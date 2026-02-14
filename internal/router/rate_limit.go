@@ -22,6 +22,7 @@ type RateLimitRule struct {
 	Prefix        string
 	WindowSeconds int
 	MaxRequests   int
+	BlockSeconds  int
 	MessageKey    string
 }
 
@@ -29,6 +30,9 @@ var rateLimitScript = redis.NewScript(`
 local current = redis.call("INCR", KEYS[1])
 if current == 1 then
 	redis.call("EXPIRE", KEYS[1], ARGV[1])
+end
+if tonumber(ARGV[2]) > 0 and tonumber(ARGV[3]) > 0 and current == tonumber(ARGV[2]) + 1 then
+	redis.call("EXPIRE", KEYS[1], ARGV[3])
 end
 local ttl = redis.call("TTL", KEYS[1])
 return {current, ttl}
@@ -53,7 +57,14 @@ func RateLimitMiddleware(client *redis.Client, rule RateLimitRule, keyFunc RateL
 			key = fmt.Sprintf("%s:%s", rule.Prefix, key)
 		}
 
-		result, err := rateLimitScript.Run(c.Request.Context(), client, []string{key}, rule.WindowSeconds).Result()
+		result, err := rateLimitScript.Run(
+			c.Request.Context(),
+			client,
+			[]string{key},
+			rule.WindowSeconds,
+			rule.MaxRequests,
+			rule.BlockSeconds,
+		).Result()
 		if err != nil {
 			msg := i18n.T(i18n.ResolveLocale(c), "error.rate_limit_unavailable")
 			response.Error(c, response.CodeInternal, msg)

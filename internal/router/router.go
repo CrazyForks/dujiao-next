@@ -37,12 +37,14 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 		Prefix:        fmt.Sprintf("%s:rate:login", redisPrefix),
 		WindowSeconds: cfg.Security.LoginRateLimit.WindowSeconds,
 		MaxRequests:   cfg.Security.LoginRateLimit.MaxAttempts,
+		BlockSeconds:  cfg.Security.LoginRateLimit.BlockSeconds,
 		MessageKey:    "error.login_too_many",
 	}
 	adminLoginRule := RateLimitRule{
 		Prefix:        fmt.Sprintf("%s:rate:admin_login", redisPrefix),
 		WindowSeconds: cfg.Security.LoginRateLimit.WindowSeconds,
 		MaxRequests:   cfg.Security.LoginRateLimit.MaxAttempts,
+		BlockSeconds:  cfg.Security.LoginRateLimit.BlockSeconds,
 		MessageKey:    "error.login_too_many",
 	}
 
