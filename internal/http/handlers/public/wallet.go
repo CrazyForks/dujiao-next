@@ -169,8 +169,16 @@ func (h *Handler) CaptureMyWalletRechargePayment(c *gin.Context) {
 		Context:   c.Request.Context(),
 	})
 	if err != nil {
-		respondPaymentCaptureError(c, err)
-		return
+		// 部分渠道不支持主动捕获时，回退为返回当前支付状态，避免前端“检查支付状态”直接报错。
+		if !errors.Is(err, service.ErrPaymentProviderNotSupported) {
+			respondPaymentCaptureError(c, err)
+			return
+		}
+		updatedPayment, err = h.PaymentService.GetPayment(uint(paymentID))
+		if err != nil {
+			respondPaymentCaptureError(c, err)
+			return
+		}
 	}
 	updatedRecharge, err := h.WalletService.GetRechargeOrderByRechargeNo(uid, recharge.RechargeNo)
 	if err != nil {
