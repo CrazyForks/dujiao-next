@@ -116,6 +116,7 @@ var (
 	ErrCardSecretCreateFailed        = errors.New("card secret create failed")
 	ErrCardSecretFetchFailed         = errors.New("card secret fetch failed")
 	ErrCardSecretUpdateFailed        = errors.New("card secret update failed")
+	ErrCardSecretDeleteFailed        = errors.New("card secret delete failed")
 	ErrCardSecretBatchCreateFailed   = errors.New("card secret batch create failed")
 	ErrCardSecretBatchFetchFailed    = errors.New("card secret batch fetch failed")
 	ErrCardSecretImportFailed        = errors.New("card secret import failed")

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -206,6 +207,107 @@ func (s *CardSecretService) ListCardSecrets(input ListCardSecretInput) ([]models
 	return items, total, nil
 }
 
+// BatchUpdateCardSecretStatus 批量更新卡密状态
+func (s *CardSecretService) BatchUpdateCardSecretStatus(ids []uint, status string) (int64, error) {
+	normalizedIDs := normalizeCardSecretIDs(ids)
+	if len(normalizedIDs) == 0 {
+		return 0, ErrCardSecretInvalid
+	}
+	normalizedStatus := strings.TrimSpace(status)
+	switch normalizedStatus {
+	case models.CardSecretStatusAvailable, models.CardSecretStatusReserved, models.CardSecretStatusUsed:
+	default:
+		return 0, ErrCardSecretInvalid
+	}
+	rows, err := s.secretRepo.BatchUpdateStatus(normalizedIDs, normalizedStatus, time.Now())
+	if err != nil {
+		return 0, ErrCardSecretUpdateFailed
+	}
+	return rows, nil
+}
+
+// BatchDeleteCardSecrets 批量删除卡密
+func (s *CardSecretService) BatchDeleteCardSecrets(ids []uint) (int64, error) {
+	normalizedIDs := normalizeCardSecretIDs(ids)
+	if len(normalizedIDs) == 0 {
+		return 0, ErrCardSecretInvalid
+	}
+	rows, err := s.secretRepo.BatchDeleteByIDs(normalizedIDs)
+	if err != nil {
+		return 0, ErrCardSecretDeleteFailed
+	}
+	return rows, nil
+}
+
+// ExportCardSecrets 批量导出卡密（txt/csv）
+func (s *CardSecretService) ExportCardSecrets(ids []uint, format string) ([]byte, string, error) {
+	normalizedIDs := normalizeCardSecretIDs(ids)
+	if len(normalizedIDs) == 0 {
+		return nil, "", ErrCardSecretInvalid
+	}
+	normalizedFormat := strings.ToLower(strings.TrimSpace(format))
+	switch normalizedFormat {
+	case "txt", "csv":
+	default:
+		return nil, "", ErrCardSecretInvalid
+	}
+
+	items, err := s.secretRepo.ListByIDs(normalizedIDs)
+	if err != nil {
+		return nil, "", ErrCardSecretFetchFailed
+	}
+	if len(items) == 0 {
+		return nil, "", ErrNotFound
+	}
+
+	if normalizedFormat == "txt" {
+		lines := make([]string, 0, len(items))
+		for _, item := range items {
+			secret := strings.TrimSpace(item.Secret)
+			if secret == "" {
+				continue
+			}
+			lines = append(lines, secret)
+		}
+		return []byte(strings.Join(lines, "\n")), "text/plain; charset=utf-8", nil
+	}
+
+	buffer := bytes.NewBuffer(nil)
+	writer := csv.NewWriter(buffer)
+	header := []string{"id", "secret", "status", "product_id", "sku_id", "order_id", "batch_id", "created_at"}
+	if err := writer.Write(header); err != nil {
+		return nil, "", ErrCardSecretFetchFailed
+	}
+	for _, item := range items {
+		orderID := ""
+		if item.OrderID != nil {
+			orderID = strconv.FormatUint(uint64(*item.OrderID), 10)
+		}
+		batchID := ""
+		if item.BatchID != nil {
+			batchID = strconv.FormatUint(uint64(*item.BatchID), 10)
+		}
+		row := []string{
+			strconv.FormatUint(uint64(item.ID), 10),
+			item.Secret,
+			item.Status,
+			strconv.FormatUint(uint64(item.ProductID), 10),
+			strconv.FormatUint(uint64(item.SKUID), 10),
+			orderID,
+			batchID,
+			item.CreatedAt.Format(time.RFC3339),
+		}
+		if err := writer.Write(row); err != nil {
+			return nil, "", ErrCardSecretFetchFailed
+		}
+	}
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return nil, "", ErrCardSecretFetchFailed
+	}
+	return buffer.Bytes(), "text/csv; charset=utf-8", nil
+}
+
 // UpdateCardSecret 更新卡密
 func (s *CardSecretService) UpdateCardSecret(id uint, secret, status string) (*models.CardSecret, error) {
 	if id == 0 {
@@ -393,4 +495,23 @@ func generateBatchNo() string {
 	now := time.Now().Format("20060102150405")
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return fmt.Sprintf("BATCH-%s-%04d", now, rng.Intn(10000))
+}
+
+func normalizeCardSecretIDs(ids []uint) []uint {
+	if len(ids) == 0 {
+		return []uint{}
+	}
+	seen := make(map[uint]struct{}, len(ids))
+	result := make([]uint, 0, len(ids))
+	for _, id := range ids {
+		if id == 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		result = append(result, id)
+	}
+	return result
 }

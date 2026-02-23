@@ -82,12 +82,13 @@ func (s *ProductService) GetPublicBySlug(slug string) (*models.Product, error) {
 }
 
 // ListAdmin 获取后台商品列表
-func (s *ProductService) ListAdmin(categoryID, search, manualStockStatus string, page, pageSize int) ([]models.Product, int64, error) {
+func (s *ProductService) ListAdmin(categoryID, search, fulfillmentType, manualStockStatus string, page, pageSize int) ([]models.Product, int64, error) {
 	filter := repository.ProductListFilter{
 		Page:              page,
 		PageSize:          pageSize,
 		CategoryID:        categoryID,
 		Search:            search,
+		FulfillmentType:   strings.TrimSpace(fulfillmentType),
 		ManualStockStatus: normalizeManualStockStatus(manualStockStatus),
 		OnlyActive:        false,
 		WithCategory:      true,

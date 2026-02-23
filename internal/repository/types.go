@@ -8,6 +8,7 @@ type ProductListFilter struct {
 	PageSize          int
 	CategoryID        string
 	Search            string
+	FulfillmentType   string
 	ManualStockStatus string
 	OnlyActive        bool
 	WithCategory      bool

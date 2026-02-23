@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/http/response"
@@ -25,6 +26,23 @@ type CreateCardSecretBatchRequest struct {
 type UpdateCardSecretRequest struct {
 	Secret *string `json:"secret"`
 	Status *string `json:"status"`
+}
+
+// BatchUpdateCardSecretStatusRequest 批量更新卡密状态请求
+type BatchUpdateCardSecretStatusRequest struct {
+	IDs    []uint `json:"ids" binding:"required"`
+	Status string `json:"status" binding:"required"`
+}
+
+// BatchDeleteCardSecretRequest 批量删除卡密请求
+type BatchDeleteCardSecretRequest struct {
+	IDs []uint `json:"ids" binding:"required"`
+}
+
+// ExportCardSecretRequest 批量导出卡密请求
+type ExportCardSecretRequest struct {
+	IDs    []uint `json:"ids" binding:"required"`
+	Format string `json:"format" binding:"required"`
 }
 
 // CreateCardSecretBatch 批量录入卡密
@@ -234,6 +252,86 @@ func (h *Handler) UpdateCardSecret(c *gin.Context) {
 	}
 
 	response.Success(c, item)
+}
+
+// BatchUpdateCardSecretStatus 批量更新卡密状态
+func (h *Handler) BatchUpdateCardSecretStatus(c *gin.Context) {
+	var req BatchUpdateCardSecretStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, response.CodeBadRequest, "error.bad_request", err)
+		return
+	}
+
+	rows, err := h.CardSecretService.BatchUpdateCardSecretStatus(req.IDs, req.Status)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrCardSecretInvalid):
+			respondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+		case errors.Is(err, service.ErrCardSecretUpdateFailed):
+			respondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
+		default:
+			respondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
+		}
+		return
+	}
+
+	response.Success(c, gin.H{
+		"affected": rows,
+	})
+}
+
+// BatchDeleteCardSecrets 批量删除卡密
+func (h *Handler) BatchDeleteCardSecrets(c *gin.Context) {
+	var req BatchDeleteCardSecretRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, response.CodeBadRequest, "error.bad_request", err)
+		return
+	}
+
+	rows, err := h.CardSecretService.BatchDeleteCardSecrets(req.IDs)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrCardSecretInvalid):
+			respondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+		case errors.Is(err, service.ErrCardSecretDeleteFailed):
+			respondError(c, response.CodeInternal, "error.card_secret_delete_failed", err)
+		default:
+			respondError(c, response.CodeInternal, "error.card_secret_delete_failed", err)
+		}
+		return
+	}
+
+	response.Success(c, gin.H{
+		"affected": rows,
+	})
+}
+
+// ExportCardSecrets 批量导出卡密
+func (h *Handler) ExportCardSecrets(c *gin.Context) {
+	var req ExportCardSecretRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, response.CodeBadRequest, "error.bad_request", err)
+		return
+	}
+
+	content, contentType, err := h.CardSecretService.ExportCardSecrets(req.IDs, req.Format)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrCardSecretInvalid):
+			respondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+		case errors.Is(err, service.ErrNotFound):
+			respondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
+		default:
+			respondError(c, response.CodeInternal, "error.card_secret_fetch_failed", err)
+		}
+		return
+	}
+
+	normalizedFormat := strings.ToLower(strings.TrimSpace(req.Format))
+	filename := "card-secrets-" + time.Now().Format("20060102-150405") + "." + normalizedFormat
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
+	c.Data(200, contentType, content)
 }
 
 // GetCardSecretStats 获取库存统计

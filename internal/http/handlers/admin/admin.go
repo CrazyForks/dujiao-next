@@ -22,9 +22,10 @@ func (h *Handler) GetAdminProducts(c *gin.Context) {
 	page, pageSize = normalizePagination(page, pageSize)
 	categoryID := c.Query("category_id")
 	search := c.Query("search")
+	fulfillmentType := strings.TrimSpace(c.Query("fulfillment_type"))
 	manualStockStatus := c.Query("manual_stock_status")
 
-	products, total, err := h.ProductService.ListAdmin(categoryID, search, manualStockStatus, page, pageSize)
+	products, total, err := h.ProductService.ListAdmin(categoryID, search, fulfillmentType, manualStockStatus, page, pageSize)
 	if err != nil {
 		respondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		return

@@ -14,9 +14,12 @@ type CardSecretRepository interface {
 	CreateBatch(items []models.CardSecret) error
 	ListByProduct(productID, skuID uint, status string, page, pageSize int) ([]models.CardSecret, int64, error)
 	ListAll(status string, page, pageSize int) ([]models.CardSecret, int64, error)
+	ListByIDs(ids []uint) ([]models.CardSecret, error)
 	ListByOrderAndStatus(orderID uint, status string) ([]models.CardSecret, error)
 	GetByID(id uint) (*models.CardSecret, error)
 	Update(secret *models.CardSecret) error
+	BatchUpdateStatus(ids []uint, status string, updatedAt time.Time) (int64, error)
+	BatchDeleteByIDs(ids []uint) (int64, error)
 	CountByProduct(productID, skuID uint) (int64, int64, int64, error)
 	CountAvailable(productID, skuID uint) (int64, error)
 	CountAvailableByProductIDs(productIDs []uint) (map[uint]int64, error)
@@ -107,6 +110,18 @@ func (r *GormCardSecretRepository) ListAll(status string, page, pageSize int) ([
 	return items, total, nil
 }
 
+// ListByIDs 按 ID 列表查询卡密
+func (r *GormCardSecretRepository) ListByIDs(ids []uint) ([]models.CardSecret, error) {
+	if len(ids) == 0 {
+		return []models.CardSecret{}, nil
+	}
+	var items []models.CardSecret
+	if err := r.db.Where("id IN ?", ids).Order("id asc").Find(&items).Error; err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 // ListByOrderAndStatus 按订单与状态获取卡密
 func (r *GormCardSecretRepository) ListByOrderAndStatus(orderID uint, status string) ([]models.CardSecret, error) {
 	if orderID == 0 {
@@ -138,6 +153,32 @@ func (r *GormCardSecretRepository) GetByID(id uint) (*models.CardSecret, error) 
 // Update 更新卡密
 func (r *GormCardSecretRepository) Update(secret *models.CardSecret) error {
 	return r.db.Save(secret).Error
+}
+
+// BatchUpdateStatus 批量更新卡密状态
+func (r *GormCardSecretRepository) BatchUpdateStatus(ids []uint, status string, updatedAt time.Time) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	if updatedAt.IsZero() {
+		updatedAt = time.Now()
+	}
+	result := r.db.Model(&models.CardSecret{}).
+		Where("id IN ?", ids).
+		Updates(map[string]interface{}{
+			"status":     status,
+			"updated_at": updatedAt,
+		})
+	return result.RowsAffected, result.Error
+}
+
+// BatchDeleteByIDs 批量删除卡密
+func (r *GormCardSecretRepository) BatchDeleteByIDs(ids []uint) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	result := r.db.Where("id IN ?", ids).Delete(&models.CardSecret{})
+	return result.RowsAffected, result.Error
 }
 
 // CountByProduct 统计库存数量（总/可用/已用）
