@@ -589,6 +589,7 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 				"sku_id":      sku.ID,
 				"sku_code":    sku.SKUCode,
 				"spec_values": sku.SpecValuesJSON,
+				"image":       firstProductImage(product.Images),
 			},
 			Tags:                         product.Tags,
 			UnitPrice:                    models.NewMoneyFromDecimal(unitPriceAmount),
@@ -769,6 +770,16 @@ func resolveManualFormSubmission(manualFormData map[string]models.JSON, productI
 	}
 
 	return models.JSON{}
+}
+
+func firstProductImage(images models.StringArray) string {
+	for _, raw := range images {
+		image := strings.TrimSpace(raw)
+		if image != "" {
+			return image
+		}
+	}
+	return ""
 }
 
 // cancelOrderWithChildren 取消父订单并级联子订单

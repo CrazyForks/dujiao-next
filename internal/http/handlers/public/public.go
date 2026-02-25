@@ -195,12 +195,16 @@ func (h *Handler) decoratePublicProduct(product *models.Product, promotionServic
 	}
 
 	item := PublicProductView{Product: *product}
+	displayPrice := resolvePublicDisplayPrice(product)
+	item.Product.PriceAmount = displayPrice
 	h.decorateProductStock(product, &item)
 	if promotionService == nil {
 		return item, nil
 	}
 
-	promotion, discountedPrice, err := promotionService.ApplyPromotion(product, 1)
+	priceCarrier := *product
+	priceCarrier.PriceAmount = displayPrice
+	promotion, discountedPrice, err := promotionService.ApplyPromotion(&priceCarrier, 1)
 	if err != nil {
 		if errors.Is(err, service.ErrPromotionInvalid) {
 			return item, nil
@@ -210,7 +214,7 @@ func (h *Handler) decoratePublicProduct(product *models.Product, promotionServic
 	if promotion == nil {
 		return item, nil
 	}
-	if !discountedPrice.Decimal.LessThan(product.PriceAmount.Decimal) {
+	if !discountedPrice.Decimal.LessThan(displayPrice.Decimal) {
 		return item, nil
 	}
 
@@ -221,6 +225,19 @@ func (h *Handler) decoratePublicProduct(product *models.Product, promotionServic
 	item.PromotionPriceAmount = &discountedPrice
 
 	return item, nil
+}
+
+func resolvePublicDisplayPrice(product *models.Product) models.Money {
+	if product == nil {
+		return models.Money{}
+	}
+	for _, sku := range product.SKUs {
+		if !sku.IsActive {
+			continue
+		}
+		return sku.PriceAmount
+	}
+	return product.PriceAmount
 }
 
 func (h *Handler) decorateProductStock(product *models.Product, item *PublicProductView) {
