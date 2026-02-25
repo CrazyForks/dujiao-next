@@ -14,15 +14,17 @@ import (
 
 // ProductService 商品业务服务
 type ProductService struct {
-	repo           repository.ProductRepository
-	productSKURepo repository.ProductSKURepository
+	repo             repository.ProductRepository
+	productSKURepo   repository.ProductSKURepository
+	cardSecretRepo   repository.CardSecretRepository
 }
 
 // NewProductService 创建商品服务
-func NewProductService(repo repository.ProductRepository, productSKURepo repository.ProductSKURepository) *ProductService {
+func NewProductService(repo repository.ProductRepository, productSKURepo repository.ProductSKURepository, cardSecretRepo repository.CardSecretRepository) *ProductService {
 	return &ProductService{
-		repo:           repo,
-		productSKURepo: productSKURepo,
+		repo:             repo,
+		productSKURepo:   productSKURepo,
+		cardSecretRepo:   cardSecretRepo,
 	}
 }
 
@@ -576,8 +578,8 @@ func (s *ProductService) Delete(id string) error {
 }
 
 // ApplyAutoStockCounts 聚合卡密自动发货库存信息并填充到商品中
-func (s *ProductService) ApplyAutoStockCounts(cardSecretRepo repository.CardSecretRepository, products ...models.Product) error {
-	if cardSecretRepo == nil || len(products) == 0 {
+func (s *ProductService) ApplyAutoStockCounts(products ...models.Product) error {
+	if len(products) == 0 {
 		return nil
 	}
 
@@ -591,7 +593,7 @@ func (s *ProductService) ApplyAutoStockCounts(cardSecretRepo repository.CardSecr
 		return nil
 	}
 
-	counts, err := cardSecretRepo.CountStockByProductIDs(productIDs)
+	counts, err := s.cardSecretRepo.CountStockByProductIDs(productIDs)
 	if err != nil {
 		return err
 	}
