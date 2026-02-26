@@ -50,6 +50,8 @@ type StripeWebhookQuery struct {
 	ChannelID uint `form:"channel_id"`
 }
 
+const callbackLogValueLimit = 4096
+
 // CreatePayment 创建支付单
 func (h *Handler) CreatePayment(c *gin.Context) {
 	uid, ok := getUserID(c)
@@ -204,6 +206,11 @@ func (h *Handler) GetLatestPayment(c *gin.Context) {
 
 // PaymentCallback 支付回调
 func (h *Handler) PaymentCallback(c *gin.Context) {
+	requestLog(c).Infow("payment_callback_received",
+		"method", c.Request.Method,
+		"client_ip", c.ClientIP(),
+		"content_type", strings.TrimSpace(c.GetHeader("Content-Type")),
+	)
 	if handled := h.HandleWechatCallback(c); handled {
 		return
 	}
@@ -226,16 +233,30 @@ func (h *Handler) PaymentCallback(c *gin.Context) {
 
 // PaypalWebhook PayPal webhook 回调。
 func (h *Handler) PaypalWebhook(c *gin.Context) {
+	log := requestLog(c)
 	var query PaypalWebhookQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
+		log.Warnw("paypal_webhook_query_invalid", "error", err)
 		respondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
+		log.Warnw("paypal_webhook_body_read_failed", "channel_id", query.ChannelID, "error", err)
 		respondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
+	log.Infow("paypal_webhook_received",
+		"channel_id", query.ChannelID,
+		"client_ip", c.ClientIP(),
+		"body_size", len(body),
+		"paypal_transmission_id", strings.TrimSpace(c.GetHeader("Paypal-Transmission-Id")),
+		"paypal_transmission_time", strings.TrimSpace(c.GetHeader("Paypal-Transmission-Time")),
+		"paypal_auth_algo", strings.TrimSpace(c.GetHeader("Paypal-Auth-Algo")),
+		"paypal_cert_url", truncateCallbackLogValue(strings.TrimSpace(c.GetHeader("Paypal-Cert-Url"))),
+		"paypal_transmission_sig", truncateCallbackLogValue(strings.TrimSpace(c.GetHeader("Paypal-Transmission-Sig"))),
+		"raw_body", callbackRawBodyForLog(body),
+	)
 	headers := make(map[string]string)
 	for key, values := range c.Request.Header {
 		if len(values) == 0 {
@@ -250,6 +271,11 @@ func (h *Handler) PaypalWebhook(c *gin.Context) {
 		Context:   c.Request.Context(),
 	})
 	if err != nil {
+		log.Warnw("paypal_webhook_handle_failed",
+			"channel_id", query.ChannelID,
+			"event_type", eventType,
+			"error", err,
+		)
 		switch {
 		case errors.Is(err, service.ErrPaymentInvalid):
 			respondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
@@ -278,6 +304,10 @@ func (h *Handler) PaypalWebhook(c *gin.Context) {
 	}
 
 	if payment == nil {
+		log.Infow("paypal_webhook_accepted_no_payment",
+			"channel_id", query.ChannelID,
+			"event_type", eventType,
+		)
 		response.Success(c, gin.H{
 			"accepted":   true,
 			"event_type": eventType,
@@ -286,6 +316,12 @@ func (h *Handler) PaypalWebhook(c *gin.Context) {
 		return
 	}
 
+	log.Infow("paypal_webhook_processed",
+		"channel_id", query.ChannelID,
+		"event_type", eventType,
+		"payment_id", payment.ID,
+		"status", payment.Status,
+	)
 	response.Success(c, gin.H{
 		"accepted":   true,
 		"event_type": eventType,
@@ -297,14 +333,23 @@ func (h *Handler) PaypalWebhook(c *gin.Context) {
 
 // StripeWebhook Stripe webhook 回调。
 func (h *Handler) StripeWebhook(c *gin.Context) {
+	log := requestLog(c)
 	var query StripeWebhookQuery
 	_ = c.ShouldBindQuery(&query)
 
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
+		log.Warnw("stripe_webhook_body_read_failed", "channel_id", query.ChannelID, "error", err)
 		respondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
+	log.Infow("stripe_webhook_received",
+		"channel_id", query.ChannelID,
+		"client_ip", c.ClientIP(),
+		"body_size", len(body),
+		"stripe_signature", truncateCallbackLogValue(strings.TrimSpace(c.GetHeader("Stripe-Signature"))),
+		"raw_body", callbackRawBodyForLog(body),
+	)
 	headers := make(map[string]string)
 	for key, values := range c.Request.Header {
 		if len(values) == 0 {
@@ -320,6 +365,11 @@ func (h *Handler) StripeWebhook(c *gin.Context) {
 		Context:   c.Request.Context(),
 	})
 	if err != nil {
+		log.Warnw("stripe_webhook_handle_failed",
+			"channel_id", query.ChannelID,
+			"event_type", eventType,
+			"error", err,
+		)
 		switch {
 		case errors.Is(err, service.ErrPaymentInvalid):
 			respondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
@@ -348,6 +398,10 @@ func (h *Handler) StripeWebhook(c *gin.Context) {
 	}
 
 	if payment == nil {
+		log.Infow("stripe_webhook_accepted_no_payment",
+			"channel_id", query.ChannelID,
+			"event_type", eventType,
+		)
 		response.Success(c, gin.H{
 			"accepted":   true,
 			"event_type": eventType,
@@ -356,6 +410,12 @@ func (h *Handler) StripeWebhook(c *gin.Context) {
 		return
 	}
 
+	log.Infow("stripe_webhook_processed",
+		"channel_id", query.ChannelID,
+		"event_type", eventType,
+		"payment_id", payment.ID,
+		"status", payment.Status,
+	)
 	response.Success(c, gin.H{
 		"accepted":   true,
 		"event_type": eventType,
@@ -366,17 +426,30 @@ func (h *Handler) StripeWebhook(c *gin.Context) {
 }
 
 func (h *Handler) HandleWechatCallback(c *gin.Context) bool {
+	log := requestLog(c)
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
+		log.Warnw("wechat_callback_body_read_failed", "error", err)
 		return false
 	}
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 	if !isWechatCallbackRequest(c, body) {
+		log.Debugw("wechat_callback_not_matched")
 		return false
 	}
 
 	var query WechatCallbackQuery
 	_ = c.ShouldBindQuery(&query)
+	log.Infow("wechat_callback_received",
+		"channel_id", query.ChannelID,
+		"client_ip", c.ClientIP(),
+		"body_size", len(body),
+		"wechatpay_signature", truncateCallbackLogValue(strings.TrimSpace(c.GetHeader("Wechatpay-Signature"))),
+		"wechatpay_timestamp", strings.TrimSpace(c.GetHeader("Wechatpay-Timestamp")),
+		"wechatpay_nonce", truncateCallbackLogValue(strings.TrimSpace(c.GetHeader("Wechatpay-Nonce"))),
+		"wechatpay_serial", strings.TrimSpace(c.GetHeader("Wechatpay-Serial")),
+		"raw_body", callbackRawBodyForLog(body),
+	)
 
 	headers := make(map[string]string)
 	for key, values := range c.Request.Header {
@@ -393,13 +466,23 @@ func (h *Handler) HandleWechatCallback(c *gin.Context) bool {
 		Context:   c.Request.Context(),
 	})
 	if err != nil {
+		log.Warnw("wechat_callback_handle_failed",
+			"channel_id", query.ChannelID,
+			"error", err,
+		)
 		respondWechatCallback(c, false)
 		return true
 	}
 	if payment == nil {
+		log.Infow("wechat_callback_accepted_no_payment", "channel_id", query.ChannelID)
 		respondWechatCallback(c, true)
 		return true
 	}
+	log.Infow("wechat_callback_processed",
+		"channel_id", query.ChannelID,
+		"payment_id", payment.ID,
+		"status", payment.Status,
+	)
 	respondWechatCallback(c, true)
 	return true
 }
@@ -455,45 +538,95 @@ func parseCallbackForm(c *gin.Context) (map[string][]string, error) {
 }
 
 func (h *Handler) HandleAlipayCallback(c *gin.Context) bool {
+	log := requestLog(c)
 	form, err := parseCallbackForm(c)
 	if err != nil {
+		log.Warnw("alipay_callback_form_parse_failed", "error", err)
 		return false
 	}
 	if !isAlipayCallbackForm(form) {
+		log.Debugw("alipay_callback_not_matched")
 		return false
 	}
+	log.Infow("alipay_callback_received",
+		"client_ip", c.ClientIP(),
+		"out_trade_no", strings.TrimSpace(getFirstValue(form, "out_trade_no")),
+		"trade_no", strings.TrimSpace(getFirstValue(form, "trade_no")),
+		"trade_status", strings.TrimSpace(getFirstValue(form, "trade_status")),
+		"raw_form", callbackRawFormForLog(form),
+	)
 
 	payment, channel, err := h.findAlipayCallbackPayment(form)
 	if err != nil || payment == nil || channel == nil {
+		log.Warnw("alipay_callback_payment_not_found",
+			"out_trade_no", strings.TrimSpace(getFirstValue(form, "out_trade_no")),
+			"trade_no", strings.TrimSpace(getFirstValue(form, "trade_no")),
+			"error", err,
+		)
 		c.String(200, constants.AlipayCallbackFail)
 		return true
 	}
 
 	cfg, err := alipay.ParseConfig(channel.ConfigJSON)
 	if err != nil {
+		log.Warnw("alipay_callback_config_parse_failed",
+			"payment_id", payment.ID,
+			"channel_id", channel.ID,
+			"error", err,
+		)
 		c.String(200, constants.AlipayCallbackFail)
 		return true
 	}
 	if err := alipay.VerifyCallback(cfg, form); err != nil {
+		log.Warnw("alipay_callback_signature_invalid",
+			"payment_id", payment.ID,
+			"channel_id", channel.ID,
+			"error", err,
+		)
 		c.String(200, constants.AlipayCallbackFail)
 		return true
 	}
 	if err := alipay.VerifyCallbackOwnership(cfg, form); err != nil {
-		requestLog(c).Warnw("alipay_callback_ownership_invalid", "error", err)
+		log.Warnw("alipay_callback_ownership_invalid",
+			"payment_id", payment.ID,
+			"channel_id", channel.ID,
+			"error", err,
+		)
 		c.String(200, constants.AlipayCallbackFail)
 		return true
 	}
 
 	input, err := parseAlipayCallback(form, payment.ID)
 	if err != nil {
+		log.Warnw("alipay_callback_parse_failed",
+			"payment_id", payment.ID,
+			"channel_id", channel.ID,
+			"error", err,
+		)
 		c.String(200, constants.AlipayCallbackFail)
 		return true
 	}
 	input.ChannelID = channel.ID
-	if _, err := h.PaymentService.HandleCallback(*input); err != nil {
+	updated, err := h.PaymentService.HandleCallback(*input)
+	if err != nil {
+		log.Warnw("alipay_callback_handle_failed",
+			"payment_id", payment.ID,
+			"channel_id", channel.ID,
+			"order_no", input.OrderNo,
+			"provider_ref", input.ProviderRef,
+			"status", input.Status,
+			"error", err,
+		)
 		c.String(200, constants.AlipayCallbackFail)
 		return true
 	}
+	log.Infow("alipay_callback_processed",
+		"payment_id", payment.ID,
+		"channel_id", channel.ID,
+		"order_no", input.OrderNo,
+		"provider_ref", input.ProviderRef,
+		"status", updated.Status,
+	)
 	c.String(200, constants.AlipayCallbackSuccess)
 	return true
 }
@@ -659,58 +792,118 @@ func mapAlipayTradeStatus(tradeStatus string) (string, bool) {
 }
 
 func (h *Handler) HandleEpayCallback(c *gin.Context) bool {
+	log := requestLog(c)
 	form, err := parseCallbackForm(c)
 	if err != nil {
+		log.Warnw("epay_callback_form_parse_failed", "error", err)
 		return false
 	}
 	if strings.TrimSpace(getFirstValue(form, "param")) == "" {
+		log.Debugw("epay_callback_not_matched", "reason", "missing_param")
 		return false
 	}
 	if strings.TrimSpace(getFirstValue(form, "trade_status")) == "" && strings.TrimSpace(getFirstValue(form, "out_trade_no")) == "" {
+		log.Debugw("epay_callback_not_matched", "reason", "missing_trade_fields")
 		return false
 	}
+	log.Infow("epay_callback_received",
+		"client_ip", c.ClientIP(),
+		"param", strings.TrimSpace(getFirstValue(form, "param")),
+		"out_trade_no", strings.TrimSpace(getFirstValue(form, "out_trade_no")),
+		"trade_no", strings.TrimSpace(getFirstValue(form, "trade_no")),
+		"trade_status", strings.TrimSpace(getFirstValue(form, "trade_status")),
+		"raw_form", callbackRawFormForLog(form),
+	)
 	paymentID, err := parseEpayPaymentID(form)
 	if err != nil {
+		log.Warnw("epay_callback_payment_id_invalid", "error", err)
 		c.String(200, constants.EpayCallbackFail)
 		return true
 	}
 	payment, err := h.PaymentRepo.GetByID(paymentID)
 	if err != nil || payment == nil {
+		log.Warnw("epay_callback_payment_not_found", "payment_id", paymentID, "error", err)
 		c.String(200, constants.EpayCallbackFail)
 		return true
 	}
 	channel, err := h.PaymentChannelRepo.GetByID(payment.ChannelID)
 	if err != nil || channel == nil {
+		log.Warnw("epay_callback_channel_not_found",
+			"payment_id", payment.ID,
+			"channel_id", payment.ChannelID,
+			"error", err,
+		)
 		c.String(200, constants.EpayCallbackFail)
 		return true
 	}
 	if strings.ToLower(strings.TrimSpace(channel.ProviderType)) != constants.PaymentProviderEpay {
+		log.Warnw("epay_callback_provider_invalid",
+			"payment_id", payment.ID,
+			"channel_id", channel.ID,
+			"provider_type", channel.ProviderType,
+		)
 		c.String(200, constants.EpayCallbackFail)
 		return true
 	}
 	cfg, err := epay.ParseConfig(channel.ConfigJSON)
 	if err != nil {
+		log.Warnw("epay_callback_config_parse_failed",
+			"payment_id", payment.ID,
+			"channel_id", channel.ID,
+			"error", err,
+		)
 		c.String(200, constants.EpayCallbackFail)
 		return true
 	}
 	if err := epay.ValidateConfig(cfg); err != nil {
+		log.Warnw("epay_callback_config_invalid",
+			"payment_id", payment.ID,
+			"channel_id", channel.ID,
+			"error", err,
+		)
 		c.String(200, constants.EpayCallbackFail)
 		return true
 	}
 	if err := epay.VerifyCallback(cfg, form); err != nil {
+		log.Warnw("epay_callback_signature_invalid",
+			"payment_id", payment.ID,
+			"channel_id", channel.ID,
+			"error", err,
+		)
 		c.String(200, constants.EpayCallbackFail)
 		return true
 	}
 	input, err := parseEpayCallback(form)
 	if err != nil {
+		log.Warnw("epay_callback_parse_failed",
+			"payment_id", payment.ID,
+			"channel_id", channel.ID,
+			"error", err,
+		)
 		c.String(200, constants.EpayCallbackFail)
 		return true
 	}
 	input.ChannelID = channel.ID
-	if _, err := h.PaymentService.HandleCallback(*input); err != nil {
+	updated, err := h.PaymentService.HandleCallback(*input)
+	if err != nil {
+		log.Warnw("epay_callback_handle_failed",
+			"payment_id", payment.ID,
+			"channel_id", channel.ID,
+			"order_no", input.OrderNo,
+			"provider_ref", input.ProviderRef,
+			"status", input.Status,
+			"error", err,
+		)
 		c.String(200, constants.EpayCallbackFail)
 		return true
 	}
+	log.Infow("epay_callback_processed",
+		"payment_id", payment.ID,
+		"channel_id", channel.ID,
+		"order_no", input.OrderNo,
+		"provider_ref", input.ProviderRef,
+		"status", updated.Status,
+	)
 	c.String(200, constants.EpayCallbackSuccess)
 	return true
 }
@@ -789,6 +982,44 @@ func getFirstValue(form map[string][]string, key string) string {
 		return values[0]
 	}
 	return ""
+}
+
+func truncateCallbackLogValue(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if len(raw) <= callbackLogValueLimit {
+		return raw
+	}
+	return raw[:callbackLogValueLimit] + "...(truncated)"
+}
+
+func callbackRawBodyForLog(body []byte) string {
+	if len(body) == 0 {
+		return ""
+	}
+	return truncateCallbackLogValue(string(body))
+}
+
+func callbackRawFormForLog(form map[string][]string) map[string]interface{} {
+	result := make(map[string]interface{}, len(form))
+	for key, values := range form {
+		if len(values) == 0 {
+			result[key] = ""
+			continue
+		}
+		if len(values) == 1 {
+			result[key] = truncateCallbackLogValue(values[0])
+			continue
+		}
+		copied := make([]string, 0, len(values))
+		for _, value := range values {
+			copied = append(copied, truncateCallbackLogValue(value))
+		}
+		result[key] = copied
+	}
+	return result
 }
 
 func respondPaymentCreateError(c *gin.Context, err error) {
@@ -874,7 +1105,12 @@ func (h *Handler) HandleEpusdtCallback(c *gin.Context) bool {
 		return false
 	}
 
-	log.Infow("epusdt_callback_received", "trade_id", data.TradeID, "order_id", data.OrderID, "status", data.Status)
+	log.Infow("epusdt_callback_received",
+		"trade_id", data.TradeID,
+		"order_id", data.OrderID,
+		"status", data.Status,
+		"raw_body", callbackRawBodyForLog(body),
+	)
 
 	// 通过 trade_id 查找支付记录
 	payment, err := h.PaymentRepo.GetLatestByProviderRef(data.TradeID)

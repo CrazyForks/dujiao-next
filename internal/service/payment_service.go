@@ -537,45 +537,78 @@ func (s *PaymentService) HandleCallback(input PaymentCallbackInput) (*models.Pay
 	log := paymentLogger(
 		"payment_id", input.PaymentID,
 		"target_status", status,
+		"callback_channel_id", input.ChannelID,
+		"callback_order_no", strings.TrimSpace(input.OrderNo),
+		"callback_provider_ref", strings.TrimSpace(input.ProviderRef),
+		"callback_currency", strings.ToUpper(strings.TrimSpace(input.Currency)),
+		"callback_amount", input.Amount.String(),
 	)
+	log.Infow("payment_callback_received")
 
 	payment, err := s.paymentRepo.GetByID(input.PaymentID)
 	if err != nil {
+		log.Errorw("payment_callback_payment_fetch_failed", "error", err)
 		return nil, ErrPaymentUpdateFailed
 	}
 	if payment == nil {
+		log.Warnw("payment_callback_payment_not_found")
 		return nil, ErrPaymentNotFound
 	}
 	if payment.OrderID == 0 {
+		log.Infow("payment_callback_wallet_recharge_flow")
 		return s.handleWalletRechargeCallback(payment, status, input)
 	}
 
 	order, err := s.orderRepo.GetByID(payment.OrderID)
 	if err != nil {
+		log.Errorw("payment_callback_order_fetch_failed", "order_id", payment.OrderID, "error", err)
 		return nil, ErrOrderFetchFailed
 	}
 	if order == nil {
+		log.Warnw("payment_callback_order_not_found", "order_id", payment.OrderID)
 		return nil, ErrOrderNotFound
 	}
 
 	if input.ChannelID != 0 && input.ChannelID != payment.ChannelID {
+		log.Warnw("payment_callback_channel_mismatch",
+			"stored_channel_id", payment.ChannelID,
+			"callback_channel_id", input.ChannelID,
+		)
 		return nil, ErrPaymentInvalid
 	}
 	if input.OrderNo != "" && input.OrderNo != order.OrderNo {
+		log.Warnw("payment_callback_order_no_mismatch",
+			"stored_order_no", order.OrderNo,
+			"callback_order_no", input.OrderNo,
+		)
 		return nil, ErrPaymentInvalid
 	}
 	if input.Currency != "" && strings.ToUpper(strings.TrimSpace(input.Currency)) != strings.ToUpper(strings.TrimSpace(payment.Currency)) {
+		log.Warnw("payment_callback_currency_mismatch",
+			"stored_currency", payment.Currency,
+			"callback_currency", input.Currency,
+		)
 		return nil, ErrPaymentCurrencyMismatch
 	}
 	if !input.Amount.Decimal.IsZero() && input.Amount.Decimal.Cmp(payment.Amount.Decimal) != 0 {
+		log.Warnw("payment_callback_amount_mismatch",
+			"stored_amount", payment.Amount.String(),
+			"callback_amount", input.Amount.String(),
+		)
 		return nil, ErrPaymentAmountMismatch
 	}
 
 	// 幂等处理：已成功的不再回退状态
 	if payment.Status == constants.PaymentStatusSuccess {
+		log.Infow("payment_callback_idempotent_success",
+			"current_status", payment.Status,
+		)
 		return s.updateCallbackMeta(payment, constants.PaymentStatusSuccess, input)
 	}
 	if payment.Status == status {
+		log.Infow("payment_callback_idempotent_same_status",
+			"current_status", payment.Status,
+		)
 		return s.updateCallbackMeta(payment, status, input)
 	}
 
@@ -605,43 +638,81 @@ func (s *PaymentService) HandleCallback(input PaymentCallbackInput) (*models.Pay
 }
 
 func (s *PaymentService) handleWalletRechargeCallback(payment *models.Payment, status string, input PaymentCallbackInput) (*models.Payment, error) {
+	log := paymentLogger(
+		"payment_id", payment.ID,
+		"recharge_no", strings.TrimSpace(input.OrderNo),
+		"target_status", status,
+		"callback_channel_id", input.ChannelID,
+		"callback_provider_ref", strings.TrimSpace(input.ProviderRef),
+		"callback_currency", strings.ToUpper(strings.TrimSpace(input.Currency)),
+		"callback_amount", input.Amount.String(),
+	)
 	if s.walletRepo == nil {
+		log.Errorw("wallet_recharge_callback_wallet_repo_nil")
 		return nil, ErrPaymentUpdateFailed
 	}
 	recharge, err := s.walletRepo.GetRechargeOrderByPaymentID(payment.ID)
 	if err != nil {
+		log.Errorw("wallet_recharge_callback_recharge_fetch_failed", "error", err)
 		return nil, ErrPaymentUpdateFailed
 	}
 	if recharge == nil {
+		log.Warnw("wallet_recharge_callback_recharge_not_found")
 		return nil, ErrWalletRechargeNotFound
 	}
 
 	if input.ChannelID != 0 && input.ChannelID != payment.ChannelID {
+		log.Warnw("wallet_recharge_callback_channel_mismatch",
+			"stored_channel_id", payment.ChannelID,
+			"callback_channel_id", input.ChannelID,
+		)
 		return nil, ErrPaymentInvalid
 	}
 	if input.OrderNo != "" && input.OrderNo != recharge.RechargeNo {
+		log.Warnw("wallet_recharge_callback_order_no_mismatch",
+			"stored_recharge_no", recharge.RechargeNo,
+			"callback_order_no", input.OrderNo,
+		)
 		return nil, ErrPaymentInvalid
 	}
 	if input.Currency != "" && strings.ToUpper(strings.TrimSpace(input.Currency)) != strings.ToUpper(strings.TrimSpace(payment.Currency)) {
+		log.Warnw("wallet_recharge_callback_currency_mismatch",
+			"stored_currency", payment.Currency,
+			"callback_currency", input.Currency,
+		)
 		return nil, ErrPaymentCurrencyMismatch
 	}
 	if !input.Amount.Decimal.IsZero() && input.Amount.Decimal.Cmp(payment.Amount.Decimal) != 0 {
+		log.Warnw("wallet_recharge_callback_amount_mismatch",
+			"stored_amount", payment.Amount.String(),
+			"callback_amount", input.Amount.String(),
+		)
 		return nil, ErrPaymentAmountMismatch
 	}
 
 	// 幂等处理：已成功状态仅更新回调元信息。
 	if payment.Status == constants.PaymentStatusSuccess {
+		log.Infow("wallet_recharge_callback_idempotent_success",
+			"current_status", payment.Status,
+		)
 		return s.updateCallbackMeta(payment, constants.PaymentStatusSuccess, input)
 	}
 	if payment.Status == status {
+		log.Infow("wallet_recharge_callback_idempotent_same_status",
+			"current_status", payment.Status,
+		)
 		return s.updateCallbackMeta(payment, status, input)
 	}
 
 	now := time.Now()
 	updated, err := s.applyWalletRechargePaymentUpdate(payment, status, input, now)
 	if err != nil {
+		log.Errorw("wallet_recharge_callback_apply_failed", "error", err)
 		return nil, err
 	}
+	log.Infow("wallet_recharge_callback_processed",
+		"new_status", updated.Status,
+	)
 	return updated, nil
 }
 
@@ -951,34 +1022,53 @@ func (s *PaymentService) captureStripePayment(input CapturePaymentInput, payment
 
 // HandlePaypalWebhook 处理 PayPal webhook。
 func (s *PaymentService) HandlePaypalWebhook(input WebhookCallbackInput) (*models.Payment, string, error) {
+	log := paymentLogger(
+		"provider", constants.PaymentChannelTypePaypal,
+		"channel_id", input.ChannelID,
+		"body_size", len(input.Body),
+	)
 	if input.ChannelID == 0 {
+		log.Warnw("payment_webhook_invalid_channel_id")
 		return nil, "", ErrPaymentInvalid
 	}
 	channel, err := s.channelRepo.GetByID(input.ChannelID)
 	if err != nil {
+		log.Errorw("payment_webhook_channel_fetch_failed", "error", err)
 		return nil, "", ErrPaymentUpdateFailed
 	}
 	if channel == nil {
+		log.Warnw("payment_webhook_channel_not_found")
 		return nil, "", ErrPaymentChannelNotFound
 	}
 	providerType := strings.ToLower(strings.TrimSpace(channel.ProviderType))
 	channelType := strings.ToLower(strings.TrimSpace(channel.ChannelType))
 	if providerType != constants.PaymentProviderOfficial || channelType != constants.PaymentChannelTypePaypal {
+		log.Warnw("payment_webhook_provider_mismatch",
+			"provider_type", channel.ProviderType,
+			"channel_type", channel.ChannelType,
+		)
 		return nil, "", ErrPaymentProviderNotSupported
 	}
 
 	cfg, err := paypal.ParseConfig(channel.ConfigJSON)
 	if err != nil {
+		log.Warnw("payment_webhook_config_parse_failed", "error", err)
 		return nil, "", fmt.Errorf("%w: %v", ErrPaymentChannelConfigInvalid, err)
 	}
 	if err := paypal.ValidateConfig(cfg); err != nil {
+		log.Warnw("payment_webhook_config_invalid", "error", err)
 		return nil, "", fmt.Errorf("%w: %v", ErrPaymentChannelConfigInvalid, err)
 	}
 
 	event, err := paypal.ParseWebhookEvent(input.Body)
 	if err != nil {
+		log.Warnw("payment_webhook_payload_invalid", "error", err)
 		return nil, "", ErrPaymentGatewayResponseInvalid
 	}
+	log.Infow("payment_webhook_event_parsed",
+		"event_type", event.EventType,
+		"event_id", event.ID,
+	)
 
 	ctx := input.Context
 	if ctx == nil {
@@ -989,6 +1079,11 @@ func (s *PaymentService) HandlePaypalWebhook(input WebhookCallbackInput) (*model
 		headers.Set(key, value)
 	}
 	if err := paypal.VerifyWebhookSignature(ctx, cfg, headers, event.Raw); err != nil {
+		log.Warnw("payment_webhook_signature_invalid",
+			"event_type", event.EventType,
+			"event_id", event.ID,
+			"error", err,
+		)
 		switch {
 		case errors.Is(err, paypal.ErrConfigInvalid):
 			return nil, event.EventType, fmt.Errorf("%w: %v", ErrPaymentChannelConfigInvalid, err)
@@ -1001,24 +1096,50 @@ func (s *PaymentService) HandlePaypalWebhook(input WebhookCallbackInput) (*model
 
 	paypalOrderID := strings.TrimSpace(event.RelatedOrderID())
 	if paypalOrderID == "" {
+		log.Warnw("payment_webhook_related_order_missing",
+			"event_type", event.EventType,
+			"event_id", event.ID,
+		)
 		return nil, event.EventType, ErrPaymentInvalid
 	}
 
 	payment, err := s.paymentRepo.GetLatestByProviderRef(paypalOrderID)
 	if err != nil {
+		log.Errorw("payment_webhook_payment_lookup_failed",
+			"provider_ref", paypalOrderID,
+			"error", err,
+		)
 		return nil, event.EventType, ErrPaymentUpdateFailed
 	}
 	if payment == nil {
+		log.Infow("payment_webhook_payment_not_found",
+			"provider_ref", paypalOrderID,
+			"event_type", event.EventType,
+			"event_id", event.ID,
+		)
 		return nil, event.EventType, nil
 	}
 
 	status, ok := paypal.ToPaymentStatus(event.EventType, event.ResourceStatus())
 	if !ok {
+		log.Infow("payment_webhook_status_ignored",
+			"payment_id", payment.ID,
+			"provider_ref", paypalOrderID,
+			"event_type", event.EventType,
+			"event_id", event.ID,
+		)
 		return payment, event.EventType, nil
 	}
 
 	amount, amountCurrency, err := buildPaypalCallbackAmount(event, status)
 	if err != nil {
+		log.Warnw("payment_webhook_amount_invalid",
+			"payment_id", payment.ID,
+			"provider_ref", paypalOrderID,
+			"event_type", event.EventType,
+			"event_id", event.ID,
+			"error", err,
+		)
 		return nil, event.EventType, err
 	}
 
@@ -1039,8 +1160,22 @@ func (s *PaymentService) HandlePaypalWebhook(input WebhookCallbackInput) (*model
 		Payload:     models.JSON(payloadMap),
 	})
 	if err != nil {
+		log.Errorw("payment_webhook_callback_apply_failed",
+			"payment_id", payment.ID,
+			"provider_ref", paypalOrderID,
+			"event_type", event.EventType,
+			"event_id", event.ID,
+			"error", err,
+		)
 		return nil, event.EventType, err
 	}
+	log.Infow("payment_webhook_processed",
+		"payment_id", updated.ID,
+		"provider_ref", paypalOrderID,
+		"event_type", event.EventType,
+		"event_id", event.ID,
+		"status", updated.Status,
+	)
 	return updated, event.EventType, nil
 }
 
@@ -1082,6 +1217,11 @@ func buildPaypalCallbackAmount(event *paypal.WebhookEvent, status string) (model
 
 // HandleWechatWebhook 处理微信支付回调。
 func (s *PaymentService) HandleWechatWebhook(input WebhookCallbackInput) (*models.Payment, string, error) {
+	log := paymentLogger(
+		"provider", constants.PaymentChannelTypeWechat,
+		"channel_id", input.ChannelID,
+		"body_size", len(input.Body),
+	)
 	ctx := input.Context
 	if ctx == nil {
 		ctx = context.Background()
@@ -1089,6 +1229,7 @@ func (s *PaymentService) HandleWechatWebhook(input WebhookCallbackInput) (*model
 
 	candidates, err := s.resolveWechatWebhookChannels(input.ChannelID)
 	if err != nil {
+		log.Warnw("payment_webhook_resolve_channels_failed", "error", err)
 		return nil, "", err
 	}
 
@@ -1126,29 +1267,71 @@ func (s *PaymentService) HandleWechatWebhook(input WebhookCallbackInput) (*model
 		payment, err := s.findWechatWebhookPayment(channel.ID, result)
 		if err != nil {
 			if errors.Is(err, ErrPaymentNotFound) {
+				log.Infow("payment_webhook_payment_not_found",
+					"channel_id", channel.ID,
+					"event_type", result.EventType,
+					"provider_ref", result.TransactionID,
+					"order_no", result.OrderNo,
+				)
 				return nil, result.EventType, nil
 			}
+			log.Warnw("payment_webhook_payment_lookup_failed",
+				"channel_id", channel.ID,
+				"event_type", result.EventType,
+				"provider_ref", result.TransactionID,
+				"order_no", result.OrderNo,
+				"error", err,
+			)
 			return nil, result.EventType, err
 		}
 		if payment == nil {
+			log.Infow("payment_webhook_payment_not_found",
+				"channel_id", channel.ID,
+				"event_type", result.EventType,
+				"provider_ref", result.TransactionID,
+				"order_no", result.OrderNo,
+			)
 			return nil, result.EventType, nil
 		}
 
 		updated, err := s.handleWechatWebhookCallback(channel.ID, payment, result)
 		if err != nil {
+			log.Warnw("payment_webhook_callback_apply_failed",
+				"channel_id", channel.ID,
+				"payment_id", payment.ID,
+				"event_type", result.EventType,
+				"provider_ref", result.TransactionID,
+				"order_no", result.OrderNo,
+				"error", err,
+			)
 			return nil, result.EventType, err
 		}
+		log.Infow("payment_webhook_processed",
+			"channel_id", channel.ID,
+			"payment_id", updated.ID,
+			"event_type", result.EventType,
+			"provider_ref", result.TransactionID,
+			"order_no", result.OrderNo,
+			"status", updated.Status,
+		)
 		return updated, result.EventType, nil
 	}
 
 	if lastErr != nil {
+		log.Warnw("payment_webhook_verify_failed_all_channels", "error", lastErr)
 		return nil, "", lastErr
 	}
+	log.Warnw("payment_webhook_no_channel_matched")
 	return nil, "", ErrPaymentGatewayResponseInvalid
 }
 
 // HandleStripeWebhook 处理 Stripe webhook。
 func (s *PaymentService) HandleStripeWebhook(input WebhookCallbackInput) (*models.Payment, string, error) {
+	log := paymentLogger(
+		"provider", constants.PaymentChannelTypeStripe,
+		"channel_id", input.ChannelID,
+		"body_size", len(input.Body),
+	)
 	ctx := input.Context
 	if ctx == nil {
 		ctx = context.Background()
@@ -1156,6 +1339,7 @@ func (s *PaymentService) HandleStripeWebhook(input WebhookCallbackInput) (*model
 
 	candidates, err := s.resolveStripeWebhookChannels(input.ChannelID)
 	if err != nil {
+		log.Warnw("payment_webhook_resolve_channels_failed", "error", err)
 		return nil, "", err
 	}
 
@@ -1189,28 +1373,77 @@ func (s *PaymentService) HandleStripeWebhook(input WebhookCallbackInput) (*model
 			lastErr = mappedErr
 			continue
 		}
+		log.Infow("payment_webhook_event_parsed",
+			"channel_id", channel.ID,
+			"event_type", result.EventType,
+			"event_id", result.EventID,
+			"provider_ref", result.ProviderRef,
+			"order_no", result.OrderNo,
+		)
 
 		payment, err := s.findStripeWebhookPayment(channel.ID, result)
 		if err != nil {
 			if errors.Is(err, ErrPaymentNotFound) {
+				log.Infow("payment_webhook_payment_not_found",
+					"channel_id", channel.ID,
+					"event_type", result.EventType,
+					"event_id", result.EventID,
+					"provider_ref", result.ProviderRef,
+					"order_no", result.OrderNo,
+				)
 				return nil, result.EventType, nil
 			}
+			log.Warnw("payment_webhook_payment_lookup_failed",
+				"channel_id", channel.ID,
+				"event_type", result.EventType,
+				"event_id", result.EventID,
+				"provider_ref", result.ProviderRef,
+				"order_no", result.OrderNo,
+				"error", err,
+			)
 			return nil, result.EventType, err
 		}
 		if payment == nil {
+			log.Infow("payment_webhook_payment_not_found",
+				"channel_id", channel.ID,
+				"event_type", result.EventType,
+				"event_id", result.EventID,
+				"provider_ref", result.ProviderRef,
+				"order_no", result.OrderNo,
+			)
 			return nil, result.EventType, nil
 		}
 
 		updated, err := s.handleStripeWebhookCallback(channel.ID, payment, result)
 		if err != nil {
+			log.Warnw("payment_webhook_callback_apply_failed",
+				"channel_id", channel.ID,
+				"payment_id", payment.ID,
+				"event_type", result.EventType,
+				"event_id", result.EventID,
+				"provider_ref", result.ProviderRef,
+				"order_no", result.OrderNo,
+				"error", err,
+			)
 			return nil, result.EventType, err
 		}
+		log.Infow("payment_webhook_processed",
+			"channel_id", channel.ID,
+			"payment_id", updated.ID,
+			"event_type", result.EventType,
+			"event_id", result.EventID,
+			"provider_ref", result.ProviderRef,
+			"order_no", result.OrderNo,
+			"status", updated.Status,
+		)
 		return updated, result.EventType, nil
 	}
 
 	if lastErr != nil {
+		log.Warnw("payment_webhook_verify_failed_all_channels", "error", lastErr)
 		return nil, "", lastErr
 	}
+	log.Warnw("payment_webhook_no_channel_matched")
 	return nil, "", ErrPaymentGatewayResponseInvalid
 }
 
