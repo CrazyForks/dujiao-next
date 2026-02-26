@@ -228,6 +228,7 @@ const (
 	TaskOrderStatusEmail     = "order:status_email"
 	TaskOrderAutoFulfill     = "order:auto_fulfill"
 	TaskOrderTimeoutCancel   = "order:timeout_cancel"
+	TaskWalletRechargeExpire = "wallet_recharge:timeout_expire"
 	TaskNotificationDispatch = "notification:dispatch"
 )
 

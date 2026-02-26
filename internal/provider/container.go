@@ -188,5 +188,17 @@ func (c *Container) initServices() {
 	c.AuthzAuditService = service.NewAuthzAuditService(c.AuthzAuditLogRepo)
 	c.DashboardService = service.NewDashboardService(c.DashboardRepo, c.SettingService)
 	c.NotificationService = service.NewNotificationService(c.SettingService, c.EmailService, c.QueueClient, c.DashboardService, c.Config.TelegramAuth)
-	c.PaymentService = service.NewPaymentService(c.OrderRepo, c.ProductRepo, c.ProductSKURepo, c.PaymentRepo, c.PaymentChannelRepo, c.WalletRepo, c.QueueClient, c.WalletService, c.NotificationService)
+	c.PaymentService = service.NewPaymentService(
+		c.OrderRepo,
+		c.ProductRepo,
+		c.ProductSKURepo,
+		c.PaymentRepo,
+		c.PaymentChannelRepo,
+		c.WalletRepo,
+		c.QueueClient,
+		c.WalletService,
+		c.SettingService,
+		c.Config.Order.PaymentExpireMinutes,
+		c.NotificationService,
+	)
 }

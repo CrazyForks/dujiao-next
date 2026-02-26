@@ -28,6 +28,7 @@ type CardSecretRepository interface {
 	Reserve(ids []uint, orderID uint, reservedAt time.Time) (int64, error)
 	ReleaseByOrder(orderID uint) (int64, error)
 	MarkUsed(ids []uint, orderID uint, usedAt time.Time) (int64, error)
+	Transaction(fn func(tx *gorm.DB) error) error
 	WithTx(tx *gorm.DB) *GormCardSecretRepository
 }
 
@@ -55,6 +56,14 @@ func (r *GormCardSecretRepository) WithTx(tx *gorm.DB) *GormCardSecretRepository
 		return r
 	}
 	return &GormCardSecretRepository{db: tx}
+}
+
+// Transaction 执行事务
+func (r *GormCardSecretRepository) Transaction(fn func(tx *gorm.DB) error) error {
+	if fn == nil {
+		return nil
+	}
+	return r.db.Transaction(fn)
 }
 
 // CreateBatch 批量创建卡密

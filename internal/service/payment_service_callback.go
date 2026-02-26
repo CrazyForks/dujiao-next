@@ -235,7 +235,7 @@ func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *models.Paymen
 		payment.ProviderPayload = input.Payload
 	}
 
-	err := models.DB.Transaction(func(tx *gorm.DB) error {
+	err := s.paymentRepo.Transaction(func(tx *gorm.DB) error {
 		paymentRepo := s.paymentRepo.WithTx(tx)
 		rechargeRepo := s.walletRepo.WithTx(tx)
 
@@ -340,7 +340,7 @@ func (s *PaymentService) applyPaymentUpdate(payment *models.Payment, order *mode
 		payment.ProviderPayload = input.Payload
 	}
 
-	err := models.DB.Transaction(func(tx *gorm.DB) error {
+	err := s.paymentRepo.Transaction(func(tx *gorm.DB) error {
 		paymentRepo := s.paymentRepo.WithTx(tx)
 
 		if err := paymentRepo.Update(payment); err != nil {

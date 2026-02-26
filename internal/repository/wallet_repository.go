@@ -29,6 +29,7 @@ type WalletRepository interface {
 	GetRechargeOrderByPaymentIDForUpdate(paymentID uint) (*models.WalletRechargeOrder, error)
 	ListRechargeOrdersAdmin(filter WalletRechargeListFilter) ([]models.WalletRechargeOrder, int64, error)
 	GetRechargeOrdersByPaymentIDs(paymentIDs []uint) ([]models.WalletRechargeOrder, error)
+	Transaction(fn func(tx *gorm.DB) error) error
 	WithTx(tx *gorm.DB) *GormWalletRepository
 }
 
@@ -48,6 +49,14 @@ func (r *GormWalletRepository) WithTx(tx *gorm.DB) *GormWalletRepository {
 		return r
 	}
 	return &GormWalletRepository{db: tx}
+}
+
+// Transaction 执行事务
+func (r *GormWalletRepository) Transaction(fn func(tx *gorm.DB) error) error {
+	if fn == nil {
+		return nil
+	}
+	return r.db.Transaction(fn)
 }
 
 // GetAccountByUserID 按用户ID获取钱包账户

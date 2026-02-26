@@ -15,6 +15,8 @@ const (
 	TaskOrderAutoFulfill = constants.TaskOrderAutoFulfill
 	// TaskOrderTimeoutCancel 超时取消任务
 	TaskOrderTimeoutCancel = constants.TaskOrderTimeoutCancel
+	// TaskWalletRechargeExpire 钱包充值超时过期任务
+	TaskWalletRechargeExpire = constants.TaskWalletRechargeExpire
 	// TaskNotificationDispatch 通知中心分发任务
 	TaskNotificationDispatch = constants.TaskNotificationDispatch
 )
@@ -33,6 +35,11 @@ type OrderAutoFulfillPayload struct {
 // OrderTimeoutCancelPayload 超时取消任务载荷
 type OrderTimeoutCancelPayload struct {
 	OrderID uint `json:"order_id"`
+}
+
+// WalletRechargeExpirePayload 钱包充值超时过期任务载荷
+type WalletRechargeExpirePayload struct {
+	PaymentID uint `json:"payment_id"`
 }
 
 // NotificationDispatchPayload 通知中心分发任务载荷
@@ -70,6 +77,15 @@ func NewOrderTimeoutCancelTask(payload OrderTimeoutCancelPayload) (*asynq.Task, 
 		return nil, err
 	}
 	return asynq.NewTask(TaskOrderTimeoutCancel, body), nil
+}
+
+// NewWalletRechargeExpireTask 创建钱包充值超时过期任务
+func NewWalletRechargeExpireTask(payload WalletRechargeExpirePayload) (*asynq.Task, error) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	return asynq.NewTask(TaskWalletRechargeExpire, body), nil
 }
 
 // NewNotificationDispatchTask 创建通知中心分发任务

@@ -127,7 +127,7 @@ func (s *GiftCardService) GenerateGiftCards(input GenerateGiftCardsInput) (*mode
 		})
 	}
 
-	if err := models.DB.Transaction(func(tx *gorm.DB) error {
+	if err := s.repo.Transaction(func(tx *gorm.DB) error {
 		repo := s.repo.WithTx(tx)
 		if err := repo.CreateBatch(batch, cards); err != nil {
 			return ErrGiftCardBatchCreateFailed
@@ -358,7 +358,7 @@ func (s *GiftCardService) RedeemGiftCard(input GiftCardRedeemInput) (*models.Gif
 		resultTxn   *models.WalletTransaction
 		resultError error
 	)
-	err := models.DB.Transaction(func(tx *gorm.DB) error {
+	err := s.repo.Transaction(func(tx *gorm.DB) error {
 		repo := s.repo.WithTx(tx)
 		card, err := repo.GetByCodeForUpdate(code)
 		if err != nil {

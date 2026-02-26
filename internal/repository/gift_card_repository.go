@@ -37,6 +37,7 @@ type GiftCardRepository interface {
 	Update(card *models.GiftCard) error
 	Delete(id uint) error
 	BatchUpdateStatus(ids []uint, status string, updatedAt time.Time) (int64, error)
+	Transaction(fn func(tx *gorm.DB) error) error
 	WithTx(tx *gorm.DB) *GormGiftCardRepository
 }
 
@@ -56,6 +57,14 @@ func (r *GormGiftCardRepository) WithTx(tx *gorm.DB) *GormGiftCardRepository {
 		return r
 	}
 	return &GormGiftCardRepository{db: tx}
+}
+
+// Transaction 执行事务
+func (r *GormGiftCardRepository) Transaction(fn func(tx *gorm.DB) error) error {
+	if fn == nil {
+		return nil
+	}
+	return r.db.Transaction(fn)
 }
 
 // CreateBatch 创建礼品卡批次与卡片

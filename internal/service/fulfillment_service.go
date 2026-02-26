@@ -79,7 +79,7 @@ func (s *FulfillmentService) CreateManual(input CreateManualInput) (*models.Fulf
 	}
 
 	var created *models.Fulfillment
-	err = models.DB.Transaction(func(tx *gorm.DB) error {
+	err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
 		var existing models.Fulfillment
 		if err := tx.Where("order_id = ?", input.OrderID).First(&existing).Error; err == nil {
 			return ErrFulfillmentExists
@@ -188,7 +188,7 @@ func (s *FulfillmentService) CreateAuto(orderID uint) (*models.Fulfillment, erro
 
 	now := time.Now()
 	var fulfillment *models.Fulfillment
-	err = models.DB.Transaction(func(tx *gorm.DB) error {
+	err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
 		var existing models.Fulfillment
 		if err := tx.Where("order_id = ?", orderID).First(&existing).Error; err == nil {
 			return ErrFulfillmentExists

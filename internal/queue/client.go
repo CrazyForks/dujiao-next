@@ -95,6 +95,23 @@ func (c *Client) EnqueueOrderTimeoutCancel(payload OrderTimeoutCancelPayload, de
 	return err
 }
 
+// EnqueueWalletRechargeExpire 推送钱包充值超时过期任务
+func (c *Client) EnqueueWalletRechargeExpire(payload WalletRechargeExpirePayload, delay time.Duration) error {
+	if !c.Enabled() {
+		return nil
+	}
+	if delay < 0 {
+		delay = 0
+	}
+	task, err := NewWalletRechargeExpireTask(payload)
+	if err != nil {
+		return err
+	}
+	options := []asynq.Option{asynq.Queue(c.defaultQueue), asynq.ProcessIn(delay)}
+	_, err = c.client.Enqueue(task, options...)
+	return err
+}
+
 // EnqueueNotificationDispatch 推送通知中心分发任务
 func (c *Client) EnqueueNotificationDispatch(payload NotificationDispatchPayload, opts ...asynq.Option) error {
 	if !c.Enabled() {

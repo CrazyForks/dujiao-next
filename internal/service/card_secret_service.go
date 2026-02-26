@@ -101,7 +101,7 @@ func (s *CardSecretService) CreateCardSecretBatch(input CreateCardSecretBatchInp
 		batch.CreatedBy = &input.AdminID
 	}
 
-	err = models.DB.Transaction(func(tx *gorm.DB) error {
+	err = s.secretRepo.Transaction(func(tx *gorm.DB) error {
 		batchRepo := s.batchRepo.WithTx(tx)
 		secretRepo := s.secretRepo.WithTx(tx)
 		if err := batchRepo.Create(batch); err != nil {

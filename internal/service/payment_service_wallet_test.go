@@ -30,6 +30,7 @@ func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 		&models.ProductSKU{},
 		&models.WalletAccount{},
 		&models.WalletTransaction{},
+		&models.WalletRechargeOrder{},
 		&models.PaymentChannel{},
 		&models.Payment{},
 	); err != nil {
@@ -45,7 +46,7 @@ func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	walletRepo := repository.NewWalletRepository(db)
 	userRepo := repository.NewUserRepository(db)
 	walletSvc := NewWalletService(walletRepo, orderRepo, userRepo)
-	paymentSvc := NewPaymentService(orderRepo, productRepo, productSKURepo, paymentRepo, channelRepo, walletRepo, nil, walletSvc, nil)
+	paymentSvc := NewPaymentService(orderRepo, productRepo, productSKURepo, paymentRepo, channelRepo, walletRepo, nil, walletSvc, nil, 15, nil)
 
 	return paymentSvc, db
 }
@@ -159,4 +160,162 @@ func TestCreatePaymentWalletFullAmountCreatesPaymentRecord(t *testing.T) {
 	if !refreshedAccount.Balance.Decimal.Equal(decimal.NewFromInt(50)) {
 		t.Fatalf("wallet balance want 50 got %s", refreshedAccount.Balance.String())
 	}
+}
+
+func TestExpireWalletRechargePaymentPendingToExpired(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusPending, constants.WalletRechargeStatusPending)
+
+	updated, err := svc.ExpireWalletRechargePayment(payment.ID)
+	if err != nil {
+		t.Fatalf("expire wallet recharge payment failed: %v", err)
+	}
+	if updated == nil {
+		t.Fatalf("expected updated payment")
+	}
+	if updated.Status != constants.PaymentStatusExpired {
+		t.Fatalf("payment status want %s got %s", constants.PaymentStatusExpired, updated.Status)
+	}
+	if updated.ExpiredAt == nil {
+		t.Fatalf("expected payment expired_at set")
+	}
+
+	var refreshedPayment models.Payment
+	if err := db.First(&refreshedPayment, payment.ID).Error; err != nil {
+		t.Fatalf("reload payment failed: %v", err)
+	}
+	if refreshedPayment.Status != constants.PaymentStatusExpired {
+		t.Fatalf("reloaded payment status want %s got %s", constants.PaymentStatusExpired, refreshedPayment.Status)
+	}
+	if refreshedPayment.ExpiredAt == nil {
+		t.Fatalf("reloaded payment expected expired_at set")
+	}
+
+	var refreshedRecharge models.WalletRechargeOrder
+	if err := db.First(&refreshedRecharge, recharge.ID).Error; err != nil {
+		t.Fatalf("reload recharge failed: %v", err)
+	}
+	if refreshedRecharge.Status != constants.WalletRechargeStatusExpired {
+		t.Fatalf("recharge status want %s got %s", constants.WalletRechargeStatusExpired, refreshedRecharge.Status)
+	}
+}
+
+func TestExpireWalletRechargePaymentDoesNotOverrideSuccess(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusSuccess, constants.WalletRechargeStatusSuccess)
+
+	updated, err := svc.ExpireWalletRechargePayment(payment.ID)
+	if err != nil {
+		t.Fatalf("expire wallet recharge payment failed: %v", err)
+	}
+	if updated == nil {
+		t.Fatalf("expected updated payment")
+	}
+	if updated.Status != constants.PaymentStatusSuccess {
+		t.Fatalf("payment status want %s got %s", constants.PaymentStatusSuccess, updated.Status)
+	}
+
+	var refreshedPayment models.Payment
+	if err := db.First(&refreshedPayment, payment.ID).Error; err != nil {
+		t.Fatalf("reload payment failed: %v", err)
+	}
+	if refreshedPayment.Status != constants.PaymentStatusSuccess {
+		t.Fatalf("reloaded payment status want %s got %s", constants.PaymentStatusSuccess, refreshedPayment.Status)
+	}
+	if refreshedPayment.PaidAt == nil {
+		t.Fatalf("success payment should keep paid_at")
+	}
+
+	var refreshedRecharge models.WalletRechargeOrder
+	if err := db.First(&refreshedRecharge, recharge.ID).Error; err != nil {
+		t.Fatalf("reload recharge failed: %v", err)
+	}
+	if refreshedRecharge.Status != constants.WalletRechargeStatusSuccess {
+		t.Fatalf("recharge status want %s got %s", constants.WalletRechargeStatusSuccess, refreshedRecharge.Status)
+	}
+}
+
+func TestExpireWalletRechargePaymentSkipsOrderPayment(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	now := time.Now()
+	payment := &models.Payment{
+		OrderID:         99,
+		ChannelID:       1,
+		ProviderType:    constants.PaymentProviderOfficial,
+		ChannelType:     constants.PaymentChannelTypeWechat,
+		InteractionMode: constants.PaymentInteractionQR,
+		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
+		FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+		Currency:        "CNY",
+		Status:          constants.PaymentStatusPending,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+	if err := db.Create(payment).Error; err != nil {
+		t.Fatalf("create payment failed: %v", err)
+	}
+
+	updated, err := svc.ExpireWalletRechargePayment(payment.ID)
+	if err != nil {
+		t.Fatalf("expire wallet recharge payment failed: %v", err)
+	}
+	if updated == nil {
+		t.Fatalf("expected payment result")
+	}
+	if updated.Status != constants.PaymentStatusPending {
+		t.Fatalf("order payment should remain pending, got %s", updated.Status)
+	}
+}
+
+func createWalletRechargeFixture(t *testing.T, db *gorm.DB, paymentStatus string, rechargeStatus string) (*models.Payment, *models.WalletRechargeOrder) {
+	t.Helper()
+	now := time.Now()
+	payment := &models.Payment{
+		OrderID:         0,
+		ChannelID:       1,
+		ProviderType:    constants.PaymentProviderOfficial,
+		ChannelType:     constants.PaymentChannelTypeWechat,
+		InteractionMode: constants.PaymentInteractionQR,
+		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
+		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
+		FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+		Currency:        "CNY",
+		Status:          paymentStatus,
+		ProviderRef:     fmt.Sprintf("RECHARGE-PAY-%d", now.UnixNano()),
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+	if paymentStatus == constants.PaymentStatusSuccess {
+		payment.PaidAt = &now
+	}
+	if err := db.Create(payment).Error; err != nil {
+		t.Fatalf("create payment failed: %v", err)
+	}
+
+	recharge := &models.WalletRechargeOrder{
+		RechargeNo:      fmt.Sprintf("WRTEST%d", now.UnixNano()),
+		UserID:          1,
+		PaymentID:       payment.ID,
+		ChannelID:       1,
+		ProviderType:    constants.PaymentProviderOfficial,
+		ChannelType:     constants.PaymentChannelTypeWechat,
+		InteractionMode: constants.PaymentInteractionQR,
+		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
+		PayableAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
+		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
+		FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+		Currency:        "CNY",
+		Status:          rechargeStatus,
+		Remark:          "test",
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+	if rechargeStatus == constants.WalletRechargeStatusSuccess {
+		recharge.PaidAt = &now
+	}
+	if err := db.Create(recharge).Error; err != nil {
+		t.Fatalf("create recharge failed: %v", err)
+	}
+	return payment, recharge
 }

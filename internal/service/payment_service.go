@@ -39,11 +39,25 @@ type PaymentService struct {
 	walletRepo      repository.WalletRepository
 	queueClient     *queue.Client
 	walletSvc       *WalletService
+	settingService  *SettingService
+	expireMinutes   int
 	notificationSvc *NotificationService
 }
 
 // NewPaymentService 创建支付服务
-func NewPaymentService(orderRepo repository.OrderRepository, productRepo repository.ProductRepository, productSKURepo repository.ProductSKURepository, paymentRepo repository.PaymentRepository, channelRepo repository.PaymentChannelRepository, walletRepo repository.WalletRepository, queueClient *queue.Client, walletSvc *WalletService, notificationSvc *NotificationService) *PaymentService {
+func NewPaymentService(
+	orderRepo repository.OrderRepository,
+	productRepo repository.ProductRepository,
+	productSKURepo repository.ProductSKURepository,
+	paymentRepo repository.PaymentRepository,
+	channelRepo repository.PaymentChannelRepository,
+	walletRepo repository.WalletRepository,
+	queueClient *queue.Client,
+	walletSvc *WalletService,
+	settingService *SettingService,
+	expireMinutes int,
+	notificationSvc *NotificationService,
+) *PaymentService {
 	return &PaymentService{
 		orderRepo:       orderRepo,
 		productRepo:     productRepo,
@@ -53,6 +67,8 @@ func NewPaymentService(orderRepo repository.OrderRepository, productRepo reposit
 		walletRepo:      walletRepo,
 		queueClient:     queueClient,
 		walletSvc:       walletSvc,
+		settingService:  settingService,
+		expireMinutes:   expireMinutes,
 		notificationSvc: notificationSvc,
 	}
 }
@@ -168,7 +184,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 	orderPaidByWallet := false
 	now := time.Now()
 
-	err := models.DB.Transaction(func(tx *gorm.DB) error {
+	err := s.paymentRepo.Transaction(func(tx *gorm.DB) error {
 		var lockedOrder models.Order
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Preload("Items").
@@ -358,7 +374,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 	}
 
 	if err := s.applyProviderPayment(input, order, channel, payment); err != nil {
-		rollbackErr := models.DB.Transaction(func(tx *gorm.DB) error {
+		rollbackErr := s.paymentRepo.Transaction(func(tx *gorm.DB) error {
 			paymentRepo := s.paymentRepo.WithTx(tx)
 			payment.Status = constants.PaymentStatusFailed
 			payment.UpdatedAt = time.Now()
@@ -458,7 +474,7 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 
 	var payment *models.Payment
 	var recharge *models.WalletRechargeOrder
-	err = models.DB.Transaction(func(tx *gorm.DB) error {
+	err = s.paymentRepo.Transaction(func(tx *gorm.DB) error {
 		rechargeNo := generateWalletRechargeNo()
 		paymentRepo := s.paymentRepo.WithTx(tx)
 		payment = &models.Payment{
@@ -520,7 +536,7 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 		ClientIP:  input.ClientIP,
 		Context:   input.Context,
 	}, virtualOrder, channel, payment); err != nil {
-		_ = models.DB.Transaction(func(tx *gorm.DB) error {
+		_ = s.paymentRepo.Transaction(func(tx *gorm.DB) error {
 			rechargeRepo := s.walletRepo.WithTx(tx)
 			paymentRepo := s.paymentRepo.WithTx(tx)
 			failedAt := time.Now()
@@ -538,6 +554,40 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 			return rechargeRepo.UpdateRechargeOrder(lockedRecharge)
 		})
 		return nil, err
+	}
+	if s.queueClient != nil {
+		delay := time.Duration(s.resolveExpireMinutes()) * time.Minute
+		if err := s.queueClient.EnqueueWalletRechargeExpire(queue.WalletRechargeExpirePayload{
+			PaymentID: payment.ID,
+		}, delay); err != nil {
+			logger.Errorw("wallet_recharge_enqueue_timeout_expire_failed",
+				"payment_id", payment.ID,
+				"recharge_no", recharge.RechargeNo,
+				"delay_minutes", int(delay/time.Minute),
+				"error", err,
+			)
+			_ = s.paymentRepo.Transaction(func(tx *gorm.DB) error {
+				rechargeRepo := s.walletRepo.WithTx(tx)
+				paymentRepo := s.paymentRepo.WithTx(tx)
+				failedAt := time.Now()
+				payment.Status = constants.PaymentStatusFailed
+				payment.UpdatedAt = failedAt
+				if updateErr := paymentRepo.Update(payment); updateErr != nil {
+					return updateErr
+				}
+				lockedRecharge, getErr := rechargeRepo.GetRechargeOrderByPaymentIDForUpdate(payment.ID)
+				if getErr != nil || lockedRecharge == nil {
+					return getErr
+				}
+				if lockedRecharge.Status == constants.WalletRechargeStatusSuccess {
+					return nil
+				}
+				lockedRecharge.Status = constants.WalletRechargeStatusFailed
+				lockedRecharge.UpdatedAt = failedAt
+				return rechargeRepo.UpdateRechargeOrder(lockedRecharge)
+			})
+			return nil, ErrQueueUnavailable
+		}
 	}
 
 	reloadedRecharge, err := s.walletRepo.GetRechargeOrderByPaymentID(payment.ID)
@@ -1115,6 +1165,24 @@ func validatePaymentCurrencyForChannel(currency string, channel *models.PaymentC
 		return ErrPaymentCurrencyMismatch
 	}
 	return nil
+}
+
+func (s *PaymentService) resolveExpireMinutes() int {
+	defaultMinutes := s.expireMinutes
+	if defaultMinutes <= 0 {
+		defaultMinutes = 15
+	}
+	if s.settingService == nil {
+		return defaultMinutes
+	}
+	minutes, err := s.settingService.GetOrderPaymentExpireMinutes(defaultMinutes)
+	if err != nil {
+		return defaultMinutes
+	}
+	if minutes <= 0 {
+		return defaultMinutes
+	}
+	return minutes
 }
 
 func normalizePaymentStatus(status string) string {

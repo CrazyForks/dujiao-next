@@ -37,6 +37,7 @@ func (c *Consumer) Register(mux *asynq.ServeMux) {
 	mux.HandleFunc(queue.TaskOrderStatusEmail, c.handleOrderStatusEmail)
 	mux.HandleFunc(queue.TaskOrderAutoFulfill, c.handleOrderAutoFulfill)
 	mux.HandleFunc(queue.TaskOrderTimeoutCancel, c.handleOrderTimeoutCancel)
+	mux.HandleFunc(queue.TaskWalletRechargeExpire, c.handleWalletRechargeExpire)
 	mux.HandleFunc(queue.TaskNotificationDispatch, c.handleNotificationDispatch)
 }
 
@@ -186,6 +187,43 @@ func (c *Consumer) handleOrderTimeoutCancel(_ context.Context, task *asynq.Task)
 			return err
 		default:
 			logger.Warnw("worker_order_timeout_cancel_failed", "order_id", payload.OrderID, "error", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Consumer) handleWalletRechargeExpire(_ context.Context, task *asynq.Task) error {
+	if c == nil || task == nil {
+		logger.Debugw("worker_wallet_recharge_expire_skip_nil", "consumer_nil", c == nil, "task_nil", task == nil)
+		return nil
+	}
+	var payload queue.WalletRechargeExpirePayload
+	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
+		logger.Warnw("worker_wallet_recharge_expire_unmarshal_failed", "error", err)
+		return err
+	}
+	if payload.PaymentID == 0 {
+		logger.Debugw("worker_wallet_recharge_expire_skip_invalid_payload", "payment_id", payload.PaymentID)
+		return nil
+	}
+	if c.PaymentService == nil {
+		logger.Warnw("worker_wallet_recharge_expire_skip_payment_service_nil", "payment_id", payload.PaymentID)
+		return nil
+	}
+	if _, err := c.PaymentService.ExpireWalletRechargePayment(payload.PaymentID); err != nil {
+		switch {
+		case errors.Is(err, service.ErrPaymentNotFound):
+			logger.Debugw("worker_wallet_recharge_expire_skip_payment_not_found", "payment_id", payload.PaymentID)
+			return nil
+		case errors.Is(err, service.ErrWalletRechargeNotFound):
+			logger.Debugw("worker_wallet_recharge_expire_skip_recharge_not_found", "payment_id", payload.PaymentID)
+			return nil
+		case errors.Is(err, service.ErrPaymentUpdateFailed):
+			logger.Warnw("worker_wallet_recharge_expire_update_failed", "payment_id", payload.PaymentID, "error", err)
+			return err
+		default:
+			logger.Warnw("worker_wallet_recharge_expire_failed", "payment_id", payload.PaymentID, "error", err)
 			return err
 		}
 	}

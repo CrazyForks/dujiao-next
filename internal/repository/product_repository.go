@@ -22,6 +22,7 @@ type ProductRepository interface {
 	ReserveManualStock(productID uint, quantity int) (int64, error)
 	ReleaseManualStock(productID uint, quantity int) (int64, error)
 	ConsumeManualStock(productID uint, quantity int) (int64, error)
+	Transaction(fn func(tx *gorm.DB) error) error
 	WithTx(tx *gorm.DB) ProductRepository
 }
 
@@ -41,6 +42,14 @@ func (r *GormProductRepository) WithTx(tx *gorm.DB) ProductRepository {
 		return r
 	}
 	return &GormProductRepository{db: tx}
+}
+
+// Transaction 执行事务
+func (r *GormProductRepository) Transaction(fn func(tx *gorm.DB) error) error {
+	if fn == nil {
+		return nil
+	}
+	return r.db.Transaction(fn)
 }
 
 // List 商品列表

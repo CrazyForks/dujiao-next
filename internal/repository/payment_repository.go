@@ -22,6 +22,7 @@ type PaymentRepository interface {
 	GetLatestPendingByOrder(orderID uint, now time.Time) (*models.Payment, error)
 	GetLatestPendingByOrderChannel(orderID uint, channelID uint, now time.Time) (*models.Payment, error)
 	ListAdmin(filter PaymentListFilter) ([]models.Payment, int64, error)
+	Transaction(fn func(tx *gorm.DB) error) error
 	WithTx(tx *gorm.DB) *GormPaymentRepository
 }
 
@@ -41,6 +42,14 @@ func (r *GormPaymentRepository) WithTx(tx *gorm.DB) *GormPaymentRepository {
 		return r
 	}
 	return &GormPaymentRepository{db: tx}
+}
+
+// Transaction 执行事务
+func (r *GormPaymentRepository) Transaction(fn func(tx *gorm.DB) error) error {
+	if fn == nil {
+		return nil
+	}
+	return r.db.Transaction(fn)
 }
 
 // Create 创建支付记录

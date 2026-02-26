@@ -23,6 +23,7 @@ type OrderRepository interface {
 	ListByGuest(email, password string, page, pageSize int) ([]models.Order, int64, error)
 	ListAdmin(filter OrderListFilter) ([]models.Order, int64, error)
 	UpdateStatus(id uint, status string, updates map[string]interface{}) error
+	Transaction(fn func(tx *gorm.DB) error) error
 	WithTx(tx *gorm.DB) *GormOrderRepository
 }
 
@@ -42,6 +43,14 @@ func (r *GormOrderRepository) WithTx(tx *gorm.DB) *GormOrderRepository {
 		return r
 	}
 	return &GormOrderRepository{db: tx}
+}
+
+// Transaction 执行事务
+func (r *GormOrderRepository) Transaction(fn func(tx *gorm.DB) error) error {
+	if fn == nil {
+		return nil
+	}
+	return r.db.Transaction(fn)
 }
 
 func (r *GormOrderRepository) withChildren(query *gorm.DB) *gorm.DB {

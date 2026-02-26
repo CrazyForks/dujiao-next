@@ -313,7 +313,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 		order.CouponID = &result.AppliedCoupon.ID
 	}
 
-	err = models.DB.Transaction(func(tx *gorm.DB) error {
+	err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
 		orderRepo := s.orderRepo.WithTx(tx)
 		var productSKURepo repository.ProductSKURepository
 		if s.productSKURepo != nil {
@@ -788,7 +788,7 @@ func (s *OrderService) cancelOrderWithChildren(order *models.Order, rollbackCoup
 		return ErrOrderNotFound
 	}
 	now := time.Now()
-	err := models.DB.Transaction(func(tx *gorm.DB) error {
+	err := s.orderRepo.Transaction(func(tx *gorm.DB) error {
 		orderRepo := s.orderRepo.WithTx(tx)
 		productRepo := s.productRepo.WithTx(tx)
 		var productSKURepo repository.ProductSKURepository
@@ -948,7 +948,7 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*mo
 				return nil, ErrOrderStatusInvalid
 			}
 			now := time.Now()
-			err = models.DB.Transaction(func(tx *gorm.DB) error {
+			err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
 				orderRepo := s.orderRepo.WithTx(tx)
 				productRepo := s.productRepo.WithTx(tx)
 				var productSKURepo repository.ProductSKURepository
@@ -999,7 +999,7 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*mo
 				return nil, ErrOrderStatusInvalid
 			}
 			now := time.Now()
-			err = models.DB.Transaction(func(tx *gorm.DB) error {
+			err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
 				orderRepo := s.orderRepo.WithTx(tx)
 				updates := map[string]interface{}{"updated_at": now}
 				if err := orderRepo.UpdateStatus(order.ID, constants.OrderStatusCompleted, updates); err != nil {
@@ -1063,7 +1063,7 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*mo
 	}
 
 	if target == constants.OrderStatusCanceled {
-		err = models.DB.Transaction(func(tx *gorm.DB) error {
+		err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
 			orderRepo := s.orderRepo.WithTx(tx)
 			productRepo := s.productRepo.WithTx(tx)
 			var productSKURepo repository.ProductSKURepository
@@ -1090,7 +1090,7 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*mo
 			return nil
 		})
 	} else if target == constants.OrderStatusPaid {
-		err = models.DB.Transaction(func(tx *gorm.DB) error {
+		err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
 			orderRepo := s.orderRepo.WithTx(tx)
 			productRepo := s.productRepo.WithTx(tx)
 			var productSKURepo repository.ProductSKURepository

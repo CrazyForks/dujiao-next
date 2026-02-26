@@ -14,17 +14,17 @@ import (
 
 // ProductService 商品业务服务
 type ProductService struct {
-	repo             repository.ProductRepository
-	productSKURepo   repository.ProductSKURepository
-	cardSecretRepo   repository.CardSecretRepository
+	repo           repository.ProductRepository
+	productSKURepo repository.ProductSKURepository
+	cardSecretRepo repository.CardSecretRepository
 }
 
 // NewProductService 创建商品服务
 func NewProductService(repo repository.ProductRepository, productSKURepo repository.ProductSKURepository, cardSecretRepo repository.CardSecretRepository) *ProductService {
 	return &ProductService{
-		repo:             repo,
-		productSKURepo:   productSKURepo,
-		cardSecretRepo:   cardSecretRepo,
+		repo:           repo,
+		productSKURepo: productSKURepo,
+		cardSecretRepo: cardSecretRepo,
 	}
 }
 
@@ -185,7 +185,7 @@ func (s *ProductService) Create(input CreateProductInput) (*models.Product, erro
 		product.ManualFormSchemaJSON = normalizedSchemaJSON
 	}
 
-	if err := models.DB.Transaction(func(tx *gorm.DB) error {
+	if err := s.repo.Transaction(func(tx *gorm.DB) error {
 		productRepo := s.repo.WithTx(tx)
 		var skuRepo repository.ProductSKURepository
 		if s.productSKURepo != nil {
@@ -299,7 +299,7 @@ func (s *ProductService) Update(id string, input CreateProductInput) (*models.Pr
 	product.PriceAmount = models.NewMoneyFromDecimal(priceAmount)
 	product.ManualStockTotal = manualStockTotal
 
-	if err := models.DB.Transaction(func(tx *gorm.DB) error {
+	if err := s.repo.Transaction(func(tx *gorm.DB) error {
 		productRepo := s.repo.WithTx(tx)
 		var skuRepo repository.ProductSKURepository
 		if s.productSKURepo != nil {

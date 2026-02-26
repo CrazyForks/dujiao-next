@@ -175,7 +175,7 @@ func (s *WalletService) AdminRefundToWallet(input AdminRefundToWalletInput) (*mo
 	remark := cleanWalletRemark(input.Remark, "管理员退款到余额")
 
 	var txnResult *models.WalletTransaction
-	if err := models.DB.Transaction(func(tx *gorm.DB) error {
+	if err := s.walletRepo.Transaction(func(tx *gorm.DB) error {
 		var order models.Order
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			First(&order, input.OrderID).Error; err != nil {
@@ -550,7 +550,7 @@ func (s *WalletService) CreditInTx(tx *gorm.DB, input WalletCreditInput) (*model
 func (s *WalletService) changeBalance(userID uint, delta decimal.Decimal, txnType string, orderID *uint, reference, remark, currency string) (*models.WalletAccount, *models.WalletTransaction, error) {
 	var accountResult *models.WalletAccount
 	var txnResult *models.WalletTransaction
-	if err := models.DB.Transaction(func(tx *gorm.DB) error {
+	if err := s.walletRepo.Transaction(func(tx *gorm.DB) error {
 		repo := s.walletRepo.WithTx(tx)
 		now := time.Now()
 		account, err := s.ensureAccountForUpdate(repo, userID, now)
