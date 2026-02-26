@@ -2,8 +2,10 @@ package config
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 
+	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 
 	"github.com/spf13/viper"
@@ -189,6 +191,35 @@ type CORSConfig struct {
 	MaxAge           int      `mapstructure:"max_age"`
 }
 
+var (
+	defaultCORSAllowedOrigins = []string{"*"}
+	defaultCORSAllowedMethods = []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodPatch}
+	defaultCORSAllowedHeaders = []string{
+		"Content-Type",
+		"Content-Length",
+		"Accept-Encoding",
+		"Authorization",
+		"Cache-Control",
+		"X-Requested-With",
+		"X-CSRF-Token",
+	}
+)
+
+// DefaultCORSAllowedOrigins 返回默认允许跨域来源（副本，避免调用方修改全局默认值）
+func DefaultCORSAllowedOrigins() []string {
+	return append([]string(nil), defaultCORSAllowedOrigins...)
+}
+
+// DefaultCORSAllowedMethods 返回默认允许跨域方法（副本，避免调用方修改全局默认值）
+func DefaultCORSAllowedMethods() []string {
+	return append([]string(nil), defaultCORSAllowedMethods...)
+}
+
+// DefaultCORSAllowedHeaders 返回默认允许跨域请求头（副本，避免调用方修改全局默认值）
+func DefaultCORSAllowedHeaders() []string {
+	return append([]string(nil), defaultCORSAllowedHeaders...)
+}
+
 // SecurityConfig 安全配置
 type SecurityConfig struct {
 	LoginRateLimit LoginRateLimitConfig `mapstructure:"login_rate_limit"`
@@ -251,7 +282,7 @@ func Load() *Config {
 	viper.SetDefault("redis.port", 6379)
 	viper.SetDefault("redis.password", "")
 	viper.SetDefault("redis.db", 0)
-	viper.SetDefault("redis.prefix", "dj")
+	viper.SetDefault("redis.prefix", constants.RedisPrefixDefault)
 	viper.SetDefault("queue.enabled", true)
 	viper.SetDefault("queue.host", "127.0.0.1")
 	viper.SetDefault("queue.port", 6379)
@@ -278,17 +309,9 @@ func Load() *Config {
 	})
 	viper.SetDefault("upload.max_width", 4096)
 	viper.SetDefault("upload.max_height", 4096)
-	viper.SetDefault("cors.allowed_origins", []string{"*"})
-	viper.SetDefault("cors.allowed_methods", []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"})
-	viper.SetDefault("cors.allowed_headers", []string{
-		"Content-Type",
-		"Content-Length",
-		"Accept-Encoding",
-		"Authorization",
-		"Cache-Control",
-		"X-Requested-With",
-		"X-CSRF-Token",
-	})
+	viper.SetDefault("cors.allowed_origins", DefaultCORSAllowedOrigins())
+	viper.SetDefault("cors.allowed_methods", DefaultCORSAllowedMethods())
+	viper.SetDefault("cors.allowed_headers", DefaultCORSAllowedHeaders())
 	viper.SetDefault("cors.allow_credentials", true)
 	viper.SetDefault("cors.max_age", 600)
 	viper.SetDefault("security.login_rate_limit.window_seconds", 300)

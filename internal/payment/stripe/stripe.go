@@ -17,6 +17,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dujiao-next/internal/constants"
+
 	"github.com/shopspring/decimal"
 )
 
@@ -465,13 +467,13 @@ func fillWebhookResult(result *WebhookResult, eventType string, objectRaw map[st
 func mapEventTypeStatus(eventType string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(eventType)) {
 	case "checkout.session.completed", "checkout.session.async_payment_succeeded", "payment_intent.succeeded":
-		return "success", true
+		return constants.PaymentStatusSuccess, true
 	case "checkout.session.expired":
-		return "expired", true
+		return constants.PaymentStatusExpired, true
 	case "checkout.session.async_payment_failed", "payment_intent.payment_failed", "payment_intent.canceled":
-		return "failed", true
+		return constants.PaymentStatusFailed, true
 	case "payment_intent.processing":
-		return "pending", true
+		return constants.PaymentStatusPending, true
 	default:
 		return "", false
 	}
@@ -481,27 +483,27 @@ func mapCheckoutSessionStatus(paymentStatus string, sessionStatus string) string
 	paymentStatus = strings.ToLower(strings.TrimSpace(paymentStatus))
 	sessionStatus = strings.ToLower(strings.TrimSpace(sessionStatus))
 	if paymentStatus == "paid" {
-		return "success"
+		return constants.PaymentStatusSuccess
 	}
 	if sessionStatus == "expired" {
-		return "expired"
+		return constants.PaymentStatusExpired
 	}
 	if sessionStatus == "complete" && paymentStatus == "no_payment_required" {
-		return "success"
+		return constants.PaymentStatusSuccess
 	}
-	return "pending"
+	return constants.PaymentStatusPending
 }
 
 func mapPaymentIntentStatus(status string) string {
 	switch strings.ToLower(strings.TrimSpace(status)) {
 	case "succeeded":
-		return "success"
+		return constants.PaymentStatusSuccess
 	case "canceled", "requires_payment_method":
-		return "failed"
+		return constants.PaymentStatusFailed
 	case "processing", "requires_capture", "requires_action", "requires_confirmation":
-		return "pending"
+		return constants.PaymentStatusPending
 	default:
-		return "pending"
+		return constants.PaymentStatusPending
 	}
 }
 

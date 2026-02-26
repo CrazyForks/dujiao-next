@@ -2,12 +2,14 @@ package router
 
 import (
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 
 	"github.com/dujiao-next/internal/authz"
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
+	"github.com/dujiao-next/internal/constants"
 	adminhandlers "github.com/dujiao-next/internal/http/handlers/admin"
 	publichandlers "github.com/dujiao-next/internal/http/handlers/public"
 	"github.com/dujiao-next/internal/http/response"
@@ -30,7 +32,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 	adminHandler := adminhandlers.New(c)
 	redisPrefix := strings.TrimSpace(cfg.Redis.Prefix)
 	if redisPrefix == "" {
-		redisPrefix = "dj"
+		redisPrefix = constants.RedisPrefixDefault
 	}
 	redisClient := cache.Client()
 	loginRule := RateLimitRule{
@@ -271,7 +273,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 
 	// 健康检查
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
 	return r
@@ -295,7 +297,7 @@ func buildAdminPermissionCatalog(engine *gin.Engine) []adminPermissionCatalogIte
 
 	for _, item := range routes {
 		method := strings.ToUpper(strings.TrimSpace(item.Method))
-		if method == "" || method == "OPTIONS" || method == "HEAD" {
+		if method == "" || method == http.MethodOptions || method == http.MethodHead {
 			continue
 		}
 		if !strings.HasPrefix(item.Path, "/api/v1/admin/") {

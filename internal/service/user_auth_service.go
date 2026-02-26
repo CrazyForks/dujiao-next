@@ -98,7 +98,7 @@ func (s *UserAuthService) GenerateUserJWT(user *models.User, expireHours int) (s
 
 // ParseUserJWT 解析用户 JWT Token
 func (s *UserAuthService) ParseUserJWT(tokenString string) (*UserJWTClaims, error) {
-	parser := jwt.NewParser(jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+	parser := newHS256JWTParser()
 	claims := &UserJWTClaims{}
 	token, err := parser.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.cfg.UserJWT.SecretKey), nil

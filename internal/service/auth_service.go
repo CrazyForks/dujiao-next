@@ -84,7 +84,7 @@ func (s *AuthService) GenerateJWT(admin *models.Admin) (string, time.Time, error
 
 // ParseJWT 解析 JWT Token
 func (s *AuthService) ParseJWT(tokenString string) (*JWTClaims, error) {
-	parser := jwt.NewParser(jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+	parser := newHS256JWTParser()
 	token, err := parser.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.cfg.JWT.SecretKey), nil
 	})

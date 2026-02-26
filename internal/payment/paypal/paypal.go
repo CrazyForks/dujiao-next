@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dujiao-next/internal/constants"
 )
 
 var (
@@ -415,20 +417,20 @@ func ToPaymentStatus(eventType, resourceStatus string) (string, bool) {
 
 	switch eventType {
 	case "PAYMENT.CAPTURE.COMPLETED", "CHECKOUT.ORDER.COMPLETED":
-		return "success", true
+		return constants.PaymentStatusSuccess, true
 	case "PAYMENT.CAPTURE.DENIED", "PAYMENT.CAPTURE.DECLINED", "PAYMENT.CAPTURE.FAILED", "CHECKOUT.ORDER.DENIED":
-		return "failed", true
+		return constants.PaymentStatusFailed, true
 	case "PAYMENT.CAPTURE.PENDING", "CHECKOUT.ORDER.APPROVED":
-		return "pending", true
+		return constants.PaymentStatusPending, true
 	}
 
 	switch resourceStatus {
 	case "COMPLETED":
-		return "success", true
+		return constants.PaymentStatusSuccess, true
 	case "DENIED", "DECLINED", "FAILED", "VOIDED":
-		return "failed", true
+		return constants.PaymentStatusFailed, true
 	case "PENDING", "APPROVED", "CREATED", "SAVED":
-		return "pending", true
+		return constants.PaymentStatusPending, true
 	}
 
 	return "", false

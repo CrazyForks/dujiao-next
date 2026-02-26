@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dujiao-next/internal/constants"
 )
 
 var (
@@ -65,8 +67,8 @@ type CreateResult struct {
 type CallbackData struct {
 	TradeID            string      `json:"trade_id"`
 	OrderID            string      `json:"order_id"`
-	Amount             interface{} `json:"amount"`              // 可能是 float64 或 string
-	ActualAmount       interface{} `json:"actual_amount"`       // 可能是 float64 或 string
+	Amount             interface{} `json:"amount"`        // 可能是 float64 或 string
+	ActualAmount       interface{} `json:"actual_amount"` // 可能是 float64 或 string
 	Token              string      `json:"token"`
 	BlockTransactionID string      `json:"block_transaction_id"`
 	Signature          string      `json:"signature"`
@@ -232,7 +234,6 @@ func CreatePayment(ctx context.Context, cfg *Config, input CreateInput) (*Create
 	}, nil
 }
 
-
 // VerifyCallback 验证回调签名
 func VerifyCallback(cfg *Config, data *CallbackData) error {
 	if cfg == nil || data == nil {
@@ -390,10 +391,10 @@ func IsSupportedTradeType(tradeType string) bool {
 func ToPaymentStatus(status int) string {
 	switch status {
 	case StatusSuccess:
-		return "success"
+		return constants.PaymentStatusSuccess
 	case StatusExpired:
-		return "expired"
+		return constants.PaymentStatusExpired
 	default:
-		return "pending"
+		return constants.PaymentStatusPending
 	}
 }

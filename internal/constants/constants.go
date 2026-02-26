@@ -231,6 +231,11 @@ const (
 	TaskNotificationDispatch = "notification:dispatch"
 )
 
+// 缓存默认配置常量
+const (
+	RedisPrefixDefault = "dj"
+)
+
 // 设置键常量
 const (
 	SettingKeySiteConfig               = "site_config"

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/config"
+	"github.com/dujiao-next/internal/constants"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -32,7 +33,7 @@ func InitRedis(cfg *config.RedisConfig) error {
 	}
 	redisPrefix = strings.TrimSpace(cfg.Prefix)
 	if redisPrefix == "" {
-		redisPrefix = "dj"
+		redisPrefix = constants.RedisPrefixDefault
 	}
 
 	redisClient = redis.NewClient(&redis.Options{

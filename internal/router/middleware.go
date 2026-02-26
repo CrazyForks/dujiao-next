@@ -2,6 +2,7 @@ package router
 
 import (
 	"go.uber.org/zap"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -24,28 +25,22 @@ import (
 const requestIDKey = "request_id"
 const requestIDHeader = "X-Request-ID"
 const adminIsSuperContextKey = "admin_is_super"
+const authHeaderKey = "Authorization"
+const authSchemeBearer = "Bearer"
 
 // CORSMiddleware 跨域中间件
 func CORSMiddleware(cfg config.CORSConfig) gin.HandlerFunc {
 	allowedOrigins := cfg.AllowedOrigins
 	if len(allowedOrigins) == 0 {
-		allowedOrigins = []string{"*"}
+		allowedOrigins = config.DefaultCORSAllowedOrigins()
 	}
 	allowedMethods := cfg.AllowedMethods
 	if len(allowedMethods) == 0 {
-		allowedMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
+		allowedMethods = config.DefaultCORSAllowedMethods()
 	}
 	allowedHeaders := cfg.AllowedHeaders
 	if len(allowedHeaders) == 0 {
-		allowedHeaders = []string{
-			"Content-Type",
-			"Content-Length",
-			"Accept-Encoding",
-			"Authorization",
-			"Cache-Control",
-			"X-Requested-With",
-			"X-CSRF-Token",
-		}
+		allowedHeaders = config.DefaultCORSAllowedHeaders()
 	}
 	methodsHeader := strings.Join(allowedMethods, ", ")
 	headersHeader := strings.Join(allowedHeaders, ", ")
@@ -68,8 +63,8 @@ func CORSMiddleware(cfg config.CORSConfig) gin.HandlerFunc {
 			c.Writer.Header().Set("Access-Control-Max-Age", strconv.Itoa(cfg.MaxAge))
 		}
 
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
 
@@ -165,7 +160,7 @@ func JWTAuthMiddleware(secretKey string, adminRepo repository.AdminRepository) g
 			c.Abort()
 			return
 		}
-		authHeader := c.GetHeader("Authorization")
+		authHeader := c.GetHeader(authHeaderKey)
 		if authHeader == "" {
 			msg := i18n.T(i18n.ResolveLocale(c), "error.auth_header_missing")
 			response.Unauthorized(c, msg)
@@ -174,7 +169,7 @@ func JWTAuthMiddleware(secretKey string, adminRepo repository.AdminRepository) g
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
-		if !(len(parts) == 2 && parts[0] == "Bearer") {
+		if !(len(parts) == 2 && parts[0] == authSchemeBearer) {
 			msg := i18n.T(i18n.ResolveLocale(c), "error.auth_header_invalid")
 			response.Unauthorized(c, msg)
 			c.Abort()
@@ -182,7 +177,7 @@ func JWTAuthMiddleware(secretKey string, adminRepo repository.AdminRepository) g
 		}
 
 		tokenString := parts[1]
-		parser := jwt.NewParser(jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+		parser := newHS256JWTParser()
 		claims := &service.JWTClaims{}
 		token, err := parser.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(secretKey), nil
@@ -326,7 +321,7 @@ func UserJWTAuthMiddleware(secretKey string, userRepo repository.UserRepository)
 			c.Abort()
 			return
 		}
-		authHeader := c.GetHeader("Authorization")
+		authHeader := c.GetHeader(authHeaderKey)
 		if authHeader == "" {
 			msg := i18n.T(i18n.ResolveLocale(c), "error.auth_header_missing")
 			response.Unauthorized(c, msg)
@@ -335,7 +330,7 @@ func UserJWTAuthMiddleware(secretKey string, userRepo repository.UserRepository)
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
-		if !(len(parts) == 2 && parts[0] == "Bearer") {
+		if !(len(parts) == 2 && parts[0] == authSchemeBearer) {
 			msg := i18n.T(i18n.ResolveLocale(c), "error.auth_header_invalid")
 			response.Unauthorized(c, msg)
 			c.Abort()
@@ -343,7 +338,7 @@ func UserJWTAuthMiddleware(secretKey string, userRepo repository.UserRepository)
 		}
 
 		tokenString := parts[1]
-		parser := jwt.NewParser(jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+		parser := newHS256JWTParser()
 		claims := &service.UserJWTClaims{}
 		token, err := parser.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(secretKey), nil
@@ -419,6 +414,10 @@ func isIssuedAfterInvalidBeforeUnix(issuedAt *jwt.NumericDate, invalidBeforeUnix
 		return false
 	}
 	return issuedAt.Time.Unix() >= invalidBeforeUnix
+}
+
+func newHS256JWTParser() *jwt.Parser {
+	return jwt.NewParser(jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 }
 
 func isActiveUserStatus(status string) bool {
