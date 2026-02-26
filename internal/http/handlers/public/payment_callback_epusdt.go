@@ -52,7 +52,7 @@ func (h *Handler) HandleEpusdtCallback(c *gin.Context) bool {
 	payment, err := h.PaymentRepo.GetLatestByProviderRef(data.TradeID)
 	if err != nil || payment == nil {
 		log.Warnw("epusdt_callback_payment_not_found", "trade_id", data.TradeID, "error", err)
-		c.String(200, "fail")
+		c.String(200, constants.EpusdtCallbackFail)
 		return true
 	}
 
@@ -62,14 +62,14 @@ func (h *Handler) HandleEpusdtCallback(c *gin.Context) bool {
 	channel, err := h.PaymentChannelRepo.GetByID(payment.ChannelID)
 	if err != nil || channel == nil {
 		log.Warnw("epusdt_callback_channel_not_found", "channel_id", payment.ChannelID, "error", err)
-		c.String(200, "fail")
+		c.String(200, constants.EpusdtCallbackFail)
 		return true
 	}
 
 	// 验证是否为 epusdt 渠道
 	if strings.ToLower(strings.TrimSpace(channel.ProviderType)) != constants.PaymentProviderEpusdt {
 		log.Warnw("epusdt_callback_invalid_provider", "provider_type", channel.ProviderType)
-		c.String(200, "fail")
+		c.String(200, constants.EpusdtCallbackFail)
 		return true
 	}
 
@@ -77,14 +77,14 @@ func (h *Handler) HandleEpusdtCallback(c *gin.Context) bool {
 	cfg, err := epusdt.ParseConfig(channel.ConfigJSON)
 	if err != nil {
 		log.Warnw("epusdt_callback_config_parse_failed", "error", err)
-		c.String(200, "fail")
+		c.String(200, constants.EpusdtCallbackFail)
 		return true
 	}
 
 	// 验证签名
 	if err := epusdt.VerifyCallback(cfg, data); err != nil {
 		log.Warnw("epusdt_callback_signature_invalid", "error", err)
-		c.String(200, "fail")
+		c.String(200, constants.EpusdtCallbackFail)
 		return true
 	}
 
@@ -121,11 +121,11 @@ func (h *Handler) HandleEpusdtCallback(c *gin.Context) bool {
 	// 处理回调
 	if _, err := h.PaymentService.HandleCallback(input); err != nil {
 		log.Errorw("epusdt_callback_handle_failed", "error", err)
-		c.String(200, "fail")
+		c.String(200, constants.EpusdtCallbackFail)
 		return true
 	}
 
 	log.Infow("epusdt_callback_processed", "payment_id", payment.ID, "status", status)
-	c.String(200, "success")
+	c.String(200, constants.EpusdtCallbackSuccess)
 	return true
 }

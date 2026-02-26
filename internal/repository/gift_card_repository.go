@@ -11,6 +11,10 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+const (
+	giftCardListStatusExpired = "expired"
+)
+
 // GiftCardListFilter 礼品卡列表筛选
 type GiftCardListFilter struct {
 	Code           string
@@ -126,7 +130,7 @@ func (r *GormGiftCardRepository) List(filter GiftCardListFilter) ([]models.GiftC
 	if status := strings.TrimSpace(filter.Status); status != "" {
 		now := time.Now()
 		switch status {
-		case "expired":
+		case giftCardListStatusExpired:
 			query = query.Where("status = ? AND expires_at IS NOT NULL AND expires_at < ?", models.GiftCardStatusActive, now)
 		case models.GiftCardStatusActive:
 			query = query.Where("status = ? AND (expires_at IS NULL OR expires_at >= ?)", models.GiftCardStatusActive, now)

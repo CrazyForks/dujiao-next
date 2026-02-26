@@ -33,6 +33,30 @@ const (
 	defaultAPIBaseURL        = "https://api.stripe.com"
 	defaultTimeout           = 12 * time.Second
 	defaultWebhookToleranceS = 300
+
+	stripeObjectCheckoutSession = "checkout.session"
+	stripeObjectPaymentIntent   = "payment_intent"
+
+	stripeEventCheckoutSessionCompleted           = "checkout.session.completed"
+	stripeEventCheckoutSessionAsyncPaymentSuccess = "checkout.session.async_payment_succeeded"
+	stripeEventCheckoutSessionExpired             = "checkout.session.expired"
+	stripeEventCheckoutSessionAsyncPaymentFailed  = "checkout.session.async_payment_failed"
+	stripeEventPaymentIntentSucceeded             = "payment_intent.succeeded"
+	stripeEventPaymentIntentFailed                = "payment_intent.payment_failed"
+	stripeEventPaymentIntentCanceled              = "payment_intent.canceled"
+	stripeEventPaymentIntentProcessing            = "payment_intent.processing"
+
+	stripePaymentStatusPaid  = "paid"
+	stripeSessionExpired     = "expired"
+	stripeSessionComplete    = "complete"
+	stripePaymentNoRequired  = "no_payment_required"
+	stripePIStatusSucceeded  = "succeeded"
+	stripePIStatusCanceled   = "canceled"
+	stripePIStatusReqPayMeth = "requires_payment_method"
+	stripePIStatusProcessing = "processing"
+	stripePIStatusReqCapture = "requires_capture"
+	stripePIStatusReqAction  = "requires_action"
+	stripePIStatusReqConfirm = "requires_confirmation"
 )
 
 var zeroDecimalCurrencies = map[string]struct{}{
@@ -414,7 +438,7 @@ func fillWebhookResult(result *WebhookResult, eventType string, objectRaw map[st
 	result.OrderNo = strings.TrimSpace(readString(metadata, "order_no"))
 
 	switch objectType {
-	case "checkout.session":
+	case stripeObjectCheckoutSession:
 		result.SessionID = strings.TrimSpace(readString(objectRaw, "id"))
 		result.PaymentIntentID = strings.TrimSpace(readPaymentIntentID(objectRaw))
 		result.ProviderRef = result.SessionID
@@ -432,7 +456,7 @@ func fillWebhookResult(result *WebhookResult, eventType string, objectRaw map[st
 		} else {
 			result.Status = mapCheckoutSessionStatus(strings.TrimSpace(readString(objectRaw, "payment_status")), strings.TrimSpace(readString(objectRaw, "status")))
 		}
-	case "payment_intent":
+	case stripeObjectPaymentIntent:
 		result.PaymentIntentID = strings.TrimSpace(readString(objectRaw, "id"))
 		result.ProviderRef = result.PaymentIntentID
 		result.Currency = strings.ToUpper(strings.TrimSpace(readString(objectRaw, "currency")))
@@ -466,13 +490,13 @@ func fillWebhookResult(result *WebhookResult, eventType string, objectRaw map[st
 
 func mapEventTypeStatus(eventType string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(eventType)) {
-	case "checkout.session.completed", "checkout.session.async_payment_succeeded", "payment_intent.succeeded":
+	case stripeEventCheckoutSessionCompleted, stripeEventCheckoutSessionAsyncPaymentSuccess, stripeEventPaymentIntentSucceeded:
 		return constants.PaymentStatusSuccess, true
-	case "checkout.session.expired":
+	case stripeEventCheckoutSessionExpired:
 		return constants.PaymentStatusExpired, true
-	case "checkout.session.async_payment_failed", "payment_intent.payment_failed", "payment_intent.canceled":
+	case stripeEventCheckoutSessionAsyncPaymentFailed, stripeEventPaymentIntentFailed, stripeEventPaymentIntentCanceled:
 		return constants.PaymentStatusFailed, true
-	case "payment_intent.processing":
+	case stripeEventPaymentIntentProcessing:
 		return constants.PaymentStatusPending, true
 	default:
 		return "", false
@@ -482,13 +506,13 @@ func mapEventTypeStatus(eventType string) (string, bool) {
 func mapCheckoutSessionStatus(paymentStatus string, sessionStatus string) string {
 	paymentStatus = strings.ToLower(strings.TrimSpace(paymentStatus))
 	sessionStatus = strings.ToLower(strings.TrimSpace(sessionStatus))
-	if paymentStatus == "paid" {
+	if paymentStatus == stripePaymentStatusPaid {
 		return constants.PaymentStatusSuccess
 	}
-	if sessionStatus == "expired" {
+	if sessionStatus == stripeSessionExpired {
 		return constants.PaymentStatusExpired
 	}
-	if sessionStatus == "complete" && paymentStatus == "no_payment_required" {
+	if sessionStatus == stripeSessionComplete && paymentStatus == stripePaymentNoRequired {
 		return constants.PaymentStatusSuccess
 	}
 	return constants.PaymentStatusPending
@@ -496,11 +520,11 @@ func mapCheckoutSessionStatus(paymentStatus string, sessionStatus string) string
 
 func mapPaymentIntentStatus(status string) string {
 	switch strings.ToLower(strings.TrimSpace(status)) {
-	case "succeeded":
+	case stripePIStatusSucceeded:
 		return constants.PaymentStatusSuccess
-	case "canceled", "requires_payment_method":
+	case stripePIStatusCanceled, stripePIStatusReqPayMeth:
 		return constants.PaymentStatusFailed
-	case "processing", "requires_capture", "requires_action", "requires_confirmation":
+	case stripePIStatusProcessing, stripePIStatusReqCapture, stripePIStatusReqAction, stripePIStatusReqConfirm:
 		return constants.PaymentStatusPending
 	default:
 		return constants.PaymentStatusPending

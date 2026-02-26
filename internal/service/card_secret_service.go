@@ -247,7 +247,7 @@ func (s *CardSecretService) ExportCardSecrets(ids []uint, format string) ([]byte
 	}
 	normalizedFormat := strings.ToLower(strings.TrimSpace(format))
 	switch normalizedFormat {
-	case "txt", "csv":
+	case constants.ExportFormatTXT, constants.ExportFormatCSV:
 	default:
 		return nil, "", ErrCardSecretInvalid
 	}
@@ -260,7 +260,7 @@ func (s *CardSecretService) ExportCardSecrets(ids []uint, format string) ([]byte
 		return nil, "", ErrNotFound
 	}
 
-	if normalizedFormat == "txt" {
+	if normalizedFormat == constants.ExportFormatTXT {
 		lines := make([]string, 0, len(items))
 		for _, item := range items {
 			secret := strings.TrimSpace(item.Secret)

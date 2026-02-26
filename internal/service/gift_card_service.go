@@ -272,7 +272,7 @@ func (s *GiftCardService) ExportGiftCards(ids []uint, format string) ([]byte, st
 		return nil, "", ErrGiftCardInvalid
 	}
 	normalizedFormat := strings.TrimSpace(strings.ToLower(format))
-	if normalizedFormat != "csv" && normalizedFormat != "txt" {
+	if normalizedFormat != constants.ExportFormatCSV && normalizedFormat != constants.ExportFormatTXT {
 		return nil, "", ErrGiftCardInvalid
 	}
 
@@ -284,7 +284,7 @@ func (s *GiftCardService) ExportGiftCards(ids []uint, format string) ([]byte, st
 		return nil, "", ErrGiftCardNotFound
 	}
 
-	if normalizedFormat == "txt" {
+	if normalizedFormat == constants.ExportFormatTXT {
 		lines := make([]string, 0, len(cards))
 		for _, card := range cards {
 			lines = append(lines, strings.TrimSpace(card.Code))

@@ -6,6 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	responseMsgSuccess = "success"
+)
+
 // Response 统一响应结构
 type Response struct {
 	StatusCode int         `json:"status_code"` // 业务状态码
@@ -55,7 +59,7 @@ func BuildPagination(page, pageSize int, total int64) Pagination {
 func Success(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, Response{
 		StatusCode: 0,
-		Msg:        "success",
+		Msg:        responseMsgSuccess,
 		Data:       data,
 	})
 }
@@ -73,7 +77,7 @@ func SuccessWithMsg(c *gin.Context, msg string, data interface{}) {
 func SuccessWithPage(c *gin.Context, data interface{}, pagination Pagination) {
 	c.JSON(http.StatusOK, PageResponse{
 		StatusCode: 0,
-		Msg:        "success",
+		Msg:        responseMsgSuccess,
 		Data:       data,
 		Pagination: pagination,
 	})

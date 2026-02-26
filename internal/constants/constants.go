@@ -102,6 +102,12 @@ const (
 	AlipayCallbackFail            = "fail"
 )
 
+// EPUSDT 回调常量
+const (
+	EpusdtCallbackSuccess = "success"
+	EpusdtCallbackFail    = "fail"
+)
+
 // 文章类型常量
 const (
 	PostTypeBlog   = "blog"
@@ -277,6 +283,12 @@ const (
 const (
 	CardSecretSourceManual = "manual"
 	CardSecretSourceCSV    = "csv"
+)
+
+// 导出格式常量
+const (
+	ExportFormatCSV = "csv"
+	ExportFormatTXT = "txt"
 )
 
 // Banner 位置常量
