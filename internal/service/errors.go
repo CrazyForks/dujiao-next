@@ -134,4 +134,7 @@ var (
 	ErrInvalidBanner                 = errors.New("invalid banner")
 	ErrQueueUnavailable              = errors.New("queue unavailable")
 	ErrDashboardRangeInvalid         = errors.New("dashboard range invalid")
+	ErrNotificationConfigInvalid     = errors.New("notification config invalid")
+	ErrNotificationSendFailed        = errors.New("notification send failed")
+	ErrNotificationEventInvalid      = errors.New("notification event invalid")
 )

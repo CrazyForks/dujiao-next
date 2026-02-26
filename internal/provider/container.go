@@ -68,6 +68,7 @@ type Container struct {
 	UserLoginLogService   *service.UserLoginLogService
 	AuthzAuditService     *service.AuthzAuditService
 	DashboardService      *service.DashboardService
+	NotificationService   *service.NotificationService
 }
 
 // NewContainer 初始化容器
@@ -183,8 +184,9 @@ func (c *Container) initServices() {
 	c.CouponAdminService = service.NewCouponAdminService(c.CouponRepo)
 	c.PromotionAdminService = service.NewPromotionAdminService(c.PromotionRepo)
 	c.BannerService = service.NewBannerService(c.BannerRepo)
-	c.PaymentService = service.NewPaymentService(c.OrderRepo, c.ProductRepo, c.ProductSKURepo, c.PaymentRepo, c.PaymentChannelRepo, c.WalletRepo, c.QueueClient, c.WalletService)
 	c.UserLoginLogService = service.NewUserLoginLogService(c.UserLoginLogRepo)
 	c.AuthzAuditService = service.NewAuthzAuditService(c.AuthzAuditLogRepo)
 	c.DashboardService = service.NewDashboardService(c.DashboardRepo, c.SettingService)
+	c.NotificationService = service.NewNotificationService(c.SettingService, c.EmailService, c.QueueClient, c.DashboardService, c.Config.TelegramAuth)
+	c.PaymentService = service.NewPaymentService(c.OrderRepo, c.ProductRepo, c.ProductSKURepo, c.PaymentRepo, c.PaymentChannelRepo, c.WalletRepo, c.QueueClient, c.WalletService, c.NotificationService)
 }

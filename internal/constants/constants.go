@@ -202,24 +202,43 @@ const (
 	CaptchaSceneGiftCardRedeem   = "gift_card_redeem"
 )
 
+// 通知中心事件常量
+const (
+	NotificationEventWalletRechargeSuccess    = "wallet_recharge_success"
+	NotificationEventOrderPaidSuccess         = "order_paid_success"
+	NotificationEventManualFulfillmentPending = "manual_fulfillment_pending"
+	NotificationEventExceptionAlert           = "exception_alert"
+	NotificationEventExceptionAlertCheck      = "exception_alert_check"
+)
+
+// 通知中心异常阈值类型常量
+const (
+	NotificationAlertTypeOutOfStockProducts = "out_of_stock_products"
+	NotificationAlertTypeLowStockProducts   = "low_stock_products"
+	NotificationAlertTypePendingOrders      = "pending_payment_orders"
+	NotificationAlertTypePaymentsFailed     = "payments_failed"
+)
+
 // 队列常量
 const (
-	QueueDefault           = "default"
-	TaskOrderStatusEmail   = "order:status_email"
-	TaskOrderAutoFulfill   = "order:auto_fulfill"
-	TaskOrderTimeoutCancel = "order:timeout_cancel"
+	QueueDefault             = "default"
+	TaskOrderStatusEmail     = "order:status_email"
+	TaskOrderAutoFulfill     = "order:auto_fulfill"
+	TaskOrderTimeoutCancel   = "order:timeout_cancel"
+	TaskNotificationDispatch = "notification:dispatch"
 )
 
 // 设置键常量
 const (
-	SettingKeySiteConfig             = "site_config"
-	SettingKeyOrderConfig            = "order_config"
-	SettingKeySMTPConfig             = "smtp_config"
-	SettingKeyCaptchaConfig          = "captcha_config"
-	SettingKeyTelegramAuthConfig     = "telegram_auth_config"
-	SettingKeyDashboardConfig        = "dashboard_config"
-	SettingFieldSiteCurrency         = "currency"
-	SettingFieldPaymentExpireMinutes = "payment_expire_minutes"
+	SettingKeySiteConfig               = "site_config"
+	SettingKeyOrderConfig              = "order_config"
+	SettingKeySMTPConfig               = "smtp_config"
+	SettingKeyCaptchaConfig            = "captcha_config"
+	SettingKeyTelegramAuthConfig       = "telegram_auth_config"
+	SettingKeyDashboardConfig          = "dashboard_config"
+	SettingKeyNotificationCenterConfig = "notification_center_config"
+	SettingFieldSiteCurrency           = "currency"
+	SettingFieldPaymentExpireMinutes   = "payment_expire_minutes"
 )
 
 // 币种常量

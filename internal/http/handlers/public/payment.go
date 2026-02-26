@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -228,6 +229,11 @@ func (h *Handler) PaymentCallback(c *gin.Context) {
 		"client_ip", c.ClientIP(),
 		"content_type", strings.TrimSpace(c.GetHeader("Content-Type")),
 	)
+	h.enqueuePaymentExceptionAlert(c, models.JSON{
+		"alert_type":  "callback_unrecognized",
+		"alert_level": "warning",
+		"message":     "支付回调请求无法匹配已支持的回调格式",
+	})
 	c.String(http.StatusBadRequest, constants.EpayCallbackFail)
 }
 
@@ -276,6 +282,12 @@ func (h *Handler) PaypalWebhook(c *gin.Context) {
 			"event_type", eventType,
 			"error", err,
 		)
+		h.enqueuePaymentExceptionAlert(c, models.JSON{
+			"alert_type":  "paypal_webhook_handle_failed",
+			"alert_level": "error",
+			"message":     strings.TrimSpace(err.Error()),
+			"provider":    constants.PaymentChannelTypePaypal,
+		})
 		switch {
 		case errors.Is(err, service.ErrPaymentInvalid):
 			respondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
@@ -370,6 +382,12 @@ func (h *Handler) StripeWebhook(c *gin.Context) {
 			"event_type", eventType,
 			"error", err,
 		)
+		h.enqueuePaymentExceptionAlert(c, models.JSON{
+			"alert_type":  "stripe_webhook_handle_failed",
+			"alert_level": "error",
+			"message":     strings.TrimSpace(err.Error()),
+			"provider":    constants.PaymentChannelTypeStripe,
+		})
 		switch {
 		case errors.Is(err, service.ErrPaymentInvalid):
 			respondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
@@ -470,6 +488,12 @@ func (h *Handler) HandleWechatCallback(c *gin.Context) bool {
 			"channel_id", query.ChannelID,
 			"error", err,
 		)
+		h.enqueuePaymentExceptionAlert(c, models.JSON{
+			"alert_type":  "wechat_callback_handle_failed",
+			"alert_level": "error",
+			"message":     strings.TrimSpace(err.Error()),
+			"provider":    constants.PaymentChannelTypeWechat,
+		})
 		respondWechatCallback(c, false)
 		return true
 	}
@@ -583,6 +607,13 @@ func (h *Handler) HandleAlipayCallback(c *gin.Context) bool {
 			"channel_id", channel.ID,
 			"error", err,
 		)
+		h.enqueuePaymentExceptionAlert(c, models.JSON{
+			"alert_type":  "alipay_signature_invalid",
+			"alert_level": "error",
+			"payment_id":  fmt.Sprintf("%d", payment.ID),
+			"message":     strings.TrimSpace(err.Error()),
+			"provider":    constants.PaymentChannelTypeAlipay,
+		})
 		c.String(200, constants.AlipayCallbackFail)
 		return true
 	}
@@ -592,6 +623,13 @@ func (h *Handler) HandleAlipayCallback(c *gin.Context) bool {
 			"channel_id", channel.ID,
 			"error", err,
 		)
+		h.enqueuePaymentExceptionAlert(c, models.JSON{
+			"alert_type":  "alipay_ownership_invalid",
+			"alert_level": "error",
+			"payment_id":  fmt.Sprintf("%d", payment.ID),
+			"message":     strings.TrimSpace(err.Error()),
+			"provider":    constants.PaymentChannelTypeAlipay,
+		})
 		c.String(200, constants.AlipayCallbackFail)
 		return true
 	}
@@ -603,6 +641,13 @@ func (h *Handler) HandleAlipayCallback(c *gin.Context) bool {
 			"channel_id", channel.ID,
 			"error", err,
 		)
+		h.enqueuePaymentExceptionAlert(c, models.JSON{
+			"alert_type":  "alipay_callback_parse_failed",
+			"alert_level": "error",
+			"payment_id":  fmt.Sprintf("%d", payment.ID),
+			"message":     strings.TrimSpace(err.Error()),
+			"provider":    constants.PaymentChannelTypeAlipay,
+		})
 		c.String(200, constants.AlipayCallbackFail)
 		return true
 	}
@@ -617,6 +662,14 @@ func (h *Handler) HandleAlipayCallback(c *gin.Context) bool {
 			"status", input.Status,
 			"error", err,
 		)
+		h.enqueuePaymentExceptionAlert(c, models.JSON{
+			"alert_type":  "alipay_callback_handle_failed",
+			"alert_level": "error",
+			"payment_id":  fmt.Sprintf("%d", payment.ID),
+			"order_no":    strings.TrimSpace(input.OrderNo),
+			"message":     strings.TrimSpace(err.Error()),
+			"provider":    constants.PaymentChannelTypeAlipay,
+		})
 		c.String(200, constants.AlipayCallbackFail)
 		return true
 	}
@@ -870,6 +923,13 @@ func (h *Handler) HandleEpayCallback(c *gin.Context) bool {
 			"channel_id", channel.ID,
 			"error", err,
 		)
+		h.enqueuePaymentExceptionAlert(c, models.JSON{
+			"alert_type":  "epay_signature_invalid",
+			"alert_level": "error",
+			"payment_id":  fmt.Sprintf("%d", payment.ID),
+			"message":     strings.TrimSpace(err.Error()),
+			"provider":    constants.PaymentProviderEpay,
+		})
 		c.String(200, constants.EpayCallbackFail)
 		return true
 	}
@@ -880,6 +940,13 @@ func (h *Handler) HandleEpayCallback(c *gin.Context) bool {
 			"channel_id", channel.ID,
 			"error", err,
 		)
+		h.enqueuePaymentExceptionAlert(c, models.JSON{
+			"alert_type":  "epay_callback_parse_failed",
+			"alert_level": "error",
+			"payment_id":  fmt.Sprintf("%d", payment.ID),
+			"message":     strings.TrimSpace(err.Error()),
+			"provider":    constants.PaymentProviderEpay,
+		})
 		c.String(200, constants.EpayCallbackFail)
 		return true
 	}
@@ -894,6 +961,14 @@ func (h *Handler) HandleEpayCallback(c *gin.Context) bool {
 			"status", input.Status,
 			"error", err,
 		)
+		h.enqueuePaymentExceptionAlert(c, models.JSON{
+			"alert_type":  "epay_callback_handle_failed",
+			"alert_level": "error",
+			"payment_id":  fmt.Sprintf("%d", payment.ID),
+			"order_no":    strings.TrimSpace(input.OrderNo),
+			"message":     strings.TrimSpace(err.Error()),
+			"provider":    constants.PaymentProviderEpay,
+		})
 		c.String(200, constants.EpayCallbackFail)
 		return true
 	}
@@ -1020,6 +1095,30 @@ func callbackRawFormForLog(form map[string][]string) map[string]interface{} {
 		result[key] = copied
 	}
 	return result
+}
+
+func (h *Handler) enqueuePaymentExceptionAlert(c *gin.Context, data models.JSON) {
+	if h == nil || h.Container == nil || h.NotificationService == nil {
+		return
+	}
+	payload := models.JSON{
+		"source":      "payment_callback",
+		"method":      strings.TrimSpace(c.Request.Method),
+		"path":        strings.TrimSpace(c.Request.URL.Path),
+		"client_ip":   strings.TrimSpace(c.ClientIP()),
+		"occurred_at": time.Now().Format("2006-01-02 15:04:05"),
+	}
+	for key, value := range data {
+		payload[key] = value
+	}
+	if err := h.NotificationService.Enqueue(service.NotificationEnqueueInput{
+		EventType: constants.NotificationEventExceptionAlert,
+		BizType:   "payment_callback",
+		BizID:     0,
+		Data:      payload,
+	}); err != nil {
+		requestLog(c).Warnw("enqueue_payment_exception_alert_failed", "error", err)
+	}
 }
 
 func respondPaymentCreateError(c *gin.Context, err error) {

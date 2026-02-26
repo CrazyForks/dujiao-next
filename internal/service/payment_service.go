@@ -34,27 +34,29 @@ import (
 
 // PaymentService 支付服务
 type PaymentService struct {
-	orderRepo      repository.OrderRepository
-	productRepo    repository.ProductRepository
-	productSKURepo repository.ProductSKURepository
-	paymentRepo    repository.PaymentRepository
-	channelRepo    repository.PaymentChannelRepository
-	walletRepo     repository.WalletRepository
-	queueClient    *queue.Client
-	walletSvc      *WalletService
+	orderRepo       repository.OrderRepository
+	productRepo     repository.ProductRepository
+	productSKURepo  repository.ProductSKURepository
+	paymentRepo     repository.PaymentRepository
+	channelRepo     repository.PaymentChannelRepository
+	walletRepo      repository.WalletRepository
+	queueClient     *queue.Client
+	walletSvc       *WalletService
+	notificationSvc *NotificationService
 }
 
 // NewPaymentService 创建支付服务
-func NewPaymentService(orderRepo repository.OrderRepository, productRepo repository.ProductRepository, productSKURepo repository.ProductSKURepository, paymentRepo repository.PaymentRepository, channelRepo repository.PaymentChannelRepository, walletRepo repository.WalletRepository, queueClient *queue.Client, walletSvc *WalletService) *PaymentService {
+func NewPaymentService(orderRepo repository.OrderRepository, productRepo repository.ProductRepository, productSKURepo repository.ProductSKURepository, paymentRepo repository.PaymentRepository, channelRepo repository.PaymentChannelRepository, walletRepo repository.WalletRepository, queueClient *queue.Client, walletSvc *WalletService, notificationSvc *NotificationService) *PaymentService {
 	return &PaymentService{
-		orderRepo:      orderRepo,
-		productRepo:    productRepo,
-		productSKURepo: productSKURepo,
-		paymentRepo:    paymentRepo,
-		channelRepo:    channelRepo,
-		walletRepo:     walletRepo,
-		queueClient:    queueClient,
-		walletSvc:      walletSvc,
+		orderRepo:       orderRepo,
+		productRepo:     productRepo,
+		productSKURepo:  productSKURepo,
+		paymentRepo:     paymentRepo,
+		channelRepo:     channelRepo,
+		walletRepo:      walletRepo,
+		queueClient:     queueClient,
+		walletSvc:       walletSvc,
+		notificationSvc: notificationSvc,
 	}
 }
 
@@ -314,7 +316,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 	}
 
 	if orderPaidByWallet {
-		s.enqueueOrderPaidAsync(order, log)
+		s.enqueueOrderPaidAsync(order, payment, log)
 		return &CreatePaymentResult{
 			Payment:          nil,
 			Channel:          nil,
@@ -625,7 +627,7 @@ func (s *PaymentService) HandleCallback(input PaymentCallbackInput) (*models.Pay
 		return nil, err
 	}
 	if orderPaid {
-		s.enqueueOrderPaidAsync(order, log)
+		s.enqueueOrderPaidAsync(order, updated, log)
 	}
 	log.Infow("payment_callback_processed",
 		"order_id", order.ID,
@@ -713,6 +715,10 @@ func (s *PaymentService) handleWalletRechargeCallback(payment *models.Payment, s
 	log.Infow("wallet_recharge_callback_processed",
 		"new_status", updated.Status,
 	)
+	if updated.Status == constants.PaymentStatusSuccess {
+		s.enqueueWalletRechargeSuccessAsync(recharge, updated, log)
+	}
+	s.enqueueExceptionAlertCheckAsync("wallet_recharge_callback_processed", log)
 	return updated, nil
 }
 
@@ -1840,20 +1846,31 @@ func (s *PaymentService) markOrderPaid(tx *gorm.DB, order *models.Order, now tim
 	return nil
 }
 
-func (s *PaymentService) enqueueOrderPaidAsync(order *models.Order, log *zap.SugaredLogger) {
-	if s.queueClient == nil || order == nil {
+func (s *PaymentService) enqueueOrderPaidAsync(order *models.Order, payment *models.Payment, log *zap.SugaredLogger) {
+	if order == nil {
 		return
 	}
-	if _, err := enqueueOrderStatusEmailTaskIfEligible(s.orderRepo, s.queueClient, order.ID, constants.OrderStatusPaid); err != nil {
-		log.Warnw("payment_enqueue_status_email_failed",
-			"order_id", order.ID,
-			"order_no", order.OrderNo,
-			"status", constants.OrderStatusPaid,
-			"error", err,
-		)
+	if s.queueClient != nil {
+		if _, err := enqueueOrderStatusEmailTaskIfEligible(s.orderRepo, s.queueClient, order.ID, constants.OrderStatusPaid); err != nil {
+			log.Warnw("payment_enqueue_status_email_failed",
+				"order_id", order.ID,
+				"order_no", order.OrderNo,
+				"status", constants.OrderStatusPaid,
+				"error", err,
+			)
+		}
+	}
+	s.enqueueOrderPaidNotificationAsync(order, payment, log)
+	s.enqueueExceptionAlertCheckAsync("order_paid", log)
+
+	if s.queueClient == nil {
+		return
 	}
 	if len(order.Children) > 0 {
 		for _, child := range order.Children {
+			if child.Status == constants.OrderStatusFulfilling {
+				s.enqueueManualFulfillmentPendingAsync(&child, order, log)
+			}
 			if shouldAutoFulfill(&child) {
 				if err := s.queueClient.EnqueueOrderAutoFulfill(queue.OrderAutoFulfillPayload{
 					OrderID: child.ID,
@@ -1869,6 +1886,9 @@ func (s *PaymentService) enqueueOrderPaidAsync(order *models.Order, log *zap.Sug
 		}
 		return
 	}
+	if order.Status == constants.OrderStatusFulfilling {
+		s.enqueueManualFulfillmentPendingAsync(order, nil, log)
+	}
 	if shouldAutoFulfill(order) {
 		if err := s.queueClient.EnqueueOrderAutoFulfill(queue.OrderAutoFulfillPayload{
 			OrderID: order.ID,
@@ -1879,6 +1899,132 @@ func (s *PaymentService) enqueueOrderPaidAsync(order *models.Order, log *zap.Sug
 				"error", err,
 			)
 		}
+	}
+}
+
+func (s *PaymentService) enqueueOrderPaidNotificationAsync(order *models.Order, payment *models.Payment, log *zap.SugaredLogger) {
+	if s.notificationSvc == nil || order == nil {
+		return
+	}
+	providerType := ""
+	channelType := ""
+	payload := models.JSON{
+		"order_id":     fmt.Sprintf("%d", order.ID),
+		"order_no":     strings.TrimSpace(order.OrderNo),
+		"user_id":      fmt.Sprintf("%d", order.UserID),
+		"guest_email":  strings.TrimSpace(order.GuestEmail),
+		"amount":       order.TotalAmount.String(),
+		"currency":     strings.ToUpper(strings.TrimSpace(order.Currency)),
+		"order_status": strings.TrimSpace(order.Status),
+	}
+	if payment != nil {
+		payload["payment_id"] = fmt.Sprintf("%d", payment.ID)
+		providerType = strings.TrimSpace(payment.ProviderType)
+		channelType = strings.TrimSpace(payment.ChannelType)
+	}
+	// 钱包全额支付不会生成在线支付单，这里补充可读渠道标识，避免模板渲染为空。
+	if providerType == "" && order.WalletPaidAmount.Decimal.GreaterThan(decimal.Zero) {
+		providerType = "wallet"
+		channelType = "balance"
+	}
+	if providerType != "" {
+		payload["provider_type"] = providerType
+	}
+	if channelType != "" {
+		payload["channel_type"] = channelType
+	}
+	if err := s.notificationSvc.Enqueue(NotificationEnqueueInput{
+		EventType: constants.NotificationEventOrderPaidSuccess,
+		BizType:   "order",
+		BizID:     order.ID,
+		Locale:    strings.TrimSpace(order.GuestLocale),
+		Data:      payload,
+	}); err != nil {
+		log.Warnw("notification_enqueue_order_paid_failed",
+			"order_id", order.ID,
+			"order_no", order.OrderNo,
+			"error", err,
+		)
+	}
+}
+
+func (s *PaymentService) enqueueWalletRechargeSuccessAsync(recharge *models.WalletRechargeOrder, payment *models.Payment, log *zap.SugaredLogger) {
+	if s.notificationSvc == nil || recharge == nil {
+		return
+	}
+	payload := models.JSON{
+		"user_id":       fmt.Sprintf("%d", recharge.UserID),
+		"recharge_id":   fmt.Sprintf("%d", recharge.ID),
+		"recharge_no":   strings.TrimSpace(recharge.RechargeNo),
+		"amount":        recharge.Amount.String(),
+		"currency":      strings.ToUpper(strings.TrimSpace(recharge.Currency)),
+		"provider_type": strings.TrimSpace(recharge.ProviderType),
+		"channel_type":  strings.TrimSpace(recharge.ChannelType),
+	}
+	if payment != nil {
+		payload["payment_id"] = fmt.Sprintf("%d", payment.ID)
+	}
+	if err := s.notificationSvc.Enqueue(NotificationEnqueueInput{
+		EventType: constants.NotificationEventWalletRechargeSuccess,
+		BizType:   "wallet_recharge",
+		BizID:     recharge.ID,
+		Data:      payload,
+	}); err != nil {
+		log.Warnw("notification_enqueue_wallet_recharge_failed",
+			"recharge_id", recharge.ID,
+			"recharge_no", recharge.RechargeNo,
+			"error", err,
+		)
+	}
+}
+
+func (s *PaymentService) enqueueManualFulfillmentPendingAsync(order *models.Order, parent *models.Order, log *zap.SugaredLogger) {
+	if s.notificationSvc == nil || order == nil {
+		return
+	}
+	payload := models.JSON{
+		"order_id":     fmt.Sprintf("%d", order.ID),
+		"order_no":     strings.TrimSpace(order.OrderNo),
+		"user_id":      fmt.Sprintf("%d", order.UserID),
+		"guest_email":  strings.TrimSpace(order.GuestEmail),
+		"order_status": strings.TrimSpace(order.Status),
+	}
+	if parent != nil {
+		payload["parent_order_id"] = fmt.Sprintf("%d", parent.ID)
+		payload["parent_order_no"] = strings.TrimSpace(parent.OrderNo)
+	}
+	if err := s.notificationSvc.Enqueue(NotificationEnqueueInput{
+		EventType: constants.NotificationEventManualFulfillmentPending,
+		BizType:   "order",
+		BizID:     order.ID,
+		Locale:    strings.TrimSpace(order.GuestLocale),
+		Data:      payload,
+	}); err != nil {
+		log.Warnw("notification_enqueue_manual_pending_failed",
+			"order_id", order.ID,
+			"order_no", order.OrderNo,
+			"error", err,
+		)
+	}
+}
+
+func (s *PaymentService) enqueueExceptionAlertCheckAsync(reason string, log *zap.SugaredLogger) {
+	if s.notificationSvc == nil {
+		return
+	}
+	payload := models.JSON{
+		"message": strings.TrimSpace(reason),
+	}
+	if err := s.notificationSvc.Enqueue(NotificationEnqueueInput{
+		EventType: constants.NotificationEventExceptionAlertCheck,
+		BizType:   "dashboard_alert",
+		BizID:     0,
+		Data:      payload,
+	}); err != nil {
+		log.Warnw("notification_enqueue_exception_check_failed",
+			"reason", reason,
+			"error", err,
+		)
 	}
 }
 

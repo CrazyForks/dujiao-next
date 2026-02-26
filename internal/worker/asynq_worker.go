@@ -37,6 +37,7 @@ func (c *Consumer) Register(mux *asynq.ServeMux) {
 	mux.HandleFunc(queue.TaskOrderStatusEmail, c.handleOrderStatusEmail)
 	mux.HandleFunc(queue.TaskOrderAutoFulfill, c.handleOrderAutoFulfill)
 	mux.HandleFunc(queue.TaskOrderTimeoutCancel, c.handleOrderTimeoutCancel)
+	mux.HandleFunc(queue.TaskNotificationDispatch, c.handleNotificationDispatch)
 }
 
 func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) error {
@@ -187,6 +188,36 @@ func (c *Consumer) handleOrderTimeoutCancel(_ context.Context, task *asynq.Task)
 			logger.Warnw("worker_order_timeout_cancel_failed", "order_id", payload.OrderID, "error", err)
 			return err
 		}
+	}
+	return nil
+}
+
+func (c *Consumer) handleNotificationDispatch(ctx context.Context, task *asynq.Task) error {
+	if c == nil || task == nil {
+		logger.Debugw("worker_notification_dispatch_skip_nil", "consumer_nil", c == nil, "task_nil", task == nil)
+		return nil
+	}
+	if c.NotificationService == nil {
+		logger.Warnw("worker_notification_dispatch_skip_service_nil")
+		return nil
+	}
+	var payload queue.NotificationDispatchPayload
+	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
+		logger.Warnw("worker_notification_dispatch_unmarshal_failed", "error", err)
+		return err
+	}
+	if strings.TrimSpace(payload.EventType) == "" {
+		logger.Debugw("worker_notification_dispatch_skip_empty_event")
+		return nil
+	}
+	if err := c.NotificationService.Dispatch(ctx, payload); err != nil {
+		logger.Warnw("worker_notification_dispatch_failed",
+			"event_type", payload.EventType,
+			"biz_type", payload.BizType,
+			"biz_id", payload.BizID,
+			"error", err,
+		)
+		return err
 	}
 	return nil
 }

@@ -95,6 +95,20 @@ func (c *Client) EnqueueOrderTimeoutCancel(payload OrderTimeoutCancelPayload, de
 	return err
 }
 
+// EnqueueNotificationDispatch 推送通知中心分发任务
+func (c *Client) EnqueueNotificationDispatch(payload NotificationDispatchPayload, opts ...asynq.Option) error {
+	if !c.Enabled() {
+		return nil
+	}
+	task, err := NewNotificationDispatchTask(payload)
+	if err != nil {
+		return err
+	}
+	options := append([]asynq.Option{asynq.Queue(c.defaultQueue)}, opts...)
+	_, err = c.client.Enqueue(task, options...)
+	return err
+}
+
 // BuildServerConfig 生成队列服务配置
 func BuildServerConfig(cfg *config.QueueConfig) (asynq.RedisClientOpt, asynq.Config) {
 	opt := buildRedisOpt(cfg)

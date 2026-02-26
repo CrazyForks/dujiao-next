@@ -184,6 +184,9 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 				authorized.PUT("/settings/captcha", adminHandler.UpdateCaptchaSettings)
 				authorized.GET("/settings/telegram-auth", adminHandler.GetTelegramAuthSettings)
 				authorized.PUT("/settings/telegram-auth", adminHandler.UpdateTelegramAuthSettings)
+				authorized.GET("/settings/notification-center", adminHandler.GetNotificationCenterSettings)
+				authorized.PUT("/settings/notification-center", adminHandler.UpdateNotificationCenterSettings)
+				authorized.POST("/settings/notification-center/test", adminHandler.TestNotificationCenterSettings)
 				authorized.PUT("/password", adminHandler.UpdateAdminPassword) // 修改密码
 
 				// 权限管理
