@@ -33,6 +33,7 @@ const (
 	PaymentProviderOfficial = "official"
 	PaymentProviderEpay     = "epay"
 	PaymentProviderEpusdt   = "epusdt"
+	PaymentProviderTokenpay = "tokenpay"
 	PaymentProviderWallet   = "wallet"
 )
 
@@ -106,6 +107,12 @@ const (
 const (
 	EpusdtCallbackSuccess = "success"
 	EpusdtCallbackFail    = "fail"
+)
+
+// TokenPay 回调常量
+const (
+	TokenPayCallbackSuccess = "ok"
+	TokenPayCallbackFail    = "fail"
 )
 
 // 文章类型常量

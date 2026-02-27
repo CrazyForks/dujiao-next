@@ -19,6 +19,7 @@ import (
 	"github.com/dujiao-next/internal/payment/epusdt"
 	"github.com/dujiao-next/internal/payment/paypal"
 	"github.com/dujiao-next/internal/payment/stripe"
+	"github.com/dujiao-next/internal/payment/tokenpay"
 	"github.com/dujiao-next/internal/payment/wechatpay"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
@@ -780,6 +781,61 @@ func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *m
 			return ErrPaymentUpdateFailed
 		}
 		return nil
+	case constants.PaymentProviderTokenpay:
+		cfg, err := tokenpay.ParseConfig(channel.ConfigJSON)
+		if err != nil {
+			return fmt.Errorf("%w: %v", ErrPaymentChannelConfigInvalid, err)
+		}
+		if strings.TrimSpace(cfg.Currency) == "" {
+			cfg.Currency = tokenpay.DefaultCurrency
+		}
+		if strings.TrimSpace(cfg.NotifyURL) == "" {
+			return fmt.Errorf("%w: notify_url is required", ErrPaymentChannelConfigInvalid)
+		}
+		if err := tokenpay.ValidateConfig(cfg); err != nil {
+			return fmt.Errorf("%w: %v", ErrPaymentChannelConfigInvalid, err)
+		}
+		ctx := input.Context
+		if ctx == nil {
+			ctx = context.Background()
+		}
+		redirectURL := strings.TrimSpace(cfg.RedirectURL)
+		if redirectURL != "" {
+			redirectURL = appendURLQuery(redirectURL, buildOrderReturnQuery(order, "tokenpay_return", ""))
+		}
+		createResult, err := tokenpay.CreatePayment(ctx, cfg, tokenpay.CreateInput{
+			OutOrderID:      strings.TrimSpace(order.OrderNo),
+			OrderUserKey:    resolveTokenPayOrderUserKey(order),
+			ActualAmount:    payment.Amount.String(),
+			Currency:        strings.TrimSpace(cfg.Currency),
+			PassThroughInfo: fmt.Sprintf("payment_id=%d", payment.ID),
+			NotifyURL:       strings.TrimSpace(cfg.NotifyURL),
+			RedirectURL:     redirectURL,
+		})
+		if err != nil {
+			switch {
+			case errors.Is(err, tokenpay.ErrConfigInvalid):
+				return fmt.Errorf("%w: %v", ErrPaymentChannelConfigInvalid, err)
+			case errors.Is(err, tokenpay.ErrRequestFailed):
+				return ErrPaymentGatewayRequestFailed
+			case errors.Is(err, tokenpay.ErrResponseInvalid):
+				return ErrPaymentGatewayResponseInvalid
+			default:
+				return ErrPaymentGatewayRequestFailed
+			}
+		}
+		payment.PayURL = strings.TrimSpace(pickFirstNonEmpty(createResult.PayURL, createResult.QRCodeLink))
+		payment.QRCode = strings.TrimSpace(pickFirstNonEmpty(createResult.QRCodeBase64, createResult.QRCodeLink, createResult.PayURL))
+		payment.Status = constants.PaymentStatusPending
+		payment.ProviderRef = pickFirstNonEmpty(strings.TrimSpace(createResult.TokenOrderID), strings.TrimSpace(payment.ProviderRef), order.OrderNo)
+		if createResult.Raw != nil {
+			payment.ProviderPayload = models.JSON(createResult.Raw)
+		}
+		payment.UpdatedAt = time.Now()
+		if err := s.paymentRepo.Update(payment); err != nil {
+			return ErrPaymentUpdateFailed
+		}
+		return nil
 	case constants.PaymentProviderOfficial:
 		channelType = strings.ToLower(strings.TrimSpace(channel.ChannelType))
 		switch channelType {
@@ -1005,6 +1061,25 @@ func (s *PaymentService) ValidateChannel(channel *models.PaymentChannel) error {
 			return fmt.Errorf("%w: %v", ErrPaymentChannelConfigInvalid, err)
 		}
 		return nil
+	case constants.PaymentProviderTokenpay:
+		if strings.ToLower(strings.TrimSpace(channel.InteractionMode)) != constants.PaymentInteractionRedirect &&
+			strings.ToLower(strings.TrimSpace(channel.InteractionMode)) != constants.PaymentInteractionQR {
+			return ErrPaymentChannelConfigInvalid
+		}
+		cfg, err := tokenpay.ParseConfig(channel.ConfigJSON)
+		if err != nil {
+			return fmt.Errorf("%w: %v", ErrPaymentChannelConfigInvalid, err)
+		}
+		if strings.TrimSpace(cfg.Currency) == "" {
+			cfg.Currency = tokenpay.DefaultCurrency
+		}
+		if strings.TrimSpace(cfg.NotifyURL) == "" {
+			return fmt.Errorf("%w: notify_url is required", ErrPaymentChannelConfigInvalid)
+		}
+		if err := tokenpay.ValidateConfig(cfg); err != nil {
+			return fmt.Errorf("%w: %v", ErrPaymentChannelConfigInvalid, err)
+		}
+		return nil
 	case constants.PaymentProviderOfficial:
 		channelType := strings.ToLower(strings.TrimSpace(channel.ChannelType))
 		switch channelType {
@@ -1080,6 +1155,19 @@ func pickFirstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func resolveTokenPayOrderUserKey(order *models.Order) string {
+	if order == nil {
+		return ""
+	}
+	if order.UserID > 0 {
+		return strconv.FormatUint(uint64(order.UserID), 10)
+	}
+	if guestEmail := strings.TrimSpace(order.GuestEmail); guestEmail != "" {
+		return guestEmail
+	}
+	return strings.TrimSpace(order.OrderNo)
 }
 
 func generateWalletRechargeNo() string {
