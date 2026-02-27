@@ -38,6 +38,20 @@ var (
 const (
 	defaultBaseURL = "https://api.mch.weixin.qq.com"
 	defaultTimeout = 15 * time.Second
+
+	wechatH5TypeWAP     = "WAP"
+	wechatH5TypeIOS     = "IOS"
+	wechatH5TypeAndroid = "ANDROID"
+
+	wechatTradeStateSuccess    = "SUCCESS"
+	wechatTradeStateRefund     = "REFUND"
+	wechatTradeStateNotPay     = "NOTPAY"
+	wechatTradeStateUserPaying = "USERPAYING"
+	wechatTradeStateClosed     = "CLOSED"
+	wechatTradeStateRevoked    = "REVOKED"
+	wechatTradeStatePayError   = "PAYERROR"
+
+	wechatAttachPaymentIDPrefix = "payment_id:"
 )
 
 // Config 微信官方支付配置。
@@ -139,7 +153,7 @@ func ValidateConfig(cfg *Config, interactionMode string) error {
 	}
 	if cfg.H5Type != "" {
 		switch strings.ToUpper(strings.TrimSpace(cfg.H5Type)) {
-		case "WAP", "IOS", "ANDROID":
+		case wechatH5TypeWAP, wechatH5TypeIOS, wechatH5TypeAndroid:
 		default:
 			return fmt.Errorf("%w: h5_type is invalid", ErrConfigInvalid)
 		}
@@ -172,7 +186,7 @@ func CreatePayment(ctx context.Context, cfg *Config, input CreateInput, interact
 		notifyURL = cfg.NotifyURL
 	}
 
-	currency := "CNY"
+	currency := constants.SiteCurrencyDefault
 	payload := map[string]interface{}{
 		"appid":        cfg.AppID,
 		"mchid":        cfg.MerchantID,
@@ -356,8 +370,8 @@ func ParsePaymentIDFromAttach(raw string) (uint, bool) {
 			}
 		}
 	}
-	if strings.HasPrefix(raw, "payment_id:") {
-		raw = strings.TrimSpace(strings.TrimPrefix(raw, "payment_id:"))
+	if strings.HasPrefix(raw, wechatAttachPaymentIDPrefix) {
+		raw = strings.TrimSpace(strings.TrimPrefix(raw, wechatAttachPaymentIDPrefix))
 	}
 	parsed, err := strconv.ParseUint(raw, 10, 64)
 	if err != nil || parsed == 0 {
@@ -370,11 +384,11 @@ func ParsePaymentIDFromAttach(raw string) (uint, bool) {
 func ToPaymentStatus(tradeState string) (string, bool) {
 	state := strings.ToUpper(strings.TrimSpace(tradeState))
 	switch state {
-	case "SUCCESS", "REFUND":
+	case wechatTradeStateSuccess, wechatTradeStateRefund:
 		return constants.PaymentStatusSuccess, true
-	case "NOTPAY", "USERPAYING":
+	case wechatTradeStateNotPay, wechatTradeStateUserPaying:
 		return constants.PaymentStatusPending, true
-	case "CLOSED", "REVOKED", "PAYERROR":
+	case wechatTradeStateClosed, wechatTradeStateRevoked, wechatTradeStatePayError:
 		return constants.PaymentStatusFailed, true
 	default:
 		return "", false
@@ -760,7 +774,7 @@ func (c *Config) normalize() {
 	c.H5WapName = strings.TrimSpace(c.H5WapName)
 	c.BaseURL = strings.TrimRight(strings.TrimSpace(c.BaseURL), "/")
 	if c.H5Type == "" {
-		c.H5Type = "WAP"
+		c.H5Type = wechatH5TypeWAP
 	}
 	if c.BaseURL == "" {
 		c.BaseURL = defaultBaseURL

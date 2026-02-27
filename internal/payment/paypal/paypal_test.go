@@ -1,6 +1,10 @@
 package paypal
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/dujiao-next/internal/constants"
+)
 
 func TestValidateConfig(t *testing.T) {
 	cfg := &Config{
@@ -53,17 +57,29 @@ func TestParseConfigAndNormalize(t *testing.T) {
 }
 
 func TestToPaymentStatus(t *testing.T) {
-	status, ok := ToPaymentStatus("PAYMENT.CAPTURE.COMPLETED", "")
-	if !ok || status != "success" {
-		t.Fatalf("expected success status for completed event, got %s %v", status, ok)
+	tests := []struct {
+		name           string
+		eventType      string
+		resourceStatus string
+		expectStatus   string
+		expectOK       bool
+	}{
+		{name: "EventCompleted", eventType: paypalEventCaptureCompleted, resourceStatus: "", expectStatus: constants.PaymentStatusSuccess, expectOK: true},
+		{name: "EventPending", eventType: paypalEventCapturePending, resourceStatus: "", expectStatus: constants.PaymentStatusPending, expectOK: true},
+		{name: "ResourceDeclined", eventType: "", resourceStatus: paypalResourceStatusDeclined, expectStatus: constants.PaymentStatusFailed, expectOK: true},
+		{name: "ResourceCreated", eventType: "", resourceStatus: paypalResourceStatusCreated, expectStatus: constants.PaymentStatusPending, expectOK: true},
+		{name: "Unknown", eventType: "UNKNOWN", resourceStatus: "UNKNOWN", expectStatus: "", expectOK: false},
 	}
-	status, ok = ToPaymentStatus("", "DECLINED")
-	if !ok || status != "failed" {
-		t.Fatalf("expected failed status for declined resource, got %s %v", status, ok)
-	}
-	status, ok = ToPaymentStatus("UNKNOWN", "UNKNOWN")
-	if ok || status != "" {
-		t.Fatalf("expected unsupported mapping, got %s %v", status, ok)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			status, ok := ToPaymentStatus(tc.eventType, tc.resourceStatus)
+			if ok != tc.expectOK {
+				t.Fatalf("unexpected ok: got %v, want %v", ok, tc.expectOK)
+			}
+			if status != tc.expectStatus {
+				t.Fatalf("unexpected status: got %s, want %s", status, tc.expectStatus)
+			}
+		})
 	}
 }
 

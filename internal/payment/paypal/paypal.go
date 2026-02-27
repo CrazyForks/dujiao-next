@@ -27,6 +27,30 @@ var (
 const (
 	defaultSandboxBaseURL = "https://api-m.sandbox.paypal.com"
 	defaultTimeout        = 12 * time.Second
+
+	paypalWebhookVerifyStatusSuccess = "SUCCESS"
+
+	paypalEventCaptureCompleted = "PAYMENT.CAPTURE.COMPLETED"
+	paypalEventOrderCompleted   = "CHECKOUT.ORDER.COMPLETED"
+	paypalEventCaptureDenied    = "PAYMENT.CAPTURE.DENIED"
+	paypalEventCaptureDeclined  = "PAYMENT.CAPTURE.DECLINED"
+	paypalEventCaptureFailed    = "PAYMENT.CAPTURE.FAILED"
+	paypalEventOrderDenied      = "CHECKOUT.ORDER.DENIED"
+	paypalEventCapturePending   = "PAYMENT.CAPTURE.PENDING"
+	paypalEventOrderApproved    = "CHECKOUT.ORDER.APPROVED"
+
+	paypalResourceStatusCompleted = "COMPLETED"
+	paypalResourceStatusDenied    = "DENIED"
+	paypalResourceStatusDeclined  = "DECLINED"
+	paypalResourceStatusFailed    = "FAILED"
+	paypalResourceStatusVoided    = "VOIDED"
+	paypalResourceStatusPending   = "PENDING"
+	paypalResourceStatusApproved  = "APPROVED"
+	paypalResourceStatusCreated   = "CREATED"
+	paypalResourceStatusSaved     = "SAVED"
+
+	paypalUserActionPayNow         = "PAY_NOW"
+	paypalShippingPreferenceNoShip = "NO_SHIPPING"
 )
 
 // Config PayPal 渠道配置。
@@ -305,7 +329,7 @@ func VerifyWebhookSignature(ctx context.Context, cfg *Config, headers http.Heade
 	if err := json.Unmarshal(respBody, &resp); err != nil {
 		return fmt.Errorf("%w: decode verify response failed", ErrWebhookVerifyFailed)
 	}
-	if strings.ToUpper(strings.TrimSpace(readString(resp, "verification_status"))) != "SUCCESS" {
+	if strings.ToUpper(strings.TrimSpace(readString(resp, "verification_status"))) != paypalWebhookVerifyStatusSuccess {
 		return fmt.Errorf("%w: verify result is not success", ErrWebhookVerifyFailed)
 	}
 	return nil
@@ -416,20 +440,20 @@ func ToPaymentStatus(eventType, resourceStatus string) (string, bool) {
 	resourceStatus = strings.ToUpper(strings.TrimSpace(resourceStatus))
 
 	switch eventType {
-	case "PAYMENT.CAPTURE.COMPLETED", "CHECKOUT.ORDER.COMPLETED":
+	case paypalEventCaptureCompleted, paypalEventOrderCompleted:
 		return constants.PaymentStatusSuccess, true
-	case "PAYMENT.CAPTURE.DENIED", "PAYMENT.CAPTURE.DECLINED", "PAYMENT.CAPTURE.FAILED", "CHECKOUT.ORDER.DENIED":
+	case paypalEventCaptureDenied, paypalEventCaptureDeclined, paypalEventCaptureFailed, paypalEventOrderDenied:
 		return constants.PaymentStatusFailed, true
-	case "PAYMENT.CAPTURE.PENDING", "CHECKOUT.ORDER.APPROVED":
+	case paypalEventCapturePending, paypalEventOrderApproved:
 		return constants.PaymentStatusPending, true
 	}
 
 	switch resourceStatus {
-	case "COMPLETED":
+	case paypalResourceStatusCompleted:
 		return constants.PaymentStatusSuccess, true
-	case "DENIED", "DECLINED", "FAILED", "VOIDED":
+	case paypalResourceStatusDenied, paypalResourceStatusDeclined, paypalResourceStatusFailed, paypalResourceStatusVoided:
 		return constants.PaymentStatusFailed, true
-	case "PENDING", "APPROVED", "CREATED", "SAVED":
+	case paypalResourceStatusPending, paypalResourceStatusApproved, paypalResourceStatusCreated, paypalResourceStatusSaved:
 		return constants.PaymentStatusPending, true
 	}
 
@@ -451,11 +475,11 @@ func (c *Config) normalize() {
 	c.LandingPage = strings.TrimSpace(c.LandingPage)
 	c.UserAction = strings.TrimSpace(c.UserAction)
 	if c.UserAction == "" {
-		c.UserAction = "PAY_NOW"
+		c.UserAction = paypalUserActionPayNow
 	}
 	c.ShippingPreference = strings.TrimSpace(c.ShippingPreference)
 	if c.ShippingPreference == "" {
-		c.ShippingPreference = "NO_SHIPPING"
+		c.ShippingPreference = paypalShippingPreferenceNoShip
 	}
 }
 

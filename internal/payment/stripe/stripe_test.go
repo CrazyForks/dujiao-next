@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/dujiao-next/internal/constants"
 )
 
 func TestParseAndValidateConfig(t *testing.T) {
@@ -107,13 +109,69 @@ func TestVerifyAndParseWebhookInvalidSignature(t *testing.T) {
 }
 
 func TestMapPaymentIntentStatus(t *testing.T) {
-	if got := mapPaymentIntentStatus("succeeded"); got != "success" {
-		t.Fatalf("expected success, got %s", got)
+	tests := []struct {
+		name   string
+		input  string
+		expect string
+	}{
+		{name: "Succeeded", input: stripePIStatusSucceeded, expect: constants.PaymentStatusSuccess},
+		{name: "Processing", input: stripePIStatusProcessing, expect: constants.PaymentStatusPending},
+		{name: "Canceled", input: stripePIStatusCanceled, expect: constants.PaymentStatusFailed},
+		{name: "RequiresPaymentMethod", input: stripePIStatusReqPayMeth, expect: constants.PaymentStatusFailed},
+		{name: "UnknownDefaultsPending", input: "unknown", expect: constants.PaymentStatusPending},
 	}
-	if got := mapPaymentIntentStatus("processing"); got != "pending" {
-		t.Fatalf("expected pending, got %s", got)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := mapPaymentIntentStatus(tc.input); got != tc.expect {
+				t.Fatalf("unexpected status: got %s, want %s", got, tc.expect)
+			}
+		})
 	}
-	if got := mapPaymentIntentStatus("canceled"); got != "failed" {
-		t.Fatalf("expected failed, got %s", got)
+}
+
+func TestMapEventTypeStatus(t *testing.T) {
+	tests := []struct {
+		name      string
+		eventType string
+		expect    string
+		ok        bool
+	}{
+		{name: "CheckoutCompleted", eventType: stripeEventCheckoutSessionCompleted, expect: constants.PaymentStatusSuccess, ok: true},
+		{name: "CheckoutExpired", eventType: stripeEventCheckoutSessionExpired, expect: constants.PaymentStatusExpired, ok: true},
+		{name: "CheckoutAsyncFailed", eventType: stripeEventCheckoutSessionAsyncPaymentFailed, expect: constants.PaymentStatusFailed, ok: true},
+		{name: "PIProcessing", eventType: stripeEventPaymentIntentProcessing, expect: constants.PaymentStatusPending, ok: true},
+		{name: "Unknown", eventType: "unknown.event", expect: "", ok: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := mapEventTypeStatus(tc.eventType)
+			if ok != tc.ok {
+				t.Fatalf("unexpected ok: got %v, want %v", ok, tc.ok)
+			}
+			if got != tc.expect {
+				t.Fatalf("unexpected status: got %s, want %s", got, tc.expect)
+			}
+		})
+	}
+}
+
+func TestMapCheckoutSessionStatus(t *testing.T) {
+	tests := []struct {
+		name          string
+		paymentStatus string
+		sessionStatus string
+		expect        string
+	}{
+		{name: "PaidWins", paymentStatus: stripePaymentStatusPaid, sessionStatus: stripeSessionComplete, expect: constants.PaymentStatusSuccess},
+		{name: "SessionExpired", paymentStatus: "", sessionStatus: stripeSessionExpired, expect: constants.PaymentStatusExpired},
+		{name: "NoPaymentRequiredComplete", paymentStatus: stripePaymentNoRequired, sessionStatus: stripeSessionComplete, expect: constants.PaymentStatusSuccess},
+		{name: "UnknownDefaultsPending", paymentStatus: "unpaid", sessionStatus: "open", expect: constants.PaymentStatusPending},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := mapCheckoutSessionStatus(tc.paymentStatus, tc.sessionStatus); got != tc.expect {
+				t.Fatalf("unexpected status: got %s, want %s", got, tc.expect)
+			}
+		})
 	}
 }

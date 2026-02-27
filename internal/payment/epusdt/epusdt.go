@@ -30,6 +30,26 @@ const (
 	StatusWaiting = 1 // 等待支付
 	StatusSuccess = 2 // 支付成功
 	StatusExpired = 3 // 支付超时
+
+	epusdtTradeTypeUSDTTRC20 = "usdt.trc20"
+	epusdtTradeTypeUSDTERC20 = "usdt.erc20"
+	epusdtTradeTypeUSDTBEP20 = "usdt.bep20"
+	epusdtTradeTypeUSDTPOLY  = "usdt.polygon"
+	epusdtTradeTypeUSDCTRC20 = "usdc.trc20"
+	epusdtTradeTypeUSDCERC20 = "usdc.erc20"
+	epusdtTradeTypeUSDCPOLY  = "usdc.polygon"
+	epusdtTradeTypeUSDCBEP20 = "usdc.bep20"
+	epusdtTradeTypeTRX       = "tron.trx"
+	epusdtTradeTypeETH       = "eth.eth"
+	epusdtTradeTypeBNB       = "bsc.bnb"
+
+	epusdtChannelTypeUSDT      = "usdt"
+	epusdtChannelTypeUSDTTRC20 = "usdt-trc20"
+	epusdtChannelTypeUSDCTRC20 = "usdc-trc20"
+	epusdtChannelTypeTRX       = "trx"
+
+	epusdtCreateTransactionPath = "/api/v1/order/create-transaction"
+	epusdtStatusSuccessMsg      = "status is not success"
 )
 
 // Config BEpusdt 配置
@@ -146,10 +166,10 @@ func (c *Config) normalize() {
 	c.NotifyURL = strings.TrimSpace(c.NotifyURL)
 	c.ReturnURL = strings.TrimSpace(c.ReturnURL)
 	if c.TradeType == "" {
-		c.TradeType = "usdt.trc20"
+		c.TradeType = epusdtTradeTypeUSDTTRC20
 	}
 	if c.Fiat == "" {
-		c.Fiat = "CNY"
+		c.Fiat = constants.SiteCurrencyDefault
 	}
 }
 
@@ -193,7 +213,7 @@ func CreatePayment(ctx context.Context, cfg *Config, input CreateInput) (*Create
 	signature := Sign(params, cfg.AuthToken)
 	params["signature"] = signature
 
-	endpoint := cfg.GatewayURL + "/api/v1/order/create-transaction"
+	endpoint := cfg.GatewayURL + epusdtCreateTransactionPath
 	respBytes, err := postJSON(ctx, endpoint, params)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrRequestFailed, err)
@@ -241,7 +261,7 @@ func VerifyCallback(cfg *Config, data *CallbackData) error {
 	}
 
 	if data.Status != StatusSuccess {
-		return fmt.Errorf("%w: status is not success", ErrResponseInvalid)
+		return fmt.Errorf("%w: %s", ErrResponseInvalid, epusdtStatusSuccessMsg)
 	}
 
 	params := map[string]interface{}{
@@ -359,12 +379,12 @@ func IsSupportedChannelType(channelType string) bool {
 // ResolveTradeType 根据 channel_type 解析 trade_type
 func ResolveTradeType(channelType string) string {
 	switch strings.ToLower(strings.TrimSpace(channelType)) {
-	case "usdt", "usdt-trc20":
-		return "usdt.trc20"
-	case "usdc-trc20":
-		return "usdc.trc20"
-	case "trx":
-		return "tron.trx"
+	case epusdtChannelTypeUSDT, epusdtChannelTypeUSDTTRC20:
+		return epusdtTradeTypeUSDTTRC20
+	case epusdtChannelTypeUSDCTRC20:
+		return epusdtTradeTypeUSDCTRC20
+	case epusdtChannelTypeTRX:
+		return epusdtTradeTypeTRX
 	default:
 		return ""
 	}
@@ -373,9 +393,9 @@ func ResolveTradeType(channelType string) string {
 // IsSupportedTradeType 判断是否支持的交易类型
 func IsSupportedTradeType(tradeType string) bool {
 	supported := []string{
-		"usdt.trc20", "usdt.erc20", "usdt.bep20", "usdt.polygon",
-		"tron.trx", "eth.eth", "bsc.bnb",
-		"usdc.erc20", "usdc.polygon", "usdc.bep20",
+		epusdtTradeTypeUSDTTRC20, epusdtTradeTypeUSDTERC20, epusdtTradeTypeUSDTBEP20, epusdtTradeTypeUSDTPOLY,
+		epusdtTradeTypeTRX, epusdtTradeTypeETH, epusdtTradeTypeBNB,
+		epusdtTradeTypeUSDCTRC20, epusdtTradeTypeUSDCERC20, epusdtTradeTypeUSDCPOLY, epusdtTradeTypeUSDCBEP20,
 	}
 	t := strings.ToLower(strings.TrimSpace(tradeType))
 	for _, s := range supported {

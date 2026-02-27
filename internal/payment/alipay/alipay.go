@@ -33,7 +33,28 @@ var (
 	ErrSignatureInvalid = errors.New("alipay signature invalid")
 )
 
-const defaultTimeout = 12 * time.Second
+const (
+	defaultTimeout = 12 * time.Second
+
+	alipaySignTypeRSA2 = "RSA2"
+	alipaySignTypeRSA  = "RSA"
+
+	alipayReqFormatJSON = "JSON"
+	alipayReqCharset    = "utf-8"
+	alipayReqVersion    = "1.0"
+
+	alipayRespCodeSuccess = "10000"
+
+	alipayMethodPrecreate = "alipay.trade.precreate"
+	alipayMethodWAPPay    = "alipay.trade.wap.pay"
+	alipayMethodPagePay   = "alipay.trade.page.pay"
+
+	alipayProductCodeFaceToFace = "FACE_TO_FACE_PAYMENT"
+	alipayProductCodeQuickWAP   = "QUICK_WAP_WAY"
+	alipayProductCodeFastPay    = "FAST_INSTANT_TRADE_PAY"
+
+	alipayGatewayDefault = "https://openapi.alipay.com/gateway.do"
+)
 
 // Config 支付宝官方配置。
 type Config struct {
@@ -125,7 +146,7 @@ func ValidateConfig(cfg *Config, interactionMode string) error {
 	if requiresReturnURL(interactionMode) && strings.TrimSpace(cfg.ReturnURL) == "" {
 		return fmt.Errorf("%w: return_url is required for mode %s", ErrConfigInvalid, interactionMode)
 	}
-	if cfg.SignType != "RSA2" && cfg.SignType != "RSA" {
+	if cfg.SignType != alipaySignTypeRSA2 && cfg.SignType != alipaySignTypeRSA {
 		return fmt.Errorf("%w: sign_type is invalid", ErrConfigInvalid)
 	}
 	return nil
@@ -176,11 +197,11 @@ func CreatePayment(ctx context.Context, cfg *Config, input CreateInput, interact
 	params := map[string]string{
 		"app_id":      cfg.AppID,
 		"method":      method,
-		"format":      "JSON",
-		"charset":     "utf-8",
+		"format":      alipayReqFormatJSON,
+		"charset":     alipayReqCharset,
 		"sign_type":   cfg.SignType,
 		"timestamp":   time.Now().Format("2006-01-02 15:04:05"),
-		"version":     "1.0",
+		"version":     alipayReqVersion,
 		"notify_url":  notifyURL,
 		"biz_content": string(bizContentBytes),
 	}
@@ -235,7 +256,7 @@ func VerifyCallback(cfg *Config, form map[string][]string) error {
 	if signType == "" {
 		signType = strings.ToUpper(strings.TrimSpace(cfg.SignType))
 	}
-	if signType != "RSA2" && signType != "RSA" {
+	if signType != alipaySignTypeRSA2 && signType != alipaySignTypeRSA {
 		return fmt.Errorf("%w: sign_type is invalid", ErrSignatureInvalid)
 	}
 	content := buildSignContentFromForm(form)
@@ -252,7 +273,7 @@ func VerifyCallback(cfg *Config, form map[string][]string) error {
 	}
 	var digest []byte
 	var hashType crypto.Hash
-	if signType == "RSA" {
+	if signType == alipaySignTypeRSA {
 		sum := sha1.Sum([]byte(content))
 		digest = sum[:]
 		hashType = crypto.SHA1
@@ -304,7 +325,7 @@ func requestPrecreate(ctx context.Context, cfg *Config, method string, params ma
 	}
 
 	code := strings.TrimSpace(readString(responseNode, "code"))
-	if code != "10000" {
+	if code != alipayRespCodeSuccess {
 		errMsg := strings.TrimSpace(readString(responseNode, "sub_msg"))
 		if errMsg == "" {
 			errMsg = strings.TrimSpace(readString(responseNode, "msg"))
@@ -335,11 +356,11 @@ func requestPrecreate(ctx context.Context, cfg *Config, method string, params ma
 func resolveMethod(mode string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(mode)) {
 	case constants.PaymentInteractionQR:
-		return "alipay.trade.precreate", nil
+		return alipayMethodPrecreate, nil
 	case constants.PaymentInteractionWAP:
-		return "alipay.trade.wap.pay", nil
+		return alipayMethodWAPPay, nil
 	case constants.PaymentInteractionPage:
-		return "alipay.trade.page.pay", nil
+		return alipayMethodPagePay, nil
 	default:
 		return "", fmt.Errorf("%w: interaction_mode %s is not supported", ErrConfigInvalid, mode)
 	}
@@ -366,14 +387,14 @@ func buildBizContent(mode string, input CreateInput) (map[string]interface{}, er
 	}
 	switch strings.ToLower(strings.TrimSpace(mode)) {
 	case constants.PaymentInteractionQR:
-		bizContent["product_code"] = "FACE_TO_FACE_PAYMENT"
+		bizContent["product_code"] = alipayProductCodeFaceToFace
 	case constants.PaymentInteractionWAP:
-		bizContent["product_code"] = "QUICK_WAP_WAY"
+		bizContent["product_code"] = alipayProductCodeQuickWAP
 		if strings.TrimSpace(input.QuitURL) != "" {
 			bizContent["quit_url"] = strings.TrimSpace(input.QuitURL)
 		}
 	case constants.PaymentInteractionPage:
-		bizContent["product_code"] = "FAST_INSTANT_TRADE_PAY"
+		bizContent["product_code"] = alipayProductCodeFastPay
 	default:
 		return nil, fmt.Errorf("%w: interaction_mode %s is not supported", ErrConfigInvalid, mode)
 	}
@@ -412,7 +433,7 @@ func signContent(content, privateKeyRaw, signType string) (string, error) {
 	var hashType crypto.Hash
 	var digest []byte
 	signType = strings.ToUpper(strings.TrimSpace(signType))
-	if signType == "RSA" {
+	if signType == alipaySignTypeRSA {
 		sum := sha1.Sum([]byte(content))
 		hashType = crypto.SHA1
 		digest = sum[:]
@@ -620,9 +641,9 @@ func (c *Config) normalize() {
 	c.AppCertSN = strings.TrimSpace(c.AppCertSN)
 	c.AlipayRootCertSN = strings.TrimSpace(c.AlipayRootCertSN)
 	if c.SignType == "" {
-		c.SignType = "RSA2"
+		c.SignType = alipaySignTypeRSA2
 	}
 	if c.GatewayURL == "" {
-		c.GatewayURL = "https://openapi.alipay.com/gateway.do"
+		c.GatewayURL = alipayGatewayDefault
 	}
 }

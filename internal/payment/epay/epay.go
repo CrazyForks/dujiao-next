@@ -28,6 +28,17 @@ import (
 const (
 	VersionV1 = "v1"
 	VersionV2 = "v2"
+
+	epaySignTypeRSA = "RSA"
+	epaySignTypeMD5 = "MD5"
+
+	epayAPIPathV2 = "/api/pay/create"
+	epayAPIPathV1 = "/mapi.php"
+
+	epayMethodWeb = "web"
+	epayDevicePC  = "pc"
+
+	epayHeaderAcceptLanguage = "zh-CN,zh;q=0.9,en;q=0.8"
 )
 
 var (
@@ -161,23 +172,23 @@ func (c *Config) normalize() {
 	c.SignType = strings.TrimSpace(c.SignType)
 	if c.SignType == "" {
 		if c.EpayVersion == VersionV2 {
-			c.SignType = "RSA"
+			c.SignType = epaySignTypeRSA
 		} else {
-			c.SignType = "MD5"
+			c.SignType = epaySignTypeMD5
 		}
 	}
 	if c.APIPath == "" {
 		if c.EpayVersion == VersionV2 {
-			c.APIPath = "/api/pay/create"
+			c.APIPath = epayAPIPathV2
 		} else {
-			c.APIPath = "/mapi.php"
+			c.APIPath = epayAPIPathV1
 		}
 	}
 	if c.Method == "" {
-		c.Method = "web"
+		c.Method = epayMethodWeb
 	}
 	if c.Device == "" {
-		c.Device = "pc"
+		c.Device = epayDevicePC
 	}
 }
 
@@ -373,7 +384,7 @@ func postForm(ctx context.Context, endpoint string, params map[string]string) ([
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json, text/plain, */*")
-	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+	req.Header.Set("Accept-Language", epayHeaderAcceptLanguage)
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)

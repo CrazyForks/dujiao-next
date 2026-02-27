@@ -14,6 +14,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	wechatCallbackRespCodeSuccess = "SUCCESS"
+	wechatCallbackRespCodeFail    = "FAIL"
+	wechatCallbackRespMsgSuccess  = "成功"
+	wechatCallbackRespMsgFail     = "失败"
+)
+
 func (h *Handler) HandleWechatCallback(c *gin.Context) bool {
 	log := requestLog(c)
 	body, err := io.ReadAll(c.Request.Body)
@@ -111,13 +118,13 @@ func isWechatCallbackRequest(c *gin.Context, body []byte) bool {
 func respondWechatCallback(c *gin.Context, success bool) {
 	if success {
 		c.JSON(http.StatusOK, gin.H{
-			"code":    "SUCCESS",
-			"message": "成功",
+			"code":    wechatCallbackRespCodeSuccess,
+			"message": wechatCallbackRespMsgSuccess,
 		})
 		return
 	}
 	c.JSON(http.StatusBadRequest, gin.H{
-		"code":    "FAIL",
-		"message": "失败",
+		"code":    wechatCallbackRespCodeFail,
+		"message": wechatCallbackRespMsgFail,
 	})
 }

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
@@ -324,17 +325,30 @@ func TestParsePaymentIDFromAttach(t *testing.T) {
 }
 
 func TestToPaymentStatus(t *testing.T) {
-	if status, ok := ToPaymentStatus("SUCCESS"); !ok || status != constants.PaymentStatusSuccess {
-		t.Fatalf("unexpected status mapping: %s %v", status, ok)
+	tests := []struct {
+		name     string
+		trade    string
+		expect   string
+		expectOK bool
+	}{
+		{name: "Success", trade: wechatTradeStateSuccess, expect: constants.PaymentStatusSuccess, expectOK: true},
+		{name: "Refund", trade: wechatTradeStateRefund, expect: constants.PaymentStatusSuccess, expectOK: true},
+		{name: "NotPay", trade: wechatTradeStateNotPay, expect: constants.PaymentStatusPending, expectOK: true},
+		{name: "UserPaying", trade: wechatTradeStateUserPaying, expect: constants.PaymentStatusPending, expectOK: true},
+		{name: "PayError", trade: wechatTradeStatePayError, expect: constants.PaymentStatusFailed, expectOK: true},
+		{name: "LowercaseInput", trade: strings.ToLower(wechatTradeStateSuccess), expect: constants.PaymentStatusSuccess, expectOK: true},
+		{name: "Unknown", trade: "UNKNOWN", expect: "", expectOK: false},
 	}
-	if status, ok := ToPaymentStatus("NOTPAY"); !ok || status != constants.PaymentStatusPending {
-		t.Fatalf("unexpected status mapping: %s %v", status, ok)
-	}
-	if status, ok := ToPaymentStatus("PAYERROR"); !ok || status != constants.PaymentStatusFailed {
-		t.Fatalf("unexpected status mapping: %s %v", status, ok)
-	}
-	if _, ok := ToPaymentStatus("UNKNOWN"); ok {
-		t.Fatalf("expected unknown state to be unsupported")
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			status, ok := ToPaymentStatus(tc.trade)
+			if ok != tc.expectOK {
+				t.Fatalf("unexpected ok: got %v, want %v", ok, tc.expectOK)
+			}
+			if status != tc.expect {
+				t.Fatalf("unexpected status: got %s, want %s", status, tc.expect)
+			}
+		})
 	}
 }
 
