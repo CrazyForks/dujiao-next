@@ -268,6 +268,199 @@ func TestExpireWalletRechargePaymentSkipsOrderPayment(t *testing.T) {
 	}
 }
 
+func TestWalletRechargeCallbackSuccessAfterExpireCreditsOnce(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusPending, constants.WalletRechargeStatusPending)
+
+	if _, err := svc.ExpireWalletRechargePayment(payment.ID); err != nil {
+		t.Fatalf("expire wallet recharge payment failed: %v", err)
+	}
+
+	updated, err := svc.HandleCallback(buildWalletRechargeCallbackInput(payment, recharge, constants.PaymentStatusSuccess, "CALLBACK-SUCCESS-1"))
+	if err != nil {
+		t.Fatalf("handle wallet recharge callback failed: %v", err)
+	}
+	if updated.Status != constants.PaymentStatusSuccess {
+		t.Fatalf("payment status want %s got %s", constants.PaymentStatusSuccess, updated.Status)
+	}
+
+	assertWalletRechargeSuccessState(t, db, payment.ID, recharge.ID, recharge.UserID, recharge.Amount.Decimal)
+}
+
+func TestWalletRechargeCallbackSuccessThenExpireKeepsSuccess(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusPending, constants.WalletRechargeStatusPending)
+
+	if _, err := svc.HandleCallback(buildWalletRechargeCallbackInput(payment, recharge, constants.PaymentStatusSuccess, "CALLBACK-SUCCESS-2")); err != nil {
+		t.Fatalf("handle wallet recharge callback failed: %v", err)
+	}
+
+	updated, err := svc.ExpireWalletRechargePayment(payment.ID)
+	if err != nil {
+		t.Fatalf("expire wallet recharge payment failed: %v", err)
+	}
+	if updated.Status != constants.PaymentStatusSuccess {
+		t.Fatalf("payment status want %s got %s", constants.PaymentStatusSuccess, updated.Status)
+	}
+
+	assertWalletRechargeSuccessState(t, db, payment.ID, recharge.ID, recharge.UserID, recharge.Amount.Decimal)
+}
+
+func TestWalletRechargeCallbackDuplicateSuccessDoesNotDuplicateCredit(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusPending, constants.WalletRechargeStatusPending)
+
+	if _, err := svc.HandleCallback(buildWalletRechargeCallbackInput(payment, recharge, constants.PaymentStatusSuccess, "CALLBACK-SUCCESS-FIRST")); err != nil {
+		t.Fatalf("handle first wallet recharge callback failed: %v", err)
+	}
+	if _, err := svc.HandleCallback(buildWalletRechargeCallbackInput(payment, recharge, constants.PaymentStatusSuccess, "CALLBACK-SUCCESS-SECOND")); err != nil {
+		t.Fatalf("handle second wallet recharge callback failed: %v", err)
+	}
+
+	assertWalletRechargeSuccessState(t, db, payment.ID, recharge.ID, recharge.UserID, recharge.Amount.Decimal)
+
+	reference := fmt.Sprintf("recharge:%d:success", recharge.ID)
+	var txnCount int64
+	if err := db.Model(&models.WalletTransaction{}).Where("reference = ?", reference).Count(&txnCount).Error; err != nil {
+		t.Fatalf("count wallet transaction failed: %v", err)
+	}
+	if txnCount != 1 {
+		t.Fatalf("wallet recharge success transaction count want 1 got %d", txnCount)
+	}
+}
+
+func TestWalletRechargeCallbackPendingAfterExpireDoesNotReopen(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusPending, constants.WalletRechargeStatusPending)
+
+	if _, err := svc.ExpireWalletRechargePayment(payment.ID); err != nil {
+		t.Fatalf("expire wallet recharge payment failed: %v", err)
+	}
+	updated, err := svc.HandleCallback(buildWalletRechargeCallbackInput(payment, recharge, constants.PaymentStatusPending, "CALLBACK-PENDING-LATE"))
+	if err != nil {
+		t.Fatalf("handle wallet recharge callback failed: %v", err)
+	}
+	if updated.Status != constants.PaymentStatusExpired {
+		t.Fatalf("payment status want %s got %s", constants.PaymentStatusExpired, updated.Status)
+	}
+
+	var refreshedRecharge models.WalletRechargeOrder
+	if err := db.First(&refreshedRecharge, recharge.ID).Error; err != nil {
+		t.Fatalf("reload recharge failed: %v", err)
+	}
+	if refreshedRecharge.Status != constants.WalletRechargeStatusExpired {
+		t.Fatalf("recharge status want %s got %s", constants.WalletRechargeStatusExpired, refreshedRecharge.Status)
+	}
+}
+
+func TestWalletRechargeCallbackTerminalStateMatrixDoesNotReopen(t *testing.T) {
+	cases := []struct {
+		name              string
+		paymentStatus     string
+		rechargeStatus    string
+		callbackStatus    string
+		wantPaymentStatus string
+		wantRechargeState string
+	}{
+		{
+			name:              "expired_to_pending",
+			paymentStatus:     constants.PaymentStatusExpired,
+			rechargeStatus:    constants.WalletRechargeStatusExpired,
+			callbackStatus:    constants.PaymentStatusPending,
+			wantPaymentStatus: constants.PaymentStatusExpired,
+			wantRechargeState: constants.WalletRechargeStatusExpired,
+		},
+		{
+			name:              "failed_to_pending",
+			paymentStatus:     constants.PaymentStatusFailed,
+			rechargeStatus:    constants.WalletRechargeStatusFailed,
+			callbackStatus:    constants.PaymentStatusPending,
+			wantPaymentStatus: constants.PaymentStatusFailed,
+			wantRechargeState: constants.WalletRechargeStatusFailed,
+		},
+		{
+			name:              "failed_to_expired",
+			paymentStatus:     constants.PaymentStatusFailed,
+			rechargeStatus:    constants.WalletRechargeStatusFailed,
+			callbackStatus:    constants.PaymentStatusExpired,
+			wantPaymentStatus: constants.PaymentStatusFailed,
+			wantRechargeState: constants.WalletRechargeStatusFailed,
+		},
+		{
+			name:              "expired_to_failed",
+			paymentStatus:     constants.PaymentStatusExpired,
+			rechargeStatus:    constants.WalletRechargeStatusExpired,
+			callbackStatus:    constants.PaymentStatusFailed,
+			wantPaymentStatus: constants.PaymentStatusExpired,
+			wantRechargeState: constants.WalletRechargeStatusExpired,
+		},
+		{
+			name:              "success_to_pending",
+			paymentStatus:     constants.PaymentStatusSuccess,
+			rechargeStatus:    constants.WalletRechargeStatusSuccess,
+			callbackStatus:    constants.PaymentStatusPending,
+			wantPaymentStatus: constants.PaymentStatusSuccess,
+			wantRechargeState: constants.WalletRechargeStatusSuccess,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc, db := setupPaymentServiceWalletTest(t)
+			payment, recharge := createWalletRechargeFixture(t, db, tc.paymentStatus, tc.rechargeStatus)
+
+			providerRef := fmt.Sprintf("CALLBACK-%s-%d", tc.name, time.Now().UnixNano())
+			updated, err := svc.HandleCallback(buildWalletRechargeCallbackInput(payment, recharge, tc.callbackStatus, providerRef))
+			if err != nil {
+				t.Fatalf("handle wallet recharge callback failed: %v", err)
+			}
+			if updated.Status != tc.wantPaymentStatus {
+				t.Fatalf("payment status want %s got %s", tc.wantPaymentStatus, updated.Status)
+			}
+
+			var refreshedPayment models.Payment
+			if err := db.First(&refreshedPayment, payment.ID).Error; err != nil {
+				t.Fatalf("reload payment failed: %v", err)
+			}
+			if refreshedPayment.Status != tc.wantPaymentStatus {
+				t.Fatalf("reloaded payment status want %s got %s", tc.wantPaymentStatus, refreshedPayment.Status)
+			}
+
+			var refreshedRecharge models.WalletRechargeOrder
+			if err := db.First(&refreshedRecharge, recharge.ID).Error; err != nil {
+				t.Fatalf("reload recharge failed: %v", err)
+			}
+			if refreshedRecharge.Status != tc.wantRechargeState {
+				t.Fatalf("recharge status want %s got %s", tc.wantRechargeState, refreshedRecharge.Status)
+			}
+		})
+	}
+}
+
+func TestWalletRechargeCallbackSuccessAfterFailedCreditsOnce(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusFailed, constants.WalletRechargeStatusFailed)
+
+	updated, err := svc.HandleCallback(buildWalletRechargeCallbackInput(payment, recharge, constants.PaymentStatusSuccess, "CALLBACK-SUCCESS-AFTER-FAILED"))
+	if err != nil {
+		t.Fatalf("handle wallet recharge callback failed: %v", err)
+	}
+	if updated.Status != constants.PaymentStatusSuccess {
+		t.Fatalf("payment status want %s got %s", constants.PaymentStatusSuccess, updated.Status)
+	}
+
+	assertWalletRechargeSuccessState(t, db, payment.ID, recharge.ID, recharge.UserID, recharge.Amount.Decimal)
+
+	reference := fmt.Sprintf("recharge:%d:success", recharge.ID)
+	var txnCount int64
+	if err := db.Model(&models.WalletTransaction{}).Where("reference = ?", reference).Count(&txnCount).Error; err != nil {
+		t.Fatalf("count wallet transaction failed: %v", err)
+	}
+	if txnCount != 1 {
+		t.Fatalf("wallet recharge success transaction count want 1 got %d", txnCount)
+	}
+}
+
 func createWalletRechargeFixture(t *testing.T, db *gorm.DB, paymentStatus string, rechargeStatus string) (*models.Payment, *models.WalletRechargeOrder) {
 	t.Helper()
 	now := time.Now()
@@ -318,4 +511,59 @@ func createWalletRechargeFixture(t *testing.T, db *gorm.DB, paymentStatus string
 		t.Fatalf("create recharge failed: %v", err)
 	}
 	return payment, recharge
+}
+
+func buildWalletRechargeCallbackInput(payment *models.Payment, recharge *models.WalletRechargeOrder, status string, providerRef string) PaymentCallbackInput {
+	return PaymentCallbackInput{
+		PaymentID:   payment.ID,
+		OrderNo:     recharge.RechargeNo,
+		ChannelID:   payment.ChannelID,
+		Status:      status,
+		ProviderRef: providerRef,
+		Amount:      payment.Amount,
+		Currency:    payment.Currency,
+		PaidAt:      ptrTime(time.Now()),
+		Payload: models.JSON{
+			"provider_ref": providerRef,
+			"status":       status,
+		},
+	}
+}
+
+func assertWalletRechargeSuccessState(t *testing.T, db *gorm.DB, paymentID uint, rechargeID uint, userID uint, rechargeAmount decimal.Decimal) {
+	t.Helper()
+
+	var refreshedPayment models.Payment
+	if err := db.First(&refreshedPayment, paymentID).Error; err != nil {
+		t.Fatalf("reload payment failed: %v", err)
+	}
+	if refreshedPayment.Status != constants.PaymentStatusSuccess {
+		t.Fatalf("payment status want %s got %s", constants.PaymentStatusSuccess, refreshedPayment.Status)
+	}
+	if refreshedPayment.PaidAt == nil {
+		t.Fatalf("payment should set paid_at")
+	}
+
+	var refreshedRecharge models.WalletRechargeOrder
+	if err := db.First(&refreshedRecharge, rechargeID).Error; err != nil {
+		t.Fatalf("reload recharge failed: %v", err)
+	}
+	if refreshedRecharge.Status != constants.WalletRechargeStatusSuccess {
+		t.Fatalf("recharge status want %s got %s", constants.WalletRechargeStatusSuccess, refreshedRecharge.Status)
+	}
+	if refreshedRecharge.PaidAt == nil {
+		t.Fatalf("recharge should set paid_at")
+	}
+
+	var account models.WalletAccount
+	if err := db.Where("user_id = ?", userID).First(&account).Error; err != nil {
+		t.Fatalf("reload wallet account failed: %v", err)
+	}
+	if !account.Balance.Decimal.Equal(rechargeAmount) {
+		t.Fatalf("wallet balance want %s got %s", rechargeAmount.String(), account.Balance.String())
+	}
+}
+
+func ptrTime(v time.Time) *time.Time {
+	return &v
 }

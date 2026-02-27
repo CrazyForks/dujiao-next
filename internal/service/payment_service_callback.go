@@ -194,6 +194,14 @@ func (s *PaymentService) handleWalletRechargeCallback(payment *models.Payment, s
 		)
 		return s.updateCallbackMeta(payment, status, input)
 	}
+	if !canApplyWalletRechargeCallback(payment.Status, recharge.Status, status) {
+		log.Infow("wallet_recharge_callback_ignored_terminal_transition",
+			"current_payment_status", payment.Status,
+			"current_recharge_status", recharge.Status,
+			"target_status", status,
+		)
+		return s.updateCallbackMeta(payment, payment.Status, input)
+	}
 
 	now := time.Now()
 	updated, err := s.applyWalletRechargePaymentUpdate(payment, status, input, now)
@@ -284,6 +292,24 @@ func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *models.Paymen
 		return nil, err
 	}
 	return paymentVal, nil
+}
+
+func canApplyWalletRechargeCallback(paymentStatus string, rechargeStatus string, targetStatus string) bool {
+	// 成功回调允许覆盖终态（支付网关存在延迟成功通知场景）。
+	if targetStatus == constants.PaymentStatusSuccess {
+		return true
+	}
+	// 非成功回调不允许改变任何终态，避免 expired/failed/success 被回调串扰重开。
+	if paymentStatus == constants.PaymentStatusSuccess || rechargeStatus == constants.WalletRechargeStatusSuccess {
+		return false
+	}
+	if paymentStatus == constants.PaymentStatusFailed || rechargeStatus == constants.WalletRechargeStatusFailed {
+		return false
+	}
+	if paymentStatus == constants.PaymentStatusExpired || rechargeStatus == constants.WalletRechargeStatusExpired {
+		return false
+	}
+	return true
 }
 
 func (s *PaymentService) updateCallbackMeta(payment *models.Payment, status string, input PaymentCallbackInput) (*models.Payment, error) {

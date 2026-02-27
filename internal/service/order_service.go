@@ -949,24 +949,11 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*mo
 			}
 			now := time.Now()
 			err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
-				orderRepo := s.orderRepo.WithTx(tx)
-				productRepo := s.productRepo.WithTx(tx)
-				var productSKURepo repository.ProductSKURepository
-				if s.productSKURepo != nil {
-					productSKURepo = s.productSKURepo.WithTx(tx)
-				}
-				updates := map[string]interface{}{
-					"paid_at":    now,
-					"updated_at": now,
-				}
-				if err := orderRepo.UpdateStatus(order.ID, constants.OrderStatusPaid, updates); err != nil {
-					return ErrOrderUpdateFailed
+				if err := s.updateOrderToPaidInTx(tx, order.ID, nil, now); err != nil {
+					return err
 				}
 				for _, child := range order.Children {
-					if err := orderRepo.UpdateStatus(child.ID, constants.OrderStatusPaid, updates); err != nil {
-						return ErrOrderUpdateFailed
-					}
-					if err := consumeManualStockByItems(productRepo, productSKURepo, child.Items); err != nil {
+					if err := s.updateOrderToPaidInTx(tx, child.ID, child.Items, now); err != nil {
 						return err
 					}
 				}
@@ -1000,23 +987,7 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*mo
 			}
 			now := time.Now()
 			err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
-				orderRepo := s.orderRepo.WithTx(tx)
-				updates := map[string]interface{}{"updated_at": now}
-				if err := orderRepo.UpdateStatus(order.ID, constants.OrderStatusCompleted, updates); err != nil {
-					return ErrOrderUpdateFailed
-				}
-				for _, child := range order.Children {
-					if child.Status == constants.OrderStatusCompleted {
-						continue
-					}
-					if child.Status != constants.OrderStatusDelivered {
-						return ErrOrderStatusInvalid
-					}
-					if err := orderRepo.UpdateStatus(child.ID, constants.OrderStatusCompleted, updates); err != nil {
-						return ErrOrderUpdateFailed
-					}
-				}
-				return nil
+				return s.completeParentOrderInTx(tx, order, now)
 			})
 			if err != nil {
 				if errors.Is(err, ErrOrderStatusInvalid) {
@@ -1064,46 +1035,11 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*mo
 
 	if target == constants.OrderStatusCanceled {
 		err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
-			orderRepo := s.orderRepo.WithTx(tx)
-			productRepo := s.productRepo.WithTx(tx)
-			var productSKURepo repository.ProductSKURepository
-			if s.productSKURepo != nil {
-				productSKURepo = s.productSKURepo.WithTx(tx)
-			}
-			if err := orderRepo.UpdateStatus(order.ID, target, updates); err != nil {
-				return ErrOrderUpdateFailed
-			}
-			if s.cardSecretRepo != nil {
-				secretRepo := s.cardSecretRepo.WithTx(tx)
-				if _, err := secretRepo.ReleaseByOrder(order.ID); err != nil {
-					return err
-				}
-			}
-			if err := releaseManualStockByItems(productRepo, productSKURepo, order.Items); err != nil {
-				return err
-			}
-			if s.walletService != nil {
-				if _, err := s.walletService.ReleaseOrderBalance(tx, order, constants.WalletTxnTypeOrderRefund, "订单取消退回余额"); err != nil {
-					return err
-				}
-			}
-			return nil
+			return s.cancelSingleOrderInTx(tx, order, target, updates)
 		})
 	} else if target == constants.OrderStatusPaid {
 		err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
-			orderRepo := s.orderRepo.WithTx(tx)
-			productRepo := s.productRepo.WithTx(tx)
-			var productSKURepo repository.ProductSKURepository
-			if s.productSKURepo != nil {
-				productSKURepo = s.productSKURepo.WithTx(tx)
-			}
-			if err := orderRepo.UpdateStatus(order.ID, target, updates); err != nil {
-				return ErrOrderUpdateFailed
-			}
-			if err := consumeManualStockByItems(productRepo, productSKURepo, order.Items); err != nil {
-				return err
-			}
-			return nil
+			return s.updateOrderToPaidInTx(tx, order.ID, order.Items, now)
 		})
 	} else {
 		err = s.orderRepo.UpdateStatus(order.ID, target, updates)
@@ -1158,6 +1094,79 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*mo
 	}
 	fillOrderItemsFromChildren(order)
 	return order, nil
+}
+
+func (s *OrderService) completeParentOrderInTx(tx *gorm.DB, order *models.Order, now time.Time) error {
+	if order == nil {
+		return ErrOrderNotFound
+	}
+	orderRepo := s.orderRepo.WithTx(tx)
+	updates := map[string]interface{}{"updated_at": now}
+	if err := orderRepo.UpdateStatus(order.ID, constants.OrderStatusCompleted, updates); err != nil {
+		return ErrOrderUpdateFailed
+	}
+	for _, child := range order.Children {
+		if child.Status == constants.OrderStatusCompleted {
+			continue
+		}
+		if child.Status != constants.OrderStatusDelivered {
+			return ErrOrderStatusInvalid
+		}
+		if err := orderRepo.UpdateStatus(child.ID, constants.OrderStatusCompleted, updates); err != nil {
+			return ErrOrderUpdateFailed
+		}
+	}
+	return nil
+}
+
+func (s *OrderService) updateOrderToPaidInTx(tx *gorm.DB, orderID uint, items []models.OrderItem, now time.Time) error {
+	orderRepo := s.orderRepo.WithTx(tx)
+	productRepo := s.productRepo.WithTx(tx)
+	var productSKURepo repository.ProductSKURepository
+	if s.productSKURepo != nil {
+		productSKURepo = s.productSKURepo.WithTx(tx)
+	}
+	updates := map[string]interface{}{
+		"paid_at":    now,
+		"updated_at": now,
+	}
+	if err := orderRepo.UpdateStatus(orderID, constants.OrderStatusPaid, updates); err != nil {
+		return ErrOrderUpdateFailed
+	}
+	if err := consumeManualStockByItems(productRepo, productSKURepo, items); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *OrderService) cancelSingleOrderInTx(tx *gorm.DB, order *models.Order, target string, updates map[string]interface{}) error {
+	if order == nil {
+		return ErrOrderNotFound
+	}
+	orderRepo := s.orderRepo.WithTx(tx)
+	productRepo := s.productRepo.WithTx(tx)
+	var productSKURepo repository.ProductSKURepository
+	if s.productSKURepo != nil {
+		productSKURepo = s.productSKURepo.WithTx(tx)
+	}
+	if err := orderRepo.UpdateStatus(order.ID, target, updates); err != nil {
+		return ErrOrderUpdateFailed
+	}
+	if s.cardSecretRepo != nil {
+		secretRepo := s.cardSecretRepo.WithTx(tx)
+		if _, err := secretRepo.ReleaseByOrder(order.ID); err != nil {
+			return err
+		}
+	}
+	if err := releaseManualStockByItems(productRepo, productSKURepo, order.Items); err != nil {
+		return err
+	}
+	if s.walletService != nil {
+		if _, err := s.walletService.ReleaseOrderBalance(tx, order, constants.WalletTxnTypeOrderRefund, "订单取消退回余额"); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // CancelExpiredOrder 超时取消订单
