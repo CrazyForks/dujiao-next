@@ -18,6 +18,7 @@ type Config struct {
 	Database     DatabaseConfig     `mapstructure:"database"`
 	JWT          JWTConfig          `mapstructure:"jwt"`
 	UserJWT      JWTConfig          `mapstructure:"user_jwt"`
+	Bootstrap    BootstrapConfig    `mapstructure:"bootstrap"`
 	TelegramAuth TelegramAuthConfig `mapstructure:"telegram_auth"`
 	Redis        RedisConfig        `mapstructure:"redis"`
 	Queue        QueueConfig        `mapstructure:"queue"`
@@ -78,6 +79,12 @@ type JWTConfig struct {
 	SecretKey             string `mapstructure:"secret"`
 	ExpireHours           int    `mapstructure:"expire_hours"`
 	RememberMeExpireHours int    `mapstructure:"remember_me_expire_hours"`
+}
+
+// BootstrapConfig 启动初始化配置
+type BootstrapConfig struct {
+	DefaultAdminUsername string `mapstructure:"default_admin_username"`
+	DefaultAdminPassword string `mapstructure:"default_admin_password"`
 }
 
 // TelegramAuthConfig Telegram 登录配置
@@ -272,6 +279,8 @@ func Load() *Config {
 	viper.SetDefault("user_jwt.secret", "user-change-me-in-production")
 	viper.SetDefault("user_jwt.expire_hours", 24)
 	viper.SetDefault("user_jwt.remember_me_expire_hours", 168)
+	viper.SetDefault("bootstrap.default_admin_username", "")
+	viper.SetDefault("bootstrap.default_admin_password", "")
 	viper.SetDefault("telegram_auth.enabled", false)
 	viper.SetDefault("telegram_auth.bot_username", "")
 	viper.SetDefault("telegram_auth.bot_token", "")

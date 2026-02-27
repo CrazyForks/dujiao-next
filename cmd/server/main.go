@@ -57,10 +57,9 @@ func main() {
 	}
 
 	// 初始化默认管理员账号
-	defaultAdminUser := os.Getenv("DJ_DEFAULT_ADMIN_USERNAME")
-	defaultAdminPass := os.Getenv("DJ_DEFAULT_ADMIN_PASSWORD")
+	defaultAdminUser, defaultAdminPass := resolveDefaultAdminCredentials(cfg)
 	if cfg.Server.Mode == "release" && defaultAdminPass == "" {
-		stdLog.Printf("警告: 未设置 DJ_DEFAULT_ADMIN_PASSWORD，已跳过默认管理员初始化")
+		stdLog.Printf("警告: 未设置 DJ_DEFAULT_ADMIN_PASSWORD 且 bootstrap.default_admin_password 为空，已跳过默认管理员初始化")
 	} else if err := models.InitDefaultAdmin(defaultAdminUser, defaultAdminPass); err != nil {
 		stdLog.Printf("警告: 初始化默认管理员失败: %v", err)
 	}
@@ -115,4 +114,20 @@ func isWeakSecret(secret string) bool {
 		return true
 	}
 	return false
+}
+
+// resolveDefaultAdminCredentials 解析默认管理员初始化凭据（环境变量优先，其次 config.yml）
+func resolveDefaultAdminCredentials(cfg *config.Config) (string, string) {
+	user := strings.TrimSpace(os.Getenv("DJ_DEFAULT_ADMIN_USERNAME"))
+	pass := strings.TrimSpace(os.Getenv("DJ_DEFAULT_ADMIN_PASSWORD"))
+	if cfg == nil {
+		return user, pass
+	}
+	if user == "" {
+		user = strings.TrimSpace(cfg.Bootstrap.DefaultAdminUsername)
+	}
+	if pass == "" {
+		pass = strings.TrimSpace(cfg.Bootstrap.DefaultAdminPassword)
+	}
+	return user, pass
 }
