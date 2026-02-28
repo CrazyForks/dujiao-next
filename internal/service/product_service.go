@@ -679,6 +679,7 @@ func (s *ProductService) ApplyAutoStockCounts(products []models.Product) error {
 		products[i].AutoStockLocked = pLocked
 		products[i].AutoStockSold = pUsed
 
+		legacyTargetIdx := resolveLegacyStockTargetSKUIndex(products[i].SKUs)
 		for j := range products[i].SKUs {
 			skuID := products[i].SKUs[j].ID
 			statusMap := pMap[skuID]
@@ -687,9 +688,9 @@ func (s *ProductService) ApplyAutoStockCounts(products []models.Product) error {
 			locked := statusMap[models.CardSecretStatusReserved]
 			used := statusMap[models.CardSecretStatusUsed]
 
-			// 如果 skuID 为 0 的卡密存在，则合并到第一个 SKU
-			// 避免将通用 SKU 的数量重复加到所有 SKU 上
-			if j == 0 && pMap[0] != nil {
+			// 如果 skuID 为 0 的历史卡密存在，优先归并到 DEFAULT SKU。
+			// 若不存在 DEFAULT SKU，则回退到首个启用 SKU，避免重复叠加到所有 SKU。
+			if j == legacyTargetIdx && pMap[0] != nil {
 				available += pMap[0][models.CardSecretStatusAvailable]
 				locked += pMap[0][models.CardSecretStatusReserved]
 				used += pMap[0][models.CardSecretStatusUsed]
@@ -702,4 +703,35 @@ func (s *ProductService) ApplyAutoStockCounts(products []models.Product) error {
 		}
 	}
 	return nil
+}
+
+func resolveLegacyStockTargetSKUIndex(skus []models.ProductSKU) int {
+	if len(skus) == 0 {
+		return -1
+	}
+
+	defaultCode := strings.ToUpper(strings.TrimSpace(models.DefaultSKUCode))
+	firstActiveIdx := -1
+	for idx := range skus {
+		if !skus[idx].IsActive {
+			continue
+		}
+		if firstActiveIdx < 0 {
+			firstActiveIdx = idx
+		}
+		if strings.ToUpper(strings.TrimSpace(skus[idx].SKUCode)) == defaultCode {
+			return idx
+		}
+	}
+	if firstActiveIdx >= 0 {
+		return firstActiveIdx
+	}
+
+	// 防御性回退：没有启用 SKU 时，仍尽量归并到 DEFAULT SKU。
+	for idx := range skus {
+		if strings.ToUpper(strings.TrimSpace(skus[idx].SKUCode)) == defaultCode {
+			return idx
+		}
+	}
+	return 0
 }

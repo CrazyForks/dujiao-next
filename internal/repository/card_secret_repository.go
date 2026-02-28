@@ -34,10 +34,10 @@ type CardSecretRepository interface {
 
 // SKUStockCount 卡密库存统计结果
 type SKUStockCount struct {
-	ProductID uint
-	SKUID     uint
-	Status    string
-	Total     int64
+	ProductID uint   `gorm:"column:product_id"`
+	SKUID     uint   `gorm:"column:sku_id"`
+	Status    string `gorm:"column:status"`
+	Total     int64  `gorm:"column:total"`
 }
 
 // GormCardSecretRepository GORM 实现
