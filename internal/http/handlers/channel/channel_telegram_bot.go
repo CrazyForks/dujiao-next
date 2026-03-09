@@ -11,7 +11,7 @@ import (
 )
 
 // GetBotConfig GET /api/v1/channel/telegram/config
-// 返回 Telegram Bot 配置 + config_version
+// 返回 Telegram Bot 配置 + config_version（嵌套结构）
 func (h *Handler) GetBotConfig(c *gin.Context) {
 	config, err := h.SettingService.GetTelegramBotConfig()
 	if err != nil {
@@ -23,6 +23,17 @@ func (h *Handler) GetBotConfig(c *gin.Context) {
 		return
 	}
 
+	// 从已认证的 channel client 获取 bot_token
+	var botToken string
+	if clientID, exists := c.Get("channel_client_id"); exists {
+		if id, ok := clientID.(uint); ok {
+			client, err := h.ChannelClientService.GetChannelClient(id)
+			if err == nil && client != nil {
+				botToken, _ = h.ChannelClientService.DecryptBotToken(client)
+			}
+		}
+	}
+
 	runtimeStatus, err := h.SettingService.GetTelegramBotRuntimeStatus()
 	if err != nil {
 		logger.Warnw("channel_get_runtime_status_failed", "error", err)
@@ -30,18 +41,8 @@ func (h *Handler) GetBotConfig(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"ok": true,
-		"config": gin.H{
-			"bot_display_name":  config.BotDisplayName,
-			"bot_description":   config.BotDescription,
-			"support_link":      config.SupportLink,
-			"avatar_url":        config.AvatarURL,
-			"welcome_cover_url": config.WelcomeCoverURL,
-			"default_locale":    config.DefaultLocale,
-			"welcome_message":   config.WelcomeMessage,
-			"announcement":      config.Announcement,
-			"announcement_on":   config.AnnouncementOn,
-		},
+		"ok":             true,
+		"config":         service.SerializeTelegramBotConfigForChannel(*config, botToken),
 		"config_version": runtimeStatus.ConfigVersion,
 	})
 }

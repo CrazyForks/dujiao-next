@@ -28,6 +28,7 @@ var allowedUploadScenes = map[string]struct{}{
 	"editor":   {},
 	"common":   {},
 	"category": {},
+	"telegram": {},
 }
 
 // UploadService 文件上传服务

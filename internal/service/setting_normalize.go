@@ -41,8 +41,7 @@ func normalizeSettingValueByKey(key string, value map[string]interface{}) models
 	case constants.SettingKeyAffiliateConfig:
 		return normalizeAffiliateSettingMap(value)
 	case constants.SettingKeyTelegramBotConfig:
-		setting := telegramBotConfigFromJSON(models.JSON(value), TelegramBotConfigDefault())
-		return TelegramBotConfigToMap(setting)
+		return normalizeTelegramBotConfig(models.JSON(value))
 	default:
 		return models.JSON(value)
 	}

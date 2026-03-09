@@ -27,18 +27,21 @@ func NewChannelClientService(repo repository.ChannelClientRepository, appSecretK
 	}
 }
 
-// ChannelClientResponse 创建渠道客户端的响应（仅创建时返回明文 secret）
+// ChannelClientResponse 渠道客户端响应（含明文 secret）
 type ChannelClientResponse struct {
-	ID          uint   `json:"id"`
-	Name        string `json:"name"`
-	ChannelType string `json:"channel_type"`
-	ChannelKey  string `json:"channel_key"`
-	Secret      string `json:"secret"` // 明文 secret，仅创建时可见
-	Description string `json:"description"`
+	ID            uint   `json:"id"`
+	Name          string `json:"name"`
+	ChannelType   string `json:"channel_type"`
+	ChannelKey    string `json:"channel_key"`
+	ChannelSecret string `json:"channel_secret"`
+	BotToken      string `json:"bot_token"`
+	BotTokenSet   bool   `json:"bot_token_set"`
+	Description   string `json:"description"`
+	Status        int    `json:"status"`
 }
 
 // CreateChannelClient 创建渠道客户端
-func (s *ChannelClientService) CreateChannelClient(name, channelType, description string) (*ChannelClientResponse, error) {
+func (s *ChannelClientService) CreateChannelClient(name, channelType, description, botToken string) (*ChannelClientResponse, error) {
 	// 生成随机 key (32 bytes = 64 hex chars)
 	keyBytes := make([]byte, 32)
 	if _, err := rand.Read(keyBytes); err != nil {
@@ -68,17 +71,29 @@ func (s *ChannelClientService) CreateChannelClient(name, channelType, descriptio
 		Description:   description,
 	}
 
+	// 加密 bot_token（如果提供）
+	if botToken != "" {
+		encryptedToken, err := crypto.Encrypt(s.encKey, botToken)
+		if err != nil {
+			return nil, fmt.Errorf("encrypt bot token: %w", err)
+		}
+		client.BotToken = encryptedToken
+	}
+
 	if err := s.repo.Create(client); err != nil {
 		return nil, err
 	}
 
 	return &ChannelClientResponse{
-		ID:          client.ID,
-		Name:        client.Name,
-		ChannelType: client.ChannelType,
-		ChannelKey:  client.ChannelKey,
-		Secret:      plainSecret,
-		Description: client.Description,
+		ID:            client.ID,
+		Name:          client.Name,
+		ChannelType:   client.ChannelType,
+		ChannelKey:    client.ChannelKey,
+		ChannelSecret: plainSecret,
+		BotToken:      maskBotToken(botToken),
+		BotTokenSet:   botToken != "",
+		Description:   client.Description,
+		Status:        client.Status,
 	}, nil
 }
 
@@ -99,6 +114,132 @@ func (s *ChannelClientService) ListChannelClients() ([]models.ChannelClient, err
 	return s.repo.FindAll()
 }
 
+// GetChannelClientDetail 获取渠道客户端详情（含解密 secret）
+func (s *ChannelClientService) GetChannelClientDetail(id uint) (*ChannelClientResponse, error) {
+	client, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if client == nil {
+		return nil, ErrChannelClientNotFound
+	}
+
+	plainSecret, err := crypto.Decrypt(s.encKey, client.ChannelSecret)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt channel secret: %w", err)
+	}
+
+	resp := &ChannelClientResponse{
+		ID:            client.ID,
+		Name:          client.Name,
+		ChannelType:   client.ChannelType,
+		ChannelKey:    client.ChannelKey,
+		ChannelSecret: plainSecret,
+		BotTokenSet:   client.BotToken != "",
+		Description:   client.Description,
+		Status:        client.Status,
+	}
+
+	if client.BotToken != "" {
+		plainToken, err := crypto.Decrypt(s.encKey, client.BotToken)
+		if err == nil {
+			resp.BotToken = maskBotToken(plainToken)
+		}
+	}
+
+	return resp, nil
+}
+
+// ListChannelClientDetails 列出所有渠道客户端（含解密 secret）
+func (s *ChannelClientService) ListChannelClientDetails() ([]ChannelClientResponse, error) {
+	clients, err := s.repo.FindAll()
+	if err != nil {
+		return nil, err
+	}
+	result := make([]ChannelClientResponse, 0, len(clients))
+	for _, c := range clients {
+		plainSecret, decErr := crypto.Decrypt(s.encKey, c.ChannelSecret)
+		if decErr != nil {
+			plainSecret = ""
+		}
+		resp := ChannelClientResponse{
+			ID:            c.ID,
+			Name:          c.Name,
+			ChannelType:   c.ChannelType,
+			ChannelKey:    c.ChannelKey,
+			ChannelSecret: plainSecret,
+			BotTokenSet:   c.BotToken != "",
+			Description:   c.Description,
+			Status:        c.Status,
+		}
+		if c.BotToken != "" {
+			plainToken, decErr := crypto.Decrypt(s.encKey, c.BotToken)
+			if decErr == nil {
+				resp.BotToken = maskBotToken(plainToken)
+			}
+		}
+		result = append(result, resp)
+	}
+	return result, nil
+}
+
+// ResetChannelClientSecret 重置渠道客户端 Secret
+func (s *ChannelClientService) ResetChannelClientSecret(id uint) (*ChannelClientResponse, error) {
+	client, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if client == nil {
+		return nil, ErrChannelClientNotFound
+	}
+
+	secretBytes := make([]byte, 32)
+	if _, err := rand.Read(secretBytes); err != nil {
+		return nil, fmt.Errorf("generate channel secret: %w", err)
+	}
+	plainSecret := hex.EncodeToString(secretBytes)
+
+	encryptedSecret, err := crypto.Encrypt(s.encKey, plainSecret)
+	if err != nil {
+		return nil, fmt.Errorf("encrypt channel secret: %w", err)
+	}
+
+	client.ChannelSecret = encryptedSecret
+	if err := s.repo.Update(client); err != nil {
+		return nil, err
+	}
+
+	resp := &ChannelClientResponse{
+		ID:            client.ID,
+		Name:          client.Name,
+		ChannelType:   client.ChannelType,
+		ChannelKey:    client.ChannelKey,
+		ChannelSecret: plainSecret,
+		BotTokenSet:   client.BotToken != "",
+		Description:   client.Description,
+		Status:        client.Status,
+	}
+	if client.BotToken != "" {
+		plainToken, decErr := crypto.Decrypt(s.encKey, client.BotToken)
+		if decErr == nil {
+			resp.BotToken = maskBotToken(plainToken)
+		}
+	}
+	return resp, nil
+}
+
+// DeleteChannelClient 删除渠道客户端（软删除）
+func (s *ChannelClientService) DeleteChannelClient(id uint) error {
+	client, err := s.repo.FindByID(id)
+	if err != nil {
+		return err
+	}
+	if client == nil {
+		return ErrChannelClientNotFound
+	}
+	return s.repo.Delete(client)
+}
+
 // UpdateChannelClientStatus 更新渠道客户端状态
 func (s *ChannelClientService) UpdateChannelClientStatus(id uint, status int) error {
 	client, err := s.repo.FindByID(id)
@@ -110,6 +251,70 @@ func (s *ChannelClientService) UpdateChannelClientStatus(id uint, status int) er
 	}
 	client.Status = status
 	return s.repo.Update(client)
+}
+
+// UpdateChannelClient 更新渠道客户端信息（名称、描述、bot_token）
+func (s *ChannelClientService) UpdateChannelClient(id uint, name, description string, botToken *string) (*ChannelClientResponse, error) {
+	client, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if client == nil {
+		return nil, ErrChannelClientNotFound
+	}
+
+	if name != "" {
+		client.Name = name
+	}
+	client.Description = description
+
+	// botToken 为 nil 表示不修改；非 nil 则更新（空字符串表示清空）
+	if botToken != nil {
+		if *botToken != "" {
+			encryptedToken, err := crypto.Encrypt(s.encKey, *botToken)
+			if err != nil {
+				return nil, fmt.Errorf("encrypt bot token: %w", err)
+			}
+			client.BotToken = encryptedToken
+		} else {
+			client.BotToken = ""
+		}
+	}
+
+	if err := s.repo.Update(client); err != nil {
+		return nil, err
+	}
+
+	plainSecret, err := crypto.Decrypt(s.encKey, client.ChannelSecret)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt channel secret: %w", err)
+	}
+
+	resp := &ChannelClientResponse{
+		ID:            client.ID,
+		Name:          client.Name,
+		ChannelType:   client.ChannelType,
+		ChannelKey:    client.ChannelKey,
+		ChannelSecret: plainSecret,
+		BotTokenSet:   client.BotToken != "",
+		Description:   client.Description,
+		Status:        client.Status,
+	}
+	if client.BotToken != "" {
+		plainToken, decErr := crypto.Decrypt(s.encKey, client.BotToken)
+		if decErr == nil {
+			resp.BotToken = maskBotToken(plainToken)
+		}
+	}
+	return resp, nil
+}
+
+// DecryptBotToken 解密渠道客户端的 Bot Token（供 Channel API 使用）
+func (s *ChannelClientService) DecryptBotToken(client *models.ChannelClient) (string, error) {
+	if client.BotToken == "" {
+		return "", nil
+	}
+	return crypto.Decrypt(s.encKey, client.BotToken)
 }
 
 // VerifyChannelSignature 验证渠道签名

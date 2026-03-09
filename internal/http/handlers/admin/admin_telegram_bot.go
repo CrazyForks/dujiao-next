@@ -18,15 +18,15 @@ func (h *Handler) GetTelegramBotConfig(c *gin.Context) {
 	response.Success(c, service.MaskTelegramBotConfigForAdmin(*setting))
 }
 
-// UpdateTelegramBotConfig 更新 Telegram Bot 配置
+// UpdateTelegramBotConfig 更新 Telegram Bot 配置（整对象覆盖）
 func (h *Handler) UpdateTelegramBotConfig(c *gin.Context) {
-	var req service.TelegramBotConfigSettingPatch
+	var req service.TelegramBotConfigSetting
 	if err := c.ShouldBindJSON(&req); err != nil {
 		shared.RespondBindError(c, err)
 		return
 	}
 
-	setting, err := h.SettingService.PatchTelegramBotConfig(req)
+	setting, err := h.SettingService.UpdateTelegramBotConfig(req)
 	if err != nil {
 		shared.RespondError(c, response.CodeInternal, "error.settings_save_failed", err)
 		return

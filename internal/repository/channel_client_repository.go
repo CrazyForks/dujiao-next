@@ -15,6 +15,7 @@ type ChannelClientRepository interface {
 	FindByChannelKey(key string) (*models.ChannelClient, error)
 	FindAll() ([]models.ChannelClient, error)
 	Update(client *models.ChannelClient) error
+	Delete(client *models.ChannelClient) error
 }
 
 // GormChannelClientRepository GORM 实现
@@ -68,4 +69,9 @@ func (r *GormChannelClientRepository) FindAll() ([]models.ChannelClient, error) 
 // Update 更新渠道客户端
 func (r *GormChannelClientRepository) Update(client *models.ChannelClient) error {
 	return r.db.Save(client).Error
+}
+
+// Delete 删除渠道客户端（软删除）
+func (r *GormChannelClientRepository) Delete(client *models.ChannelClient) error {
+	return r.db.Delete(client).Error
 }

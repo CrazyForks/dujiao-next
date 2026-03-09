@@ -377,7 +377,10 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 				authorized.GET("/channel-clients", adminHandler.ListChannelClients)
 				authorized.POST("/channel-clients", adminHandler.CreateChannelClient)
 				authorized.GET("/channel-clients/:id", adminHandler.GetChannelClient)
+				authorized.PUT("/channel-clients/:id", adminHandler.UpdateChannelClient)
 				authorized.PUT("/channel-clients/:id/status", adminHandler.UpdateChannelClientStatus)
+				authorized.POST("/channel-clients/:id/reset-secret", adminHandler.ResetChannelClientSecret)
+				authorized.DELETE("/channel-clients/:id", adminHandler.DeleteChannelClient)
 
 				// Telegram Bot 设置
 				authorized.GET("/settings/telegram-bot", adminHandler.GetTelegramBotConfig)
