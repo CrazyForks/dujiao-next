@@ -250,6 +250,9 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 				authorized.PUT("/products/:id", adminHandler.UpdateProduct)
 				authorized.PATCH("/products/:id", adminHandler.QuickUpdateProduct)
 				authorized.DELETE("/products/:id", adminHandler.DeleteProduct)
+				authorized.POST("/products/batch-status", adminHandler.BatchUpdateProductStatus)
+				authorized.POST("/products/batch-category", adminHandler.BatchUpdateProductCategory)
+				authorized.POST("/products/batch-delete", adminHandler.BatchDeleteProducts)
 
 				// 文章管理
 				authorized.GET("/posts", adminHandler.GetAdminPosts)
@@ -424,6 +427,9 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 				authorized.POST("/product-mappings/:id/sync", adminHandler.SyncProductMapping)
 				authorized.PUT("/product-mappings/:id/status", adminHandler.UpdateProductMappingStatus)
 				authorized.DELETE("/product-mappings/:id", adminHandler.DeleteProductMapping)
+				authorized.POST("/product-mappings/batch-sync", adminHandler.BatchSyncProductMappings)
+				authorized.POST("/product-mappings/batch-status", adminHandler.BatchUpdateProductMappingStatus)
+				authorized.POST("/product-mappings/batch-delete", adminHandler.BatchDeleteProductMappings)
 				authorized.GET("/upstream-products", adminHandler.ListUpstreamProducts)
 
 				// 采购单管理

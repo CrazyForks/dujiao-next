@@ -3,6 +3,7 @@ package service
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -94,6 +95,18 @@ func (s *ProductService) ListPublic(categoryID, search string, page, pageSize in
 		Search:       search,
 		OnlyActive:   true,
 		WithCategory: true,
+	}
+	return s.repo.List(filter)
+}
+
+// ListPublicUpdatedAfter 获取指定时间后更新的公开商品列表（供上游同步接口使用）
+func (s *ProductService) ListPublicUpdatedAfter(updatedAfter *time.Time, page, pageSize int) ([]models.Product, int64, error) {
+	filter := repository.ProductListFilter{
+		Page:         page,
+		PageSize:     pageSize,
+		OnlyActive:   true,
+		WithCategory: true,
+		UpdatedAfter: updatedAfter,
 	}
 	return s.repo.List(filter)
 }

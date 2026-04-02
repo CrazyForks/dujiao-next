@@ -23,6 +23,7 @@ type ProductListFilter struct {
 	ManualStockStatus string
 	OnlyActive        bool
 	WithCategory      bool
+	UpdatedAfter      *time.Time // 仅返回此时间之后更新的商品
 }
 
 // PostListFilter 查询文章列表的过滤条件

@@ -85,6 +85,10 @@ func (r *GormProductRepository) List(filter ProductListFilter) ([]models.Product
 		query = query.Where(searchQuery)
 	}
 
+	if filter.UpdatedAfter != nil {
+		query = query.Where("updated_at > ?", *filter.UpdatedAfter)
+	}
+
 	manualStockStatus := strings.ToLower(strings.TrimSpace(filter.ManualStockStatus))
 	query = applyManualStockStatusFilter(query, manualStockStatus)
 
@@ -103,60 +107,57 @@ func (r *GormProductRepository) List(filter ProductListFilter) ([]models.Product
 }
 
 func applyManualStockStatusFilter(query *gorm.DB, status string) *gorm.DB {
-	if query == nil {
+	if query == nil || status == "" {
 		return query
 	}
 
-	const activeSKUExistsSQL = "EXISTS (SELECT 1 FROM product_skus ps WHERE ps.product_id = products.id AND ps.is_active = ? AND ps.deleted_at IS NULL)"
-	const activeUnlimitedSKUExistsSQL = "EXISTS (SELECT 1 FROM product_skus ps WHERE ps.product_id = products.id AND ps.is_active = ? AND ps.deleted_at IS NULL AND ps.manual_stock_total = ?)"
-	const activeSKURemainingSQL = "COALESCE((SELECT SUM(CASE WHEN ps.manual_stock_total > 0 THEN ps.manual_stock_total ELSE 0 END) FROM product_skus ps WHERE ps.product_id = products.id AND ps.is_active = ? AND ps.deleted_at IS NULL), 0)"
+	// manual 库存子查询
+	const manualActiveSKUExists = "EXISTS (SELECT 1 FROM product_skus ps WHERE ps.product_id = products.id AND ps.is_active = true AND ps.deleted_at IS NULL)"
+	const manualUnlimitedSKUExists = "EXISTS (SELECT 1 FROM product_skus ps WHERE ps.product_id = products.id AND ps.is_active = true AND ps.deleted_at IS NULL AND ps.manual_stock_total = -1)"
+	const manualSKURemaining = "COALESCE((SELECT SUM(CASE WHEN ps.manual_stock_total > 0 THEN ps.manual_stock_total ELSE 0 END) FROM product_skus ps WHERE ps.product_id = products.id AND ps.is_active = true AND ps.deleted_at IS NULL), 0)"
+
+	// auto 库存子查询（可用卡密数）
+	const autoStockCount = "COALESCE((SELECT COUNT(*) FROM card_secrets cs WHERE cs.product_id = products.id AND cs.status = 'available' AND cs.deleted_at IS NULL), 0)"
+
+	// upstream 库存子查询（通过 product_mappings + sku_mappings）
+	const upstreamUnlimitedExists = "EXISTS (SELECT 1 FROM product_mappings pm JOIN sku_mappings sm ON sm.product_mapping_id = pm.id AND sm.deleted_at IS NULL WHERE pm.local_product_id = products.id AND pm.deleted_at IS NULL AND sm.upstream_stock = -1)"
+	const upstreamStockSum = "COALESCE((SELECT SUM(CASE WHEN sm.upstream_stock > 0 THEN sm.upstream_stock ELSE 0 END) FROM product_mappings pm JOIN sku_mappings sm ON sm.product_mapping_id = pm.id AND sm.deleted_at IS NULL WHERE pm.local_product_id = products.id AND pm.deleted_at IS NULL), 0)"
 
 	switch status {
 	case "low":
-		condition := fmt.Sprintf(
-			"fulfillment_type = ? AND (((%s) AND NOT (%s) AND (%s) <= 0) OR (NOT (%s) AND manual_stock_total = 0))",
-			activeSKUExistsSQL,
-			activeUnlimitedSKUExistsSQL,
-			activeSKURemainingSQL,
-			activeSKUExistsSQL,
+		// manual: 非无限且剩余 <= 0 | auto: 可用卡密 = 0 | upstream: 非无限且库存和 = 0
+		condition := fmt.Sprintf("("+
+			"(fulfillment_type = 'manual' AND (((%s) AND NOT (%s) AND (%s) <= 0) OR (NOT (%s) AND manual_stock_total = 0)))"+
+			" OR (fulfillment_type = 'auto' AND (%s) = 0)"+
+			" OR (fulfillment_type = 'upstream' AND NOT (%s) AND (%s) = 0)"+
+			")",
+			manualActiveSKUExists, manualUnlimitedSKUExists, manualSKURemaining, manualActiveSKUExists,
+			autoStockCount,
+			upstreamUnlimitedExists, upstreamStockSum,
 		)
-		return query.Where(
-			condition,
-			constants.FulfillmentTypeManual,
-			true,
-			true, constants.ManualStockUnlimited,
-			true,
-			true,
-		)
+		return query.Where(condition)
 	case "normal":
-		condition := fmt.Sprintf(
-			"fulfillment_type = ? AND (((%s) AND NOT (%s) AND (%s) > 0) OR (NOT (%s) AND manual_stock_total > 0))",
-			activeSKUExistsSQL,
-			activeUnlimitedSKUExistsSQL,
-			activeSKURemainingSQL,
-			activeSKUExistsSQL,
+		// manual: 非无限且剩余 > 0 | auto: 可用卡密 > 0 | upstream: 非无限且库存和 > 0
+		condition := fmt.Sprintf("("+
+			"(fulfillment_type = 'manual' AND (((%s) AND NOT (%s) AND (%s) > 0) OR (NOT (%s) AND manual_stock_total > 0)))"+
+			" OR (fulfillment_type = 'auto' AND (%s) > 0)"+
+			" OR (fulfillment_type = 'upstream' AND NOT (%s) AND (%s) > 0)"+
+			")",
+			manualActiveSKUExists, manualUnlimitedSKUExists, manualSKURemaining, manualActiveSKUExists,
+			autoStockCount,
+			upstreamUnlimitedExists, upstreamStockSum,
 		)
-		return query.Where(
-			condition,
-			constants.FulfillmentTypeManual,
-			true,
-			true, constants.ManualStockUnlimited,
-			true,
-			true,
-		)
+		return query.Where(condition)
 	case "unlimited":
-		condition := fmt.Sprintf(
-			"fulfillment_type = ? AND ((%s) OR (NOT (%s) AND manual_stock_total = ?))",
-			activeUnlimitedSKUExistsSQL,
-			activeSKUExistsSQL,
+		// manual: 有无限 SKU | upstream: 有无限库存的映射
+		condition := fmt.Sprintf("("+
+			"(fulfillment_type = 'manual' AND ((%s) OR (NOT (%s) AND manual_stock_total = -1)))"+
+			" OR (fulfillment_type = 'upstream' AND (%s))"+
+			")",
+			manualUnlimitedSKUExists, manualActiveSKUExists,
+			upstreamUnlimitedExists,
 		)
-		return query.Where(
-			condition,
-			constants.FulfillmentTypeManual,
-			true, constants.ManualStockUnlimited,
-			true,
-			constants.ManualStockUnlimited,
-		)
+		return query.Where(condition)
 	default:
 		return query
 	}

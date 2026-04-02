@@ -416,6 +416,73 @@ func (h *Handler) applyUpstreamDisplayTypes(products []models.Product) {
 	}
 }
 
+// BatchProductActionRequest 商品批量操作请求
+type BatchProductActionRequest struct {
+	IDs []uint `json:"ids" binding:"required,min=1"`
+}
+
+// BatchProductStatusRequest 商品批量状态更新请求
+type BatchProductStatusRequest struct {
+	IDs      []uint `json:"ids" binding:"required,min=1"`
+	IsActive bool   `json:"is_active"`
+}
+
+// BatchProductCategoryRequest 商品批量分类更新请求
+type BatchProductCategoryRequest struct {
+	IDs        []uint `json:"ids" binding:"required,min=1"`
+	CategoryID uint   `json:"category_id"`
+}
+
+// BatchUpdateProductStatus 批量上架/下架
+func (h *Handler) BatchUpdateProductStatus(c *gin.Context) {
+	var req BatchProductStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		shared.RespondBindError(c, err)
+		return
+	}
+	successCount := 0
+	for _, id := range req.IDs {
+		_, err := h.ProductService.QuickUpdate(strconv.FormatUint(uint64(id), 10), map[string]interface{}{"is_active": req.IsActive})
+		if err == nil {
+			successCount++
+		}
+	}
+	response.Success(c, gin.H{"total": len(req.IDs), "success_count": successCount})
+}
+
+// BatchUpdateProductCategory 批量修改分类
+func (h *Handler) BatchUpdateProductCategory(c *gin.Context) {
+	var req BatchProductCategoryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		shared.RespondBindError(c, err)
+		return
+	}
+	successCount := 0
+	for _, id := range req.IDs {
+		_, err := h.ProductService.QuickUpdate(strconv.FormatUint(uint64(id), 10), map[string]interface{}{"category_id": req.CategoryID})
+		if err == nil {
+			successCount++
+		}
+	}
+	response.Success(c, gin.H{"total": len(req.IDs), "success_count": successCount})
+}
+
+// BatchDeleteProducts 批量删除商品
+func (h *Handler) BatchDeleteProducts(c *gin.Context) {
+	var req BatchProductActionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		shared.RespondBindError(c, err)
+		return
+	}
+	successCount := 0
+	for _, id := range req.IDs {
+		if err := h.ProductService.Delete(strconv.FormatUint(uint64(id), 10)); err == nil {
+			successCount++
+		}
+	}
+	response.Success(c, gin.H{"total": len(req.IDs), "success_count": successCount})
+}
+
 // DeleteProduct 删除商品（软删除）
 func (h *Handler) DeleteProduct(c *gin.Context) {
 	id := c.Param("id")

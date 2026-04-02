@@ -115,13 +115,14 @@ type RedisConfig struct {
 
 // QueueConfig 异步队列配置
 type QueueConfig struct {
-	Enabled     bool           `mapstructure:"enabled"`
-	Host        string         `mapstructure:"host"`
-	Port        int            `mapstructure:"port"`
-	Password    string         `mapstructure:"password"`
-	DB          int            `mapstructure:"db"`
-	Concurrency int            `mapstructure:"concurrency"`
-	Queues      map[string]int `mapstructure:"queues"`
+	Enabled              bool           `mapstructure:"enabled"`
+	Host                 string         `mapstructure:"host"`
+	Port                 int            `mapstructure:"port"`
+	Password             string         `mapstructure:"password"`
+	DB                   int            `mapstructure:"db"`
+	Concurrency          int            `mapstructure:"concurrency"`
+	Queues               map[string]int `mapstructure:"queues"`
+	UpstreamSyncInterval string         `mapstructure:"upstream_sync_interval"` // 上游库存同步间隔，如 "5m"、"10m"，默认 "5m"
 }
 
 // OrderConfig 订单配置

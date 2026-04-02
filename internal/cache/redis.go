@@ -88,6 +88,26 @@ func SetJSON(ctx context.Context, key string, value interface{}, ttl time.Durati
 	return redisClient.Set(ctx, buildKey(key), payload, ttl).Err()
 }
 
+// GetString 获取字符串缓存
+func GetString(ctx context.Context, key string) (string, error) {
+	if !Enabled() {
+		return "", nil
+	}
+	val, err := redisClient.Get(ctx, buildKey(key)).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
+	return val, err
+}
+
+// SetString 写入字符串缓存
+func SetString(ctx context.Context, key string, value string, ttl time.Duration) error {
+	if !Enabled() {
+		return nil
+	}
+	return redisClient.Set(ctx, buildKey(key), value, ttl).Err()
+}
+
 // Del 删除缓存
 func Del(ctx context.Context, key string) error {
 	if !Enabled() {

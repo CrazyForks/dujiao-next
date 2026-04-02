@@ -22,6 +22,7 @@ type ProductMappingRepository interface {
 	ListActiveByConnection(connectionID uint) ([]models.ProductMapping, error)
 	ListAllActive() ([]models.ProductMapping, error)
 	ListByLocalProductIDs(productIDs []uint) ([]models.ProductMapping, error)
+	ListUpstreamIDsByConnection(connectionID uint) ([]uint, error)
 }
 
 // ProductMappingListFilter 映射列表筛选
@@ -150,4 +151,14 @@ func (r *GormProductMappingRepository) ListByLocalProductIDs(productIDs []uint) 
 		return nil, err
 	}
 	return mappings, nil
+}
+
+func (r *GormProductMappingRepository) ListUpstreamIDsByConnection(connectionID uint) ([]uint, error) {
+	var ids []uint
+	if err := r.db.Model(&models.ProductMapping{}).
+		Where("connection_id = ?", connectionID).
+		Pluck("upstream_product_id", &ids).Error; err != nil {
+		return nil, err
+	}
+	return ids, nil
 }

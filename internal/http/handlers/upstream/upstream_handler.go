@@ -177,11 +177,23 @@ func (h *Handler) ListProducts(c *gin.Context) {
 	if page < 1 {
 		page = 1
 	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
+	if pageSize < 1 || pageSize > 50 {
+		pageSize = 50
 	}
 
-	products, total, err := h.ProductService.ListPublic("", "", page, pageSize)
+	// 支持增量同步：仅返回指定时间之后更新的商品
+	var products []models.Product
+	var total int64
+	var err error
+	if updatedAfterStr := c.Query("updated_after"); updatedAfterStr != "" {
+		if t, parseErr := time.Parse(time.RFC3339, updatedAfterStr); parseErr == nil {
+			products, total, err = h.ProductService.ListPublicUpdatedAfter(&t, page, pageSize)
+		} else {
+			products, total, err = h.ProductService.ListPublic("", "", page, pageSize)
+		}
+	} else {
+		products, total, err = h.ProductService.ListPublic("", "", page, pageSize)
+	}
 	if err != nil {
 		logger.Errorw("upstream_list_products_failed", "error", err)
 		errorResponse(c, http.StatusInternalServerError, "internal_error", "failed to list products")

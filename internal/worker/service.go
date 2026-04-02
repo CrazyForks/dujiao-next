@@ -34,7 +34,7 @@ func NewService(cfg *config.QueueConfig, consumer *Consumer) (*Service, error) {
 	consumer.Register(mux)
 
 	scheduler := asynq.NewScheduler(opt, nil)
-	registerPeriodicTasks(scheduler, consumer)
+	registerPeriodicTasks(scheduler, consumer, cfg)
 
 	return &Service{
 		name:      "worker",
@@ -46,7 +46,7 @@ func NewService(cfg *config.QueueConfig, consumer *Consumer) (*Service, error) {
 }
 
 // registerPeriodicTasks 注册所有周期性任务
-func registerPeriodicTasks(scheduler *asynq.Scheduler, consumer *Consumer) {
+func registerPeriodicTasks(scheduler *asynq.Scheduler, consumer *Consumer, cfg *config.QueueConfig) {
 	if scheduler == nil || consumer == nil {
 		return
 	}
@@ -60,12 +60,16 @@ func registerPeriodicTasks(scheduler *asynq.Scheduler, consumer *Consumer) {
 		}
 	}
 	if consumer.ProductMappingService != nil {
+		syncInterval := "5m"
+		if cfg != nil && cfg.UpstreamSyncInterval != "" {
+			syncInterval = cfg.UpstreamSyncInterval
+		}
 		task := queue.NewUpstreamSyncStockTask()
-		entryID, err := scheduler.Register("@every 1m", task, asynq.Queue(queue.DefaultQueue))
+		entryID, err := scheduler.Register("@every "+syncInterval, task, asynq.Queue(queue.DefaultQueue))
 		if err != nil {
 			logger.Warnw("scheduler_register_upstream_sync_stock_failed", "error", err)
 		} else {
-			logger.Infow("scheduler_register_upstream_sync_stock_ok", "entry_id", entryID)
+			logger.Infow("scheduler_register_upstream_sync_stock_ok", "entry_id", entryID, "interval", syncInterval)
 		}
 	}
 	if consumer.NotificationService != nil {

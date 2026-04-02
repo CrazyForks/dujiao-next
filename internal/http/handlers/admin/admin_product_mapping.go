@@ -168,6 +168,71 @@ func (h *Handler) BatchImportUpstreamProducts(c *gin.Context) {
 	})
 }
 
+// BatchMappingActionRequest 批量操作请求
+type BatchMappingActionRequest struct {
+	IDs []uint `json:"ids" binding:"required,min=1"`
+}
+
+// BatchSyncProductMappings 批量同步
+func (h *Handler) BatchSyncProductMappings(c *gin.Context) {
+	var req BatchMappingActionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		shared.RespondBindError(c, err)
+		return
+	}
+
+	successCount := 0
+	for _, id := range req.IDs {
+		if err := h.ProductMappingService.SyncProduct(id); err == nil {
+			successCount++
+		}
+	}
+
+	response.Success(c, gin.H{"total": len(req.IDs), "success_count": successCount})
+}
+
+// BatchUpdateMappingStatusRequest 批量更新状态请求
+type BatchUpdateMappingStatusRequest struct {
+	IDs      []uint `json:"ids" binding:"required,min=1"`
+	IsActive bool   `json:"is_active"`
+}
+
+// BatchUpdateProductMappingStatus 批量启用/禁用
+func (h *Handler) BatchUpdateProductMappingStatus(c *gin.Context) {
+	var req BatchUpdateMappingStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		shared.RespondBindError(c, err)
+		return
+	}
+
+	successCount := 0
+	for _, id := range req.IDs {
+		if err := h.ProductMappingService.SetActive(id, req.IsActive); err == nil {
+			successCount++
+		}
+	}
+
+	response.Success(c, gin.H{"total": len(req.IDs), "success_count": successCount})
+}
+
+// BatchDeleteProductMappings 批量删除
+func (h *Handler) BatchDeleteProductMappings(c *gin.Context) {
+	var req BatchMappingActionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		shared.RespondBindError(c, err)
+		return
+	}
+
+	successCount := 0
+	for _, id := range req.IDs {
+		if err := h.ProductMappingService.Delete(id); err == nil {
+			successCount++
+		}
+	}
+
+	response.Success(c, gin.H{"total": len(req.IDs), "success_count": successCount})
+}
+
 // SyncProductMapping 同步商品映射
 func (h *Handler) SyncProductMapping(c *gin.Context) {
 	id, err := shared.ParseParamUint(c, "id")
@@ -248,7 +313,7 @@ func (h *Handler) ListUpstreamProducts(c *gin.Context) {
 	}
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "50"))
 	page, pageSize = shared.NormalizePagination(page, pageSize)
 
 	result, err := h.ProductMappingService.ListUpstreamProducts(connectionID, page, pageSize)
@@ -261,5 +326,15 @@ func (h *Handler) ListUpstreamProducts(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, result)
+	// 查询已映射的上游商品 ID（仅首页时返回，避免重复查询）
+	var mappedIDs []uint
+	if page == 1 {
+		mappedIDs, _ = h.ProductMappingService.GetMappedUpstreamIDs(connectionID)
+	}
+
+	response.Success(c, gin.H{
+		"items":      result.Items,
+		"total":      result.Total,
+		"mapped_ids": mappedIDs,
+	})
 }

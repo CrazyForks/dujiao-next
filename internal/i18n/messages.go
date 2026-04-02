@@ -260,6 +260,18 @@ var messages = map[string]map[string]string{
 		"validation.rule.lte":      "必须小于或等于 %s",
 		"validation.rule.numeric":  "必须是数字",
 		"validation.rule.alphanum": "只能包含字母和数字",
+
+		// 商品映射
+		"error.mapping_fetch_failed":           "获取商品映射失败",
+		"error.mapping_not_found":              "商品映射不存在",
+		"error.mapping_already_exists":         "该上游商品已存在映射",
+		"error.mapping_import_failed":          "导入上游商品失败",
+		"error.mapping_sync_failed":            "同步商品映射失败",
+		"error.mapping_update_failed":          "更新商品映射失败",
+		"error.mapping_delete_failed":          "删除商品映射失败",
+		"error.connection_not_found":           "站点连接不存在",
+		"error.upstream_product_not_found":     "上游商品不存在",
+		"error.upstream_products_fetch_failed": "获取上游商品列表失败",
 	},
 	LocaleTW: {
 		"error.jwt_secret_missing":                       "JWT secret 未配置",
@@ -506,6 +518,18 @@ var messages = map[string]map[string]string{
 		"validation.rule.lte":      "必須小於或等於 %s",
 		"validation.rule.numeric":  "必須是數字",
 		"validation.rule.alphanum": "只能包含字母和數字",
+
+		// 商品映射
+		"error.mapping_fetch_failed":           "獲取商品映射失敗",
+		"error.mapping_not_found":              "商品映射不存在",
+		"error.mapping_already_exists":         "該上游商品已存在映射",
+		"error.mapping_import_failed":          "導入上游商品失敗",
+		"error.mapping_sync_failed":            "同步商品映射失敗",
+		"error.mapping_update_failed":          "更新商品映射失敗",
+		"error.mapping_delete_failed":          "刪除商品映射失敗",
+		"error.connection_not_found":           "站點連接不存在",
+		"error.upstream_product_not_found":     "上游商品不存在",
+		"error.upstream_products_fetch_failed": "獲取上游商品列表失敗",
 	},
 	LocaleEN: {
 		"error.jwt_secret_missing":                       "JWT secret is not configured",
@@ -752,6 +776,18 @@ var messages = map[string]map[string]string{
 		"validation.rule.lte":      "must be less than or equal to %s",
 		"validation.rule.numeric":  "must be numeric",
 		"validation.rule.alphanum": "must be alphanumeric",
+
+		// Product mappings
+		"error.mapping_fetch_failed":           "Failed to fetch product mapping",
+		"error.mapping_not_found":              "Product mapping not found",
+		"error.mapping_already_exists":         "Mapping already exists for this upstream product",
+		"error.mapping_import_failed":          "Failed to import upstream product",
+		"error.mapping_sync_failed":            "Failed to sync product mapping",
+		"error.mapping_update_failed":          "Failed to update product mapping",
+		"error.mapping_delete_failed":          "Failed to delete product mapping",
+		"error.connection_not_found":           "Site connection not found",
+		"error.upstream_product_not_found":     "Upstream product not found",
+		"error.upstream_products_fetch_failed": "Failed to fetch upstream products",
 	},
 }
 
