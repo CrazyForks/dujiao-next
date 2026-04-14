@@ -116,6 +116,7 @@ var (
 	ErrWalletNotSupportedForGuest          = errors.New("wallet not supported for guest")
 	ErrWalletRechargeNotFound              = errors.New("wallet recharge not found")
 	ErrWalletRechargeStatusInvalid         = errors.New("wallet recharge status invalid")
+	ErrRefundRecordCreateFailed            = errors.New("refund record create failed")
 	ErrCardSecretInsufficient              = errors.New("card secret insufficient")
 	ErrFulfillmentNotAuto                  = errors.New("fulfillment not auto")
 	ErrCardSecretInvalid                   = errors.New("card secret invalid")

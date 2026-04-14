@@ -13,7 +13,7 @@ type ProcurementOrder struct {
 	ConnectionID             uint           `gorm:"index;not null" json:"connection_id"`
 	LocalOrderID             uint           `gorm:"index;not null" json:"local_order_id"`
 	LocalOrderNo             string         `gorm:"type:varchar(64);index" json:"local_order_no"`
-	UpstreamOrderID          uint           `json:"upstream_order_id,omitempty"`
+	UpstreamOrderID          uint           `json:"-"`
 	UpstreamOrderNo          string         `gorm:"type:varchar(64);index" json:"upstream_order_no,omitempty"`
 	Status                   string         `gorm:"type:varchar(20);not null;default:'pending';index" json:"status"`
 	UpstreamAmount           Money          `gorm:"type:decimal(20,2);not null;default:0" json:"upstream_amount"`
@@ -33,6 +33,10 @@ type ProcurementOrder struct {
 	Connection    *SiteConnection `gorm:"foreignKey:ConnectionID" json:"connection,omitempty"`
 	LocalOrder    *Order          `gorm:"foreignKey:LocalOrderID" json:"local_order,omitempty"`
 	ParentOrderNo string          `gorm:"-" json:"parent_order_no,omitempty"` // 父订单号（虚拟字段）
+	// UpstreamRefundRecords 仅用于接口返回，不写入数据库；值来自上游 /upstream/orders 的 refund_records
+	UpstreamRefundRecords []JSON `gorm:"-" json:"upstream_refund_records,omitempty"`
+	// UpstreamRefundedAmount 仅用于接口返回，不写入数据库；值来自上游 /upstream/orders 的 refunded_amount
+	UpstreamRefundedAmount string `gorm:"-" json:"upstream_refunded_amount,omitempty"`
 }
 
 // TruncateUpstreamPayload 截断超长的上游交付内容。

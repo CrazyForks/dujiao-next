@@ -46,6 +46,8 @@ type OrderStatusEmailInput struct {
 	OrderNo           string
 	Status            string
 	Amount            models.Money
+	RefundAmount      models.Money
+	RefundReason      string
 	Currency          string
 	SiteName          string
 	SiteURL           string
@@ -93,6 +95,10 @@ func buildOrderStatusContentFromTemplate(input OrderStatusEmailInput, locale str
 		}
 	case constants.OrderStatusCanceled:
 		sceneTmpl = tmplSetting.Templates.Canceled
+	case constants.OrderStatusRefunded:
+		sceneTmpl = tmplSetting.Templates.Refunded
+	case constants.OrderStatusPartiallyRefunded:
+		sceneTmpl = tmplSetting.Templates.PartiallyRefunded
 	default:
 		sceneTmpl = tmplSetting.Templates.Default
 	}
@@ -110,10 +116,16 @@ func buildOrderStatusContentFromTemplate(input OrderStatusEmailInput, locale str
 		"order_no":         input.OrderNo,
 		"status":           statusLabel,
 		"amount":           input.Amount.String(),
+		"refund_amount":    "",
+		"refund_reason":    "",
 		"currency":         strings.TrimSpace(input.Currency),
 		"site_name":        strings.TrimSpace(input.SiteName),
 		"site_url":         strings.TrimSpace(input.SiteURL),
 		"fulfillment_info": strings.TrimSpace(input.FulfillmentInfo),
+	}
+	if status == constants.OrderStatusRefunded || status == constants.OrderStatusPartiallyRefunded {
+		variables["refund_amount"] = input.RefundAmount.String()
+		variables["refund_reason"] = strings.TrimSpace(input.RefundReason)
 	}
 
 	subject := renderTemplate(localeTmpl.Subject, variables)
@@ -321,26 +333,36 @@ func buildOrderStatusContent(input OrderStatusEmailInput, locale string) (string
 		statusLabel = input.Status
 	}
 	amount := input.Amount.String()
+	refundAmount := input.RefundAmount.String()
+	refundReason := strings.TrimSpace(input.RefundReason)
 	currency := strings.TrimSpace(input.Currency)
+	siteName := strings.TrimSpace(input.SiteName)
+	siteURL := strings.TrimSpace(input.SiteURL)
 	subject := i18n.Sprintf(normalized, "email.order_status.subject", statusLabel)
 	payload := strings.TrimSpace(input.FulfillmentInfo)
 	status := strings.ToLower(strings.TrimSpace(input.Status))
 	switch status {
 	case constants.OrderStatusDelivered, constants.OrderStatusCompleted:
 		if payload != "" {
-			body := i18n.Sprintf(normalized, "email.order_status.body_delivered", input.OrderNo, statusLabel, amount, currency, payload)
+			body := i18n.Sprintf(normalized, "email.order_status.body_delivered", input.OrderNo, statusLabel, amount, currency, payload, siteName, siteURL)
 			return subject, appendGuestTip(normalized, input, appendFulfillmentAttachmentTip(normalized, input, body))
 		}
-		body := i18n.Sprintf(normalized, "email.order_status.body_delivered_simple", input.OrderNo, statusLabel, amount, currency)
+		body := i18n.Sprintf(normalized, "email.order_status.body_delivered_simple", input.OrderNo, statusLabel, amount, currency, siteName, siteURL)
 		return subject, appendGuestTip(normalized, input, appendFulfillmentAttachmentTip(normalized, input, body))
 	case constants.OrderStatusPaid:
-		body := i18n.Sprintf(normalized, "email.order_status.body_paid", input.OrderNo, statusLabel, amount, currency)
+		body := i18n.Sprintf(normalized, "email.order_status.body_paid", input.OrderNo, statusLabel, amount, currency, siteName, siteURL)
 		return subject, appendGuestTip(normalized, input, appendFulfillmentAttachmentTip(normalized, input, body))
 	case constants.OrderStatusCanceled:
-		body := i18n.Sprintf(normalized, "email.order_status.body_canceled", input.OrderNo, statusLabel, amount, currency)
+		body := i18n.Sprintf(normalized, "email.order_status.body_canceled", input.OrderNo, statusLabel, amount, currency, siteName, siteURL)
+		return subject, appendGuestTip(normalized, input, appendFulfillmentAttachmentTip(normalized, input, body))
+	case constants.OrderStatusRefunded:
+		body := i18n.Sprintf(normalized, "email.order_status.body_refunded", input.OrderNo, statusLabel, refundAmount, currency, refundReason, siteName, siteURL)
+		return subject, appendGuestTip(normalized, input, appendFulfillmentAttachmentTip(normalized, input, body))
+	case constants.OrderStatusPartiallyRefunded:
+		body := i18n.Sprintf(normalized, "email.order_status.body_partially_refunded", input.OrderNo, statusLabel, refundAmount, currency, refundReason, siteName, siteURL)
 		return subject, appendGuestTip(normalized, input, appendFulfillmentAttachmentTip(normalized, input, body))
 	default:
-		body := i18n.Sprintf(normalized, "email.order_status.body", input.OrderNo, statusLabel, amount, currency)
+		body := i18n.Sprintf(normalized, "email.order_status.body", input.OrderNo, statusLabel, amount, currency, siteName, siteURL)
 		return subject, appendGuestTip(normalized, input, appendFulfillmentAttachmentTip(normalized, input, body))
 	}
 }

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"math"
 	"strings"
 	"testing"
 	"time"
@@ -27,7 +28,7 @@ func setupDashboardRepositoryTest(t *testing.T) (*GormDashboardRepository, *gorm
 	if err := db.AutoMigrate(&models.ProductSKU{}); err != nil {
 		t.Fatalf("migrate dashboard sku models failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.PaymentChannel{}, &models.Payment{}); err != nil {
+	if err := db.AutoMigrate(&models.PaymentChannel{}, &models.Payment{}, &models.OrderRefundRecord{}); err != nil {
 		t.Fatalf("migrate dashboard models failed: %v", err)
 	}
 	return NewDashboardRepository(db), db
@@ -545,5 +546,433 @@ func TestTrendQueriesBucketByRequestedTimezone(t *testing.T) {
 	}
 	if paymentRows[1].Day != "2026-03-02" || paymentRows[1].PaymentsSuccess != 0 || paymentRows[1].PaymentsFailed != 1 || paymentRows[1].GMVPaid != 0 {
 		t.Fatalf("unexpected second payment trend row: %+v", paymentRows[1])
+	}
+}
+
+func TestGetProfitOverviewDeductsRefundRecords(t *testing.T) {
+	repo, db := setupDashboardRepositoryTest(t)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	category := createDashboardCategory(t, db, "dashboard-profit-refund-category")
+	product := &models.Product{
+		CategoryID:      category.ID,
+		Slug:            "dashboard-profit-refund-product",
+		TitleJSON:       models.JSON{"zh-CN": "利润测试商品"},
+		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PurchaseType:    constants.ProductPurchaseMember,
+		FulfillmentType: constants.FulfillmentTypeManual,
+		IsActive:        true,
+	}
+	if err := db.Create(product).Error; err != nil {
+		t.Fatalf("create product failed: %v", err)
+	}
+
+	createOrderWithItem := func(orderNo, status string, amount, cost int64, createdAt time.Time) *models.Order {
+		t.Helper()
+		order := &models.Order{
+			OrderNo:        orderNo,
+			UserID:         1,
+			Status:         status,
+			Currency:       "CNY",
+			OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+			DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
+			TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+			CreatedAt:      createdAt,
+			UpdatedAt:      createdAt,
+		}
+		if err := db.Create(order).Error; err != nil {
+			t.Fatalf("create order failed: %v", err)
+		}
+		item := &models.OrderItem{
+			OrderID:         order.ID,
+			ProductID:       product.ID,
+			TitleJSON:       models.JSON{"zh-CN": "利润测试商品"},
+			UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+			CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(cost)),
+			Quantity:        1,
+			TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+			CouponDiscount:  models.NewMoneyFromDecimal(decimal.Zero),
+			FulfillmentType: constants.FulfillmentTypeManual,
+			CreatedAt:       createdAt,
+			UpdatedAt:       createdAt,
+		}
+		if err := db.Create(item).Error; err != nil {
+			t.Fatalf("create order item failed: %v", err)
+		}
+		return order
+	}
+
+	manualRefundedOrder := createOrderWithItem("DJ-PROFIT-MANUAL", constants.OrderStatusRefunded, 100, 40, now)
+	walletRefundedOrder := createOrderWithItem("DJ-PROFIT-WALLET", constants.OrderStatusPartiallyRefunded, 120, 50, now)
+
+	records := []models.OrderRefundRecord{
+		{
+			UserID:    1,
+			OrderID:   manualRefundedOrder.ID,
+			Type:      constants.OrderRefundTypeManual,
+			Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+			Currency:  "CNY",
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		{
+			UserID:    1,
+			OrderID:   walletRefundedOrder.ID,
+			Type:      constants.OrderRefundTypeWallet,
+			Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+			Currency:  "CNY",
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		{
+			UserID:    1,
+			OrderID:   walletRefundedOrder.ID,
+			Type:      constants.OrderRefundTypeManual,
+			Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+			Currency:  "CNY",
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+	}
+	for idx := range records {
+		if err := db.Create(&records[idx]).Error; err != nil {
+			t.Fatalf("create refund record failed: %v", err)
+		}
+	}
+
+	result, err := repo.GetProfitOverview(now.Add(-time.Hour), now.Add(time.Hour))
+	if err != nil {
+		t.Fatalf("get profit overview failed: %v", err)
+	}
+	if math.Abs(result.TotalRevenue-90) > 0.000001 {
+		t.Fatalf("total revenue want 90 got %.2f", result.TotalRevenue)
+	}
+	if math.Abs(result.TotalCost-90) > 0.000001 {
+		t.Fatalf("total cost want 90 got %.2f", result.TotalCost)
+	}
+}
+
+func TestGetProfitTrendsDeductsRefundRecords(t *testing.T) {
+	repo, db := setupDashboardRepositoryTest(t)
+	base := time.Date(2026, 3, 1, 10, 0, 0, 0, time.UTC)
+
+	category := createDashboardCategory(t, db, "dashboard-profit-trend-refund-category")
+	product := &models.Product{
+		CategoryID:      category.ID,
+		Slug:            "dashboard-profit-trend-refund-product",
+		TitleJSON:       models.JSON{"zh-CN": "利润趋势测试商品"},
+		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PurchaseType:    constants.ProductPurchaseMember,
+		FulfillmentType: constants.FulfillmentTypeManual,
+		IsActive:        true,
+	}
+	if err := db.Create(product).Error; err != nil {
+		t.Fatalf("create product failed: %v", err)
+	}
+
+	createOrderWithItem := func(orderNo, status string, amount, cost int64, createdAt time.Time) *models.Order {
+		t.Helper()
+		order := &models.Order{
+			OrderNo:        orderNo,
+			UserID:         1,
+			Status:         status,
+			Currency:       "CNY",
+			OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+			DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
+			TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+			CreatedAt:      createdAt,
+			UpdatedAt:      createdAt,
+		}
+		if err := db.Create(order).Error; err != nil {
+			t.Fatalf("create order failed: %v", err)
+		}
+		item := &models.OrderItem{
+			OrderID:         order.ID,
+			ProductID:       product.ID,
+			TitleJSON:       models.JSON{"zh-CN": "利润趋势测试商品"},
+			UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+			CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(cost)),
+			Quantity:        1,
+			TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+			CouponDiscount:  models.NewMoneyFromDecimal(decimal.Zero),
+			FulfillmentType: constants.FulfillmentTypeManual,
+			CreatedAt:       createdAt,
+			UpdatedAt:       createdAt,
+		}
+		if err := db.Create(item).Error; err != nil {
+			t.Fatalf("create order item failed: %v", err)
+		}
+		return order
+	}
+
+	day1Order := createOrderWithItem("DJ-PROFIT-TREND-DAY1", constants.OrderStatusRefunded, 80, 30, base)
+	day2Order := createOrderWithItem("DJ-PROFIT-TREND-DAY2", constants.OrderStatusRefunded, 100, 40, base.Add(24*time.Hour))
+
+	records := []models.OrderRefundRecord{
+		{
+			UserID:    1,
+			OrderID:   day1Order.ID,
+			Type:      constants.OrderRefundTypeManual,
+			Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
+			Currency:  "CNY",
+			CreatedAt: base,
+			UpdatedAt: base,
+		},
+		{
+			UserID:    1,
+			OrderID:   day2Order.ID,
+			Type:      constants.OrderRefundTypeWallet,
+			Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+			Currency:  "CNY",
+			CreatedAt: base.Add(24 * time.Hour),
+			UpdatedAt: base.Add(24 * time.Hour),
+		},
+		{
+			UserID:    1,
+			OrderID:   day2Order.ID,
+			Type:      constants.OrderRefundTypeManual,
+			Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+			Currency:  "CNY",
+			CreatedAt: base.Add(24 * time.Hour),
+			UpdatedAt: base.Add(24 * time.Hour),
+		},
+	}
+	for idx := range records {
+		if err := db.Create(&records[idx]).Error; err != nil {
+			t.Fatalf("create refund record failed: %v", err)
+		}
+	}
+
+	rows, err := repo.GetProfitTrends(base.Add(-time.Hour), base.Add(48*time.Hour))
+	if err != nil {
+		t.Fatalf("get profit trends failed: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("profit trend rows want 2 got %d", len(rows))
+	}
+	rowMap := make(map[string]DashboardProfitTrendRow, len(rows))
+	for _, row := range rows {
+		rowMap[row.Day] = row
+	}
+	day1 := "2026-03-01"
+	day2 := "2026-03-02"
+	if math.Abs(rowMap[day1].Revenue-0) > 0.000001 || math.Abs(rowMap[day1].Cost-30) > 0.000001 {
+		t.Fatalf("unexpected day1 row: %+v", rowMap[day1])
+	}
+	if math.Abs(rowMap[day2].Revenue-60) > 0.000001 || math.Abs(rowMap[day2].Cost-40) > 0.000001 {
+		t.Fatalf("unexpected day2 row: %+v", rowMap[day2])
+	}
+}
+
+func TestGetProfitOverviewDeductsInWindowRefundForOutOfWindowOrder(t *testing.T) {
+	repo, db := setupDashboardRepositoryTest(t)
+	now := time.Now().UTC().Truncate(time.Second)
+	startAt := now.AddDate(0, 0, -7)
+	endAt := now.Add(time.Hour)
+
+	category := createDashboardCategory(t, db, "dashboard-profit-period-refund-category")
+	product := &models.Product{
+		CategoryID:      category.ID,
+		Slug:            "dashboard-profit-period-refund-product",
+		TitleJSON:       models.JSON{"zh-CN": "周期退款测试商品"},
+		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PurchaseType:    constants.ProductPurchaseMember,
+		FulfillmentType: constants.FulfillmentTypeManual,
+		IsActive:        true,
+	}
+	if err := db.Create(product).Error; err != nil {
+		t.Fatalf("create product failed: %v", err)
+	}
+
+	outsideOrder := &models.Order{
+		OrderNo:        "DJ-PROFIT-OUTSIDE-ORDER",
+		UserID:         1,
+		Status:         constants.OrderStatusRefunded,
+		Currency:       "CNY",
+		OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		CreatedAt:      startAt.Add(-24 * time.Hour),
+		UpdatedAt:      startAt.Add(-24 * time.Hour),
+	}
+	if err := db.Create(outsideOrder).Error; err != nil {
+		t.Fatalf("create outside order failed: %v", err)
+	}
+	if err := db.Create(&models.OrderItem{
+		OrderID:         outsideOrder.ID,
+		ProductID:       product.ID,
+		TitleJSON:       models.JSON{"zh-CN": "周期退款测试商品"},
+		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(40)),
+		Quantity:        1,
+		TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		CouponDiscount:  models.NewMoneyFromDecimal(decimal.Zero),
+		FulfillmentType: constants.FulfillmentTypeManual,
+		CreatedAt:       startAt.Add(-24 * time.Hour),
+		UpdatedAt:       startAt.Add(-24 * time.Hour),
+	}).Error; err != nil {
+		t.Fatalf("create outside order item failed: %v", err)
+	}
+
+	inWindowOrder := &models.Order{
+		OrderNo:        "DJ-PROFIT-IN-WINDOW",
+		UserID:         1,
+		Status:         constants.OrderStatusCompleted,
+		Currency:       "CNY",
+		OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(60)),
+		DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(60)),
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
+	if err := db.Create(inWindowOrder).Error; err != nil {
+		t.Fatalf("create in-window order failed: %v", err)
+	}
+	if err := db.Create(&models.OrderItem{
+		OrderID:         inWindowOrder.ID,
+		ProductID:       product.ID,
+		TitleJSON:       models.JSON{"zh-CN": "周期退款测试商品"},
+		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(60)),
+		CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		Quantity:        1,
+		TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(60)),
+		CouponDiscount:  models.NewMoneyFromDecimal(decimal.Zero),
+		FulfillmentType: constants.FulfillmentTypeManual,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}).Error; err != nil {
+		t.Fatalf("create in-window order item failed: %v", err)
+	}
+
+	if err := db.Create(&models.OrderRefundRecord{
+		UserID:    1,
+		OrderID:   outsideOrder.ID,
+		Type:      constants.OrderRefundTypeManual,
+		Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
+		Currency:  "CNY",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatalf("create refund record failed: %v", err)
+	}
+
+	result, err := repo.GetProfitOverview(startAt, endAt)
+	if err != nil {
+		t.Fatalf("get profit overview failed: %v", err)
+	}
+	if math.Abs(result.TotalRevenue-10) > 0.000001 {
+		t.Fatalf("total revenue want 10 got %.2f", result.TotalRevenue)
+	}
+	if math.Abs(result.TotalCost-20) > 0.000001 {
+		t.Fatalf("total cost want 20 got %.2f", result.TotalCost)
+	}
+}
+
+func TestGetProfitTrendsIncludesRefundOnlyDayInWindow(t *testing.T) {
+	repo, db := setupDashboardRepositoryTest(t)
+	startAt := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	endAt := time.Date(2026, 3, 4, 0, 0, 0, 0, time.UTC)
+	day1 := time.Date(2026, 3, 1, 10, 0, 0, 0, time.UTC)
+	day2 := time.Date(2026, 3, 2, 11, 0, 0, 0, time.UTC)
+
+	category := createDashboardCategory(t, db, "dashboard-profit-refund-only-day-category")
+	product := &models.Product{
+		CategoryID:      category.ID,
+		Slug:            "dashboard-profit-refund-only-day-product",
+		TitleJSON:       models.JSON{"zh-CN": "退款单日测试商品"},
+		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PurchaseType:    constants.ProductPurchaseMember,
+		FulfillmentType: constants.FulfillmentTypeManual,
+		IsActive:        true,
+	}
+	if err := db.Create(product).Error; err != nil {
+		t.Fatalf("create product failed: %v", err)
+	}
+
+	inWindowOrder := &models.Order{
+		OrderNo:        "DJ-PROFIT-TREND-IN-WINDOW",
+		UserID:         1,
+		Status:         constants.OrderStatusCompleted,
+		Currency:       "CNY",
+		OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
+		DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
+		CreatedAt:      day1,
+		UpdatedAt:      day1,
+	}
+	if err := db.Create(inWindowOrder).Error; err != nil {
+		t.Fatalf("create in-window order failed: %v", err)
+	}
+	if err := db.Create(&models.OrderItem{
+		OrderID:         inWindowOrder.ID,
+		ProductID:       product.ID,
+		TitleJSON:       models.JSON{"zh-CN": "退款单日测试商品"},
+		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
+		CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		Quantity:        1,
+		TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
+		CouponDiscount:  models.NewMoneyFromDecimal(decimal.Zero),
+		FulfillmentType: constants.FulfillmentTypeManual,
+		CreatedAt:       day1,
+		UpdatedAt:       day1,
+	}).Error; err != nil {
+		t.Fatalf("create in-window order item failed: %v", err)
+	}
+
+	outsideOrder := &models.Order{
+		OrderNo:        "DJ-PROFIT-TREND-OUTSIDE-ORDER",
+		UserID:         1,
+		Status:         constants.OrderStatusRefunded,
+		Currency:       "CNY",
+		OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		CreatedAt:      startAt.Add(-48 * time.Hour),
+		UpdatedAt:      startAt.Add(-48 * time.Hour),
+	}
+	if err := db.Create(outsideOrder).Error; err != nil {
+		t.Fatalf("create outside order failed: %v", err)
+	}
+	if err := db.Create(&models.OrderItem{
+		OrderID:         outsideOrder.ID,
+		ProductID:       product.ID,
+		TitleJSON:       models.JSON{"zh-CN": "退款单日测试商品"},
+		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(40)),
+		Quantity:        1,
+		TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		CouponDiscount:  models.NewMoneyFromDecimal(decimal.Zero),
+		FulfillmentType: constants.FulfillmentTypeManual,
+		CreatedAt:       startAt.Add(-48 * time.Hour),
+		UpdatedAt:       startAt.Add(-48 * time.Hour),
+	}).Error; err != nil {
+		t.Fatalf("create outside order item failed: %v", err)
+	}
+
+	if err := db.Create(&models.OrderRefundRecord{
+		UserID:    1,
+		OrderID:   outsideOrder.ID,
+		Type:      constants.OrderRefundTypeManual,
+		Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		Currency:  "CNY",
+		CreatedAt: day2,
+		UpdatedAt: day2,
+	}).Error; err != nil {
+		t.Fatalf("create refund record failed: %v", err)
+	}
+
+	rows, err := repo.GetProfitTrends(startAt, endAt)
+	if err != nil {
+		t.Fatalf("get profit trends failed: %v", err)
+	}
+	rowMap := make(map[string]DashboardProfitTrendRow, len(rows))
+	for _, row := range rows {
+		rowMap[row.Day] = row
+	}
+	if math.Abs(rowMap["2026-03-01"].Revenue-80) > 0.000001 || math.Abs(rowMap["2026-03-01"].Cost-30) > 0.000001 {
+		t.Fatalf("unexpected 2026-03-01 row: %+v", rowMap["2026-03-01"])
+	}
+	if math.Abs(rowMap["2026-03-02"].Revenue-(-30)) > 0.000001 || math.Abs(rowMap["2026-03-02"].Cost-0) > 0.000001 {
+		t.Fatalf("unexpected 2026-03-02 row: %+v", rowMap["2026-03-02"])
 	}
 }

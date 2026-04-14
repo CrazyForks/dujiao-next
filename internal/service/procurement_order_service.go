@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -439,9 +441,10 @@ func (s *ProcurementOrderService) HandleUpstreamCallback(procurementOrderID uint
 	}
 
 	now := time.Now()
+	upstreamStatus = strings.ToLower(strings.TrimSpace(upstreamStatus))
 
 	switch upstreamStatus {
-	case "delivered":
+	case "delivered", "completed", "fulfilled":
 		// 更新采购单状态
 		updates := map[string]interface{}{
 			"updated_at": now,
@@ -527,6 +530,26 @@ func (s *ProcurementOrderService) HandleUpstreamCallback(procurementOrderID uint
 			"procurement_order_id", procOrder.ID,
 			"local_order_id", procOrder.LocalOrderID,
 		)
+	case "refunded", "partially_refunded":
+		updates := map[string]interface{}{
+			"updated_at": now,
+		}
+		if fulfillment != nil {
+			updates["upstream_payload"] = fulfillment.Payload
+		}
+		targetStatus := constants.ProcurementStatusPartiallyRefunded
+		if upstreamStatus == "refunded" {
+			targetStatus = constants.ProcurementStatusRefunded
+		}
+		if err := s.procRepo.UpdateStatus(procOrder.ID, targetStatus, updates); err != nil {
+			return fmt.Errorf("update procurement status: %w", err)
+		}
+		logger.Infow("procurement_order_refunded",
+			"procurement_order_id", procOrder.ID,
+			"local_order_id", procOrder.LocalOrderID,
+			"upstream_status", upstreamStatus,
+			"local_status", targetStatus,
+		)
 
 	default:
 		logger.Warnw("procurement_unknown_upstream_status",
@@ -610,11 +633,14 @@ func (s *ProcurementOrderService) PollUpstreamStatus(procurementOrderID uint) er
 		return s.requeuePoll(procOrder, conn)
 	}
 
-	switch detail.Status {
-	case "delivered", "completed":
-		return s.HandleUpstreamCallback(procOrder.ID, "delivered", detail.Fulfillment)
+	mappedStatus := mapProcurementUpstreamStatus(detail.Status)
+	switch mappedStatus {
+	case "delivered":
+		return s.HandleUpstreamCallback(procOrder.ID, mappedStatus, detail.Fulfillment)
 	case "canceled":
-		return s.HandleUpstreamCallback(procOrder.ID, "canceled", nil)
+		return s.HandleUpstreamCallback(procOrder.ID, mappedStatus, nil)
+	case "refunded", "partially_refunded":
+		return s.HandleUpstreamCallback(procOrder.ID, mappedStatus, detail.Fulfillment)
 	default:
 		// 状态未变，继续轮询
 		return s.requeuePoll(procOrder, conn)
@@ -706,9 +732,10 @@ func (s *ProcurementOrderService) SyncAcceptedOrders() {
 			continue
 		}
 
-		switch detail.Status {
-		case "delivered", "completed":
-			if cbErr := s.HandleUpstreamCallback(procOrder.ID, "delivered", detail.Fulfillment); cbErr != nil {
+		mappedStatus := mapProcurementUpstreamStatus(detail.Status)
+		switch mappedStatus {
+		case "delivered":
+			if cbErr := s.HandleUpstreamCallback(procOrder.ID, mappedStatus, detail.Fulfillment); cbErr != nil {
 				logger.Warnw("procurement_sync_accepted_deliver_failed",
 					"procurement_order_id", procOrder.ID,
 					"error", cbErr,
@@ -719,10 +746,23 @@ func (s *ProcurementOrderService) SyncAcceptedOrders() {
 				)
 			}
 		case "canceled":
-			_ = s.HandleUpstreamCallback(procOrder.ID, "canceled", nil)
+			_ = s.HandleUpstreamCallback(procOrder.ID, mappedStatus, nil)
 			logger.Infow("procurement_sync_accepted_canceled",
 				"procurement_order_id", procOrder.ID,
 			)
+		case "refunded", "partially_refunded":
+			if cbErr := s.HandleUpstreamCallback(procOrder.ID, mappedStatus, detail.Fulfillment); cbErr != nil {
+				logger.Warnw("procurement_sync_accepted_refund_failed",
+					"procurement_order_id", procOrder.ID,
+					"upstream_status", mappedStatus,
+					"error", cbErr,
+				)
+			} else {
+				logger.Infow("procurement_sync_accepted_refunded",
+					"procurement_order_id", procOrder.ID,
+					"upstream_status", mappedStatus,
+				)
+			}
 		default:
 			// 检查是否超时（超过 24 小时仍在 accepted 状态）
 			acceptedDuration := time.Since(procOrder.UpdatedAt)
@@ -749,6 +789,7 @@ func (s *ProcurementOrderService) GetByID(id uint) (*models.ProcurementOrder, er
 	if procOrder == nil {
 		return nil, ErrProcurementNotFound
 	}
+	s.fillUpstreamRefundRecordsForProcurementOrder(procOrder)
 	return procOrder, nil
 }
 
@@ -764,6 +805,7 @@ func (s *ProcurementOrderService) List(filter repository.ProcurementOrderListFil
 		return nil, 0, err
 	}
 	s.fillParentOrderNos(orders)
+	s.fillUpstreamRefundRecordsForProcurementOrders(orders)
 	return orders, total, nil
 }
 
@@ -775,6 +817,7 @@ func (s *ProcurementOrderService) FillParentOrderNo(order *models.ProcurementOrd
 	parentOrder, err := s.orderRepo.GetByID(*order.LocalOrder.ParentID)
 	if err == nil && parentOrder != nil {
 		order.ParentOrderNo = parentOrder.OrderNo
+		applyProcurementLocalRefundedAmountFallback(order.LocalOrder, parentOrder)
 	}
 }
 
@@ -800,15 +843,222 @@ func (s *ProcurementOrderService) fillParentOrderNos(orders []models.Procurement
 	if err != nil {
 		return
 	}
-	parentMap := make(map[uint]string, len(parentOrders))
+	parentMap := make(map[uint]*models.Order, len(parentOrders))
 	for _, o := range parentOrders {
-		parentMap[o.ID] = o.OrderNo
+		order := o
+		parentMap[o.ID] = &order
 	}
 
 	for i := range orders {
 		if orders[i].LocalOrder != nil && orders[i].LocalOrder.ParentID != nil {
-			orders[i].ParentOrderNo = parentMap[*orders[i].LocalOrder.ParentID]
+			if parent := parentMap[*orders[i].LocalOrder.ParentID]; parent != nil {
+				orders[i].ParentOrderNo = parent.OrderNo
+				applyProcurementLocalRefundedAmountFallback(orders[i].LocalOrder, parent)
+			}
 		}
+	}
+}
+
+// applyProcurementLocalRefundedAmountFallback 在子订单退款金额为空时回填父订单退款金额，便于采购单视图展示。
+func applyProcurementLocalRefundedAmountFallback(localOrder *models.Order, parentOrder *models.Order) {
+	if localOrder == nil || parentOrder == nil {
+		return
+	}
+	localRefunded := localOrder.RefundedAmount.Decimal.Round(2)
+	if localRefunded.GreaterThan(decimal.Zero) {
+		return
+	}
+	parentRefunded := parentOrder.RefundedAmount.Decimal.Round(2)
+	if parentRefunded.LessThanOrEqual(decimal.Zero) {
+		return
+	}
+	localOrder.RefundedAmount = models.NewMoneyFromDecimal(parentRefunded)
+}
+
+// shouldSyncUpstreamRefundStatus 判断当前采购单状态是否需要从上游拉取退款信息。
+func shouldSyncUpstreamRefundStatus(localStatus string) bool {
+	switch strings.ToLower(strings.TrimSpace(localStatus)) {
+	case constants.ProcurementStatusFulfilled,
+		constants.ProcurementStatusCompleted,
+		constants.ProcurementStatusPartiallyRefunded,
+		constants.ProcurementStatusRefunded:
+		return true
+	default:
+		return false
+	}
+}
+
+// mapProcurementUpstreamStatus 统一映射上游状态别名，便于回调与轮询使用同一分支逻辑。
+func mapProcurementUpstreamStatus(status string) string {
+	normalized := strings.ToLower(strings.TrimSpace(status))
+	switch normalized {
+	case "delivered", "completed", "fulfilled":
+		return "delivered"
+	case "canceled", "cancelled":
+		return "canceled"
+	case "refunded", "partially_refunded":
+		return normalized
+	default:
+		return normalized
+	}
+}
+
+// normalizeProcurementUpstreamStatus 规范化上游状态字符串（去空白+小写）。
+func normalizeProcurementUpstreamStatus(status string) string {
+	return strings.ToLower(strings.TrimSpace(status))
+}
+
+// buildUpstreamRefundRecords 标准化上游退款记录并按 created_at 升序排序，随后重排顺序ID。
+func buildUpstreamRefundRecords(records []models.JSON) []models.JSON {
+	if len(records) == 0 {
+		return make([]models.JSON, 0)
+	}
+	normalized := make([]models.JSON, 0, len(records))
+	for i := range records {
+		record := make(models.JSON, len(records[i]))
+		for k, v := range records[i] {
+			record[k] = v
+		}
+		normalized = append(normalized, record)
+	}
+	sort.SliceStable(normalized, func(i, j int) bool {
+		ti, okI := parseUpstreamRefundRecordCreatedAt(normalized[i]["created_at"])
+		tj, okJ := parseUpstreamRefundRecordCreatedAt(normalized[j]["created_at"])
+		switch {
+		case okI && okJ:
+			if ti.Equal(tj) {
+				return false
+			}
+			return ti.Before(tj)
+		case okI:
+			return true
+		case okJ:
+			return false
+		default:
+			return false
+		}
+	})
+	for i := range normalized {
+		// 不透传上游退款记录主键，统一使用列表自增序号（按排序后序号）。
+		normalized[i]["id"] = i + 1
+	}
+	return normalized
+}
+
+// parseUpstreamRefundRecordCreatedAt 解析上游退款记录中的 created_at 字段并返回可排序时间值。
+func parseUpstreamRefundRecordCreatedAt(v interface{}) (time.Time, bool) {
+	switch value := v.(type) {
+	case time.Time:
+		return value, true
+	case *time.Time:
+		if value == nil {
+			return time.Time{}, false
+		}
+		return *value, true
+	case string:
+		s := strings.TrimSpace(value)
+		if s == "" {
+			return time.Time{}, false
+		}
+		formats := []string{
+			time.RFC3339Nano,
+			time.RFC3339,
+			"2006-01-02 15:04:05.999999999",
+			"2006-01-02 15:04:05",
+		}
+		for _, layout := range formats {
+			if parsed, err := time.Parse(layout, s); err == nil {
+				return parsed, true
+			}
+		}
+		return time.Time{}, false
+	case int64:
+		return time.Unix(value, 0), true
+	case int:
+		return time.Unix(int64(value), 0), true
+	case float64:
+		return time.Unix(int64(value), 0), true
+	default:
+		return time.Time{}, false
+	}
+}
+
+// fillUpstreamRefundRecordsForProcurementOrder 为单条采购单补充上游退款记录与退款金额，并同步退款状态。
+func (s *ProcurementOrderService) fillUpstreamRefundRecordsForProcurementOrder(order *models.ProcurementOrder) {
+	if order == nil {
+		return
+	}
+	order.UpstreamRefundRecords = nil
+	order.UpstreamRefundedAmount = ""
+	if s.connSvc == nil || order.UpstreamOrderID == 0 || !shouldSyncUpstreamRefundStatus(order.Status) {
+		return
+	}
+	conn, err := s.connSvc.GetByID(order.ConnectionID)
+	if err != nil || conn == nil {
+		return
+	}
+	adapter, err := s.connSvc.GetAdapter(conn)
+	if err != nil {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	detail, err := adapter.GetOrder(ctx, order.UpstreamOrderID)
+	if err != nil || detail == nil {
+		return
+	}
+	upstreamRefundRecords := buildUpstreamRefundRecords(detail.RefundRecords)
+	upstreamRefundedAmount := strings.TrimSpace(detail.RefundedAmount)
+	hasRefundRecords := len(upstreamRefundRecords) > 0
+	hasRefundedAmount := isPositiveUpstreamRefundAmount(upstreamRefundedAmount)
+	if hasRefundRecords {
+		order.UpstreamRefundRecords = upstreamRefundRecords
+	}
+	if hasRefundedAmount {
+		order.UpstreamRefundedAmount = upstreamRefundedAmount
+	}
+
+	upstreamStatus := normalizeProcurementUpstreamStatus(detail.Status)
+	if upstreamStatus != "refunded" && upstreamStatus != "partially_refunded" {
+		return
+	}
+	targetStatus := constants.ProcurementStatusPartiallyRefunded
+	if upstreamStatus == "refunded" {
+		targetStatus = constants.ProcurementStatusRefunded
+	}
+	if strings.EqualFold(strings.TrimSpace(order.Status), targetStatus) {
+		order.Status = targetStatus
+		return
+	}
+	if err := s.procRepo.UpdateStatus(order.ID, targetStatus, map[string]interface{}{"updated_at": time.Now()}); err != nil {
+		logger.Warnw("procurement_sync_refund_status_failed",
+			"procurement_order_id", order.ID,
+			"upstream_order_id", order.UpstreamOrderID,
+			"upstream_status", upstreamStatus,
+			"error", err,
+		)
+		return
+	}
+	order.Status = targetStatus
+}
+
+// isPositiveUpstreamRefundAmount 判断上游退款金额字符串是否为正数。
+func isPositiveUpstreamRefundAmount(raw string) bool {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return false
+	}
+	amount, err := decimal.NewFromString(trimmed)
+	if err != nil {
+		return false
+	}
+	return amount.Round(2).GreaterThan(decimal.Zero)
+}
+
+// fillUpstreamRefundRecordsForProcurementOrders 批量为采购单补充上游退款记录与退款金额。
+func (s *ProcurementOrderService) fillUpstreamRefundRecordsForProcurementOrders(orders []models.ProcurementOrder) {
+	for i := range orders {
+		s.fillUpstreamRefundRecordsForProcurementOrder(&orders[i])
 	}
 }
 
@@ -859,8 +1109,12 @@ func (s *ProcurementOrderService) CancelManual(id uint) error {
 		return ErrProcurementNotFound
 	}
 
-	// 已交付的不能取消
-	if procOrder.Status == "fulfilled" || procOrder.Status == "canceled" {
+	// 已交付/已退款的不能取消
+	if procOrder.Status == constants.ProcurementStatusFulfilled ||
+		procOrder.Status == constants.ProcurementStatusCompleted ||
+		procOrder.Status == constants.ProcurementStatusPartiallyRefunded ||
+		procOrder.Status == constants.ProcurementStatusRefunded ||
+		procOrder.Status == constants.ProcurementStatusCanceled {
 		return ErrProcurementStatusInvalid
 	}
 

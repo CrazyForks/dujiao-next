@@ -6,9 +6,18 @@ const (
 	OrderStatusPaid               = "paid"
 	OrderStatusFulfilling         = "fulfilling"
 	OrderStatusPartiallyDelivered = "partially_delivered"
+	OrderStatusPartiallyRefunded  = "partially_refunded"
 	OrderStatusDelivered          = "delivered"
 	OrderStatusCompleted          = "completed"
 	OrderStatusCanceled           = "canceled"
+	OrderStatusRefunded           = "refunded"
+)
+
+// 订单退款常量
+
+const (
+	OrderRefundTypeManual = "manual"
+	OrderRefundTypeWallet = "wallet"
 )
 
 // 交付类型与状态常量
@@ -325,14 +334,16 @@ const (
 
 // 采购单状态常量
 const (
-	ProcurementStatusPending   = "pending"
-	ProcurementStatusSubmitted = "submitted"
-	ProcurementStatusAccepted  = "accepted"
-	ProcurementStatusRejected  = "rejected"
-	ProcurementStatusFailed    = "failed"
-	ProcurementStatusFulfilled = "fulfilled"
-	ProcurementStatusCompleted = "completed"
-	ProcurementStatusCanceled  = "canceled"
+	ProcurementStatusPending           = "pending"
+	ProcurementStatusSubmitted         = "submitted"
+	ProcurementStatusAccepted          = "accepted"
+	ProcurementStatusRejected          = "rejected"
+	ProcurementStatusFailed            = "failed"
+	ProcurementStatusPartiallyRefunded = "partially_refunded"
+	ProcurementStatusFulfilled         = "fulfilled"
+	ProcurementStatusCompleted         = "completed"
+	ProcurementStatusRefunded          = "refunded"
+	ProcurementStatusCanceled          = "canceled"
 )
 
 // 对接连接状态常量

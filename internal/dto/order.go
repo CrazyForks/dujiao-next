@@ -48,27 +48,37 @@ func NewOrderSummaryList(orders []models.Order) []OrderSummary {
 
 // OrderDetail 订单详情响应（完整字段）
 type OrderDetail struct {
-	OrderNo                  string           `json:"order_no"`
-	GuestEmail               string           `json:"guest_email,omitempty"`
-	GuestLocale              string           `json:"guest_locale,omitempty"`
-	Status                   string           `json:"status"`
-	Currency                 string           `json:"currency"`
-	OriginalAmount           models.Money     `json:"original_amount"`
-	DiscountAmount           models.Money     `json:"discount_amount"`
-	MemberDiscountAmount     models.Money     `json:"member_discount_amount"`
-	PromotionDiscountAmount  models.Money     `json:"promotion_discount_amount"`
-	TotalAmount              models.Money     `json:"total_amount"`
-	WalletPaidAmount         models.Money     `json:"wallet_paid_amount"`
-	OnlinePaidAmount         models.Money     `json:"online_paid_amount"`
-	RefundedAmount           models.Money     `json:"refunded_amount"`
-	ExpiresAt                *time.Time       `json:"expires_at"`
-	PaidAt                   *time.Time       `json:"paid_at"`
-	CanceledAt               *time.Time       `json:"canceled_at"`
-	CreatedAt                time.Time        `json:"created_at"`
-	AllowedPaymentChannelIDs []uint           `json:"allowed_payment_channel_ids,omitempty"`
-	Items                    []OrderItemResp  `json:"items,omitempty"`
-	Fulfillment              *FulfillmentResp `json:"fulfillment,omitempty"`
-	Children                 []OrderDetail    `json:"children,omitempty"`
+	OrderNo                  string            `json:"order_no"`
+	GuestEmail               string            `json:"guest_email,omitempty"`
+	GuestLocale              string            `json:"guest_locale,omitempty"`
+	Status                   string            `json:"status"`
+	Currency                 string            `json:"currency"`
+	OriginalAmount           models.Money      `json:"original_amount"`
+	DiscountAmount           models.Money      `json:"discount_amount"`
+	MemberDiscountAmount     models.Money      `json:"member_discount_amount"`
+	PromotionDiscountAmount  models.Money      `json:"promotion_discount_amount"`
+	TotalAmount              models.Money      `json:"total_amount"`
+	WalletPaidAmount         models.Money      `json:"wallet_paid_amount"`
+	OnlinePaidAmount         models.Money      `json:"online_paid_amount"`
+	RefundedAmount           models.Money      `json:"refunded_amount"`
+	ExpiresAt                *time.Time        `json:"expires_at"`
+	PaidAt                   *time.Time        `json:"paid_at"`
+	CanceledAt               *time.Time        `json:"canceled_at"`
+	CreatedAt                time.Time         `json:"created_at"`
+	AllowedPaymentChannelIDs []uint            `json:"allowed_payment_channel_ids,omitempty"`
+	RefundRecords            []OrderRefundResp `json:"refund_records,omitempty"`
+	Items                    []OrderItemResp   `json:"items,omitempty"`
+	Fulfillment              *FulfillmentResp  `json:"fulfillment,omitempty"`
+	Children                 []OrderDetail     `json:"children,omitempty"`
+}
+
+// OrderRefundResp 用户侧订单退款记录响应
+type OrderRefundResp struct {
+	Type      string       `json:"type"`
+	Amount    models.Money `json:"amount"`
+	Currency  string       `json:"currency"`
+	Remark    string       `json:"remark,omitempty"`
+	CreatedAt time.Time    `json:"created_at"`
 }
 
 // NewOrderDetail 从 models.Order 构造 OrderDetail，

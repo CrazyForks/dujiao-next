@@ -80,6 +80,19 @@ type PaymentListFilter struct {
 	Lightweight  bool
 }
 
+// OrderRefundRecordListFilter 查询订单退款记录列表的过滤条件
+type OrderRefundRecordListFilter struct {
+	Page           int
+	PageSize       int
+	UserID         uint
+	UserKeyword    string
+	OrderNo        string
+	GuestEmail     string
+	ProductKeyword string
+	CreatedFrom    *time.Time
+	CreatedTo      *time.Time
+}
+
 // PaymentChannelListFilter 查询支付渠道列表的过滤条件
 type PaymentChannelListFilter struct {
 	Page         int

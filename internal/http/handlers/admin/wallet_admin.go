@@ -24,12 +24,6 @@ type AdminAdjustUserWalletRequest struct {
 	Remark    string `json:"remark"`
 }
 
-// AdminRefundOrderToWalletRequest 管理端订单退款到余额请求
-type AdminRefundOrderToWalletRequest struct {
-	Amount string `json:"amount" binding:"required"`
-	Remark string `json:"remark"`
-}
-
 type adminWalletRechargeUser struct {
 	ID          uint   `json:"id"`
 	Email       string `json:"email"`
@@ -305,48 +299,6 @@ func (h *Handler) AdjustAdminUserWallet(c *gin.Context) {
 
 	response.Success(c, gin.H{
 		"account":     account,
-		"transaction": txn,
-	})
-}
-
-// AdminRefundOrderToWallet 管理端订单退款到余额
-func (h *Handler) AdminRefundOrderToWallet(c *gin.Context) {
-	orderID, err := shared.ParseParamUint(c, "id")
-	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
-		return
-	}
-	var req AdminRefundOrderToWalletRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
-		return
-	}
-	amount, err := decimal.NewFromString(strings.TrimSpace(req.Amount))
-	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
-		return
-	}
-	order, txn, err := h.WalletService.AdminRefundToWallet(service.AdminRefundToWalletInput{
-		OrderID: orderID,
-		Amount:  models.NewMoneyFromDecimal(amount),
-		Remark:  strings.TrimSpace(req.Remark),
-	})
-	if err != nil {
-		switch {
-		case errors.Is(err, service.ErrOrderNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
-		case errors.Is(err, service.ErrOrderStatusInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.order_status_invalid", nil)
-		case errors.Is(err, service.ErrWalletInvalidAmount), errors.Is(err, service.ErrWalletRefundExceeded), errors.Is(err, service.ErrWalletNotSupportedForGuest):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
-		default:
-			shared.RespondError(c, response.CodeInternal, "error.order_update_failed", err)
-		}
-		return
-	}
-
-	response.Success(c, gin.H{
-		"order":       order,
 		"transaction": txn,
 	})
 }

@@ -35,6 +35,7 @@ type Container struct {
 	CouponUsageRepo        repository.CouponUsageRepository
 	PromotionRepo          repository.PromotionRepository
 	WalletRepo             repository.WalletRepository
+	OrderRefundRecordRepo  repository.OrderRefundRecordRepository
 	PostRepo               repository.PostRepository
 	CategoryRepo           repository.CategoryRepository
 	BannerRepo             repository.BannerRepository
@@ -72,6 +73,7 @@ type Container struct {
 	SettingService            *service.SettingService
 	CartService               *service.CartService
 	WalletService             *service.WalletService
+	OrderRefundService        *service.OrderRefundService
 	OrderService              *service.OrderService
 	FulfillmentService        *service.FulfillmentService
 	CouponAdminService        *service.CouponAdminService
@@ -152,6 +154,7 @@ func (c *Container) initRepositories() {
 	c.CouponUsageRepo = repository.NewCouponUsageRepository(db)
 	c.PromotionRepo = repository.NewPromotionRepository(db)
 	c.WalletRepo = repository.NewWalletRepository(db)
+	c.OrderRefundRecordRepo = repository.NewOrderRefundRecordRepository(db)
 	c.PostRepo = repository.NewPostRepository(db)
 	c.CategoryRepo = repository.NewCategoryRepository(db)
 	c.BannerRepo = repository.NewBannerRepository(db)
@@ -222,25 +225,27 @@ func (c *Container) initServices() {
 	c.CategoryService = service.NewCategoryService(c.CategoryRepo)
 	c.CartService = service.NewCartService(c.CartRepo, c.ProductRepo, c.ProductSKURepo, c.PromotionRepo, c.SettingService)
 	c.WalletService = service.NewWalletService(c.WalletRepo, c.OrderRepo, c.UserRepo, c.AffiliateService)
+	c.OrderRefundService = service.NewOrderRefundService(c.OrderRepo, c.UserRepo, c.OrderRefundRecordRepo, c.AffiliateService)
 	c.MemberLevelService = service.NewMemberLevelService(c.MemberLevelRepo, c.MemberLevelPriceRepo, c.UserRepo)
 	c.OrderRiskControlService = service.NewOrderRiskControlService(c.SettingService, c.OrderRepo)
 	c.OrderService = service.NewOrderService(service.OrderServiceOptions{
-		OrderRepo:          c.OrderRepo,
-		UserRepo:           c.UserRepo,
-		ProductRepo:        c.ProductRepo,
-		ProductSKURepo:     c.ProductSKURepo,
-		CardSecretRepo:     c.CardSecretRepo,
-		CouponRepo:         c.CouponRepo,
-		CouponUsageRepo:    c.CouponUsageRepo,
-		PromotionRepo:      c.PromotionRepo,
-		QueueClient:        c.QueueClient,
-		SettingService:     c.SettingService,
-		DefaultEmailConfig: c.Config.Email,
-		WalletService:      c.WalletService,
-		AffiliateService:   c.AffiliateService,
-		MemberLevelService: c.MemberLevelService,
-		RiskControlService: c.OrderRiskControlService,
-		ExpireMinutes:      c.Config.Order.PaymentExpireMinutes,
+		OrderRepo:             c.OrderRepo,
+		OrderRefundRecordRepo: c.OrderRefundRecordRepo,
+		UserRepo:              c.UserRepo,
+		ProductRepo:           c.ProductRepo,
+		ProductSKURepo:        c.ProductSKURepo,
+		CardSecretRepo:        c.CardSecretRepo,
+		CouponRepo:            c.CouponRepo,
+		CouponUsageRepo:       c.CouponUsageRepo,
+		PromotionRepo:         c.PromotionRepo,
+		QueueClient:           c.QueueClient,
+		SettingService:        c.SettingService,
+		DefaultEmailConfig:    c.Config.Email,
+		WalletService:         c.WalletService,
+		AffiliateService:      c.AffiliateService,
+		MemberLevelService:    c.MemberLevelService,
+		RiskControlService:    c.OrderRiskControlService,
+		ExpireMinutes:         c.Config.Order.PaymentExpireMinutes,
 	})
 	c.FulfillmentService = service.NewFulfillmentService(
 		c.OrderRepo, c.FulfillmentRepo, c.CardSecretRepo, c.QueueClient,

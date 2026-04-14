@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/http/response"
+	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
@@ -29,6 +30,69 @@ func (h *Handler) enrichOrderWithAllowedChannels(order *models.Order, detail *dt
 	allowed := h.PaymentService.GetAllowedChannelIDsForOrder(allItems)
 	if len(allowed) > 0 {
 		detail.AllowedPaymentChannelIDs = allowed
+	}
+}
+
+// collectRefundRelevantOrderIDs 收集订单详情应展示退款记录的订单ID（父订单+子订单）。
+func collectRefundRelevantOrderIDs(order *models.Order) []uint {
+	if order == nil || order.ID == 0 {
+		return nil
+	}
+	seen := map[uint]struct{}{}
+	ids := make([]uint, 0, 1+len(order.Children))
+	appendID := func(id uint) {
+		if id == 0 {
+			return
+		}
+		if _, ok := seen[id]; ok {
+			return
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	appendID(order.ID)
+	for _, child := range order.Children {
+		appendID(child.ID)
+	}
+	return ids
+}
+
+// enrichOrderWithRefundRecords 为退款态订单详情补充退款记录列表。
+func (h *Handler) enrichOrderWithRefundRecords(order *models.Order, detail *dto.OrderDetail) {
+	if h == nil || order == nil || detail == nil || h.OrderRefundRecordRepo == nil {
+		return
+	}
+	status := strings.ToLower(strings.TrimSpace(detail.Status))
+	if status != constants.OrderStatusRefunded && status != constants.OrderStatusPartiallyRefunded {
+		return
+	}
+
+	orderIDs := collectRefundRelevantOrderIDs(order)
+	if len(orderIDs) == 0 {
+		return
+	}
+	records, err := h.OrderRefundRecordRepo.ListByOrderIDs(orderIDs)
+	if err != nil {
+		logger.Warnw("public_order_refund_records_fetch_failed",
+			"order_id", order.ID,
+			"order_no", order.OrderNo,
+			"error", err,
+		)
+		return
+	}
+	if len(records) == 0 {
+		return
+	}
+
+	detail.RefundRecords = make([]dto.OrderRefundResp, 0, len(records))
+	for _, record := range records {
+		detail.RefundRecords = append(detail.RefundRecords, dto.OrderRefundResp{
+			Type:      strings.TrimSpace(record.Type),
+			Amount:    record.Amount,
+			Currency:  strings.TrimSpace(record.Currency),
+			Remark:    strings.TrimSpace(record.Remark),
+			CreatedAt: record.CreatedAt,
+		})
 	}
 }
 
@@ -374,6 +438,7 @@ func (h *Handler) GetOrderByOrderNo(c *gin.Context) {
 
 	orderDetail := dto.NewOrderDetailTruncated(order)
 	h.enrichOrderWithAllowedChannels(order, &orderDetail)
+	h.enrichOrderWithRefundRecords(order, &orderDetail)
 	response.Success(c, orderDetail)
 }
 
@@ -440,6 +505,7 @@ func (h *Handler) DownloadFulfillment(c *gin.Context) {
 	respondFulfillmentDownload(c, order)
 }
 
+// respondFulfillmentDownload 输出订单交付内容下载响应。
 func respondFulfillmentDownload(c *gin.Context, order *models.Order) {
 	payload := collectFulfillmentPayload(order)
 	if payload == "" {
@@ -452,6 +518,7 @@ func respondFulfillmentDownload(c *gin.Context, order *models.Order) {
 	c.Data(200, "text/plain; charset=utf-8", []byte(payload))
 }
 
+// collectFulfillmentPayload 汇总父订单与子订单的可下载交付内容。
 func collectFulfillmentPayload(order *models.Order) string {
 	if order.Fulfillment != nil && order.Fulfillment.Payload != "" {
 		return order.Fulfillment.Payload

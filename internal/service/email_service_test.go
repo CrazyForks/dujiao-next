@@ -88,6 +88,34 @@ func TestBuildOrderStatusContent(t *testing.T) {
 				"AUTO-CODE-001",
 			},
 		},
+		{
+			name:   "refunded_zh",
+			locale: i18n.LocaleZH,
+			status: "refunded",
+			wantSubjectContains: []string{
+				"订单状态更新",
+				"已退款",
+			},
+			wantBodyContains: []string{
+				"退款金额：8.80 USD",
+				"退款原因：manual refund",
+				"示例站点 的网址：https://example.com",
+			},
+		},
+		{
+			name:   "partially_refunded_en",
+			locale: i18n.LocaleEN,
+			status: "partially_refunded",
+			wantSubjectContains: []string{
+				"Order status updated",
+				"Partially refunded",
+			},
+			wantBodyContains: []string{
+				"Refund Amount: 8.80 USD",
+				"Reason for refund: manual refund",
+				"Example Site's Site URL: https://example.com",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -96,8 +124,15 @@ func TestBuildOrderStatusContent(t *testing.T) {
 				OrderNo:         pickOrderNo(tt.status),
 				Status:          tt.status,
 				Amount:          models.NewMoneyFromDecimal(decimal.NewFromFloat(19.8)),
+				RefundAmount:    models.NewMoneyFromDecimal(decimal.NewFromFloat(8.8)),
+				RefundReason:    "manual refund",
 				Currency:        "USD",
+				SiteName:        "Example Site",
+				SiteURL:         "https://example.com",
 				FulfillmentInfo: tt.payload,
+			}
+			if tt.locale == i18n.LocaleZH {
+				input.SiteName = "示例站点"
 			}
 			subject, body := buildOrderStatusContent(input, tt.locale)
 			for _, expected := range tt.wantSubjectContains {
@@ -110,6 +145,9 @@ func TestBuildOrderStatusContent(t *testing.T) {
 					t.Fatalf("body missing %q: %s", expected, body)
 				}
 			}
+			if strings.Contains(body, "%!") {
+				t.Fatalf("body contains fmt placeholder error marker: %s", body)
+			}
 		})
 	}
 }
@@ -120,6 +158,10 @@ func pickOrderNo(status string) string {
 		return "DJ-PAID"
 	case "canceled":
 		return "DJ-CANCEL"
+	case "refunded":
+		return "DJ-REFUND"
+	case "partially_refunded":
+		return "DJ-PART-REFUND"
 	default:
 		return "DJ-DELIVER"
 	}

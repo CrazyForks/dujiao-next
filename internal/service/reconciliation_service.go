@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
@@ -126,6 +127,7 @@ func (s *ReconciliationService) Execute(ctx context.Context, jobID uint) error {
 	return nil
 }
 
+// executeReconciliation 执行单次对账主流程并回填任务统计结果。
 func (s *ReconciliationService) executeReconciliation(ctx context.Context, job *models.ReconciliationJob) error {
 	// 获取连接信息和适配器
 	conn, err := s.connSvc.GetByID(job.ConnectionID)
@@ -196,6 +198,7 @@ func (s *ReconciliationService) executeReconciliation(ctx context.Context, job *
 	return nil
 }
 
+// compareOrder 对比本地采购单与上游订单，返回差异项（无差异返回 nil）。
 func (s *ReconciliationService) compareOrder(job *models.ReconciliationJob, po *models.ProcurementOrder, detail *upstream.UpstreamOrderDetail) *models.ReconciliationItem {
 	checkStatus := job.Type == constants.ReconciliationTypeStatus || job.Type == constants.ReconciliationTypeFull
 	checkAmount := job.Type == constants.ReconciliationTypeAmount || job.Type == constants.ReconciliationTypeFull
@@ -243,17 +246,45 @@ func (s *ReconciliationService) compareOrder(job *models.ReconciliationJob, po *
 	}
 }
 
-// isStatusConsistent 判断本地采购单状态与上游状态是否一致
+// isStatusConsistent 判断本地采购单状态与上游状态是否一致。
+//
+// 状态对照说明（本地采购单 -> 上游订单）：
+// 1) completed / fulfilled
+//   - 对应上游 delivered / completed / fulfilled（已交付）。
+//   - 同时兼容上游 refunded / partially_refunded（先交付后退款的场景仍视为一致）。
+//
+// 2) canceled
+//   - 对应上游 canceled / cancelled（取消）。
+//   - 同时兼容上游 refunded / partially_refunded（本地下取消、上游退款的补偿链路）。
+//
+// 3) pending
+//   - 对应上游 pending / paid（待处理到待执行窗口）。
+//
+// 4) submitted / accepted
+//   - 对应上游 paid / processing / accepted（已提交到处理中窗口）。
+//
+// 5) failed / rejected
+//   - 对应上游 failed / rejected（失败态一致）。
+//
+// 6) 历史兼容状态 "fulfilling"
+//   - 对应上游 fulfilling / processing / paid（处理中窗口）。
+//
+// 说明：
+// - 上游状态会先做小写与空白归一化。
+// - 对于未命中的状态，默认要求两边字符串完全一致。
 func isStatusConsistent(localStatus, upstreamStatus string) bool {
-	// 状态映射对照：
-	// 本地 completed/fulfilled -> 上游 completed/delivered
-	// 本地 canceled -> 上游 canceled/refunded
-	// 本地 pending/submitted -> 上游 pending/paid
+	localStatus = strings.ToLower(strings.TrimSpace(localStatus))
+	upstreamStatus = strings.ToLower(strings.TrimSpace(upstreamStatus))
+
 	switch localStatus {
 	case constants.ProcurementStatusCompleted, constants.ProcurementStatusFulfilled:
-		return upstreamStatus == "completed" || upstreamStatus == "delivered" || upstreamStatus == "fulfilled"
+		return upstreamStatus == "completed" ||
+			upstreamStatus == "delivered" ||
+			upstreamStatus == "fulfilled" ||
+			upstreamStatus == "refunded" ||
+			upstreamStatus == "partially_refunded"
 	case constants.ProcurementStatusCanceled:
-		return upstreamStatus == "canceled" || upstreamStatus == "cancelled" || upstreamStatus == "refunded"
+		return upstreamStatus == "canceled" || upstreamStatus == "cancelled" || upstreamStatus == "refunded" || upstreamStatus == "partially_refunded"
 	case constants.ProcurementStatusPending:
 		return upstreamStatus == "pending" || upstreamStatus == "paid"
 	case constants.ProcurementStatusSubmitted, constants.ProcurementStatusAccepted:
@@ -267,6 +298,7 @@ func isStatusConsistent(localStatus, upstreamStatus string) bool {
 	}
 }
 
+// sendMismatchNotification 发送对账差异通知到通知中心。
 func (s *ReconciliationService) sendMismatchNotification(job *models.ReconciliationJob) {
 	if s.notifySvc == nil {
 		return

@@ -41,6 +41,8 @@ type OrderEmailTemplatesSetting struct {
 	Delivered            OrderEmailSceneTemplate `json:"delivered"`
 	DeliveredWithContent OrderEmailSceneTemplate `json:"delivered_with_content"`
 	Canceled             OrderEmailSceneTemplate `json:"canceled"`
+	Refunded             OrderEmailSceneTemplate `json:"refunded"`
+	PartiallyRefunded    OrderEmailSceneTemplate `json:"partially_refunded"`
 }
 
 // OrderEmailTemplateSetting 订单邮件模板配置
@@ -86,6 +88,8 @@ type OrderEmailTemplatesPatch struct {
 	Delivered            *OrderEmailSceneTemplatePatch `json:"delivered"`
 	DeliveredWithContent *OrderEmailSceneTemplatePatch `json:"delivered_with_content"`
 	Canceled             *OrderEmailSceneTemplatePatch `json:"canceled"`
+	Refunded             *OrderEmailSceneTemplatePatch `json:"refunded"`
+	PartiallyRefunded    *OrderEmailSceneTemplatePatch `json:"partially_refunded"`
 }
 
 // OrderEmailTemplateSettingPatch 订单邮件模板配置补丁
@@ -171,6 +175,34 @@ func OrderEmailTemplateDefaultSetting() OrderEmailTemplateSetting {
 					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nThe order has been canceled. Please contact admin if needed.\n\n{{site_name}}'s Site URL: {{site_url}}",
 				},
 			},
+			Refunded: OrderEmailSceneTemplate{
+				ZHCN: OrderEmailLocalizedTemplate{
+					Subject: "订单状态更新：{{status}}",
+					Body:    "订单号：{{order_no}}\n状态：{{status}}\n退款金额：{{refund_amount}} {{currency}}\n退款原因：{{refund_reason}}\n\n订单已退款，如有疑问请联系管理员。\n\n{{site_name}} 的网址：{{site_url}}",
+				},
+				ZHTW: OrderEmailLocalizedTemplate{
+					Subject: "訂單狀態更新：{{status}}",
+					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n退款金額：{{refund_amount}} {{currency}}\n退款原因：{{refund_reason}}\n\n訂單已退款，如有疑問請聯絡管理員。\n\n{{site_name}} 的網址：{{site_url}}",
+				},
+				ENUS: OrderEmailLocalizedTemplate{
+					Subject: "Order status updated: {{status}}",
+					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nRefund Amount: {{refund_amount}} {{currency}}\nReason for refund: {{refund_reason}}\n\nThe order has been refunded. Please contact admin if needed.\n\n{{site_name}}'s Site URL: {{site_url}}",
+				},
+			},
+			PartiallyRefunded: OrderEmailSceneTemplate{
+				ZHCN: OrderEmailLocalizedTemplate{
+					Subject: "订单状态更新：{{status}}",
+					Body:    "订单号：{{order_no}}\n状态：{{status}}\n退款金额：{{refund_amount}} {{currency}}\n退款原因：{{refund_reason}}\n\n订单已部分退款，如有疑问请联系管理员。\n\n{{site_name}} 的网址：{{site_url}}",
+				},
+				ZHTW: OrderEmailLocalizedTemplate{
+					Subject: "訂單狀態更新：{{status}}",
+					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n退款金額：{{refund_amount}} {{currency}}\n退款原因：{{refund_reason}}\n\n訂單已部分退款，如有疑問請聯絡管理員。\n\n{{site_name}} 的網址：{{site_url}}",
+				},
+				ENUS: OrderEmailLocalizedTemplate{
+					Subject: "Order status updated: {{status}}",
+					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nRefund Amount: {{refund_amount}} {{currency}}\nReason for refund: {{refund_reason}}\n\nThe order has been partially refunded. Please contact admin if needed.\n\n{{site_name}}'s Site URL: {{site_url}}",
+				},
+			},
 		},
 		GuestTip: OrderEmailGuestTip{
 			ZHCN: "游客订单可使用下单邮箱与订单密码在网站查询订单详情。",
@@ -194,6 +226,8 @@ func NormalizeOrderEmailTemplateSetting(setting OrderEmailTemplateSetting) Order
 	setting.Templates.Delivered = normalizeOrderEmailSceneTemplate(setting.Templates.Delivered)
 	setting.Templates.DeliveredWithContent = normalizeOrderEmailSceneTemplate(setting.Templates.DeliveredWithContent)
 	setting.Templates.Canceled = normalizeOrderEmailSceneTemplate(setting.Templates.Canceled)
+	setting.Templates.Refunded = normalizeOrderEmailSceneTemplate(setting.Templates.Refunded)
+	setting.Templates.PartiallyRefunded = normalizeOrderEmailSceneTemplate(setting.Templates.PartiallyRefunded)
 	setting.GuestTip.ZHCN = strings.TrimSpace(setting.GuestTip.ZHCN)
 	setting.GuestTip.ZHTW = strings.TrimSpace(setting.GuestTip.ZHTW)
 	setting.GuestTip.ENUS = strings.TrimSpace(setting.GuestTip.ENUS)
@@ -221,6 +255,8 @@ func ValidateOrderEmailTemplateSetting(setting OrderEmailTemplateSetting) error 
 		setting.Templates.Delivered,
 		setting.Templates.DeliveredWithContent,
 		setting.Templates.Canceled,
+		setting.Templates.Refunded,
+		setting.Templates.PartiallyRefunded,
 	}
 	for _, scene := range scenes {
 		locales := []OrderEmailLocalizedTemplate{scene.ZHCN, scene.ZHTW, scene.ENUS}
@@ -245,6 +281,8 @@ func OrderEmailTemplateSettingToMap(setting OrderEmailTemplateSetting) map[strin
 			"delivered":              orderEmailSceneTemplateToMap(normalized.Templates.Delivered),
 			"delivered_with_content": orderEmailSceneTemplateToMap(normalized.Templates.DeliveredWithContent),
 			"canceled":               orderEmailSceneTemplateToMap(normalized.Templates.Canceled),
+			"refunded":               orderEmailSceneTemplateToMap(normalized.Templates.Refunded),
+			"partially_refunded":     orderEmailSceneTemplateToMap(normalized.Templates.PartiallyRefunded),
 		},
 		"guest_tip": map[string]interface{}{
 			constants.LocaleZhCN: normalized.GuestTip.ZHCN,
@@ -321,6 +359,12 @@ func (s *SettingService) PatchOrderEmailTemplateSetting(patch OrderEmailTemplate
 		}
 		if patch.Templates.Canceled != nil {
 			applyOrderEmailSceneTemplatePatch(&next.Templates.Canceled, patch.Templates.Canceled)
+		}
+		if patch.Templates.Refunded != nil {
+			applyOrderEmailSceneTemplatePatch(&next.Templates.Refunded, patch.Templates.Refunded)
+		}
+		if patch.Templates.PartiallyRefunded != nil {
+			applyOrderEmailSceneTemplatePatch(&next.Templates.PartiallyRefunded, patch.Templates.PartiallyRefunded)
 		}
 	}
 	if patch.GuestTip != nil {
@@ -417,6 +461,12 @@ func orderEmailTemplateSettingFromJSON(raw models.JSON, fallback OrderEmailTempl
 		}
 		if sceneMap := toStringAnyMap(templatesMap["canceled"]); sceneMap != nil {
 			next.Templates.Canceled = orderEmailSceneTemplateFromMap(sceneMap, next.Templates.Canceled)
+		}
+		if sceneMap := toStringAnyMap(templatesMap["refunded"]); sceneMap != nil {
+			next.Templates.Refunded = orderEmailSceneTemplateFromMap(sceneMap, next.Templates.Refunded)
+		}
+		if sceneMap := toStringAnyMap(templatesMap["partially_refunded"]); sceneMap != nil {
+			next.Templates.PartiallyRefunded = orderEmailSceneTemplateFromMap(sceneMap, next.Templates.PartiallyRefunded)
 		}
 	}
 

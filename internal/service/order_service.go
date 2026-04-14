@@ -19,63 +19,66 @@ import (
 
 // OrderService 订单服务
 type OrderService struct {
-	orderRepo          repository.OrderRepository
-	userRepo           repository.UserRepository
-	productRepo        repository.ProductRepository
-	productSKURepo     repository.ProductSKURepository
-	cardSecretRepo     repository.CardSecretRepository
-	couponRepo         repository.CouponRepository
-	couponUsageRepo    repository.CouponUsageRepository
-	promotionRepo      repository.PromotionRepository
-	queueClient        *queue.Client
-	settingService     *SettingService
-	defaultEmailConfig config.EmailConfig
-	walletService      *WalletService
-	affiliateSvc       *AffiliateService
-	memberLevelService *MemberLevelService
-	riskControlSvc     *OrderRiskControlService
-	expireMinutes      int
+	orderRepo             repository.OrderRepository
+	orderRefundRecordRepo repository.OrderRefundRecordRepository
+	userRepo              repository.UserRepository
+	productRepo           repository.ProductRepository
+	productSKURepo        repository.ProductSKURepository
+	cardSecretRepo        repository.CardSecretRepository
+	couponRepo            repository.CouponRepository
+	couponUsageRepo       repository.CouponUsageRepository
+	promotionRepo         repository.PromotionRepository
+	queueClient           *queue.Client
+	settingService        *SettingService
+	defaultEmailConfig    config.EmailConfig
+	walletService         *WalletService
+	affiliateSvc          *AffiliateService
+	memberLevelService    *MemberLevelService
+	riskControlSvc        *OrderRiskControlService
+	expireMinutes         int
 }
 
 // OrderServiceOptions 订单服务构造参数
 type OrderServiceOptions struct {
-	OrderRepo          repository.OrderRepository
-	UserRepo           repository.UserRepository
-	ProductRepo        repository.ProductRepository
-	ProductSKURepo     repository.ProductSKURepository
-	CardSecretRepo     repository.CardSecretRepository
-	CouponRepo         repository.CouponRepository
-	CouponUsageRepo    repository.CouponUsageRepository
-	PromotionRepo      repository.PromotionRepository
-	QueueClient        *queue.Client
-	SettingService     *SettingService
-	DefaultEmailConfig config.EmailConfig
-	WalletService      *WalletService
-	AffiliateService   *AffiliateService
-	MemberLevelService *MemberLevelService
-	RiskControlService *OrderRiskControlService
-	ExpireMinutes      int
+	OrderRepo             repository.OrderRepository
+	OrderRefundRecordRepo repository.OrderRefundRecordRepository
+	UserRepo              repository.UserRepository
+	ProductRepo           repository.ProductRepository
+	ProductSKURepo        repository.ProductSKURepository
+	CardSecretRepo        repository.CardSecretRepository
+	CouponRepo            repository.CouponRepository
+	CouponUsageRepo       repository.CouponUsageRepository
+	PromotionRepo         repository.PromotionRepository
+	QueueClient           *queue.Client
+	SettingService        *SettingService
+	DefaultEmailConfig    config.EmailConfig
+	WalletService         *WalletService
+	AffiliateService      *AffiliateService
+	MemberLevelService    *MemberLevelService
+	RiskControlService    *OrderRiskControlService
+	ExpireMinutes         int
 }
 
 // NewOrderService 创建订单服务
 func NewOrderService(opts OrderServiceOptions) *OrderService {
 	return &OrderService{
-		orderRepo:          opts.OrderRepo,
-		userRepo:           opts.UserRepo,
-		productRepo:        opts.ProductRepo,
-		productSKURepo:     opts.ProductSKURepo,
-		cardSecretRepo:     opts.CardSecretRepo,
-		couponRepo:         opts.CouponRepo,
-		couponUsageRepo:    opts.CouponUsageRepo,
-		promotionRepo:      opts.PromotionRepo,
-		queueClient:        opts.QueueClient,
-		settingService:     opts.SettingService,
-		defaultEmailConfig: opts.DefaultEmailConfig,
-		walletService:      opts.WalletService,
-		affiliateSvc:       opts.AffiliateService,
-		memberLevelService: opts.MemberLevelService,
-		riskControlSvc:     opts.RiskControlService,
-		expireMinutes:      opts.ExpireMinutes,
+		orderRepo:             opts.OrderRepo,
+		orderRefundRecordRepo: opts.OrderRefundRecordRepo,
+		userRepo:              opts.UserRepo,
+		productRepo:           opts.ProductRepo,
+		productSKURepo:        opts.ProductSKURepo,
+		cardSecretRepo:        opts.CardSecretRepo,
+		couponRepo:            opts.CouponRepo,
+		couponUsageRepo:       opts.CouponUsageRepo,
+		promotionRepo:         opts.PromotionRepo,
+		queueClient:           opts.QueueClient,
+		settingService:        opts.SettingService,
+		defaultEmailConfig:    opts.DefaultEmailConfig,
+		walletService:         opts.WalletService,
+		affiliateSvc:          opts.AffiliateService,
+		memberLevelService:    opts.MemberLevelService,
+		riskControlSvc:        opts.RiskControlService,
+		expireMinutes:         opts.ExpireMinutes,
 	}
 }
 
@@ -134,17 +137,32 @@ var allowedTransitions = map[string]map[string]bool{
 		constants.OrderStatusFulfilling:         true,
 		constants.OrderStatusPartiallyDelivered: true,
 		constants.OrderStatusDelivered:          true,
+		constants.OrderStatusPartiallyRefunded:  true,
+		constants.OrderStatusRefunded:           true,
 	},
 	constants.OrderStatusFulfilling: {
 		constants.OrderStatusPartiallyDelivered: true,
 		constants.OrderStatusDelivered:          true,
+		constants.OrderStatusPartiallyRefunded:  true,
+		constants.OrderStatusRefunded:           true,
 	},
 	constants.OrderStatusPartiallyDelivered: {
-		constants.OrderStatusDelivered: true,
-		constants.OrderStatusCompleted: true,
+		constants.OrderStatusDelivered:         true,
+		constants.OrderStatusCompleted:         true,
+		constants.OrderStatusPartiallyRefunded: true,
+		constants.OrderStatusRefunded:          true,
 	},
 	constants.OrderStatusDelivered: {
-		constants.OrderStatusCompleted: true,
+		constants.OrderStatusCompleted:         true,
+		constants.OrderStatusPartiallyRefunded: true,
+		constants.OrderStatusRefunded:          true,
+	},
+	constants.OrderStatusCompleted: {
+		constants.OrderStatusPartiallyRefunded: true,
+		constants.OrderStatusRefunded:          true,
+	},
+	constants.OrderStatusPartiallyRefunded: {
+		constants.OrderStatusRefunded: true,
 	},
 }
 

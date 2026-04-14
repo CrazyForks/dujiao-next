@@ -115,12 +115,15 @@ type UpstreamFulfillment struct {
 
 // UpstreamOrderDetail 上游订单详情
 type UpstreamOrderDetail struct {
-	OrderID     uint                 `json:"order_id"`
-	OrderNo     string               `json:"order_no"`
-	Status      string               `json:"status"`
-	Amount      string               `json:"amount"`
-	Currency    string               `json:"currency"`
-	Fulfillment *UpstreamFulfillment `json:"fulfillment,omitempty"`
+	OrderID        uint                 `json:"order_id"`
+	OrderNo        string               `json:"order_no"`
+	Status         string               `json:"status"`
+	Amount         string               `json:"amount"`
+	RefundedAmount string               `json:"refunded_amount,omitempty"`
+	Currency       string               `json:"currency"`
+	Fulfillment    *UpstreamFulfillment `json:"fulfillment,omitempty"`
+	// RefundRecords 上游退款记录（协议兼容字段）
+	RefundRecords []models.JSON `json:"refund_records,omitempty"`
 }
 
 // Adapter 上游站点适配器接口

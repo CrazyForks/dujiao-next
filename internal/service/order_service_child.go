@@ -279,6 +279,50 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*mo
 				}
 			}
 			return order, nil
+		case constants.OrderStatusPartiallyRefunded, constants.OrderStatusRefunded:
+			now := time.Now()
+			err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
+				orderRepo := s.orderRepo.WithTx(tx)
+				updates := map[string]interface{}{"updated_at": now}
+				if err := orderRepo.UpdateStatus(order.ID, target, updates); err != nil {
+					return ErrOrderUpdateFailed
+				}
+				for _, child := range order.Children {
+					if child.Status == target {
+						continue
+					}
+					if !isTransitionAllowed(child.Status, target) {
+						return ErrOrderStatusInvalid
+					}
+					if err := orderRepo.UpdateStatus(child.ID, target, updates); err != nil {
+						return ErrOrderUpdateFailed
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				if errors.Is(err, ErrOrderStatusInvalid) {
+					return nil, ErrOrderStatusInvalid
+				}
+				return nil, ErrOrderUpdateFailed
+			}
+			order.Status = target
+			order.UpdatedAt = now
+			for i := range order.Children {
+				order.Children[i].Status = target
+				order.Children[i].UpdatedAt = now
+			}
+			if s.queueClient != nil {
+				if _, err := enqueueOrderStatusEmailTaskIfEligible(s.orderRepo, s.queueClient, s.settingService, s.defaultEmailConfig, order.ID, target); err != nil {
+					logger.Warnw("order_enqueue_status_email_failed",
+						"order_id", order.ID,
+						"target_order_id", order.ID,
+						"status", target,
+						"error", err,
+					)
+				}
+			}
+			return order, nil
 		default:
 			return nil, ErrOrderStatusInvalid
 		}

@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -128,9 +129,15 @@ func paidOrderStatuses() []string {
 		constants.OrderStatusPaid,
 		constants.OrderStatusFulfilling,
 		constants.OrderStatusPartiallyDelivered,
+		constants.OrderStatusPartiallyRefunded,
 		constants.OrderStatusDelivered,
 		constants.OrderStatusCompleted,
 	}
+}
+
+func profitOrderStatuses() []string {
+	statuses := append([]string{}, paidOrderStatuses()...)
+	return append(statuses, constants.OrderStatusRefunded)
 }
 
 func onlinePaymentBase(db *gorm.DB, startAt, endAt time.Time) *gorm.DB {
@@ -694,34 +701,79 @@ func (r *GormDashboardRepository) GetProfitOverview(startAt, endAt time.Time) (D
 			COALESCE(SUM(order_items.cost_price * order_items.quantity), 0) as total_cost
 		`).
 		Joins("JOIN orders ON orders.id = order_items.order_id").
-		Where("order_items.cost_price > 0 AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, paidOrderStatuses()).
+		Where("order_items.cost_price > 0 AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, profitOrderStatuses()).
 		Scan(&result).Error; err != nil {
 		return result, err
 	}
+
+	var refundedAmount float64
+	if err := r.db.Model(&models.OrderRefundRecord{}).
+		Select("COALESCE(SUM(amount), 0)").
+		Where("created_at >= ? AND created_at < ?", startAt, endAt).
+		Scan(&refundedAmount).Error; err != nil {
+		return result, err
+	}
+	result.TotalRevenue -= refundedAmount
 	return result, nil
 }
 
 // GetProfitTrends 获取利润趋势
 func (r *GormDashboardRepository) GetProfitTrends(startAt, endAt time.Time) ([]DashboardProfitTrendRow, error) {
-	dayExpr := dateGroupExpr(r.db, "orders.created_at", startAt.Location(), startAt)
+	orderDayExpr := dateGroupExpr(r.db, "orders.created_at", startAt.Location(), startAt)
 
 	rows := make([]DashboardProfitTrendRow, 0)
-	selectSQL := fmt.Sprintf(`
+	if err := r.db.Model(&models.OrderItem{}).Select(fmt.Sprintf(`
 		%s as day,
 		COALESCE(SUM(order_items.total_price - order_items.coupon_discount), 0) as revenue,
 		COALESCE(SUM(order_items.cost_price * order_items.quantity), 0) as cost
-	`, dayExpr)
-
-	if err := r.db.Model(&models.OrderItem{}).
-		Select(selectSQL).
+	`, orderDayExpr)).
 		Joins("JOIN orders ON orders.id = order_items.order_id").
-		Where("order_items.cost_price > 0 AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, paidOrderStatuses()).
-		Group(dayExpr).
-		Order("day ASC").
+		Where("order_items.cost_price > 0 AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, profitOrderStatuses()).
+		Group(orderDayExpr).
 		Scan(&rows).Error; err != nil {
 		return nil, err
 	}
-	return rows, nil
+
+	type refundTrendRow struct {
+		Day          string
+		RefundAmount float64 `gorm:"column:refund_amount"`
+	}
+	refundRows := make([]refundTrendRow, 0)
+	refundDayExpr := dateGroupExpr(r.db, "created_at", startAt.Location(), startAt)
+	if err := r.db.Model(&models.OrderRefundRecord{}).
+		Select(fmt.Sprintf(`
+			%s as day,
+			COALESCE(SUM(amount), 0) as refund_amount
+		`, refundDayExpr)).
+		Where("created_at >= ? AND created_at < ?", startAt, endAt).
+		Group(refundDayExpr).
+		Scan(&refundRows).Error; err != nil {
+		return nil, err
+	}
+
+	byDay := make(map[string]DashboardProfitTrendRow, len(rows)+len(refundRows))
+	for _, row := range rows {
+		byDay[row.Day] = row
+	}
+	for _, refundRow := range refundRows {
+		day := strings.TrimSpace(refundRow.Day)
+		if day == "" {
+			continue
+		}
+		row := byDay[day]
+		row.Day = day
+		row.Revenue -= refundRow.RefundAmount
+		byDay[day] = row
+	}
+
+	merged := make([]DashboardProfitTrendRow, 0, len(byDay))
+	for _, row := range byDay {
+		merged = append(merged, row)
+	}
+	sort.Slice(merged, func(i, j int) bool {
+		return merged[i].Day < merged[j].Day
+	})
+	return merged, nil
 }
 
 // GetTopChannels 获取支付渠道排行榜

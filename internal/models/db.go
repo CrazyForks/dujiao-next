@@ -117,6 +117,7 @@ func AutoMigrate() error {
 		&EmailVerifyCode{},
 		&Order{},
 		&OrderItem{},
+		&OrderRefundRecord{},
 		&CartItem{},
 		&PaymentChannel{},
 		&Payment{},

@@ -184,18 +184,20 @@ func (s *WalletService) AdminAdjustBalance(input WalletAdjustInput) (*models.Wal
 }
 
 // AdminRefundToWallet 管理端订单退款到余额
-func (s *WalletService) AdminRefundToWallet(input AdminRefundToWalletInput) (*models.Order, *models.WalletTransaction, error) {
+func (s *WalletService) AdminRefundToWallet(input AdminRefundToWalletInput) (*models.Order, *models.WalletTransaction, *models.OrderRefundRecord, error) {
 	if input.OrderID == 0 {
-		return nil, nil, ErrOrderNotFound
+		return nil, nil, nil, ErrOrderNotFound
 	}
 	amount := input.Amount.Decimal.Round(2)
 	if amount.LessThanOrEqual(decimal.Zero) {
-		return nil, nil, ErrWalletInvalidAmount
+		return nil, nil, nil, ErrWalletInvalidAmount
 	}
 	reference := buildWalletReference(fmt.Sprintf("order:%d:admin_refund", input.OrderID), input.OrderID)
 	remark := cleanWalletRemark(input.Remark, "管理员退款到余额")
+	recordRemark := strings.TrimSpace(input.Remark)
 
 	var txnResult *models.WalletTransaction
+	var refundRecordResult *models.OrderRefundRecord
 	if err := s.walletRepo.Transaction(func(tx *gorm.DB) error {
 		var order models.Order
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -234,11 +236,33 @@ func (s *WalletService) AdminRefundToWallet(input AdminRefundToWalletInput) (*mo
 		}
 
 		newRefunded := refundedBefore.Add(amount).Round(2)
-		if err := tx.Model(&models.Order{}).Where("id = ?", order.ID).Updates(map[string]interface{}{
+		now := time.Now()
+		updates := map[string]interface{}{
 			"refunded_amount": models.NewMoneyFromDecimal(newRefunded),
-			"updated_at":      time.Now(),
-		}).Error; err != nil {
+			"updated_at":      now,
+		}
+		markRefunded := newRefunded.GreaterThanOrEqual(order.TotalAmount.Decimal.Round(2))
+		if markRefunded {
+			updates["status"] = constants.OrderStatusRefunded
+		} else {
+			updates["status"] = constants.OrderStatusPartiallyRefunded
+		}
+		if err := tx.Model(&models.Order{}).Where("id = ?", order.ID).Updates(updates).Error; err != nil {
 			return ErrOrderUpdateFailed
+		}
+		if order.ParentID == nil {
+			targetStatus := constants.OrderStatusPartiallyRefunded
+			if markRefunded {
+				targetStatus = constants.OrderStatusRefunded
+			}
+			if err := applyParentRefundChildStatusUpdatesTx(tx, order.ID, targetStatus, now); err != nil {
+				return ErrOrderUpdateFailed
+			}
+		}
+		if order.ParentID != nil {
+			if _, err := syncParentStatus(s.orderRepo.WithTx(tx), *order.ParentID, now); err != nil {
+				return ErrOrderUpdateFailed
+			}
 		}
 		if s.affiliateSvc != nil {
 			if err := s.affiliateSvc.HandleOrderRefundedTx(
@@ -269,20 +293,35 @@ func (s *WalletService) AdminRefundToWallet(input AdminRefundToWalletInput) (*mo
 		if err := repo.CreateTransaction(txn); err != nil {
 			return ErrWalletTransactionCreateFailed
 		}
+		record := &models.OrderRefundRecord{
+			UserID:     order.UserID,
+			GuestEmail: order.GuestEmail,
+			OrderID:    order.ID,
+			Type:       constants.OrderRefundTypeWallet,
+			Amount:     models.NewMoneyFromDecimal(amount),
+			Currency:   normalizeWalletCurrency(order.Currency),
+			Remark:     recordRemark,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		}
+		if err := tx.Create(record).Error; err != nil {
+			return ErrRefundRecordCreateFailed
+		}
 		txnResult = txn
+		refundRecordResult = record
 		return nil
 	}); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	order, err := s.orderRepo.GetByID(input.OrderID)
 	if err != nil {
-		return nil, nil, ErrOrderFetchFailed
+		return nil, nil, nil, ErrOrderFetchFailed
 	}
 	if order == nil {
-		return nil, nil, ErrOrderNotFound
+		return nil, nil, nil, ErrOrderNotFound
 	}
-	return order, txnResult, nil
+	return order, txnResult, refundRecordResult, nil
 }
 
 // ApplyOrderBalance 在事务内为订单扣减余额并记录流水，返回扣减金额

@@ -57,6 +57,7 @@ func (c *Consumer) Register(mux *asynq.ServeMux) {
 	mux.HandleFunc(queue.TaskTelegramBroadcast, c.handleTelegramBroadcast)
 }
 
+// handleOrderStatusEmail 处理订单状态邮件发送任务。
 func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) error {
 	if c == nil || task == nil {
 		logger.Debugw("worker_order_status_email_skip_nil", "consumer_nil", c == nil, "task_nil", task == nil)
@@ -131,14 +132,24 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 			siteBrand = resolvedSiteBrand
 		}
 	}
+	refundDetails, refundDetailsErr := c.OrderRefundService.ResolveOrderStatusEmailRefundDetails(order, payload.RefundRecordID)
+	if refundDetailsErr != nil {
+		logger.Warnw("worker_order_status_email_resolve_refund_details_failed",
+			"order_id", order.ID,
+			"refund_record_id", payload.RefundRecordID,
+			"error", refundDetailsErr,
+		)
+	}
 	input := service.OrderStatusEmailInput{
-		OrderNo:  order.OrderNo,
-		Status:   status,
-		Amount:   order.TotalAmount,
-		Currency: order.Currency,
-		SiteName: siteBrand.SiteName,
-		SiteURL:  siteBrand.SiteURL,
-		IsGuest:  order.UserID == 0,
+		OrderNo:      order.OrderNo,
+		Status:       status,
+		Amount:       order.TotalAmount,
+		RefundAmount: refundDetails.Amount,
+		RefundReason: refundDetails.Reason,
+		Currency:     order.Currency,
+		SiteName:     siteBrand.SiteName,
+		SiteURL:      siteBrand.SiteURL,
+		IsGuest:      order.UserID == 0,
 	}
 	if models.ShouldAttachFulfillmentPayload(payloadText) {
 		// 交付内容过大，正文不放交付内容，以附件形式发送
@@ -187,6 +198,7 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 	return nil
 }
 
+// handleOrderAutoFulfill 处理自动交付任务。
 func (c *Consumer) handleOrderAutoFulfill(_ context.Context, task *asynq.Task) error {
 	if c == nil || task == nil {
 		logger.Debugw("worker_order_auto_fulfill_skip_nil", "consumer_nil", c == nil, "task_nil", task == nil)
@@ -224,6 +236,7 @@ func (c *Consumer) handleOrderAutoFulfill(_ context.Context, task *asynq.Task) e
 	return nil
 }
 
+// handleOrderTimeoutCancel 处理超时未支付订单自动取消任务。
 func (c *Consumer) handleOrderTimeoutCancel(_ context.Context, task *asynq.Task) error {
 	if c == nil || task == nil {
 		logger.Debugw("worker_order_timeout_cancel_skip_nil", "consumer_nil", c == nil, "task_nil", task == nil)
@@ -262,6 +275,7 @@ func (c *Consumer) handleOrderTimeoutCancel(_ context.Context, task *asynq.Task)
 	return nil
 }
 
+// handleWalletRechargeExpire 处理钱包充值订单过期任务。
 func (c *Consumer) handleWalletRechargeExpire(_ context.Context, task *asynq.Task) error {
 	if c == nil || task == nil {
 		logger.Debugw("worker_wallet_recharge_expire_skip_nil", "consumer_nil", c == nil, "task_nil", task == nil)
@@ -299,6 +313,7 @@ func (c *Consumer) handleWalletRechargeExpire(_ context.Context, task *asynq.Tas
 	return nil
 }
 
+// handleNotificationDispatch 处理通知中心异步分发任务。
 func (c *Consumer) handleNotificationDispatch(ctx context.Context, task *asynq.Task) error {
 	if c == nil || task == nil {
 		logger.Debugw("worker_notification_dispatch_skip_nil", "consumer_nil", c == nil, "task_nil", task == nil)
@@ -329,6 +344,7 @@ func (c *Consumer) handleNotificationDispatch(ctx context.Context, task *asynq.T
 	return nil
 }
 
+// handleAffiliateConfirmCommissions 处理分销佣金确认任务。
 func (c *Consumer) handleAffiliateConfirmCommissions(_ context.Context, _ *asynq.Task) error {
 	if c == nil || c.AffiliateService == nil {
 		logger.Debugw("worker_affiliate_confirm_skip_nil", "consumer_nil", c == nil)
@@ -341,6 +357,7 @@ func (c *Consumer) handleAffiliateConfirmCommissions(_ context.Context, _ *asynq
 	return nil
 }
 
+// handleUpstreamSyncStock 处理上游库存同步任务。
 func (c *Consumer) handleUpstreamSyncStock(_ context.Context, _ *asynq.Task) error {
 	if c == nil || c.ProductMappingService == nil {
 		logger.Debugw("worker_upstream_sync_stock_skip_nil", "consumer_nil", c == nil)
@@ -353,6 +370,7 @@ func (c *Consumer) handleUpstreamSyncStock(_ context.Context, _ *asynq.Task) err
 	return nil
 }
 
+// handleProcurementSubmit 处理采购单提交上游任务。
 func (c *Consumer) handleProcurementSubmit(_ context.Context, task *asynq.Task) error {
 	if c == nil || task == nil || c.ProcurementOrderService == nil {
 		logger.Debugw("worker_procurement_submit_skip_nil")
@@ -376,6 +394,7 @@ func (c *Consumer) handleProcurementSubmit(_ context.Context, task *asynq.Task) 
 	return nil
 }
 
+// handleProcurementPollStatus 处理采购单轮询上游状态任务。
 func (c *Consumer) handleProcurementPollStatus(_ context.Context, task *asynq.Task) error {
 	if c == nil || task == nil || c.ProcurementOrderService == nil {
 		logger.Debugw("worker_procurement_poll_skip_nil")
@@ -399,6 +418,7 @@ func (c *Consumer) handleProcurementPollStatus(_ context.Context, task *asynq.Ta
 	return nil
 }
 
+// handleProcurementSyncAccepted 处理 accepted 采购单的定时巡检任务。
 func (c *Consumer) handleProcurementSyncAccepted(_ context.Context, _ *asynq.Task) error {
 	if c == nil || c.ProcurementOrderService == nil {
 		logger.Debugw("worker_procurement_sync_accepted_skip_nil")
@@ -408,6 +428,7 @@ func (c *Consumer) handleProcurementSyncAccepted(_ context.Context, _ *asynq.Tas
 	return nil
 }
 
+// handleDownstreamCallback 处理下游回调发送任务。
 func (c *Consumer) handleDownstreamCallback(_ context.Context, task *asynq.Task) error {
 	if c == nil || task == nil || c.DownstreamCallbackService == nil {
 		logger.Debugw("worker_downstream_callback_skip_nil")
@@ -431,6 +452,7 @@ func (c *Consumer) handleDownstreamCallback(_ context.Context, task *asynq.Task)
 	return nil
 }
 
+// handleReconciliationRun 处理对账任务执行。
 func (c *Consumer) handleReconciliationRun(ctx context.Context, task *asynq.Task) error {
 	if c == nil || task == nil || c.ReconciliationService == nil {
 		logger.Debugw("worker_reconciliation_run_skip_nil")
@@ -454,6 +476,7 @@ func (c *Consumer) handleReconciliationRun(ctx context.Context, task *asynq.Task
 	return nil
 }
 
+// buildOrderFulfillmentEmailPayload 组装订单状态邮件中的交付内容文本。
 func buildOrderFulfillmentEmailPayload(order *models.Order) string {
 	if order == nil {
 		return ""
@@ -481,6 +504,7 @@ func buildOrderFulfillmentEmailPayload(order *models.Order) string {
 	return strings.Join(parts, "\n\n")
 }
 
+// handleBotNotify 处理 Telegram Bot 事件回调任务。
 func (c *Consumer) handleBotNotify(_ context.Context, task *asynq.Task) error {
 	if c == nil || task == nil {
 		return nil
@@ -590,6 +614,7 @@ func (c *Consumer) handleBotNotify(_ context.Context, task *asynq.Task) error {
 	return fmt.Errorf("bot notify unexpected status: %d", resp.StatusCode)
 }
 
+// buildBotNotifyRequestURL 构建 Bot 回调请求URL并重置查询参数。
 func buildBotNotifyRequestURL(rawURL string, path string) (string, error) {
 	parsed, err := url.Parse(strings.TrimSpace(rawURL))
 	if err != nil {
@@ -607,6 +632,7 @@ func buildBotNotifyRequestURL(rawURL string, path string) (string, error) {
 	return parsed.String(), nil
 }
 
+// handleTelegramBroadcast 处理 Telegram 群发任务。
 func (c *Consumer) handleTelegramBroadcast(ctx context.Context, task *asynq.Task) error {
 	if c == nil || task == nil {
 		return nil

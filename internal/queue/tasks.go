@@ -41,8 +41,9 @@ const (
 
 // OrderStatusEmailPayload 订单状态邮件任务载荷
 type OrderStatusEmailPayload struct {
-	OrderID uint   `json:"order_id"`
-	Status  string `json:"status"`
+	OrderID        uint   `json:"order_id"`
+	RefundRecordID uint   `json:"refund_record_id,omitempty"`
+	Status         string `json:"status"`
 }
 
 // OrderAutoFulfillPayload 自动交付任务载荷

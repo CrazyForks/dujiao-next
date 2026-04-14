@@ -195,7 +195,7 @@ func (r *GormProcurementOrderRepository) ListByLocalOrderIDs(localOrderIDs []uin
 // ListByConnectionAndTimeRange 按连接和时间范围查询采购单
 func (r *GormProcurementOrderRepository) ListByConnectionAndTimeRange(connectionID uint, start, end time.Time) ([]models.ProcurementOrder, error) {
 	var orders []models.ProcurementOrder
-	q := r.db.Where("connection_id = ? AND created_at >= ? AND created_at <= ?", connectionID, start, end)
+	q := r.db.Preload("LocalOrder").Where("connection_id = ? AND created_at >= ? AND created_at <= ?", connectionID, start, end)
 	if err := q.Find(&orders).Error; err != nil {
 		return nil, err
 	}
