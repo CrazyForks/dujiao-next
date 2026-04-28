@@ -310,6 +310,10 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 				authorized.GET("/settings/affiliate", adminHandler.GetAffiliateSettings)
 				authorized.PUT("/settings/affiliate", adminHandler.UpdateAffiliateSettings)
 				authorized.PUT("/password", adminHandler.UpdateAdminPassword) // 修改密码
+
+				// 系统信息与版本检测
+				authorized.GET("/system/version/check", adminHandler.CheckSystemUpdate)
+
 				authorized.GET("/2fa/status", adminHandler.Get2FAStatus)
 				authorized.POST("/2fa/setup", adminHandler.Setup2FA)
 				authorized.POST("/2fa/enable", adminHandler.Enable2FA)

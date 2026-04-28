@@ -199,6 +199,8 @@ func BuiltinRoleSeeds() []RoleSeed {
 				{Object: "/admin/authz/policies", Action: "*"},
 				{Object: "/admin/authz/permissions/catalog", Action: "GET"},
 				{Object: "/admin/authz/audit-logs", Action: "GET"},
+				// 系统信息与版本检测
+				{Object: "/admin/system/version/check", Action: "GET"},
 				// 渠道客户端管理
 				{Object: "/admin/channel-clients", Action: "*"},
 				{Object: "/admin/channel-clients/:id", Action: "*"},
