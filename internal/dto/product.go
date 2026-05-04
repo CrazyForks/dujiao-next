@@ -9,6 +9,7 @@ type ProductResp struct {
 	ID                   uint               `json:"id"`
 	CategoryID           uint               `json:"category_id"`
 	Slug                 string             `json:"slug"`
+	SeoMeta              models.JSON        `json:"seo_meta"`
 	Title                models.JSON        `json:"title"`
 	Description          models.JSON        `json:"description"`
 	Content              models.JSON        `json:"content"`

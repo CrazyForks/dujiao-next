@@ -71,6 +71,7 @@ func (v *publicProductView) toProductResp() dto.ProductResp {
 		ID:                   v.Product.ID,
 		CategoryID:           v.Product.CategoryID,
 		Slug:                 v.Product.Slug,
+		SeoMeta:              v.Product.SeoMetaJSON,
 		Title:                v.Product.TitleJSON,
 		Description:          v.Product.DescriptionJSON,
 		Content:              v.Product.ContentJSON,
