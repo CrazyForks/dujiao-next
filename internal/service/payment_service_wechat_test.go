@@ -9,13 +9,31 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/payment/wechatpay"
 
 	"github.com/shopspring/decimal"
 )
 
+// buildMinimalPaymentServiceWithRegistry 构造一个只注入了 Registry 的 PaymentService，
+// 供无需 DB 的 ValidateChannel 测试使用。
+func buildMinimalPaymentServiceWithRegistry(t *testing.T) *PaymentService {
+	t.Helper()
+	reg := provider.NewRegistry()
+	reg.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeStripe, provider.NewStripeAdapter())
+	reg.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypePaypal, provider.NewPaypalAdapter())
+	reg.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeWechat, provider.NewWechatpayAdapter())
+	reg.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeAlipay, provider.NewAlipayAdapter())
+	reg.Register(constants.PaymentProviderEpay, "", provider.NewEpayAdapter())
+	reg.Register(constants.PaymentProviderEpusdt, "", provider.NewEpusdtAdapter())
+	reg.Register(constants.PaymentProviderBepusdt, "", provider.NewBepusdtAdapter())
+	reg.Register(constants.PaymentProviderTokenpay, "", provider.NewTokenpayAdapter())
+	reg.Register(constants.PaymentProviderOkpay, "", provider.NewOkpayAdapter())
+	return &PaymentService{paymentProviderRegistry: reg}
+}
+
 func TestValidateChannelWechatOfficial(t *testing.T) {
-	svc := &PaymentService{}
+	svc := buildMinimalPaymentServiceWithRegistry(t)
 	channel := &models.PaymentChannel{
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeWechat,
@@ -37,7 +55,7 @@ func TestValidateChannelWechatOfficial(t *testing.T) {
 }
 
 func TestValidateChannelWechatInvalidInteractionMode(t *testing.T) {
-	svc := &PaymentService{}
+	svc := buildMinimalPaymentServiceWithRegistry(t)
 	channel := &models.PaymentChannel{
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeWechat,

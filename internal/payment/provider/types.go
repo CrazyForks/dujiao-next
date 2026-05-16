@@ -20,17 +20,18 @@ import (
 
 // CreateInput 统一支付创建输入。各 adapter wrapper 把它转成自己的 native 输入。
 type CreateInput struct {
-	PaymentID   uint
-	OrderID     uint
-	OrderNo     string
-	Subject     string
-	Amount      models.Money
-	Currency    string
-	NotifyURL   string
-	ReturnURL   string
-	ClientIP    string
-	ChannelType string
-	Extra       models.JSON
+	PaymentID      uint
+	OrderID        uint
+	OrderNo        string
+	Subject        string
+	Amount         models.Money
+	Currency       string
+	NotifyURL      string
+	ReturnURL      string
+	ReturnURLQuery map[string]string // P1.2c Task 3: append 到 ReturnURL 的 query 参数(biz_type/order_no/marker 等)
+	ClientIP       string
+	ChannelType    string
+	Extra          models.JSON
 }
 
 // CreateResult 统一支付创建结果。

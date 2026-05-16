@@ -35,12 +35,20 @@ func (a *wechatpayAdapter) Type() string {
 
 // parseConfig 解析并验证 wechatpay Config，把 wechatpay.ErrConfigInvalid 等映射为 provider.ErrXxx。
 // 4 个公开方法共用，避免每个都重复样板。
-// interactionMode 参数用于调用 wechatpay.ValidateConfig。当为空字符串时，wechatpay 包会校验并拒绝
-// ("interaction_mode is not supported")，wrapper 会正确地映射为 ErrConfigInvalid。
+// 当 interactionMode 为空字符串时，跳过 wechatpay.ValidateConfig 对 interaction_mode 的校验，
+// 仅做 ParseConfig。这用于 QueryPayment/ParseWebhook 等阶段，这些阶段不需要 interaction_mode，
+// 但需要能正常解析 Config 以获取认证信息。
 func (a *wechatpayAdapter) parseConfig(raw models.JSON, interactionMode string) (*wechatpay.Config, error) {
 	cfg, err := wechatpay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapWechatpayError(err)
+	}
+	// interactionMode="" 时跳过 wechatpay.ValidateConfig（它要求 interactionMode 必填，
+	// 空字符串会被 IsSupportedInteractionMode 拒绝）。
+	// QueryPayment/ParseWebhook 不需要 interactionMode，使用空字符串调用；
+	// CreatePayment 和 ValidateConfig 传入具体 mode，触发完整校验。
+	if interactionMode == "" {
+		return cfg, nil
 	}
 	if err := wechatpay.ValidateConfig(cfg, interactionMode); err != nil {
 		return nil, mapWechatpayError(err)
@@ -49,10 +57,18 @@ func (a *wechatpayAdapter) parseConfig(raw models.JSON, interactionMode string) 
 }
 
 // ValidateConfig 验证 channel.ConfigJSON。
-// 调用 parseConfig 传空字符串，由 wechatpay.ValidateConfig 反对 interaction_mode 空值
-// 并正确地映射为 ErrConfigInvalid。
-func (a *wechatpayAdapter) ValidateConfig(raw models.JSON, _ string) error {
-	_, err := a.parseConfig(raw, "")
+// admin 端 ValidateChannel 调用。service 层 official provider 分支传入 channel.InteractionMode，
+// 所以第二参数实际上是 interactionMode（不是 channelType）。
+// 如果 interactionMode 为空字符串（调用方未传），使用 QR 作为占位 default
+// （QR 模式不要求 h5_redirect_url，对 config 字段完整性校验最宽松，
+// IsSupportedInteractionMode 列表内）。
+// 实际 interactionMode 在 CreatePayment 阶段从 input.Extra["interaction_mode"] 再次校验。
+func (a *wechatpayAdapter) ValidateConfig(raw models.JSON, interactionMode string) error {
+	mode := strings.TrimSpace(interactionMode)
+	if mode == "" {
+		mode = constants.PaymentInteractionQR
+	}
+	_, err := a.parseConfig(raw, mode)
 	return err
 }
 
@@ -65,10 +81,33 @@ func (a *wechatpayAdapter) CreatePayment(ctx context.Context, raw models.JSON, i
 		return nil, err
 	}
 
+	// P1.2c: wrapper 内做 currency conversion + audit 字段写入。
+	// exchange_rate / original_amount / original_currency 保留到 result.Payload，
+	// 供运营/财务跨币种对账追溯实际收费 vs 原始金额。
+	// result.AmountSent/CurrencySent 反映实际发给网关的金额/币种，
+	// 让 service 层据此更新 payment.Amount/Currency，保持记录与实际收费一致。
+	originalAmount := input.Amount.Decimal.String()
+	originalCurrency := input.Currency
+	payAmount := originalAmount
+	payCurrency := originalCurrency
+	converted := false
+	if cfg.NeedsCurrencyConversion() {
+		convAmount, convCurrency, convErr := cfg.ConvertAmount(payAmount, payCurrency, 2)
+		if convErr != nil {
+			return nil, fmt.Errorf("%w: %v", ErrConfigInvalid, convErr)
+		}
+		payAmount = convAmount
+		payCurrency = convCurrency
+		converted = true
+	}
+
+	// P1.2c Task 3: wechat 回跳使用 cfg.H5RedirectURL，wrapper 没有直接访问该字段的路径，
+	// 且 wechat H5 回跳时由微信自行携带 open_id 等参数，marker 附加无意义。
+	// input.ReturnURLQuery 在此 adapter 中不使用；wechat 回跳 marker 由 callback handler 设计。
 	native := wechatpay.CreateInput{
 		OrderNo:     input.OrderNo,
-		Amount:      input.Amount.Decimal.String(),
-		Currency:    input.Currency,
+		Amount:      payAmount,
+		Currency:    payCurrency,
 		Description: input.Subject,
 		ClientIP:    input.ClientIP,
 		NotifyURL:   input.NotifyURL,
@@ -81,14 +120,23 @@ func (a *wechatpayAdapter) CreatePayment(ctx context.Context, raw models.JSON, i
 	// wechat CreatePayment 阶段返回 PrepayID，但不是最终的 transaction_id。
 	// 最终 transaction_id 在 Query 或 Webhook 时才出现。所以 ProviderRef 设为空，
 	// PrepayID 和 PayURL/QRCode 入 Payload 供上游参考。
+	payload := models.JSON{
+		"prepay_id": result.PrepayID,
+		"raw":       result.Raw,
+	}
+	if converted {
+		payload["exchange_rate"] = strings.TrimSpace(cfg.ExchangeRate)
+		payload["original_amount"] = originalAmount
+		payload["original_currency"] = originalCurrency
+	}
+
 	return &CreateResult{
-		ProviderRef: "",
-		RedirectURL: result.PayURL,
-		QRCodeURL:   result.QRCode,
-		Payload: models.JSON(map[string]interface{}{
-			"prepay_id": result.PrepayID,
-			"raw":       result.Raw,
-		}),
+		ProviderRef:  "",
+		RedirectURL:  result.PayURL,
+		QRCodeURL:    result.QRCode,
+		Payload:      payload,
+		AmountSent:   payAmount,
+		CurrencySent: payCurrency,
 	}, nil
 }
 

@@ -53,10 +53,18 @@ func (a *alipayAdapter) parseConfig(raw models.JSON, interactionMode string) (*a
 }
 
 // ValidateConfig 验证 channel.ConfigJSON。
-func (a *alipayAdapter) ValidateConfig(raw models.JSON, _ string) error {
-	// 调用 parseConfig 传空字符串，由 alipay.ValidateConfig 反对 interaction_mode 空值，
-	// wrapper 会正确地映射为 ErrConfigInvalid。
-	_, err := a.parseConfig(raw, "")
+// admin 端 ValidateChannel 调用。service 层 official provider 分支传入 channel.InteractionMode，
+// 所以第二参数实际上是 interactionMode（不是 channelType）。
+// 如果 interactionMode 为空字符串（调用方未传），使用 QR 作为占位 default
+// （QR 模式不要求 return_url，对 config 字段完整性校验最宽松，
+// IsSupportedInteractionMode 列表内）。
+// 实际 interactionMode 在 CreatePayment 阶段从 input.Extra["interaction_mode"] 再次校验。
+func (a *alipayAdapter) ValidateConfig(raw models.JSON, interactionMode string) error {
+	mode := strings.TrimSpace(interactionMode)
+	if mode == "" {
+		mode = constants.PaymentInteractionQR
+	}
+	_, err := a.parseConfig(raw, mode)
 	return err
 }
 
@@ -69,27 +77,69 @@ func (a *alipayAdapter) CreatePayment(ctx context.Context, raw models.JSON, inpu
 		return nil, err
 	}
 
+	// P1.2c: wrapper 内做 currency conversion + audit 字段写入。
+	// exchange_rate / original_amount / original_currency 保留到 result.Payload，
+	// 供运营/财务跨币种对账追溯实际收费 vs 原始金额。
+	// result.AmountSent/CurrencySent 反映实际发给网关的金额/币种，
+	// 让 service 层据此更新 payment.Amount/Currency，保持记录与实际收费一致。
+	originalAmount := input.Amount.Decimal.String()
+	originalCurrency := input.Currency
+	payAmount := originalAmount
+	payCurrency := originalCurrency
+	converted := false
+	if cfg.NeedsCurrencyConversion() {
+		convAmount, convCurrency, convErr := cfg.ConvertAmount(payAmount, payCurrency, 2)
+		if convErr != nil {
+			return nil, fmt.Errorf("%w: %v", ErrConfigInvalid, convErr)
+		}
+		payAmount = convAmount
+		payCurrency = convCurrency
+		converted = true
+	}
+
+	// P1.2c Task 3: 先 fallback 到 cfg.ReturnURL，再 append tracking marker。
+	returnURL := strings.TrimSpace(input.ReturnURL)
+	if returnURL == "" {
+		returnURL = strings.TrimSpace(cfg.ReturnURL)
+	}
+	returnURL = appendQueryParams(returnURL, input.ReturnURLQuery)
+
 	native := alipay.CreateInput{
 		OrderNo:   input.OrderNo,
-		Amount:    input.Amount.Decimal.String(),
+		Amount:    payAmount,
 		Subject:   input.Subject,
 		NotifyURL: input.NotifyURL,
-		ReturnURL: input.ReturnURL,
+		ReturnURL: returnURL,
 	}
 	result, err := alipay.CreatePayment(ctx, cfg, native, interactionMode)
 	if err != nil {
 		return nil, mapAlipayError(err)
 	}
 
+	payload := models.JSON{}
+	if result.Raw != nil {
+		payload = models.JSON(result.Raw)
+	}
+	if converted {
+		payload["exchange_rate"] = strings.TrimSpace(cfg.ExchangeRate)
+		payload["original_amount"] = originalAmount
+		payload["original_currency"] = originalCurrency
+	}
+
 	return &CreateResult{
-		ProviderRef: result.TradeNo,
-		RedirectURL: result.PayURL,
-		QRCodeURL:   result.QRCode,
-		Payload:     models.JSON(result.Raw),
+		ProviderRef:  result.TradeNo,
+		RedirectURL:  result.PayURL,
+		QRCodeURL:    result.QRCode,
+		Payload:      payload,
+		AmountSent:   payAmount,
+		CurrencySent: payCurrency,
 	}, nil
 }
 
 // VerifyCallback 实现 CallbackVerifier。alipay 用 form POST，body 参数忽略。
+// 依次执行：
+//  1. alipay.VerifyCallback   — 签名验证（防篡改）
+//  2. alipay.VerifyCallbackOwnership — 归属校验（防跨商户注入：app_id 必须与配置一致）
 func (a *alipayAdapter) VerifyCallback(raw models.JSON, form map[string][]string, _ []byte) (*CallbackResult, error) {
 	cfg, err := alipay.ParseConfig(raw)
 	if err != nil {
@@ -99,6 +149,9 @@ func (a *alipayAdapter) VerifyCallback(raw models.JSON, form map[string][]string
 	// 直接走 VerifyCallback，失败由 alipay 包内部抛 ErrSignatureInvalid。
 
 	if err := alipay.VerifyCallback(cfg, form); err != nil {
+		return nil, mapAlipayError(err)
+	}
+	if err := alipay.VerifyCallbackOwnership(cfg, form); err != nil {
 		return nil, mapAlipayError(err)
 	}
 

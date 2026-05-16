@@ -28,7 +28,7 @@ func TestStripeAdapter_ValidateConfig_InvalidIsMapped(t *testing.T) {
 		"api_base_url":         "https://api.stripe.com",
 		"payment_method_types": []any{"card"},
 	}
-	err := a.ValidateConfig(raw, "stripe")
+	err := a.ValidateConfig(raw, "redirect")
 	if err == nil {
 		t.Fatalf("expected error for missing secret_key")
 	}

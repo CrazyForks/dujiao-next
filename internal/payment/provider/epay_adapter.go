@@ -81,10 +81,33 @@ func (a *epayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input 
 	if returnURL == "" {
 		returnURL = strings.TrimSpace(cfg.ReturnURL)
 	}
+	// P1.2c Task 3: fallback 完成后 append tracking marker。
+	returnURL = appendQueryParams(returnURL, input.ReturnURLQuery)
+
+	// P1.2c: wrapper 内做 currency conversion + audit 字段写入，在 mode dispatch 之前完成，
+	// 使两条 path（BuildRedirectURL / CreatePayment）都使用转换后金额。
+	// exchange_rate / original_amount / original_currency 保留到 result.Payload，
+	// 供运营/财务跨币种对账追溯实际收费 vs 原始金额。
+	// result.AmountSent/CurrencySent 反映实际发给网关的金额/币种，
+	// 让 service 层据此更新 payment.Amount/Currency，保持记录与实际收费一致。
+	originalAmount := input.Amount.Decimal.String()
+	originalCurrency := input.Currency
+	payAmount := originalAmount
+	payCurrency := originalCurrency
+	converted := false
+	if cfg.NeedsCurrencyConversion() {
+		convAmount, convCurrency, convErr := cfg.ConvertAmount(payAmount, payCurrency, 2)
+		if convErr != nil {
+			return nil, fmt.Errorf("%w: %v", ErrConfigInvalid, convErr)
+		}
+		payAmount = convAmount
+		payCurrency = convCurrency
+		converted = true
+	}
 
 	native := epay.CreateInput{
 		OrderNo:     input.OrderNo,
-		Amount:      input.Amount.Decimal.String(),
+		Amount:      payAmount,
 		Subject:     input.Subject,
 		ChannelType: input.ChannelType,
 		ClientIP:    input.ClientIP,
@@ -110,11 +133,23 @@ func (a *epayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input 
 		return nil, mapEpayError(err)
 	}
 
+	payload := models.JSON{}
+	if result.Raw != nil {
+		payload = models.JSON(result.Raw)
+	}
+	if converted {
+		payload["exchange_rate"] = strings.TrimSpace(cfg.ExchangeRate)
+		payload["original_amount"] = originalAmount
+		payload["original_currency"] = originalCurrency
+	}
+
 	return &CreateResult{
-		ProviderRef: result.TradeNo,
-		RedirectURL: result.PayURL,
-		QRCodeURL:   result.QRCode,
-		Payload:     models.JSON(result.Raw),
+		ProviderRef:  result.TradeNo,
+		RedirectURL:  result.PayURL,
+		QRCodeURL:    result.QRCode,
+		Payload:      payload,
+		AmountSent:   payAmount,
+		CurrencySent: payCurrency,
 	}, nil
 }
 

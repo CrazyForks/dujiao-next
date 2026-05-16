@@ -75,11 +75,18 @@ func (a *okpayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input
 		return nil, err
 	}
 
+	// P1.2c C4 fix: okpay native CreatePayment 内部用 cfg.ExchangeRate 做 conversion，
+	// 但不在 CreateResult 中暴露转换后金额。wrapper 在 native 返回后自行重新计算，
+	// 填 AmountSent/CurrencySent 供 service 层更新 payment.Amount/Currency，
+	// 保证 callback 时 USDT amount 与 payment.Amount 对齐（避免 currency mismatch）。
+	originalAmount := input.Amount.Decimal.String()
+	originalCurrency := input.Currency
+
 	// 注意 okpay CreateInput 字段命名独特
 	native := okpay.CreateInput{
 		UniqueID:    input.OrderNo,
 		Name:        input.Subject,
-		Amount:      input.Amount.Decimal.String(),
+		Amount:      originalAmount,
 		ReturnURL:   input.ReturnURL,
 		CallbackURL: cfg.CallbackURL, // 从 cfg 取（对齐现有 service 逻辑）
 		Coin:        cfg.Coin,
@@ -90,13 +97,40 @@ func (a *okpayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input
 		return nil, mapOkpayError(err)
 	}
 
+	// 计算转换后金额/币种（与 native 内部使用相同的 ConvertAmountByRate 逻辑）。
+	// okpay native 已做 conversion，wrapper 这里只是**重新计算一遍**以填 AmountSent/CurrencySent，
+	// 不影响实际发给网关的数字（那由 native 决定）。
+	amountSent := originalAmount
+	currencySent := originalCurrency
+	converted := false
+	if rate := strings.TrimSpace(cfg.ExchangeRate); rate != "" && rate != "1" && rate != "1.0" {
+		if convertedDec, convErr := okpay.ConvertAmountByRate(originalAmount, cfg.ExchangeRate); convErr == nil {
+			amountSent = convertedDec.StringFixed(8)
+			currencySent = strings.ToUpper(strings.TrimSpace(cfg.Coin))
+			converted = true
+		}
+	}
+
+	// 构造 Payload：先从 native raw 复制，再附加 audit 字段。
+	payload := models.JSON{}
+	for k, v := range result.Raw {
+		payload[k] = v
+	}
+	if converted {
+		payload["exchange_rate"] = strings.TrimSpace(cfg.ExchangeRate)
+		payload["original_amount"] = originalAmount
+		payload["original_currency"] = originalCurrency
+	}
+
 	// okpay 既支持 redirect 也支持 QR 展示，两者都用同一个 PayURL。
 	// 上层通过 QRCode 字段展示二维码，所以 QRCodeURL 与 RedirectURL 保持一致。
 	return &CreateResult{
-		ProviderRef: result.OrderID,
-		RedirectURL: result.PayURL,
-		QRCodeURL:   result.PayURL,
-		Payload:     models.JSON(result.Raw),
+		ProviderRef:  result.OrderID,
+		RedirectURL:  result.PayURL,
+		QRCodeURL:    result.PayURL,
+		Payload:      payload,
+		AmountSent:   amountSent,
+		CurrencySent: currencySent,
 	}, nil
 }
 

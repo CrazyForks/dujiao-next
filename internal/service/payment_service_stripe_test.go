@@ -11,7 +11,7 @@ import (
 )
 
 func TestValidateChannelStripeOfficial(t *testing.T) {
-	svc := &PaymentService{}
+	svc := buildMinimalPaymentServiceWithRegistry(t)
 	channel := &models.PaymentChannel{
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeStripe,
@@ -34,7 +34,7 @@ func TestValidateChannelStripeOfficial(t *testing.T) {
 }
 
 func TestValidateChannelStripeInvalidInteractionMode(t *testing.T) {
-	svc := &PaymentService{}
+	svc := buildMinimalPaymentServiceWithRegistry(t)
 	channel := &models.PaymentChannel{
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeStripe,

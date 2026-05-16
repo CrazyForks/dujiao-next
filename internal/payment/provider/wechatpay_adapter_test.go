@@ -2,13 +2,33 @@ package provider
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/wechatpay"
 )
+
+// buildTestRSAPrivateKeyPEM 生成 PKCS8 格式 RSA 2048 私钥 PEM，用于 adapter 单元测试。
+// wechatpay.ParseConfig 会 parse private key，所以测试 fixture 必须是合法的 PEM。
+func buildTestRSAPrivateKeyPEM(t *testing.T) string {
+	t.Helper()
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("generate RSA key: %v", err)
+	}
+	der, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		t.Fatalf("marshal PKCS8 key: %v", err)
+	}
+	return string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der}))
+}
 
 func TestWechatpayAdapter_Type(t *testing.T) {
 	a := NewWechatpayAdapter()
@@ -20,10 +40,9 @@ func TestWechatpayAdapter_Type(t *testing.T) {
 
 func TestWechatpayAdapter_ValidateConfig_EmptyRejected(t *testing.T) {
 	a := NewWechatpayAdapter()
-	// 空 config 传给 ValidateConfig，会由 parseConfig 调 wechatpay.ValidateConfig("")
-	// wechatpay 包的 ValidateConfig 会反对空字符串的 interaction_mode，返回 ErrConfigInvalid
+	// 空 config 传给 ValidateConfig，wechatpay.ParseConfig 因缺少必填字段拒绝，返回 ErrConfigInvalid
 	raw := models.JSON{}
-	err := a.ValidateConfig(raw, "wechat")
+	err := a.ValidateConfig(raw, "redirect")
 	if err == nil {
 		t.Fatalf("expected error for empty config")
 	}
@@ -44,6 +63,77 @@ func TestWechatpayAdapter_CreatePayment_ConfigInvalidMapped(t *testing.T) {
 	}
 	if !errors.Is(err, ErrConfigInvalid) {
 		t.Fatalf("expected wrapped ErrConfigInvalid, got %v", err)
+	}
+}
+
+// buildMinimalWechatRaw 构造 wechatpay.ParseConfig 可通过的最小 config。
+// wechatpay ParseConfig 会 parse merchant_private_key（RSA PEM），所以必须使用真实格式。
+// api_v3_key 必须是 32 字节（wechat 规定）。
+func buildMinimalWechatRaw(t *testing.T) models.JSON {
+	t.Helper()
+	return models.JSON{
+		"appid":                "wx1234567890abcdef",
+		"mchid":                "1234567890",
+		"merchant_serial_no":   "ABCDEF1234567890",
+		"merchant_private_key": buildTestRSAPrivateKeyPEM(t),
+		"api_v3_key":           "01234567890123456789012345678901", // 32 bytes
+		"notify_url":           "https://example.com/api/v1/payments/webhook/wechat",
+	}
+}
+
+// TestWechatpayAdapter_ValidateConfig_ValidConfig_C1C2Regression 守护 C1+C2 regression fix:
+// ValidateConfig 应当通过 valid config + 合法 interactionMode（QR）的校验，
+// 证明 C1+C2 fix 中的 parseConfig 改动不影响 ValidateConfig 入口路径。
+func TestWechatpayAdapter_ValidateConfig_ValidConfig_C1C2Regression(t *testing.T) {
+	a := NewWechatpayAdapter()
+	raw := buildMinimalWechatRaw(t)
+	// 传合法 interactionMode（service 层 channel.InteractionMode 的值）
+	err := a.ValidateConfig(raw, constants.PaymentInteractionQR)
+	if err != nil {
+		t.Fatalf("ValidateConfig() should pass valid wechat config with QR mode, got: %v", err)
+	}
+}
+
+// TestWechatpayAdapter_QueryPayment_NotBlockedByInteractionMode 守护 C1 regression fix:
+// parseConfig("") 在修复前会被 wechatpay.ValidateConfig 拒绝 interaction_mode 为空。
+// 修复后跳过 ValidateConfig，直接 ParseConfig，
+// QueryPayment 应走到 HTTP 失败（ErrRequestFailed），而非 ErrConfigInvalid。
+func TestWechatpayAdapter_QueryPayment_NotBlockedByInteractionMode(t *testing.T) {
+	a := NewWechatpayAdapter()
+	c, ok := a.(Capturer)
+	if !ok {
+		t.Fatalf("wechatpayAdapter must implement Capturer")
+	}
+	raw := buildMinimalWechatRaw(t)
+	_, err := c.QueryPayment(context.Background(), raw, "ORDER_1")
+	if err == nil {
+		t.Fatal("expected error (no real wechat endpoint), got nil")
+	}
+	// C1 修复前：errors.Is(err, ErrConfigInvalid) && contains "interaction_mode"
+	// C1 修复后：应当是 ErrRequestFailed 或其他网络错误，不应是 ErrConfigInvalid
+	if errors.Is(err, ErrConfigInvalid) {
+		t.Fatalf("QueryPayment should NOT fail with ErrConfigInvalid after C1 fix, got: %v", err)
+	}
+}
+
+// TestWechatpayAdapter_ParseWebhook_NotBlockedByInteractionMode 守护 C2 regression fix:
+// ParseWebhook 不再被空 interactionMode 的 ValidateConfig 阻断。
+// 传入无效 body 应走到签名/解析错误，而非 ErrConfigInvalid。
+func TestWechatpayAdapter_ParseWebhook_NotBlockedByInteractionMode(t *testing.T) {
+	a := NewWechatpayAdapter()
+	wh, ok := a.(Webhooker)
+	if !ok {
+		t.Fatalf("wechatpayAdapter must implement Webhooker")
+	}
+	raw := buildMinimalWechatRaw(t)
+	_, err := wh.ParseWebhook(context.Background(), raw, map[string]string{}, []byte("{}"), time.Now())
+	if err == nil {
+		t.Fatal("expected error (invalid webhook body), got nil")
+	}
+	// C2 修复前：errors.Is(err, ErrConfigInvalid) — 被 parseConfig 拦截
+	// C2 修复后：应当是 ErrSignatureInvalid 或 ErrResponseInvalid，不应是 ErrConfigInvalid
+	if errors.Is(err, ErrConfigInvalid) {
+		t.Fatalf("ParseWebhook should NOT fail with ErrConfigInvalid after C2 fix, got: %v", err)
 	}
 }
 

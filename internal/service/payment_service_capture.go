@@ -9,9 +9,6 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
-	"github.com/dujiao-next/internal/payment/wechatpay"
-
-	"github.com/shopspring/decimal"
 )
 
 func (s *PaymentService) CapturePayment(input CapturePaymentInput) (*models.Payment, error) {
@@ -45,79 +42,16 @@ func (s *PaymentService) CapturePayment(input CapturePaymentInput) (*models.Paym
 		return nil, ErrPaymentInvalid
 	}
 
-	channelType := strings.ToLower(strings.TrimSpace(channel.ChannelType))
-
-	// stripe + paypal 走 Registry(P1.2 Phase 1 pilot)。
-	// wechat 仍走旧 switch case,P1.2b 完成 wechat adapter wrapper 后一并切。
-	if channelType == constants.PaymentChannelTypeStripe || channelType == constants.PaymentChannelTypePaypal {
-		return s.captureViaRegistry(input, payment, channel)
-	}
-
-	switch channelType {
-	case constants.PaymentChannelTypeWechat:
-		return s.captureWechatPayment(input, payment, channel)
-	default:
-		return nil, ErrPaymentProviderNotSupported
-	}
+	// 统一通过 Registry 路由。Registry.Lookup 会返回 channel 对应的 adapter,
+	// 如果 adapter 不实现 Capturer,type assertion 失败,返回 ErrPaymentProviderNotSupported。
+	// 因此无需在此显式检查 channel 是否支持 capture。
+	return s.captureViaRegistry(input, payment, channel)
 }
 
-func (s *PaymentService) captureWechatPayment(input CapturePaymentInput, payment *models.Payment, channel *models.PaymentChannel) (*models.Payment, error) {
-	cfg, err := wechatpay.ParseConfig(channel.ConfigJSON)
-	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrPaymentChannelConfigInvalid, err)
-	}
-	if err := wechatpay.ValidateConfig(cfg, channel.InteractionMode); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrPaymentChannelConfigInvalid, err)
-	}
-
-	ctx, cancel := detachOutboundRequestContext(input.Context)
-	defer cancel()
-
-	queryResult, err := wechatpay.QueryOrderByOutTradeNo(ctx, cfg, payment.ProviderRef)
-	if err != nil {
-		switch {
-		case errors.Is(err, wechatpay.ErrConfigInvalid):
-			return nil, fmt.Errorf("%w: %v", ErrPaymentChannelConfigInvalid, err)
-		case errors.Is(err, wechatpay.ErrRequestFailed):
-			return nil, ErrPaymentGatewayRequestFailed
-		case errors.Is(err, wechatpay.ErrResponseInvalid):
-			return nil, ErrPaymentGatewayResponseInvalid
-		default:
-			return nil, ErrPaymentGatewayRequestFailed
-		}
-	}
-
-	amount := models.Money{}
-	if strings.TrimSpace(queryResult.Amount) != "" {
-		parsed, parseErr := decimal.NewFromString(strings.TrimSpace(queryResult.Amount))
-		if parseErr == nil {
-			amount = models.NewMoneyFromDecimal(parsed)
-		}
-	}
-	payload := models.JSON{}
-	if queryResult.Raw != nil {
-		payload = models.JSON(queryResult.Raw)
-	}
-	status := strings.TrimSpace(queryResult.Status)
-	if status == "" {
-		status = constants.PaymentStatusPending
-	}
-	callbackInput := PaymentCallbackInput{
-		PaymentID:   payment.ID,
-		ChannelID:   channel.ID,
-		Status:      status,
-		ProviderRef: pickFirstNonEmpty(strings.TrimSpace(queryResult.TransactionID), strings.TrimSpace(payment.ProviderRef)),
-		Amount:      amount,
-		Currency:    strings.ToUpper(strings.TrimSpace(queryResult.Currency)),
-		PaidAt:      queryResult.PaidAt,
-		Payload:     payload,
-	}
-	return s.HandleCallback(callbackInput)
-}
-
-// captureViaRegistry 通过 PaymentProviderRegistry 路由调用 QueryPayment,
-// 替代原 capturePaypalPayment / captureStripePayment 的内联实现。
-// 仅 stripe + paypal 走此路径(P1.2 Phase 1 pilot),其它 channel 仍走旧 switch case。
+// captureViaRegistry 通过 PaymentProviderRegistry 路由调用 QueryPayment。
+// stripe + paypal + wechat 实现了 provider.Capturer 接口,其它 channel
+// (alipay / epay / epusdt / bepusdt / tokenpay / okpay) 仅实现 webhook 回调,
+// type assertion 失败时返回 ErrPaymentProviderNotSupported。
 func (s *PaymentService) captureViaRegistry(input CapturePaymentInput, payment *models.Payment, channel *models.PaymentChannel) (*models.Payment, error) {
 	logger.Infow("payment_capture_via_registry",
 		"payment_id", payment.ID,
