@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 
@@ -20,24 +21,25 @@ import (
 
 // PaymentService 支付服务
 type PaymentService struct {
-	orderRepo             repository.OrderRepository
-	productRepo           repository.ProductRepository
-	productSKURepo        repository.ProductSKURepository
-	paymentRepo           repository.PaymentRepository
-	channelRepo           repository.PaymentChannelRepository
-	walletRepo            repository.WalletRepository
-	userRepo              repository.UserRepository
-	userOAuthIdentityRepo repository.UserOAuthIdentityRepository
-	queueClient           *queue.Client
-	walletSvc             *WalletService
-	settingService        *SettingService
-	defaultEmailConfig    config.EmailConfig
-	expireMinutes         int
-	affiliateSvc          *AffiliateService
-	notificationSvc       *NotificationService
-	procurementSvc        *ProcurementOrderService
-	downstreamCallbackSvc *DownstreamCallbackService
-	memberLevelSvc        *MemberLevelService
+	orderRepo               repository.OrderRepository
+	productRepo             repository.ProductRepository
+	productSKURepo          repository.ProductSKURepository
+	paymentRepo             repository.PaymentRepository
+	channelRepo             repository.PaymentChannelRepository
+	walletRepo              repository.WalletRepository
+	userRepo                repository.UserRepository
+	userOAuthIdentityRepo   repository.UserOAuthIdentityRepository
+	queueClient             *queue.Client
+	walletSvc               *WalletService
+	settingService          *SettingService
+	defaultEmailConfig      config.EmailConfig
+	expireMinutes           int
+	affiliateSvc            *AffiliateService
+	notificationSvc         *NotificationService
+	procurementSvc          *ProcurementOrderService
+	downstreamCallbackSvc   *DownstreamCallbackService
+	memberLevelSvc          *MemberLevelService
+	paymentProviderRegistry *provider.Registry
 }
 
 // SetProcurementService 设置采购单服务（解决循环依赖）
@@ -57,41 +59,43 @@ func (s *PaymentService) SetMemberLevelService(svc *MemberLevelService) {
 
 // PaymentServiceOptions 支付服务构造参数
 type PaymentServiceOptions struct {
-	OrderRepo             repository.OrderRepository
-	ProductRepo           repository.ProductRepository
-	ProductSKURepo        repository.ProductSKURepository
-	PaymentRepo           repository.PaymentRepository
-	ChannelRepo           repository.PaymentChannelRepository
-	WalletRepo            repository.WalletRepository
-	UserRepo              repository.UserRepository
-	UserOAuthIdentityRepo repository.UserOAuthIdentityRepository
-	QueueClient           *queue.Client
-	WalletService         *WalletService
-	SettingService        *SettingService
-	DefaultEmailConfig    config.EmailConfig
-	ExpireMinutes         int
-	AffiliateService      *AffiliateService
-	NotificationService   *NotificationService
+	OrderRepo               repository.OrderRepository
+	ProductRepo             repository.ProductRepository
+	ProductSKURepo          repository.ProductSKURepository
+	PaymentRepo             repository.PaymentRepository
+	ChannelRepo             repository.PaymentChannelRepository
+	WalletRepo              repository.WalletRepository
+	UserRepo                repository.UserRepository
+	UserOAuthIdentityRepo   repository.UserOAuthIdentityRepository
+	QueueClient             *queue.Client
+	WalletService           *WalletService
+	SettingService          *SettingService
+	DefaultEmailConfig      config.EmailConfig
+	ExpireMinutes           int
+	AffiliateService        *AffiliateService
+	NotificationService     *NotificationService
+	PaymentProviderRegistry *provider.Registry
 }
 
 // NewPaymentService 创建支付服务
 func NewPaymentService(opts PaymentServiceOptions) *PaymentService {
 	return &PaymentService{
-		orderRepo:             opts.OrderRepo,
-		productRepo:           opts.ProductRepo,
-		productSKURepo:        opts.ProductSKURepo,
-		paymentRepo:           opts.PaymentRepo,
-		channelRepo:           opts.ChannelRepo,
-		walletRepo:            opts.WalletRepo,
-		userRepo:              opts.UserRepo,
-		userOAuthIdentityRepo: opts.UserOAuthIdentityRepo,
-		queueClient:           opts.QueueClient,
-		walletSvc:             opts.WalletService,
-		settingService:        opts.SettingService,
-		defaultEmailConfig:    opts.DefaultEmailConfig,
-		expireMinutes:         opts.ExpireMinutes,
-		affiliateSvc:          opts.AffiliateService,
-		notificationSvc:       opts.NotificationService,
+		orderRepo:               opts.OrderRepo,
+		productRepo:             opts.ProductRepo,
+		productSKURepo:          opts.ProductSKURepo,
+		paymentRepo:             opts.PaymentRepo,
+		channelRepo:             opts.ChannelRepo,
+		walletRepo:              opts.WalletRepo,
+		userRepo:                opts.UserRepo,
+		userOAuthIdentityRepo:   opts.UserOAuthIdentityRepo,
+		queueClient:             opts.QueueClient,
+		walletSvc:               opts.WalletService,
+		settingService:          opts.SettingService,
+		defaultEmailConfig:      opts.DefaultEmailConfig,
+		expireMinutes:           opts.ExpireMinutes,
+		affiliateSvc:            opts.AffiliateService,
+		notificationSvc:         opts.NotificationService,
+		paymentProviderRegistry: opts.PaymentProviderRegistry,
 	}
 }
 

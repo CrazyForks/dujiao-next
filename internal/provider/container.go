@@ -4,8 +4,10 @@ import (
 	"github.com/dujiao-next/internal/authz"
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
+	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	paymentprovider "github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
@@ -104,6 +106,9 @@ type Container struct {
 	AdProxyService            *service.AdProxyService
 	MediaService              *service.MediaService
 	OrderRiskControlService   *service.OrderRiskControlService
+
+	// 支付网关 Provider 注册表(P1.2 Phase 1 引入,pilot 阶段仅注册 stripe + paypal)
+	PaymentProviderRegistry *paymentprovider.Registry
 }
 
 // NewContainer 初始化容器
@@ -124,9 +129,27 @@ func NewContainer(cfg *config.Config) *Container {
 		}
 	}
 
+	// 实例化支付 provider 注册表并注册所有 9 个 adapter。
+	// P1.2a 注册 pilot: stripe + paypal
+	// P1.2b Task 2-8 完成的 7 个 new adapter wrapper: wechat/alipay/epay/epusdt/bepusdt/tokenpay/okpay
+	// 必须在 initServices() 之前完成,以便 PaymentService 构造时可注入。
+	// 所有 adapter 注册完成后,旧 switch case 即可整体移除(Task 10)。
+	paymentRegistry := paymentprovider.NewRegistry()
+	paymentRegistry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeStripe, paymentprovider.NewStripeAdapter())
+	paymentRegistry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypePaypal, paymentprovider.NewPaypalAdapter())
+	// P1.2b Task 2-8: 新增 7 个 adapter (wechat/alipay/epay/epusdt/bepusdt/tokenpay/okpay)
+	paymentRegistry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeWechat, paymentprovider.NewWechatpayAdapter())
+	paymentRegistry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeAlipay, paymentprovider.NewAlipayAdapter())
+	paymentRegistry.Register(constants.PaymentProviderEpay, "", paymentprovider.NewEpayAdapter())
+	paymentRegistry.Register(constants.PaymentProviderEpusdt, "", paymentprovider.NewEpusdtAdapter())
+	paymentRegistry.Register(constants.PaymentProviderBepusdt, "", paymentprovider.NewBepusdtAdapter())
+	paymentRegistry.Register(constants.PaymentProviderTokenpay, "", paymentprovider.NewTokenpayAdapter())
+	paymentRegistry.Register(constants.PaymentProviderOkpay, "", paymentprovider.NewOkpayAdapter())
+
 	c := &Container{
-		Config:      cfg,
-		QueueClient: queueClient,
+		Config:                  cfg,
+		QueueClient:             queueClient,
+		PaymentProviderRegistry: paymentRegistry,
 	}
 
 	// 1. 初始化 Repositories
@@ -276,21 +299,22 @@ func (c *Container) initServices() {
 	c.ProductMappingService.SetCategoryService(c.CategoryService)
 	c.DownstreamCallbackService = service.NewDownstreamCallbackService(c.DownstreamOrderRefRepo, c.OrderRepo, c.ApiCredentialRepo, c.QueueClient)
 	c.PaymentService = service.NewPaymentService(service.PaymentServiceOptions{
-		OrderRepo:             c.OrderRepo,
-		ProductRepo:           c.ProductRepo,
-		ProductSKURepo:        c.ProductSKURepo,
-		PaymentRepo:           c.PaymentRepo,
-		ChannelRepo:           c.PaymentChannelRepo,
-		WalletRepo:            c.WalletRepo,
-		UserRepo:              c.UserRepo,
-		UserOAuthIdentityRepo: c.UserOAuthIdentityRepo,
-		QueueClient:           c.QueueClient,
-		WalletService:         c.WalletService,
-		SettingService:        c.SettingService,
-		DefaultEmailConfig:    c.Config.Email,
-		ExpireMinutes:         c.Config.Order.PaymentExpireMinutes,
-		AffiliateService:      c.AffiliateService,
-		NotificationService:   c.NotificationService,
+		OrderRepo:               c.OrderRepo,
+		ProductRepo:             c.ProductRepo,
+		ProductSKURepo:          c.ProductSKURepo,
+		PaymentRepo:             c.PaymentRepo,
+		ChannelRepo:             c.PaymentChannelRepo,
+		WalletRepo:              c.WalletRepo,
+		UserRepo:                c.UserRepo,
+		UserOAuthIdentityRepo:   c.UserOAuthIdentityRepo,
+		QueueClient:             c.QueueClient,
+		WalletService:           c.WalletService,
+		SettingService:          c.SettingService,
+		DefaultEmailConfig:      c.Config.Email,
+		ExpireMinutes:           c.Config.Order.PaymentExpireMinutes,
+		AffiliateService:        c.AffiliateService,
+		NotificationService:     c.NotificationService,
+		PaymentProviderRegistry: c.PaymentProviderRegistry,
 	})
 	c.ProcurementOrderService = service.NewProcurementOrderService(
 		c.ProcurementOrderRepo, c.OrderRepo, c.FulfillmentRepo, c.ProductMappingRepo, c.SKUMappingRepo,
