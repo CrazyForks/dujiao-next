@@ -2,6 +2,7 @@ package admin
 
 import (
 	"encoding/json"
+	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -313,6 +314,34 @@ func (h *Handler) UpdateAdminUser(c *gin.Context) {
 	_ = cache.SetUserAuthState(c.Request.Context(), cache.BuildUserAuthState(user))
 
 	response.Success(c, user)
+}
+
+// UnbindAdminUserTelegram 管理员解除目标用户的 Telegram 绑定。
+// DELETE /admin/users/:id/oauth/telegram
+func (h *Handler) UnbindAdminUserTelegram(c *gin.Context) {
+	userID, err := shared.ParseParamUint(c, "id")
+	if err != nil {
+		shared.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
+		return
+	}
+
+	if err := h.UserAuthService.UnbindTelegram(userID); err != nil {
+		switch {
+		case errors.Is(err, service.ErrNotFound):
+			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+		case errors.Is(err, service.ErrUserDisabled):
+			shared.RespondError(c, response.CodeBadRequest, "error.user_disabled", nil)
+		case errors.Is(err, service.ErrUserOAuthNotBound):
+			shared.RespondError(c, response.CodeBadRequest, "error.telegram_not_bound", nil)
+		case errors.Is(err, service.ErrTelegramUnbindRequiresEmail):
+			shared.RespondError(c, response.CodeBadRequest, "error.telegram_unbind_requires_email", nil)
+		default:
+			shared.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
+		}
+		return
+	}
+
+	response.Success(c, gin.H{"unbound": true})
 }
 
 // GetAdminUserCouponUsages 获取用户优惠券使用记录

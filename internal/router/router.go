@@ -431,6 +431,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 				authorized.GET("/users", adminHandler.GetAdminUsers)
 				authorized.GET("/user-login-logs", adminHandler.GetUserLoginLogs)
 				authorized.PUT("/users/batch-status", adminHandler.BatchUpdateUserStatus)
+				authorized.DELETE("/users/:id/oauth/telegram", adminHandler.UnbindAdminUserTelegram)
 				authorized.GET("/users/:id", adminHandler.GetAdminUser)
 				authorized.PUT("/users/:id", adminHandler.UpdateAdminUser)
 				authorized.GET("/users/:id/coupon-usages", adminHandler.GetAdminUserCouponUsages)
