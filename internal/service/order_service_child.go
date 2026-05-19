@@ -14,7 +14,7 @@ import (
 )
 
 // cancelOrderWithChildren 取消父订单并级联子订单
-func (s *OrderService) cancelOrderWithChildren(order *models.Order, rollbackCoupon bool) error {
+func (s *OrderService) cancelOrderWithChildren(order *models.Order, rollbackCoupon bool, expirePendingPayments bool) error {
 	if order == nil {
 		return ErrOrderNotFound
 	}
@@ -94,6 +94,17 @@ func (s *OrderService) cancelOrderWithChildren(order *models.Order, rollbackCoup
 				return err
 			}
 		}
+		if expirePendingPayments && s.paymentRepo != nil {
+			orderIDs := []uint{order.ID}
+			for _, child := range order.Children {
+				if child.ID > 0 {
+					orderIDs = append(orderIDs, child.ID)
+				}
+			}
+			if _, err := s.paymentRepo.WithTx(tx).ExpirePendingByOrderIDs(orderIDs, now); err != nil {
+				return ErrOrderUpdateFailed
+			}
+		}
 		return nil
 	})
 	if err != nil {
@@ -122,7 +133,7 @@ func (s *OrderService) CancelOrder(orderID uint, userID uint) (*models.Order, er
 	if order.Status != constants.OrderStatusPendingPayment {
 		return nil, ErrOrderCancelNotAllowed
 	}
-	if err := s.cancelOrderWithChildren(order, false); err != nil {
+	if err := s.cancelOrderWithChildren(order, false, false); err != nil {
 		return nil, ErrOrderUpdateFailed
 	}
 	if s.affiliateSvc != nil {
@@ -168,7 +179,7 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*mo
 	if isParent {
 		switch target {
 		case constants.OrderStatusCanceled:
-			if err := s.cancelOrderWithChildren(order, true); err != nil {
+			if err := s.cancelOrderWithChildren(order, true, false); err != nil {
 				return nil, ErrOrderUpdateFailed
 			}
 			if s.affiliateSvc != nil {
@@ -526,7 +537,7 @@ func (s *OrderService) CancelExpiredOrder(orderID uint) (*models.Order, error) {
 	if order.ExpiresAt.After(now) {
 		return order, nil
 	}
-	if err := s.cancelOrderWithChildren(order, true); err != nil {
+	if err := s.cancelOrderWithChildren(order, true, true); err != nil {
 		return nil, err
 	}
 	if s.affiliateSvc != nil {

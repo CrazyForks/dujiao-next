@@ -262,6 +262,7 @@ func (c *Container) initServices() {
 	c.OrderService = service.NewOrderService(service.OrderServiceOptions{
 		OrderRepo:             c.OrderRepo,
 		OrderRefundRecordRepo: c.OrderRefundRecordRepo,
+		PaymentRepo:           c.PaymentRepo,
 		UserRepo:              c.UserRepo,
 		ProductRepo:           c.ProductRepo,
 		ProductSKURepo:        c.ProductSKURepo,

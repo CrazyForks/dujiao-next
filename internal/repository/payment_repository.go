@@ -22,6 +22,7 @@ type PaymentRepository interface {
 	GetLatestByProviderRef(providerRef string) (*models.Payment, error)
 	ListByOrderID(orderID uint) ([]models.Payment, error)
 	GetLatestPendingByOrder(orderID uint, now time.Time) (*models.Payment, error)
+	ExpirePendingByOrderIDs(orderIDs []uint, expiredAt time.Time) (int64, error)
 	ListAdmin(filter PaymentListFilter) ([]models.Payment, int64, error)
 	Transaction(fn func(tx *gorm.DB) error) error
 	GetByIDForUpdate(id uint) (*models.Payment, error)
@@ -159,6 +160,21 @@ func (r *GormPaymentRepository) GetLatestPendingByOrderChannel(orderID uint, cha
 		return nil, nil
 	}
 	return &payment, nil
+}
+
+// ExpirePendingByOrderIDs 将指定订单的未完成支付记录标记为过期。
+func (r *GormPaymentRepository) ExpirePendingByOrderIDs(orderIDs []uint, expiredAt time.Time) (int64, error) {
+	if len(orderIDs) == 0 {
+		return 0, nil
+	}
+	result := r.db.Model(&models.Payment{}).
+		Where("order_id IN ? AND status IN ?", orderIDs, []string{constants.PaymentStatusInitiated, constants.PaymentStatusPending}).
+		Updates(map[string]interface{}{
+			"status":     constants.PaymentStatusExpired,
+			"expired_at": expiredAt,
+			"updated_at": expiredAt,
+		})
+	return result.RowsAffected, result.Error
 }
 
 // ListAdmin 管理端支付列表

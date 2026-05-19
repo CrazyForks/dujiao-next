@@ -220,6 +220,120 @@ func TestIsTransitionAllowedRefunded(t *testing.T) {
 	}
 }
 
+func TestCancelExpiredOrderExpiresPendingPayments(t *testing.T) {
+	dsn := fmt.Sprintf("file:order_service_expire_payments_%d?mode=memory&cache=shared", time.Now().UnixNano())
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite failed: %v", err)
+	}
+	if err := db.AutoMigrate(
+		&models.Order{},
+		&models.OrderItem{},
+		&models.Fulfillment{},
+		&models.Product{},
+		&models.ProductSKU{},
+		&models.Coupon{},
+		&models.CouponUsage{},
+		&models.Payment{},
+	); err != nil {
+		t.Fatalf("auto migrate failed: %v", err)
+	}
+
+	now := time.Now()
+	expiresAt := now.Add(-time.Hour)
+	order := &models.Order{
+		OrderNo:          "EXPIRE-PAYMENT-001",
+		Status:           constants.OrderStatusPendingPayment,
+		Currency:         "CNY",
+		OriginalAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		DiscountAmount:   models.NewMoneyFromDecimal(decimal.Zero),
+		TotalAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		WalletPaidAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		OnlinePaidAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		RefundedAmount:   models.NewMoneyFromDecimal(decimal.Zero),
+		ExpiresAt:        &expiresAt,
+		CreatedAt:        now.Add(-2 * time.Hour),
+		UpdatedAt:        now.Add(-2 * time.Hour),
+	}
+	if err := db.Create(order).Error; err != nil {
+		t.Fatalf("create order failed: %v", err)
+	}
+
+	pendingPayment := &models.Payment{
+		OrderID:         order.ID,
+		ChannelID:       1,
+		ProviderType:    constants.PaymentProviderEpay,
+		ChannelType:     "alipay",
+		InteractionMode: constants.PaymentInteractionQR,
+		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		Currency:        "CNY",
+		Status:          constants.PaymentStatusPending,
+		CreatedAt:       now.Add(-2 * time.Hour),
+		UpdatedAt:       now.Add(-2 * time.Hour),
+	}
+	initiatedPayment := &models.Payment{
+		OrderID:         order.ID,
+		ChannelID:       1,
+		ProviderType:    constants.PaymentProviderEpay,
+		ChannelType:     "alipay",
+		InteractionMode: constants.PaymentInteractionQR,
+		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		Currency:        "CNY",
+		Status:          constants.PaymentStatusInitiated,
+		CreatedAt:       now.Add(-2 * time.Hour),
+		UpdatedAt:       now.Add(-2 * time.Hour),
+	}
+	successPayment := &models.Payment{
+		OrderID:         order.ID,
+		ChannelID:       1,
+		ProviderType:    constants.PaymentProviderEpay,
+		ChannelType:     "alipay",
+		InteractionMode: constants.PaymentInteractionQR,
+		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		Currency:        "CNY",
+		Status:          constants.PaymentStatusSuccess,
+		CreatedAt:       now.Add(-2 * time.Hour),
+		UpdatedAt:       now.Add(-2 * time.Hour),
+		PaidAt:          &now,
+	}
+	if err := db.Create([]*models.Payment{pendingPayment, initiatedPayment, successPayment}).Error; err != nil {
+		t.Fatalf("create payments failed: %v", err)
+	}
+
+	svc := NewOrderService(OrderServiceOptions{
+		OrderRepo:       repository.NewOrderRepository(db),
+		PaymentRepo:     repository.NewPaymentRepository(db),
+		ProductRepo:     repository.NewProductRepository(db),
+		ProductSKURepo:  repository.NewProductSKURepository(db),
+		CouponRepo:      repository.NewCouponRepository(db),
+		CouponUsageRepo: repository.NewCouponUsageRepository(db),
+	})
+	updated, err := svc.CancelExpiredOrder(order.ID)
+	if err != nil {
+		t.Fatalf("cancel expired order failed: %v", err)
+	}
+	if updated == nil || updated.Status != constants.OrderStatusCanceled {
+		t.Fatalf("expected canceled order, got: %+v", updated)
+	}
+
+	var reloaded []models.Payment
+	if err := db.Order("id asc").Find(&reloaded, "order_id = ?", order.ID).Error; err != nil {
+		t.Fatalf("reload payments failed: %v", err)
+	}
+	if len(reloaded) != 3 {
+		t.Fatalf("expected 3 payments, got %d", len(reloaded))
+	}
+	if reloaded[0].Status != constants.PaymentStatusExpired || reloaded[0].ExpiredAt == nil {
+		t.Fatalf("pending payment should expire, got status=%s expired_at=%v", reloaded[0].Status, reloaded[0].ExpiredAt)
+	}
+	if reloaded[1].Status != constants.PaymentStatusExpired || reloaded[1].ExpiredAt == nil {
+		t.Fatalf("initiated payment should expire, got status=%s expired_at=%v", reloaded[1].Status, reloaded[1].ExpiredAt)
+	}
+	if reloaded[2].Status != constants.PaymentStatusSuccess || reloaded[2].ExpiredAt != nil {
+		t.Fatalf("success payment should stay success without expired_at, got status=%s expired_at=%v", reloaded[2].Status, reloaded[2].ExpiredAt)
+	}
+}
+
 func TestUpdateOrderStatusParentToPartiallyRefundedSyncsChildren(t *testing.T) {
 	dsn := fmt.Sprintf("file:order_service_parent_partial_refund_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})

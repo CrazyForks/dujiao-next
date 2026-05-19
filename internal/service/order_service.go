@@ -20,6 +20,7 @@ import (
 type OrderService struct {
 	orderRepo             repository.OrderRepository
 	orderRefundRecordRepo repository.OrderRefundRecordRepository
+	paymentRepo           repository.PaymentRepository
 	userRepo              repository.UserRepository
 	productRepo           repository.ProductRepository
 	productSKURepo        repository.ProductSKURepository
@@ -41,6 +42,7 @@ type OrderService struct {
 type OrderServiceOptions struct {
 	OrderRepo             repository.OrderRepository
 	OrderRefundRecordRepo repository.OrderRefundRecordRepository
+	PaymentRepo           repository.PaymentRepository
 	UserRepo              repository.UserRepository
 	ProductRepo           repository.ProductRepository
 	ProductSKURepo        repository.ProductSKURepository
@@ -63,6 +65,7 @@ func NewOrderService(opts OrderServiceOptions) *OrderService {
 	return &OrderService{
 		orderRepo:             opts.OrderRepo,
 		orderRefundRecordRepo: opts.OrderRefundRecordRepo,
+		paymentRepo:           opts.PaymentRepo,
 		userRepo:              opts.UserRepo,
 		productRepo:           opts.ProductRepo,
 		productSKURepo:        opts.ProductSKURepo,
@@ -567,7 +570,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 					"error", fetchErr,
 				)
 			} else if full != nil {
-				if cancelErr := s.cancelOrderWithChildren(full, true); cancelErr != nil {
+				if cancelErr := s.cancelOrderWithChildren(full, true, false); cancelErr != nil {
 					logger.Errorw("order_timeout_rollback_cancel_failed",
 						"order_id", order.ID,
 						"order_no", order.OrderNo,
