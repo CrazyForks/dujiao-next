@@ -22,12 +22,13 @@ import (
 
 // UpdateAdminUserRequest 管理员更新用户请求
 type UpdateAdminUserRequest struct {
-	Nickname  *string `json:"nickname"`
-	Locale    *string `json:"locale"`
-	Status    *string `json:"status"`
-	Email     *string `json:"email"`
-	Password  *string `json:"password"`
-	AdminNote *string `json:"admin_note"`
+	Nickname      *string `json:"nickname"`
+	Locale        *string `json:"locale"`
+	Status        *string `json:"status"`
+	Email         *string `json:"email"`
+	Password      *string `json:"password"`
+	AdminNote     *string `json:"admin_note"`
+	EmailVerified *bool   `json:"email_verified"`
 }
 
 // BatchUpdateUserStatusRequest 批量更新用户状态请求
@@ -294,6 +295,19 @@ func (h *Handler) UpdateAdminUser(c *gin.Context) {
 	if req.AdminNote != nil {
 		user.AdminNote = *req.AdminNote
 		updated = true
+	}
+
+	if req.EmailVerified != nil {
+		if *req.EmailVerified {
+			if user.EmailVerifiedAt == nil {
+				now := time.Now()
+				user.EmailVerifiedAt = &now
+				updated = true
+			}
+		} else if user.EmailVerifiedAt != nil {
+			user.EmailVerifiedAt = nil
+			updated = true
+		}
 	}
 
 	if !updated {
