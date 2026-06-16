@@ -121,3 +121,115 @@ func TestResellerRepositoryFindActiveVerifiedDomain(t *testing.T) {
 		t.Fatalf("profile user mismatch want %d got %d", profile.UserID, active.Profile.UserID)
 	}
 }
+
+func TestResellerRepositoryListProfilesFiltersAndPreloadsUser(t *testing.T) {
+	db := openResellerRepoTestDB(t)
+	repo := NewResellerRepository(db)
+	user := models.User{Email: "reseller-list@example.test", PasswordHash: "hash", DisplayName: "Reseller List"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("create user failed: %v", err)
+	}
+	other := models.User{Email: "other-reseller-list@example.test", PasswordHash: "hash", DisplayName: "Other"}
+	if err := db.Create(&other).Error; err != nil {
+		t.Fatalf("create other user failed: %v", err)
+	}
+	profile := models.ResellerProfile{UserID: user.ID, Status: models.ResellerProfileStatusPendingReview, ApplyReason: "list me", SettlementStatus: models.ResellerSettlementStatusNormal}
+	if err := db.Create(&profile).Error; err != nil {
+		t.Fatalf("create profile failed: %v", err)
+	}
+	if err := db.Create(&models.ResellerProfile{UserID: other.ID, Status: models.ResellerProfileStatusActive, SettlementStatus: models.ResellerSettlementStatusNormal}).Error; err != nil {
+		t.Fatalf("create other profile failed: %v", err)
+	}
+
+	rows, total, err := repo.ListProfiles(ResellerProfileListFilter{
+		Page: 1, PageSize: 20, Status: models.ResellerProfileStatusPendingReview, Keyword: "reseller-list@example.test",
+	})
+	if err != nil {
+		t.Fatalf("ListProfiles failed: %v", err)
+	}
+	if total != 1 || len(rows) != 1 || rows[0].ID != profile.ID {
+		t.Fatalf("expected one filtered profile, total=%d rows=%+v", total, rows)
+	}
+	if rows[0].User == nil || rows[0].User.Email != user.Email {
+		t.Fatalf("expected user preload, got %+v", rows[0].User)
+	}
+}
+
+func TestResellerRepositoryListDomainsFiltersAndPreloadsProfileUser(t *testing.T) {
+	db := openResellerRepoTestDB(t)
+	repo := NewResellerRepository(db)
+	user := models.User{Email: "domain-owner@example.test", PasswordHash: "hash", DisplayName: "Domain Owner"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("create user failed: %v", err)
+	}
+	profile := models.ResellerProfile{UserID: user.ID, Status: models.ResellerProfileStatusActive, SettlementStatus: models.ResellerSettlementStatusNormal}
+	if err := db.Create(&profile).Error; err != nil {
+		t.Fatalf("create profile failed: %v", err)
+	}
+	domain := models.ResellerDomain{
+		ResellerID: profile.ID, Domain: "shop.example.test", Type: models.ResellerDomainTypeCustom,
+		VerificationStatus: models.ResellerDomainVerificationPending, Status: models.ResellerDomainStatusPendingReview,
+	}
+	if err := db.Create(&domain).Error; err != nil {
+		t.Fatalf("create domain failed: %v", err)
+	}
+
+	rows, total, err := repo.ListDomains(ResellerDomainListFilter{
+		Page: 1, PageSize: 20, ResellerID: profile.ID, Domain: "shop.example.test", Type: models.ResellerDomainTypeCustom,
+	})
+	if err != nil {
+		t.Fatalf("ListDomains failed: %v", err)
+	}
+	if total != 1 || len(rows) != 1 || rows[0].ID != domain.ID {
+		t.Fatalf("expected one filtered domain, total=%d rows=%+v", total, rows)
+	}
+	if rows[0].Profile == nil || rows[0].Profile.User == nil || rows[0].Profile.User.Email != user.Email {
+		t.Fatalf("expected profile and user preload, got %+v", rows[0].Profile)
+	}
+}
+
+func TestResellerRepositoryUpdateProfileAndDomain(t *testing.T) {
+	db := openResellerRepoTestDB(t)
+	repo := NewResellerRepository(db)
+	user := models.User{Email: "update-reseller@example.test", PasswordHash: "hash"}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("create user failed: %v", err)
+	}
+	profile := models.ResellerProfile{UserID: user.ID, Status: models.ResellerProfileStatusPendingReview, SettlementStatus: models.ResellerSettlementStatusNormal}
+	if err := db.Create(&profile).Error; err != nil {
+		t.Fatalf("create profile failed: %v", err)
+	}
+	reviewer := uint(99)
+	now := time.Now().UTC()
+	profile.Status = models.ResellerProfileStatusActive
+	profile.ReviewedBy = &reviewer
+	profile.ReviewedAt = &now
+	if err := repo.UpdateProfile(&profile); err != nil {
+		t.Fatalf("UpdateProfile failed: %v", err)
+	}
+	loaded, err := repo.GetProfileByID(profile.ID)
+	if err != nil {
+		t.Fatalf("GetProfileByID failed: %v", err)
+	}
+	if loaded == nil || loaded.Status != models.ResellerProfileStatusActive || loaded.ReviewedBy == nil || *loaded.ReviewedBy != reviewer {
+		t.Fatalf("profile was not updated: %+v", loaded)
+	}
+
+	domain := models.ResellerDomain{ResellerID: profile.ID, Domain: "r1.example.test", Type: models.ResellerDomainTypeSubdomain, VerificationStatus: models.ResellerDomainVerificationPending, Status: models.ResellerDomainStatusPendingReview}
+	if err := db.Create(&domain).Error; err != nil {
+		t.Fatalf("create domain failed: %v", err)
+	}
+	domain.Status = models.ResellerDomainStatusActive
+	domain.VerificationStatus = models.ResellerDomainVerificationVerified
+	domain.VerifiedAt = &now
+	if err := repo.UpdateDomain(&domain); err != nil {
+		t.Fatalf("UpdateDomain failed: %v", err)
+	}
+	loadedDomain, err := repo.GetDomainByID(domain.ID)
+	if err != nil {
+		t.Fatalf("GetDomainByID failed: %v", err)
+	}
+	if loadedDomain == nil || loadedDomain.Status != models.ResellerDomainStatusActive || loadedDomain.VerificationStatus != models.ResellerDomainVerificationVerified {
+		t.Fatalf("domain was not updated: %+v", loadedDomain)
+	}
+}

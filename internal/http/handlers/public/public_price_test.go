@@ -377,8 +377,28 @@ func (r *resellerPricingRepoForPublicTest) GetProfileByUserID(userID uint) (*mod
 	return nil, nil
 }
 
+func (r *resellerPricingRepoForPublicTest) UpdateProfile(profile *models.ResellerProfile) error {
+	return nil
+}
+
+func (r *resellerPricingRepoForPublicTest) ListProfiles(filter repository.ResellerProfileListFilter) ([]models.ResellerProfile, int64, error) {
+	return nil, 0, nil
+}
+
 func (r *resellerPricingRepoForPublicTest) UpsertDomain(domain models.ResellerDomain) (*models.ResellerDomain, error) {
 	return nil, fmt.Errorf("not implemented")
+}
+
+func (r *resellerPricingRepoForPublicTest) GetDomainByID(id uint) (*models.ResellerDomain, error) {
+	return nil, nil
+}
+
+func (r *resellerPricingRepoForPublicTest) GetDomainByIDForUpdate(id uint) (*models.ResellerDomain, error) {
+	return nil, nil
+}
+
+func (r *resellerPricingRepoForPublicTest) UpdateDomain(domain *models.ResellerDomain) error {
+	return nil
 }
 
 func (r *resellerPricingRepoForPublicTest) FindDomainByHost(host string) (*models.ResellerDomain, error) {
@@ -387,6 +407,14 @@ func (r *resellerPricingRepoForPublicTest) FindDomainByHost(host string) (*model
 
 func (r *resellerPricingRepoForPublicTest) FindActiveVerifiedDomain(host string) (*models.ResellerDomain, error) {
 	return nil, fmt.Errorf("not implemented")
+}
+
+func (r *resellerPricingRepoForPublicTest) ListDomains(filter repository.ResellerDomainListFilter) ([]models.ResellerDomain, int64, error) {
+	return nil, 0, nil
+}
+
+func (r *resellerPricingRepoForPublicTest) ListDomainsByResellerID(resellerID uint) ([]models.ResellerDomain, error) {
+	return nil, nil
 }
 
 func (r *resellerPricingRepoForPublicTest) UpsertSiteConfig(config models.ResellerSiteConfig) (*models.ResellerSiteConfig, error) {

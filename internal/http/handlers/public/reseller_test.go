@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
@@ -32,6 +34,7 @@ func openPublicResellerHandlerTestDB(t *testing.T) *gorm.DB {
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.ResellerProfile{},
+		&models.ResellerDomain{},
 		&models.ResellerLedgerEntry{},
 		&models.ResellerWithdrawRequest{},
 		&models.ResellerBalanceAccount{},
@@ -72,12 +75,85 @@ func seedPublicResellerHandlerProfile(t *testing.T, db *gorm.DB) models.Reseller
 	return profile
 }
 
+func seedPublicResellerHandlerUser(t *testing.T, db *gorm.DB) models.User {
+	t.Helper()
+	user := models.User{
+		Email:        fmt.Sprintf("public-reseller-user-%d@example.test", time.Now().UnixNano()),
+		PasswordHash: "hash",
+		Status:       constants.UserStatusActive,
+	}
+	if err := db.Create(&user).Error; err != nil {
+		t.Fatalf("create user failed: %v", err)
+	}
+	return user
+}
+
 func newPublicResellerHandlerForTest(db *gorm.DB) *Handler {
 	repo := repository.NewResellerRepository(db)
 	return &Handler{
 		Container: &provider.Container{
 			ResellerAccountingService: service.NewResellerAccountingService(repo, service.ResellerAccountingOptions{}),
 		},
+	}
+}
+
+func TestPublicResellerApplyAndSnapshot(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := openPublicResellerHandlerTestDB(t)
+	user := seedPublicResellerHandlerUser(t, db)
+	h := newPublicResellerHandlerForTest(db)
+	h.ResellerManagementService = service.NewResellerManagementService(repository.NewResellerRepository(db), config.ResellerConfig{
+		Enabled:          true,
+		SelfApplyEnabled: true,
+		SubdomainBase:    "shop.example.test",
+		MainHosts:        []string{"main.example.test"},
+	})
+
+	payload := []byte(`{"reason":"operate a storefront"}`)
+	c, recorder := newPublicResellerHandlerTestContext(http.MethodPost, "/api/v1/reseller/apply", payload, user.ID)
+	h.ApplyResellerProfile(c)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+
+	c, recorder = newPublicResellerHandlerTestContext(http.MethodGet, "/api/v1/reseller/profile", nil, user.ID)
+	h.GetResellerManagementSnapshot(c)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if !strings.Contains(recorder.Body.String(), `"opened":true`) || !strings.Contains(recorder.Body.String(), `"pending_review"`) {
+		t.Fatalf("unexpected snapshot body: %s", recorder.Body.String())
+	}
+}
+
+func TestPublicResellerSubmitCustomDomainRequiresActiveProfile(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := openPublicResellerHandlerTestDB(t)
+	user := seedPublicResellerHandlerUser(t, db)
+	h := newPublicResellerHandlerForTest(db)
+	h.ResellerManagementService = service.NewResellerManagementService(repository.NewResellerRepository(db), config.ResellerConfig{
+		Enabled:          true,
+		SelfApplyEnabled: true,
+		SubdomainBase:    "shop.example.test",
+		MainHosts:        []string{"main.example.test"},
+	})
+	if _, err := h.ResellerManagementService.ApplyUserReseller(user.ID, service.ResellerApplyInput{Reason: "pending"}); err != nil {
+		t.Fatalf("apply failed: %v", err)
+	}
+
+	c, recorder := newPublicResellerHandlerTestContext(http.MethodPost, "/api/v1/reseller/domains", []byte(`{"domain":"shop.customer.example"}`), user.ID)
+	h.SubmitResellerCustomDomain(c)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected http 200 envelope, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	var resp struct {
+		StatusCode int `json:"status_code"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode response failed: %v", err)
+	}
+	if resp.StatusCode != response.CodeBadRequest {
+		t.Fatalf("expected status_code=400 for inactive profile, got %+v body=%s", resp, recorder.Body.String())
 	}
 }
 

@@ -19,9 +19,16 @@ type ResellerRepository interface {
 	CreateProfile(profile *models.ResellerProfile) error
 	GetProfileByID(id uint) (*models.ResellerProfile, error)
 	GetProfileByUserID(userID uint) (*models.ResellerProfile, error)
+	UpdateProfile(profile *models.ResellerProfile) error
+	ListProfiles(filter ResellerProfileListFilter) ([]models.ResellerProfile, int64, error)
 	UpsertDomain(domain models.ResellerDomain) (*models.ResellerDomain, error)
+	GetDomainByID(id uint) (*models.ResellerDomain, error)
+	GetDomainByIDForUpdate(id uint) (*models.ResellerDomain, error)
+	UpdateDomain(domain *models.ResellerDomain) error
 	FindDomainByHost(host string) (*models.ResellerDomain, error)
 	FindActiveVerifiedDomain(host string) (*models.ResellerDomain, error)
+	ListDomains(filter ResellerDomainListFilter) ([]models.ResellerDomain, int64, error)
+	ListDomainsByResellerID(resellerID uint) ([]models.ResellerDomain, error)
 	UpsertSiteConfig(config models.ResellerSiteConfig) (*models.ResellerSiteConfig, error)
 	ListProductSettingsForPricing(resellerID uint, productIDs []uint, skuIDs []uint) ([]models.ResellerProductSetting, error)
 	ListHiddenProductIDs(resellerID uint) ([]uint, error)
@@ -106,6 +113,50 @@ func (r *GormResellerRepository) GetProfileByUserID(userID uint) (*models.Resell
 	return &profile, nil
 }
 
+// UpdateProfile 更新分销商资料。
+func (r *GormResellerRepository) UpdateProfile(profile *models.ResellerProfile) error {
+	if profile == nil || profile.ID == 0 {
+		return errors.New("invalid reseller profile")
+	}
+	return r.db.Save(profile).Error
+}
+
+// ListProfiles 分页列出分销商资料。
+func (r *GormResellerRepository) ListProfiles(filter ResellerProfileListFilter) ([]models.ResellerProfile, int64, error) {
+	rows := make([]models.ResellerProfile, 0)
+	query := r.db.Model(&models.ResellerProfile{}).Preload("User")
+	if filter.UserID > 0 {
+		query = query.Where("reseller_profiles.user_id = ?", filter.UserID)
+	}
+	if status := strings.TrimSpace(filter.Status); status != "" {
+		query = query.Where("reseller_profiles.status = ?", status)
+	}
+	if settlement := strings.TrimSpace(filter.SettlementStatus); settlement != "" {
+		query = query.Where("reseller_profiles.settlement_status = ?", settlement)
+	}
+	if keyword := strings.TrimSpace(filter.Keyword); keyword != "" {
+		like := "%" + strings.ToLower(keyword) + "%"
+		query = query.Joins("LEFT JOIN users ON users.id = reseller_profiles.user_id").
+			Where("LOWER(users.email) LIKE ? OR LOWER(users.display_name) LIKE ? OR CAST(reseller_profiles.id AS TEXT) = ?", like, like, keyword)
+	}
+	if filter.CreatedFrom != nil {
+		query = query.Where("reseller_profiles.created_at >= ?", *filter.CreatedFrom)
+	}
+	if filter.CreatedTo != nil {
+		query = query.Where("reseller_profiles.created_at <= ?", *filter.CreatedTo)
+	}
+	var total int64
+	if err := query.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if err := applyPagination(query.Session(&gorm.Session{}), filter.Page, filter.PageSize).
+		Order("reseller_profiles.id DESC").
+		Find(&rows).Error; err != nil {
+		return nil, 0, err
+	}
+	return rows, total, nil
+}
+
 // UpsertDomain 创建域名，或恢复同域名的软删除记录。
 func (r *GormResellerRepository) UpsertDomain(input models.ResellerDomain) (*models.ResellerDomain, error) {
 	input.Domain = normalizeDomainForRepository(input.Domain)
@@ -144,6 +195,45 @@ func (r *GormResellerRepository) UpsertDomain(input models.ResellerDomain) (*mod
 	return &existing, nil
 }
 
+// GetDomainByID 按 ID 获取域名。
+func (r *GormResellerRepository) GetDomainByID(id uint) (*models.ResellerDomain, error) {
+	if id == 0 {
+		return nil, nil
+	}
+	var row models.ResellerDomain
+	if err := r.db.Preload("Profile.User").First(&row, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &row, nil
+}
+
+// GetDomainByIDForUpdate 按 ID 获取并锁定域名。
+func (r *GormResellerRepository) GetDomainByIDForUpdate(id uint) (*models.ResellerDomain, error) {
+	if id == 0 {
+		return nil, nil
+	}
+	var row models.ResellerDomain
+	if err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).Preload("Profile.User").First(&row, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &row, nil
+}
+
+// UpdateDomain 更新域名。
+func (r *GormResellerRepository) UpdateDomain(domain *models.ResellerDomain) error {
+	if domain == nil || domain.ID == 0 {
+		return errors.New("invalid reseller domain")
+	}
+	domain.Domain = normalizeDomainForRepository(domain.Domain)
+	return r.db.Save(domain).Error
+}
+
 // FindDomainByHost 按域名获取未删除域名记录。
 func (r *GormResellerRepository) FindDomainByHost(host string) (*models.ResellerDomain, error) {
 	domain := normalizeDomainForRepository(host)
@@ -178,6 +268,65 @@ func (r *GormResellerRepository) FindActiveVerifiedDomain(host string) (*models.
 		return nil, err
 	}
 	return &row, nil
+}
+
+// ListDomainsByResellerID 列出分销商名下所有未删除域名。
+func (r *GormResellerRepository) ListDomainsByResellerID(resellerID uint) ([]models.ResellerDomain, error) {
+	rows := make([]models.ResellerDomain, 0)
+	if resellerID == 0 {
+		return rows, nil
+	}
+	if err := r.db.Where("reseller_id = ?", resellerID).Order("is_primary DESC, id ASC").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// ListDomains 分页列出分销商域名。
+func (r *GormResellerRepository) ListDomains(filter ResellerDomainListFilter) ([]models.ResellerDomain, int64, error) {
+	rows := make([]models.ResellerDomain, 0)
+	query := r.db.Model(&models.ResellerDomain{}).Preload("Profile.User")
+	if filter.ResellerID > 0 {
+		query = query.Where("reseller_domains.reseller_id = ?", filter.ResellerID)
+	}
+	if filter.UserID > 0 {
+		query = query.Joins("JOIN reseller_profiles rp_user_filter ON rp_user_filter.id = reseller_domains.reseller_id").
+			Where("rp_user_filter.user_id = ?", filter.UserID)
+	}
+	if domain := strings.TrimSpace(filter.Domain); domain != "" {
+		query = query.Where("reseller_domains.domain = ?", normalizeDomainForRepository(domain))
+	}
+	if typ := strings.TrimSpace(filter.Type); typ != "" {
+		query = query.Where("reseller_domains.type = ?", typ)
+	}
+	if status := strings.TrimSpace(filter.Status); status != "" {
+		query = query.Where("reseller_domains.status = ?", status)
+	}
+	if verification := strings.TrimSpace(filter.VerificationStatus); verification != "" {
+		query = query.Where("reseller_domains.verification_status = ?", verification)
+	}
+	if keyword := strings.TrimSpace(filter.Keyword); keyword != "" {
+		like := "%" + strings.ToLower(keyword) + "%"
+		query = query.Joins("LEFT JOIN reseller_profiles rp_keyword ON rp_keyword.id = reseller_domains.reseller_id").
+			Joins("LEFT JOIN users ON users.id = rp_keyword.user_id").
+			Where("LOWER(reseller_domains.domain) LIKE ? OR LOWER(users.email) LIKE ? OR LOWER(users.display_name) LIKE ? OR CAST(reseller_domains.reseller_id AS TEXT) = ?", like, like, like, keyword)
+	}
+	if filter.CreatedFrom != nil {
+		query = query.Where("reseller_domains.created_at >= ?", *filter.CreatedFrom)
+	}
+	if filter.CreatedTo != nil {
+		query = query.Where("reseller_domains.created_at <= ?", *filter.CreatedTo)
+	}
+	var total int64
+	if err := query.Session(&gorm.Session{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if err := applyPagination(query.Session(&gorm.Session{}), filter.Page, filter.PageSize).
+		Order("reseller_domains.id DESC").
+		Find(&rows).Error; err != nil {
+		return nil, 0, err
+	}
+	return rows, total, nil
 }
 
 // UpsertSiteConfig 创建或恢复分销站点配置。

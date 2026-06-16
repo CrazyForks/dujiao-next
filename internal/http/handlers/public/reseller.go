@@ -22,8 +22,115 @@ var userResellerFinanceErrorRules = []mappedHandlerError{
 	{target: service.ErrResellerBalanceAccountFrozen, code: response.CodeBadRequest, key: "error.forbidden"},
 }
 
+var userResellerManagementErrorRules = []mappedHandlerError{
+	{target: service.ErrResellerNotOpened, code: response.CodeBadRequest, key: "error.bad_request"},
+	{target: service.ErrResellerApplyDisabled, code: response.CodeForbidden, key: "error.forbidden"},
+	{target: service.ErrResellerProfileInactive, code: response.CodeBadRequest, key: "error.forbidden"},
+	{target: service.ErrResellerDomainInvalid, code: response.CodeBadRequest, key: "error.bad_request"},
+	{target: service.ErrResellerDomainMainHostNotAllowed, code: response.CodeBadRequest, key: "error.bad_request"},
+	{target: service.ErrResellerDomainConflict, code: response.CodeBadRequest, key: "error.bad_request"},
+}
+
 func respondUserResellerFinanceError(c *gin.Context, err error, fallbackKey string) {
 	respondWithMappedError(c, err, userResellerFinanceErrorRules, response.CodeInternal, fallbackKey)
+}
+
+func respondUserResellerManagementError(c *gin.Context, err error, fallbackKey string) {
+	respondWithMappedError(c, err, userResellerManagementErrorRules, response.CodeInternal, fallbackKey)
+}
+
+type ResellerApplyRequest struct {
+	Reason string `json:"reason"`
+}
+
+type ResellerCustomDomainRequest struct {
+	Domain string `json:"domain" binding:"required"`
+}
+
+// GetResellerManagementSnapshot 获取当前用户的分销商准入与域名状态。
+func (h *Handler) GetResellerManagementSnapshot(c *gin.Context) {
+	uid, ok := shared.GetUserID(c)
+	if !ok {
+		return
+	}
+	if h.ResellerManagementService == nil {
+		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", nil)
+		return
+	}
+	profile, domains, canApply, err := h.ResellerManagementService.GetUserManagementSnapshot(uid)
+	if err != nil {
+		respondUserResellerManagementError(c, err, "error.user_fetch_failed")
+		return
+	}
+	response.Success(c, dto.NewResellerManagementSnapshotResp(profile, domains, canApply))
+}
+
+// ApplyResellerProfile 提交当前用户的分销商申请。
+func (h *Handler) ApplyResellerProfile(c *gin.Context) {
+	uid, ok := shared.GetUserID(c)
+	if !ok {
+		return
+	}
+	if h.ResellerManagementService == nil {
+		shared.RespondError(c, response.CodeInternal, "error.save_failed", nil)
+		return
+	}
+	var req ResellerApplyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		shared.RespondBindError(c, err)
+		return
+	}
+	profile, err := h.ResellerManagementService.ApplyUserReseller(uid, service.ResellerApplyInput{Reason: req.Reason})
+	if err != nil {
+		respondUserResellerManagementError(c, err, "error.save_failed")
+		return
+	}
+	response.Success(c, dto.NewResellerManagementProfileResp(profile))
+}
+
+// ListResellerDomains 查询当前用户的分销域名。
+func (h *Handler) ListResellerDomains(c *gin.Context) {
+	uid, ok := shared.GetUserID(c)
+	if !ok {
+		return
+	}
+	if h.ResellerManagementService == nil {
+		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", nil)
+		return
+	}
+	profile, domains, _, err := h.ResellerManagementService.GetUserManagementSnapshot(uid)
+	if err != nil {
+		respondUserResellerManagementError(c, err, "error.user_fetch_failed")
+		return
+	}
+	if profile == nil {
+		respondUserResellerManagementError(c, service.ErrResellerNotOpened, "error.user_fetch_failed")
+		return
+	}
+	response.Success(c, dto.NewResellerDomainRespList(domains))
+}
+
+// SubmitResellerCustomDomain 提交当前用户的自定义分销域名。
+func (h *Handler) SubmitResellerCustomDomain(c *gin.Context) {
+	uid, ok := shared.GetUserID(c)
+	if !ok {
+		return
+	}
+	if h.ResellerManagementService == nil {
+		shared.RespondError(c, response.CodeInternal, "error.save_failed", nil)
+		return
+	}
+	var req ResellerCustomDomainRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		shared.RespondBindError(c, err)
+		return
+	}
+	row, err := h.ResellerManagementService.SubmitUserCustomDomain(uid, req.Domain)
+	if err != nil {
+		respondUserResellerManagementError(c, err, "error.save_failed")
+		return
+	}
+	response.Success(c, dto.NewResellerDomainResp(row))
 }
 
 // GetResellerDashboard 获取当前用户的分销商财务看板。

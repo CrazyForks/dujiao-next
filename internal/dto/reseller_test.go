@@ -54,3 +54,36 @@ func TestResellerDashboardRespIncludesWithdrawAvailability(t *testing.T) {
 		t.Fatalf("unexpected withdraw disabled reason: %+v", resp)
 	}
 }
+
+func TestResellerManagementSnapshotRespIncludesProfileAndDomains(t *testing.T) {
+	profile := &models.ResellerProfile{
+		ID:               12,
+		Status:           models.ResellerProfileStatusPendingReview,
+		ApplyReason:      "apply",
+		SettlementStatus: models.ResellerSettlementStatusNormal,
+	}
+	domains := []models.ResellerDomain{{
+		ID:                 33,
+		ResellerID:         12,
+		Domain:             "r12.shop.example.test",
+		Type:               models.ResellerDomainTypeSubdomain,
+		VerificationStatus: models.ResellerDomainVerificationVerified,
+		Status:             models.ResellerDomainStatusActive,
+		IsPrimary:          true,
+	}}
+	resp := NewResellerManagementSnapshotResp(profile, domains, false)
+	if !resp.Opened || resp.Profile == nil || resp.Profile.ApplyReason != "apply" {
+		t.Fatalf("unexpected snapshot profile response: %+v", resp)
+	}
+	if len(resp.Domains) != 1 || resp.Domains[0].Domain != "r12.shop.example.test" || !resp.Domains[0].IsPrimary {
+		t.Fatalf("unexpected domains response: %+v", resp.Domains)
+	}
+}
+
+func TestResellerDomainRespExposesVerificationTokenForOwner(t *testing.T) {
+	row := &models.ResellerDomain{ID: 7, Domain: "shop.example.test", VerificationToken: "reseller-verify-token"}
+	resp := NewResellerDomainResp(row)
+	if resp.VerificationToken != "reseller-verify-token" {
+		t.Fatalf("expected verification token exposed to owner/admin DTO, got %+v", resp)
+	}
+}

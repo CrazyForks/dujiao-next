@@ -276,6 +276,8 @@ type ResellerConfig struct {
 	Enabled              bool     `mapstructure:"enabled"`
 	MainHosts            []string `mapstructure:"main_hosts"`
 	TrustedForwardedHost bool     `mapstructure:"trusted_forwarded_host"`
+	SubdomainBase        string   `mapstructure:"subdomain_base"`
+	SelfApplyEnabled     bool     `mapstructure:"self_apply_enabled"`
 }
 
 // Load 从 config.yml 加载配置
@@ -398,6 +400,8 @@ func Load() *Config {
 	viper.SetDefault("reseller.enabled", false)
 	viper.SetDefault("reseller.main_hosts", []string{"localhost", "127.0.0.1", "::1"})
 	viper.SetDefault("reseller.trusted_forwarded_host", false)
+	viper.SetDefault("reseller.subdomain_base", "")
+	viper.SetDefault("reseller.self_apply_enabled", true)
 
 	// 环境变量支持
 	viper.AutomaticEnv()                                   // 自动读取环境变量

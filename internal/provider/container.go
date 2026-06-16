@@ -97,6 +97,7 @@ type Container struct {
 	AffiliateService          *service.AffiliateService
 	ResellerDomainResolver    *service.ResellerDomainResolver
 	ResellerPricingResolver   *service.ResellerPricingResolver
+	ResellerManagementService *service.ResellerManagementService
 	ResellerAccountingService *service.ResellerAccountingService
 	ApiCredentialService      *service.ApiCredentialService
 	SiteConnectionService     *service.SiteConnectionService
@@ -229,6 +230,7 @@ func (c *Container) initServices() {
 	c.SettingService = service.NewSettingService(c.SettingRepo, c.Config.Order)
 	c.ResellerDomainResolver = service.NewResellerDomainResolver(c.ResellerRepo, c.Config.Reseller)
 	c.ResellerPricingResolver = service.NewResellerPricingResolver(c.ResellerRepo)
+	c.ResellerManagementService = service.NewResellerManagementService(c.ResellerRepo, c.Config.Reseller)
 	c.ResellerAccountingService = service.NewResellerAccountingService(c.ResellerRepo, service.ResellerAccountingOptions{
 		ConfirmDays: 7,
 	})

@@ -143,6 +143,33 @@ type ResellerAdminWithdrawListFilter struct {
 	CreatedTo   *time.Time
 }
 
+// ResellerProfileListFilter 管理端分销商资料过滤条件。
+type ResellerProfileListFilter struct {
+	Page             int
+	PageSize         int
+	UserID           uint
+	Status           string
+	SettlementStatus string
+	Keyword          string
+	CreatedFrom      *time.Time
+	CreatedTo        *time.Time
+}
+
+// ResellerDomainListFilter 管理端分销商域名过滤条件。
+type ResellerDomainListFilter struct {
+	Page               int
+	PageSize           int
+	ResellerID         uint
+	UserID             uint
+	Domain             string
+	Type               string
+	Status             string
+	VerificationStatus string
+	Keyword            string
+	CreatedFrom        *time.Time
+	CreatedTo          *time.Time
+}
+
 // PaymentListFilter 查询支付列表的过滤条件
 type PaymentListFilter struct {
 	Page         int
