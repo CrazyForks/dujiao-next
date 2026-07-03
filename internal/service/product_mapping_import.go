@@ -333,6 +333,8 @@ func convertUpstreamWholesalePrices(tiers models.WholesalePriceTiers, exchangeRa
 			continue
 		}
 		converted = append(converted, WholesalePriceInput{
+			SKUID:       tier.SKUID,
+			SKUCode:     tier.SKUCode,
 			MinQuantity: tier.MinQuantity,
 			UnitPrice:   localPrice,
 		})
