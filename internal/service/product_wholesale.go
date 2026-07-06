@@ -63,15 +63,63 @@ func normalizeWholesalePriceInputs(inputs []WholesalePriceInput) (models.Wholesa
 	return tiers, nil
 }
 
+func normalizeWholesalePriceInputsForSKUs(inputs []WholesalePriceInput, skus []models.ProductSKU) (models.WholesalePriceTiers, error) {
+	if len(inputs) == 0 {
+		return normalizeWholesalePriceInputs(inputs)
+	}
+
+	skuByID := make(map[uint]models.ProductSKU, len(skus))
+	skuByCode := make(map[string]models.ProductSKU, len(skus))
+	for _, sku := range skus {
+		code := strings.TrimSpace(sku.SKUCode)
+		if sku.ID > 0 {
+			skuByID[sku.ID] = sku
+		}
+		if code != "" {
+			skuByCode[strings.ToLower(code)] = sku
+		}
+	}
+
+	normalized := make([]WholesalePriceInput, 0, len(inputs))
+	for _, input := range inputs {
+		skuCode := strings.TrimSpace(input.SKUCode)
+		switch {
+		case input.SKUID > 0:
+			sku, ok := skuByID[input.SKUID]
+			if !ok {
+				return nil, ErrWholesalePriceInvalid
+			}
+			if skuCode != "" && !strings.EqualFold(skuCode, sku.SKUCode) {
+				return nil, ErrWholesalePriceInvalid
+			}
+			input.SKUCode = strings.TrimSpace(sku.SKUCode)
+		case skuCode != "":
+			sku, ok := skuByCode[strings.ToLower(skuCode)]
+			if !ok {
+				return nil, ErrWholesalePriceInvalid
+			}
+			input.SKUID = sku.ID
+			input.SKUCode = strings.TrimSpace(sku.SKUCode)
+		default:
+			input.SKUCode = ""
+		}
+		normalized = append(normalized, input)
+	}
+	return normalizeWholesalePriceInputs(normalized)
+}
+
 func wholesaleTierUniqueKey(skuID uint, skuCode string, minQuantity int) string {
 	return fmt.Sprintf("%s:%d", wholesaleTierScopeKey(skuID, skuCode), minQuantity)
 }
 
 func wholesaleTierScopeKey(skuID uint, skuCode string) string {
+	if code := strings.ToLower(strings.TrimSpace(skuCode)); code != "" {
+		return "code:" + code
+	}
 	if skuID > 0 {
 		return fmt.Sprintf("id:%d", skuID)
 	}
-	return "code:" + strings.ToLower(strings.TrimSpace(skuCode))
+	return "all"
 }
 
 // ResolveWholesaleUnitPrice 根据商品批发价阶梯解析成交单价。
@@ -157,14 +205,18 @@ func wholesaleTierMatchPriority(tier *models.WholesalePriceTier, skuID uint, sku
 	if tier.SKUID <= 0 && strings.TrimSpace(tier.SKUCode) == "" {
 		return 1
 	}
-	if skuID > 0 && tier.SKUID == skuID {
+	tierCode := strings.ToLower(strings.TrimSpace(tier.SKUCode))
+	skuCode = strings.ToLower(strings.TrimSpace(skuCode))
+	if tier.SKUID > 0 {
+		if skuID <= 0 || tier.SKUID != skuID {
+			return 0
+		}
+		if tierCode != "" && tierCode != skuCode {
+			return 0
+		}
 		return 3
 	}
-	tierCode := strings.ToLower(strings.TrimSpace(tier.SKUCode))
-	if tierCode == "" {
-		return 0
-	}
-	if tierCode == strings.ToLower(strings.TrimSpace(skuCode)) {
+	if tierCode != "" && tierCode == skuCode {
 		return 2
 	}
 	return 0

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/shopspring/decimal"
 )
@@ -74,6 +75,26 @@ func TestNormalizeWholesalePriceInputsRejectsInvalidTiers(t *testing.T) {
 	}
 }
 
+func TestNormalizeWholesalePriceInputsRejectsDuplicateCanonicalSKUScope(t *testing.T) {
+	_, err := normalizeWholesalePriceInputs([]WholesalePriceInput{
+		{SKUID: 5, SKUCode: "SKU-A", MinQuantity: 10, UnitPrice: decimal.NewFromInt(80)},
+		{SKUCode: "SKU-A", MinQuantity: 10, UnitPrice: decimal.NewFromInt(70)},
+	})
+	if !errors.Is(err, ErrWholesalePriceInvalid) {
+		t.Fatalf("expected ErrWholesalePriceInvalid, got %v", err)
+	}
+}
+
+func TestNormalizeWholesalePriceInputsRejectsNonDecreasingCanonicalSKUScope(t *testing.T) {
+	_, err := normalizeWholesalePriceInputs([]WholesalePriceInput{
+		{SKUID: 5, SKUCode: "SKU-A", MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
+		{SKUCode: "SKU-A", MinQuantity: 10, UnitPrice: decimal.NewFromInt(90)},
+	})
+	if !errors.Is(err, ErrWholesalePriceInvalid) {
+		t.Fatalf("expected ErrWholesalePriceInvalid, got %v", err)
+	}
+}
+
 func TestNormalizeWholesalePriceInputsAllowsSameQuantityForDifferentSKUs(t *testing.T) {
 	tiers, err := normalizeWholesalePriceInputs([]WholesalePriceInput{
 		{SKUID: 2, SKUCode: "SKU-B", MinQuantity: 5, UnitPrice: decimal.NewFromInt(70)},
@@ -97,16 +118,30 @@ func TestNormalizeWholesalePriceInputsAllowsSameQuantityForDifferentSKUs(t *test
 	}
 }
 
-func TestConvertUpstreamWholesalePricesPreservesSKUScope(t *testing.T) {
+func TestConvertUpstreamWholesalePricesRemapsUpstreamSKUScope(t *testing.T) {
 	tiers := convertUpstreamWholesalePrices(models.WholesalePriceTiers{
-		{SKUID: 11, SKUCode: "SKU-A", MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
-	}, decimal.NewFromInt(1), decimal.Zero, "none")
+		{SKUID: 201, MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+	}, decimal.NewFromInt(1), decimal.Zero, "none", buildUpstreamWholesaleSKUIndex(
+		[]models.ProductSKU{{ID: 11, SKUCode: "SKU-A"}},
+		[]upstream.UpstreamSKU{{ID: 201, SKUCode: "SKU-A"}},
+		nil,
+	))
 
 	if len(tiers) != 1 {
 		t.Fatalf("expected 1 tier, got %d", len(tiers))
 	}
 	if tiers[0].SKUID != 11 || tiers[0].SKUCode != "SKU-A" {
-		t.Fatalf("expected SKU scope to be preserved, got %+v", tiers[0])
+		t.Fatalf("expected upstream SKU scope to be remapped, got %+v", tiers[0])
+	}
+}
+
+func TestConvertUpstreamWholesalePricesDropsUnmappedUpstreamSKUID(t *testing.T) {
+	tiers := convertUpstreamWholesalePrices(models.WholesalePriceTiers{
+		{SKUID: 201, MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+	}, decimal.NewFromInt(1), decimal.Zero, "none")
+
+	if len(tiers) != 0 {
+		t.Fatalf("expected unmapped upstream sku_id tier to be dropped, got %+v", tiers)
 	}
 }
 
@@ -163,6 +198,21 @@ func TestResolveWholesaleUnitPriceForSKUPrefersSpecificTier(t *testing.T) {
 	}
 	if !discount.Equal(decimal.NewFromInt(180)) {
 		t.Fatalf("expected discount 180, got %s", discount.String())
+	}
+}
+
+func TestResolveWholesaleUnitPriceForSKURequiresIDAndCodeToMatch(t *testing.T) {
+	product := &models.Product{
+		WholesalePrices: models.WholesalePriceTiers{
+			{SKUID: 11, SKUCode: "SKU-A", MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(70))},
+		},
+	}
+
+	if _, _, matched := ResolveWholesaleUnitPriceForSKU(product, decimal.NewFromInt(100), 11, "SKU-B", 6, 6); matched {
+		t.Fatalf("expected no match when sku_id matches but sku_code differs")
+	}
+	if _, _, matched := ResolveWholesaleUnitPriceForSKU(product, decimal.NewFromInt(100), 12, "SKU-A", 6, 6); matched {
+		t.Fatalf("expected no match when sku_code matches but sku_id differs")
 	}
 }
 
