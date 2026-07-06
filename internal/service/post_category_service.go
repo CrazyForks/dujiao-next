@@ -29,9 +29,9 @@ func (s *PostCategoryService) ListAll(parentID *uint) ([]models.PostCategory, er
 	return s.repo.ListAll(parentID)
 }
 
-// ListActiveTree 获取激活的分类树
-func (s *PostCategoryService) ListActiveTree() ([]models.PostCategory, error) {
-	return s.repo.ListActiveTree()
+// ListTree 获取全部分类树（含禁用，供后台用）
+func (s *PostCategoryService) ListTree() ([]models.PostCategory, error) {
+	return s.repo.ListTree()
 }
 
 // GetByID 获取单个分类

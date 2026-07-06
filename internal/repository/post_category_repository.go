@@ -11,7 +11,7 @@ import (
 type PostCategoryRepository interface {
 	ListAll(parentID *uint) ([]models.PostCategory, error)
 	ListActive() ([]models.PostCategory, error)
-	ListActiveTree() ([]models.PostCategory, error)
+	ListTree() ([]models.PostCategory, error)
 	GetByID(id uint) (*models.PostCategory, error)
 	Create(cat *models.PostCategory) error
 	Update(cat *models.PostCategory) error
@@ -53,9 +53,10 @@ func (r *GormPostCategoryRepository) ListActive() ([]models.PostCategory, error)
 	return cats, nil
 }
 
-func (r *GormPostCategoryRepository) ListActiveTree() ([]models.PostCategory, error) {
+// ListTree 获取全部分类树（含禁用，供后台用）
+func (r *GormPostCategoryRepository) ListTree() ([]models.PostCategory, error) {
 	var all []models.PostCategory
-	if err := r.db.Where("is_active = ?", true).Order("sort_order ASC, id ASC").Find(&all).Error; err != nil {
+	if err := r.db.Order("sort_order ASC, id ASC").Find(&all).Error; err != nil {
 		return nil, err
 	}
 	idMap := make(map[uint]*models.PostCategory)

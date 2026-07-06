@@ -129,3 +129,36 @@ func TestPostServiceUpdateRejectsUnsupportedOrInvalidCategoryAssignment(t *testi
 		t.Fatalf("expected ErrPostCategoryInvalid on parent category update, got %v", err)
 	}
 }
+
+func TestPostServiceCategoryAssignmentRespectsInactive(t *testing.T) {
+	svc, db := newPostServiceForTest(t)
+	inactive := createPostCategoryFixture(t, db, "archived", nil)
+	if err := db.Model(&models.PostCategory{}).Where("id = ?", inactive.ID).Update("is_active", false).Error; err != nil {
+		t.Fatalf("deactivate category fixture failed: %v", err)
+	}
+
+	_, err := svc.Create(CreatePostInput{
+		Slug:       "blog-inactive-category",
+		Type:       constants.PostTypeBlog,
+		TitleJSON:  map[string]interface{}{"zh-CN": "blog-inactive-category"},
+		CategoryID: &inactive.ID,
+	})
+	if err != ErrPostCategoryInvalid {
+		t.Fatalf("expected ErrPostCategoryInvalid for inactive category, got %v", err)
+	}
+
+	// 文章已有分类后来被禁用：保存时保留原分类应放行
+	post := createPostFixture(t, db, "blog-keeps-category", constants.PostTypeBlog, &inactive.ID)
+	updated, err := svc.Update(fmt.Sprintf("%d", post.ID), CreatePostInput{
+		Slug:       post.Slug,
+		Type:       constants.PostTypeBlog,
+		TitleJSON:  map[string]interface{}{"zh-CN": post.Slug},
+		CategoryID: &inactive.ID,
+	})
+	if err != nil {
+		t.Fatalf("expected keeping now-inactive category to succeed, got %v", err)
+	}
+	if updated.CategoryID == nil || *updated.CategoryID != inactive.ID {
+		t.Fatalf("expected category to be kept, got %v", updated.CategoryID)
+	}
+}

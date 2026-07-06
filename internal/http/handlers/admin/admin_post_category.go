@@ -15,7 +15,7 @@ import (
 // GetPostCategories 获取文章分类列表
 func (h *Handler) GetPostCategories(c *gin.Context) {
 	if c.Query("tree") == "1" {
-		cats, err := h.PostCategoryService.ListActiveTree()
+		cats, err := h.PostCategoryService.ListTree()
 		if err != nil {
 			shared.RespondError(c, response.CodeInternal, "error.post_category_fetch_failed", err)
 			return

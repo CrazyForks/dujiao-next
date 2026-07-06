@@ -229,6 +229,10 @@ func (s *PostService) validateCategoryAssignment(postType string, categoryID *ui
 	if category == nil {
 		return ErrPostCategoryInvalid
 	}
+	// 禁用分类不可新挂载；保留文章已有分类（后来才被禁用）不受影响
+	if !category.IsActive && !sameOptionalUint(currentCategoryID, categoryID) {
+		return ErrPostCategoryInvalid
+	}
 
 	childCount, err := s.categoryRepo.CountChildren(*categoryID)
 	if err != nil {
