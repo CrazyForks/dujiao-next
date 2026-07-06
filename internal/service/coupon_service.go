@@ -174,13 +174,24 @@ func (s *CouponService) resolveEligibleSubtotal(coupon *models.Coupon, items []m
 	}
 
 	eligible := decimal.Zero
+	scopeMatched := 0
+	wholesaleExcluded := 0
 	for _, item := range items {
-		if _, ok := ids[item.ProductID]; ok {
-			eligible = eligible.Add(item.TotalPrice.Decimal)
+		if _, ok := ids[item.ProductID]; !ok {
+			continue
 		}
+		scopeMatched++
+		if coupon.DisabledWholesalePrice && item.WholesaleDiscount.Decimal.GreaterThan(decimal.Zero) {
+			wholesaleExcluded++
+			continue
+		}
+		eligible = eligible.Add(item.TotalPrice.Decimal)
 	}
 
 	if eligible.IsZero() {
+		if scopeMatched > 0 && wholesaleExcluded == scopeMatched {
+			return models.Money{}, ErrCouponWholesaleDisabled
+		}
 		return models.Money{}, ErrCouponScopeInvalid
 	}
 	return models.NewMoneyFromDecimal(eligible), nil

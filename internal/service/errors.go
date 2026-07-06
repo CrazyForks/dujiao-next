@@ -62,6 +62,7 @@ var (
 	ErrCouponPaymentRoleGuestOnly          = errors.New("coupon payment role guest only")
 	ErrCouponPaymentRoleMemberOnly         = errors.New("coupon payment role member only")
 	ErrCouponMemberLevelNotAllowed         = errors.New("coupon member level not allowed")
+	ErrCouponWholesaleDisabled             = errors.New("coupon wholesale disabled")
 	ErrCouponUpdateFailed                  = errors.New("coupon update failed")
 	ErrCouponDeleteFailed                  = errors.New("coupon delete failed")
 	ErrPromotionInvalid                    = errors.New("promotion invalid")
