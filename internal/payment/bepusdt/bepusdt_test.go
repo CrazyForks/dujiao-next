@@ -27,6 +27,23 @@ func TestParseConfigAndNormalizeDefaults(t *testing.T) {
 	}
 }
 
+func TestParseConfig_CashierModeKeepsTradeTypeEmpty(t *testing.T) {
+	cfg, err := ParseConfig(map[string]interface{}{
+		"gateway_url": " https://pay.example.com/ ",
+		"auth_token":  " token ",
+		"order_mode":  constants.PaymentBepusdtOrderModeCashier,
+		"trade_type":  " usdt.trc20 ",
+		"notify_url":  " https://example.com/notify ",
+		"return_url":  " https://example.com/return ",
+	})
+	if err != nil {
+		t.Fatalf("parse config failed: %v", err)
+	}
+	if cfg.TradeType != "" {
+		t.Fatalf("cashier mode trade type should stay empty, got %s", cfg.TradeType)
+	}
+}
+
 func TestResolveTradeType(t *testing.T) {
 	tests := []struct {
 		name   string

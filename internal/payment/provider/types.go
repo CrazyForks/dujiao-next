@@ -36,12 +36,13 @@ type CreateInput struct {
 
 // CreateResult 统一支付创建结果。
 type CreateResult struct {
-	ProviderRef  string
-	RedirectURL  string
-	QRCodeURL    string
-	Payload      models.JSON
-	AmountSent   string
-	CurrencySent string
+	ProviderRef        string
+	RedirectURL        string
+	QRCodeURL          string
+	Payload            models.JSON
+	DisplayChannelType string
+	AmountSent         string
+	CurrencySent       string
 }
 
 // QueryResult 主动查询订单状态返回。

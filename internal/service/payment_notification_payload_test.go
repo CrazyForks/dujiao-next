@@ -125,6 +125,64 @@ func TestBuildOrderNotificationPayloadIncludesCustomerAndItemSummary(t *testing.
 	}
 }
 
+func TestBuildOrderNotificationPayloadUsesDisplayChannelType(t *testing.T) {
+	svc := &PaymentService{}
+	order := &models.Order{
+		ID:          1002,
+		OrderNo:     "DJ202603230002",
+		Currency:    "usd",
+		Status:      constants.OrderStatusPaid,
+		TotalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+	}
+	payment := &models.Payment{
+		ID:           10,
+		ProviderType: constants.PaymentProviderBepusdt,
+		ChannelType:  constants.PaymentProviderBepusdt,
+		ProviderPayload: models.JSON{
+			"display_channel_type": "usdt.arbitrum",
+		},
+	}
+
+	payload := svc.buildOrderNotificationPayload(order, payment)
+
+	if got := fmt.Sprintf("%v", payload["payment_channel"]); got != "bepusdt/usdt.arbitrum" {
+		t.Fatalf("payment_channel want bepusdt/usdt.arbitrum got %s", got)
+	}
+	if got := fmt.Sprintf("%v", payload["channel_type"]); got != "usdt.arbitrum" {
+		t.Fatalf("channel_type want usdt.arbitrum got %s", got)
+	}
+}
+
+func TestBuildOrderNotificationPayloadKeepsBepusdtCashierChannel(t *testing.T) {
+	svc := &PaymentService{}
+	order := &models.Order{
+		ID:          1003,
+		OrderNo:     "DJ202603230003",
+		Currency:    "usd",
+		Status:      constants.OrderStatusPaid,
+		TotalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+	}
+	payment := &models.Payment{
+		ID:           11,
+		ProviderType: constants.PaymentProviderBepusdt,
+		ChannelType:  constants.PaymentProviderBepusdt,
+		ProviderPayload: models.JSON{
+			"data": map[string]interface{}{
+				"order_mode": constants.PaymentBepusdtOrderModeCashier,
+			},
+		},
+	}
+
+	payload := svc.buildOrderNotificationPayload(order, payment)
+
+	if got := fmt.Sprintf("%v", payload["payment_channel"]); got != "bepusdt/bepusdt" {
+		t.Fatalf("payment_channel want bepusdt/bepusdt got %s", got)
+	}
+	if got := fmt.Sprintf("%v", payload["channel_type"]); got != "bepusdt" {
+		t.Fatalf("channel_type want bepusdt got %s", got)
+	}
+}
+
 func TestBuildOrderNotificationPayloadFallsBackToChildrenItems(t *testing.T) {
 	repo := newMockSettingRepo()
 	repo.store[constants.SettingKeyNotificationCenterConfig] = models.JSON{

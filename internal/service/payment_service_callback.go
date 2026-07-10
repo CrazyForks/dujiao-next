@@ -877,6 +877,12 @@ func notificationPaymentChannel(order *models.Order, payment *models.Payment) (s
 	if payment != nil {
 		providerType = strings.TrimSpace(payment.ProviderType)
 		channelType = strings.TrimSpace(payment.ChannelType)
+		// display_channel_type 是创建支付时由 adapter 写入的通用展示覆盖值。
+		// 例如 BEpusdt 交易模式数据库 channel_type 固定为 bepusdt，
+		// 但通知里的支付渠道应展示为例如 bepusdt/usdt.arbitrum。
+		if displayChannelType := notificationPayloadString(payment.ProviderPayload, "display_channel_type"); displayChannelType != "" {
+			channelType = displayChannelType
+		}
 	}
 	if providerType == "" && order != nil && order.WalletPaidAmount.Decimal.GreaterThan(decimal.Zero) {
 		providerType = constants.PaymentProviderWallet
@@ -889,6 +895,20 @@ func notificationPaymentChannel(order *models.Order, payment *models.Payment) (s
 		paymentChannel = channelType
 	}
 	return providerType, channelType, paymentChannel
+}
+
+// notificationPayloadString 从通知相关 payload 中安全读取字符串字段。
+// payload 可能来自 JSON 反序列化，值类型不固定，因此统一 fmt.Sprint 后 trim；
+// 缺失或 nil 时返回空字符串，避免 fmt.Sprint(nil) 变成 "<nil>"。
+func notificationPayloadString(payload map[string]interface{}, key string) string {
+	if payload == nil {
+		return ""
+	}
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprint(value))
 }
 
 func buildNotificationOrderItemSummaries(items []models.OrderItem, locale string) (string, string, notificationOrderItemCounts) {

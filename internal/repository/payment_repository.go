@@ -244,7 +244,45 @@ func (r *GormPaymentRepository) ListAdmin(filter PaymentListFilter) ([]models.Pa
 	if err := query.Order("payments.id desc").Find(&payments).Error; err != nil {
 		return nil, 0, err
 	}
+	if filter.Lightweight {
+		if err := r.fillPaymentDisplayChannelTypes(payments); err != nil {
+			return nil, 0, err
+		}
+	}
 	return payments, total, nil
+}
+
+// fillPaymentDisplayChannelTypes 为 lightweight 支付列表补充展示用渠道类型。
+func (r *GormPaymentRepository) fillPaymentDisplayChannelTypes(payments []models.Payment) error {
+	if len(payments) == 0 {
+		return nil
+	}
+	ids := make([]uint, 0, len(payments))
+	indexByID := make(map[uint]int, len(payments))
+	for idx := range payments {
+		ids = append(ids, payments[idx].ID)
+		indexByID[payments[idx].ID] = idx
+	}
+	type displayRow struct {
+		ID                 uint
+		DisplayChannelType string
+	}
+	var rows []displayRow
+	displayChannelTypeExpr := jsonTextExpr(r.db, "provider_payload", "display_channel_type")
+	if err := r.db.Model(&models.Payment{}).
+		Select("id", displayChannelTypeExpr+" AS display_channel_type").
+		Where("id IN ?", ids).
+		Find(&rows).Error; err != nil {
+		return err
+	}
+	for _, row := range rows {
+		idx, ok := indexByID[row.ID]
+		if !ok {
+			continue
+		}
+		payments[idx].DisplayChannelType = strings.TrimSpace(row.DisplayChannelType)
+	}
+	return nil
 }
 
 // GetByIDForUpdate 事务中加行锁读取支付单,不存在返回 (nil, nil)。

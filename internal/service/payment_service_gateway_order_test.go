@@ -17,7 +17,8 @@ import (
 )
 
 type emptyProviderRefProvider struct {
-	onCreate func(provider.CreateInput)
+	onCreate           func(provider.CreateInput)
+	displayChannelType string
 }
 
 func (p emptyProviderRefProvider) Type() string {
@@ -33,7 +34,8 @@ func (p emptyProviderRefProvider) CreatePayment(_ context.Context, _ models.JSON
 		p.onCreate(input)
 	}
 	return &provider.CreateResult{
-		QRCodeURL: "weixin://wxpay/bizpayurl?pr=test",
+		QRCodeURL:          "weixin://wxpay/bizpayurl?pr=test",
+		DisplayChannelType: p.displayChannelType,
 	}, nil
 }
 
@@ -215,6 +217,81 @@ func TestApplyProviderPaymentFallsBackToWechatGatewayOrderNoWhenProviderRefEmpty
 	}
 	if payment.ProviderRef == order.OrderNo {
 		t.Fatalf("provider ref should not fall back to business order no")
+	}
+}
+
+func TestApplyProviderPaymentStoresDisplayChannelType(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	now := time.Now()
+
+	order := &models.Order{
+		OrderNo:                 "DJTESTDISPLAY001",
+		UserID:                  1,
+		Status:                  constants.OrderStatusPendingPayment,
+		Currency:                "CNY",
+		OriginalAmount:          models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		DiscountAmount:          models.NewMoneyFromDecimal(decimal.Zero),
+		PromotionDiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		TotalAmount:             models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		WalletPaidAmount:        models.NewMoneyFromDecimal(decimal.Zero),
+		OnlinePaidAmount:        models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		RefundedAmount:          models.NewMoneyFromDecimal(decimal.Zero),
+		CreatedAt:               now,
+		UpdatedAt:               now,
+	}
+	if err := db.Create(order).Error; err != nil {
+		t.Fatalf("create order failed: %v", err)
+	}
+
+	channel := &models.PaymentChannel{
+		ProviderType:    constants.PaymentProviderOfficial,
+		ChannelType:     constants.PaymentChannelTypeWechat,
+		InteractionMode: constants.PaymentInteractionQR,
+		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
+		ConfigJSON: models.JSON{
+			"notify_url": "https://api.example.com/api/v1/payments/callback",
+		},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := db.Create(channel).Error; err != nil {
+		t.Fatalf("create channel failed: %v", err)
+	}
+
+	payment := &models.Payment{
+		OrderID:         order.ID,
+		ChannelID:       channel.ID,
+		ProviderType:    channel.ProviderType,
+		ChannelType:     channel.ChannelType,
+		InteractionMode: channel.InteractionMode,
+		Amount:          models.NewMoneyFromDecimal(decimal.RequireFromString("10.00")),
+		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
+		FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+		Currency:        "CNY",
+		Status:          constants.PaymentStatusInitiated,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+	if err := db.Create(payment).Error; err != nil {
+		t.Fatalf("create payment failed: %v", err)
+	}
+
+	svc.paymentProviderRegistry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeWechat, emptyProviderRefProvider{
+		displayChannelType: "usdt.arbitrum",
+	})
+
+	if err := svc.applyProviderPayment(CreatePaymentInput{
+		ClientIP: "127.0.0.1",
+		Context:  context.Background(),
+	}, order, channel, payment); err != nil {
+		t.Fatalf("applyProviderPayment failed: %v", err)
+	}
+
+	if payment.ProviderPayload == nil {
+		t.Fatalf("provider payload should be recorded")
+	}
+	if got := payment.ProviderPayload["display_channel_type"]; got != "usdt.arbitrum" {
+		t.Fatalf("display_channel_type = %v, want usdt.arbitrum", got)
 	}
 }
 
