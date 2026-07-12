@@ -43,6 +43,48 @@ func TestEpusdtAdapter_CreatePayment_ConfigInvalidMapped(t *testing.T) {
 	}
 }
 
+func TestEpusdtDisplayChannelType(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *epusdt.Config
+		want string
+	}{
+		{name: "nil", cfg: nil, want: ""},
+		{
+			name: "cashier",
+			cfg:  &epusdt.Config{OrderMode: constants.PaymentEpusdtOrderModeCashier},
+			want: "",
+		},
+		{
+			name: "tron usdt",
+			cfg:  &epusdt.Config{Token: " USDT ", Network: " TRON "},
+			want: "usdt.tron",
+		},
+		{
+			name: "tron trx",
+			cfg:  &epusdt.Config{Token: " trx ", Network: " tron "},
+			want: "trx.tron",
+		},
+		{
+			name: "fallback payment type",
+			cfg:  &epusdt.Config{Token: "usdc", Network: "ethereum", PaymentType: "ethereum-usdc"},
+			want: "usdc.ethereum",
+		},
+		{
+			name: "unknown without payment type",
+			cfg:  &epusdt.Config{Token: "usdc", Network: "ethereum"},
+			want: "usdc.ethereum",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := epusdtDisplayChannelType(tc.cfg); got != tc.want {
+				t.Fatalf("epusdtDisplayChannelType() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestEpusdtAdapter_MapEpusdtError(t *testing.T) {
 	cases := []struct {
 		name string

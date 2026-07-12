@@ -40,6 +40,7 @@ type Config struct {
 	GatewayURL  string `json:"gateway_url"`
 	PID         string `json:"pid"`
 	SecretKey   string `json:"secret_key"`
+	OrderMode   string `json:"order_mode"` // 订单接口模式：transaction/cashier
 	Token       string `json:"token"`
 	Network     string `json:"network"`
 	Currency    string `json:"currency,omitempty"`
@@ -61,12 +62,23 @@ func (c *Config) Normalize() {
 	c.GatewayURL = strings.TrimRight(strings.TrimSpace(c.GatewayURL), "/")
 	c.PID = strings.TrimSpace(c.PID)
 	c.SecretKey = strings.TrimSpace(c.SecretKey)
+	c.OrderMode = strings.ToLower(strings.TrimSpace(c.OrderMode))
+	if c.OrderMode == "" {
+		c.OrderMode = constants.PaymentEpusdtOrderModeTransaction
+	}
 	c.Token = strings.ToLower(strings.TrimSpace(c.Token))
 	c.Network = strings.ToLower(strings.TrimSpace(c.Network))
+	if c.OrderMode == constants.PaymentEpusdtOrderModeCashier {
+		c.Token = ""
+		c.Network = ""
+	}
 	c.Currency = strings.ToLower(strings.TrimSpace(c.Currency))
 	c.NotifyURL = strings.TrimSpace(c.NotifyURL)
 	c.ReturnURL = strings.TrimSpace(c.ReturnURL)
 	c.PaymentType = strings.TrimSpace(c.PaymentType)
+	if c.OrderMode == constants.PaymentEpusdtOrderModeCashier {
+		c.PaymentType = ""
+	}
 	if c.Currency == "" {
 		c.Currency = strings.ToLower(constants.SiteCurrencyDefault)
 	}
@@ -84,14 +96,27 @@ func ValidateConfig(cfg *Config) error {
 		{"gateway_url", cfg.GatewayURL},
 		{"pid", cfg.PID},
 		{"secret_key", cfg.SecretKey},
-		{"token", cfg.Token},
-		{"network", cfg.Network},
 		{"notify_url", cfg.NotifyURL},
 		{"return_url", cfg.ReturnURL},
 	}
 	for _, c := range checks {
 		if strings.TrimSpace(c.val) == "" {
 			return fmt.Errorf("%w: %s is required", ErrConfigInvalid, c.field)
+		}
+	}
+	orderMode := strings.ToLower(strings.TrimSpace(cfg.OrderMode))
+	if orderMode == "" {
+		orderMode = constants.PaymentEpusdtOrderModeTransaction
+	}
+	if orderMode != constants.PaymentEpusdtOrderModeTransaction && orderMode != constants.PaymentEpusdtOrderModeCashier {
+		return fmt.Errorf("%w: order_mode is invalid", ErrConfigInvalid)
+	}
+	if orderMode == constants.PaymentEpusdtOrderModeTransaction {
+		if strings.TrimSpace(cfg.Token) == "" {
+			return fmt.Errorf("%w: token is required", ErrConfigInvalid)
+		}
+		if strings.TrimSpace(cfg.Network) == "" {
+			return fmt.Errorf("%w: network is required", ErrConfigInvalid)
 		}
 	}
 	return nil
@@ -190,7 +215,9 @@ func toFloat(v interface{}) float64 {
 	return 0
 }
 
-// CreatePayment 调 POST /payments/gmpay/v1/order/create-transaction，返回 trade_id 和拼好的收银台 URL。
+// CreatePayment 调用 GMPay 创建交易接口并返回 trade_id 和收银台 URL。
+// epusdt 的收银台模式仍使用 create-transaction，只是同时省略 token/network，
+// 由服务端创建等待用户选择支付网络和代币的占位订单。
 func CreatePayment(ctx context.Context, cfg *Config, input CreateInput) (*CreateResult, error) {
 	if cfg == nil {
 		return nil, ErrConfigInvalid
@@ -223,11 +250,13 @@ func CreatePayment(ctx context.Context, cfg *Config, input CreateInput) (*Create
 		"pid":          cfg.PID,
 		"order_id":     input.OrderNo,
 		"currency":     cfg.Currency,
-		"token":        cfg.Token,
-		"network":      cfg.Network,
 		"amount":       amount,
 		"notify_url":   notifyURL,
 		"redirect_url": returnURL,
+	}
+	if cfg.OrderMode != constants.PaymentEpusdtOrderModeCashier {
+		params["token"] = cfg.Token
+		params["network"] = cfg.Network
 	}
 	if strings.TrimSpace(input.Name) != "" {
 		params["name"] = input.Name
