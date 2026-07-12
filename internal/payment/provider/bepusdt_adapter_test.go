@@ -184,6 +184,9 @@ func TestBepusdtAdapter_CreatePayment_CashierModeUsesCreateOrder(t *testing.T) {
 		if _, ok := payload["trade_type"]; ok {
 			t.Fatalf("trade_type should not be sent for cashier order mode")
 		}
+		if payload["currencies"] != "USDT,USDC" {
+			t.Fatalf("currencies = %v, want USDT,USDC", payload["currencies"])
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{
@@ -206,6 +209,7 @@ func TestBepusdtAdapter_CreatePayment_CashierModeUsesCreateOrder(t *testing.T) {
 	cfg := validBepusdtConfig(server.URL)
 	cfg["order_mode"] = constants.PaymentBepusdtOrderModeCashier
 	cfg["trade_type"] = "usdt.trc20"
+	cfg["currencies"] = " usdt, usdc "
 	result, err := a.CreatePayment(context.Background(), cfg, CreateInput{
 		OrderNo:     "ORDER-CASHIER-1",
 		Subject:     "测试商品",

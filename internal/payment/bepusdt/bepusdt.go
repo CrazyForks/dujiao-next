@@ -61,6 +61,7 @@ type Config struct {
 	AuthToken  string `json:"auth_token"`  // API Token
 	TradeType  string `json:"trade_type"`  // 交易类型，如 usdt.trc20
 	OrderMode  string `json:"order_mode"`  // 订单接口模式：transaction/cashier
+	Currencies string `json:"currencies"`  // 收银台模式限定交易币种，逗号分隔；留空不限制
 	Fiat       string `json:"fiat"`        // 法币类型，默认 CNY
 	NotifyURL  string `json:"notify_url"`  // 异步通知地址
 	ReturnURL  string `json:"return_url"`  // 同步跳转地址
@@ -158,6 +159,7 @@ func (c *Config) Normalize() {
 	c.AuthToken = strings.TrimSpace(c.AuthToken)
 	c.TradeType = strings.TrimSpace(c.TradeType)
 	c.OrderMode = strings.ToLower(strings.TrimSpace(c.OrderMode))
+	c.Currencies = strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(c.Currencies), " ", ""))
 	c.Fiat = strings.TrimSpace(c.Fiat)
 	c.NotifyURL = strings.TrimSpace(c.NotifyURL)
 	c.ReturnURL = strings.TrimSpace(c.ReturnURL)
@@ -168,6 +170,9 @@ func (c *Config) Normalize() {
 		c.TradeType = ""
 	} else if c.TradeType == "" {
 		c.TradeType = bepusdtTradeTypeUSDTTRC20
+	}
+	if c.OrderMode != constants.PaymentBepusdtOrderModeCashier {
+		c.Currencies = ""
 	}
 	if c.Fiat == "" {
 		c.Fiat = constants.SiteCurrencyDefault
@@ -287,6 +292,9 @@ func CreateCashierOrder(ctx context.Context, cfg *Config, input CreateInput) (*C
 	}
 	if input.Name != "" {
 		params["name"] = input.Name
+	}
+	if cfg.Currencies != "" {
+		params["currencies"] = cfg.Currencies
 	}
 
 	signature := Sign(params, cfg.AuthToken)
