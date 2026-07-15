@@ -15,8 +15,8 @@ import (
 )
 
 // bepusdtAdapter 是 bepusdt 网关的 Provider + CallbackVerifier 实现。
-// 与 epusdt 相似，但多 channel type 支持（usdt-trc20 / usdc-trc20 / trx 等），
-// transaction 模式需要根据 channelType 动态设置 cfg.TradeType；cashier 模式走 BEpusdt 收银台。
+// 与 epusdt 相似，但需要兼容旧 channel type（usdt-trc20 / usdc-trc20 / trx 等）；
+// transaction 模式的交易类型由 trade_type 配置决定，缺省为 usdt.trc20，cashier 模式走 BEpusdt 收银台。
 // callback 是同步 JSON POST（不是 form），所以**不**实现 Capturer 和 Webhooker。
 type bepusdtAdapter struct{}
 
@@ -35,26 +35,11 @@ func (a *bepusdtAdapter) Type() string {
 }
 
 // parseConfig 解析并验证 bepusdt Config。
-// 关键：如果 cfg.TradeType 未显式配置且 channelType 非空，
-// 则从 channelType 自动 resolve trade_type（沿用 payment_service_provider.go 的逻辑）。
-func (a *bepusdtAdapter) parseConfig(raw models.JSON, channelType string) (*bepusdt.Config, error) {
-	rawTradeType := ""
-	if raw != nil && raw["trade_type"] != nil {
-		rawTradeType = strings.TrimSpace(fmt.Sprint(raw["trade_type"]))
-	}
+// transaction 模式未配置 trade_type 时，由 Config.Normalize 保持旧行为并使用 usdt.trc20。
+func (a *bepusdtAdapter) parseConfig(raw models.JSON) (*bepusdt.Config, error) {
 	cfg, err := bepusdt.ParseConfig(raw)
 	if err != nil {
 		return nil, mapBepusdtError(err)
-	}
-	// 兼容旧数据：如果配置中没有指定 trade_type，根据旧 channel_type 自动设置。
-	// 新格式 channel_type 固定为 bepusdt，不再用于推导 trade_type。
-	if cfg.OrderMode != constants.PaymentBepusdtOrderModeCashier && rawTradeType == "" && channelType != "" {
-		resolvedTradeType := bepusdt.ResolveTradeType(channelType)
-		if resolvedTradeType != "" {
-			cfg.TradeType = resolvedTradeType
-		} else {
-			cfg.TradeType = ""
-		}
 	}
 	if err := bepusdt.ValidateConfig(cfg); err != nil {
 		return nil, mapBepusdtError(err)
@@ -69,7 +54,7 @@ func (a *bepusdtAdapter) ValidateConfig(raw models.JSON, channelType string) err
 	if normalizedChannelType != "" && normalizedChannelType != constants.PaymentProviderBepusdt && !isLegacyBepusdtChannelType(normalizedChannelType) {
 		return fmt.Errorf("%w: bepusdt channel_type %s", ErrUnsupportedChannel, channelType)
 	}
-	cfg, err := a.parseConfig(raw, channelType)
+	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return err
 	}
@@ -96,7 +81,7 @@ func (a *bepusdtAdapter) ValidateConfig(raw models.JSON, channelType string) err
 
 // CreatePayment 创建支付。bepusdt 多 channel type，需要先校验 channelType。
 func (a *bepusdtAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
-	cfg, err := a.parseConfig(raw, input.ChannelType)
+	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
 	}
@@ -227,31 +212,45 @@ func setBepusdtPayloadString(payload map[string]interface{}, key string, value s
 }
 
 func resolveBepusdtTradeLabels(tradeType string) (chain string, tokenID string) {
-	switch strings.ToLower(strings.TrimSpace(tradeType)) {
-	case "usdt.trc20":
-		return "tron", "tron-usdt"
-	case "usdt.erc20":
-		return "ethereum", "ethereum-usdt"
-	case "usdt.bep20":
-		return "bsc", "bsc-usdt"
-	case "usdt.polygon":
-		return "polygon", "polygon-usdt"
-	case "usdc.trc20":
-		return "tron", "tron-usdc"
-	case "usdc.erc20":
-		return "ethereum", "ethereum-usdc"
-	case "usdc.polygon":
-		return "polygon", "polygon-usdc"
-	case "usdc.bep20":
-		return "bsc", "bsc-usdc"
-	case "tron.trx":
-		return "tron", "tron-trx"
-	case "eth.eth":
-		return "ethereum", "ethereum-eth"
-	case "bsc.bnb":
-		return "bsc", "bsc-bnb"
-	default:
+	normalized := strings.ToLower(strings.TrimSpace(tradeType))
+	parts := strings.Split(normalized, ".")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		return "", ""
+	}
+
+	// BEpusdt 的稳定币采用 token.network，原生币采用 network.token。
+	// 根据官方 trade type 合同识别稳定币前缀，其余类型按原生币格式解析，
+	// 从而让未来的原生代币支持比如 solana.sol、aptos.apt 等类型无需逐个维护。
+	if isBepusdtTokenPrefix(parts[0]) {
+		token := parts[0]
+		network := normalizeBepusdtNetwork(parts[1])
+		return network, network + "-" + token
+	}
+
+	network := normalizeBepusdtNetwork(parts[0])
+	token := parts[1]
+	return network, network + "-" + token
+}
+
+func isBepusdtTokenPrefix(value string) bool {
+	switch value {
+	case "usdt", "usdc":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeBepusdtNetwork(network string) string {
+	switch network {
+	case "trc20":
+		return "tron"
+	case "erc20", "eth":
+		return "ethereum"
+	case "bep20":
+		return "bsc"
+	default:
+		return network
 	}
 }
 

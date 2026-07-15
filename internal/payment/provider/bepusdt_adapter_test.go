@@ -134,9 +134,9 @@ func TestBepusdtAdapter_CreatePayment_ProviderChannelUsesConfiguredTradeType(t *
 	}
 }
 
-func TestBepusdtAdapter_CreatePayment_LegacyChannelTypeFallback(t *testing.T) {
+func TestBepusdtAdapter_CreatePayment_MissingTradeTypeUsesLegacyDefault(t *testing.T) {
 	a := NewBepusdtAdapter()
-	server := newBepusdtCreatePaymentServer(t, "tron.trx")
+	server := newBepusdtCreatePaymentServer(t, "usdt.trc20")
 	defer server.Close()
 
 	cfg := validBepusdtConfig(server.URL)
@@ -152,22 +152,21 @@ func TestBepusdtAdapter_CreatePayment_LegacyChannelTypeFallback(t *testing.T) {
 		t.Fatalf("CreatePayment() failed: %v", err)
 	}
 	data := result.Payload["data"].(map[string]interface{})
-	if data["trade_type"] != "tron.trx" {
-		t.Fatalf("trade_type = %v, want tron.trx", data["trade_type"])
+	if data["trade_type"] != "usdt.trc20" {
+		t.Fatalf("trade_type = %v, want usdt.trc20", data["trade_type"])
 	}
-	if result.DisplayChannelType != "tron.trx" {
-		t.Fatalf("DisplayChannelType = %q, want tron.trx", result.DisplayChannelType)
+	if result.DisplayChannelType != "usdt.trc20" {
+		t.Fatalf("DisplayChannelType = %q, want usdt.trc20", result.DisplayChannelType)
 	}
 }
 
-func TestBepusdtAdapter_ValidateConfig_ProviderChannelRequiresTradeType(t *testing.T) {
+func TestBepusdtAdapter_ValidateConfig_ProviderChannelUsesDefaultTradeType(t *testing.T) {
 	a := NewBepusdtAdapter()
 	cfg := validBepusdtConfig("https://bepusdt.example")
 	delete(cfg, "trade_type")
 
-	err := a.ValidateConfig(cfg, constants.PaymentProviderBepusdt)
-	if !errors.Is(err, ErrConfigInvalid) {
-		t.Fatalf("expected ErrConfigInvalid, got %v", err)
+	if err := a.ValidateConfig(cfg, constants.PaymentProviderBepusdt); err != nil {
+		t.Fatalf("ValidateConfig() failed: %v", err)
 	}
 }
 
@@ -286,6 +285,36 @@ func TestBepusdtAdapter_MapBepusdtError(t *testing.T) {
 			got := mapBepusdtError(tc.in)
 			if !errors.Is(got, tc.want) {
 				t.Fatalf("mapBepusdtError(%v) errors.Is %v = false, want true", tc.in, tc.want)
+			}
+		})
+	}
+}
+
+func TestResolveBepusdtTradeLabels(t *testing.T) {
+	tests := []struct {
+		tradeType string
+		chain     string
+		tokenID   string
+	}{
+		{tradeType: "usdt.trc20", chain: "tron", tokenID: "tron-usdt"},
+		{tradeType: "usdc.erc20", chain: "ethereum", tokenID: "ethereum-usdc"},
+		{tradeType: "usdt.bep20", chain: "bsc", tokenID: "bsc-usdt"},
+		{tradeType: "tron.trx", chain: "tron", tokenID: "tron-trx"},
+		{tradeType: "ethereum.eth", chain: "ethereum", tokenID: "ethereum-eth"},
+		{tradeType: "eth.eth", chain: "ethereum", tokenID: "ethereum-eth"},
+		{tradeType: "bsc.bnb", chain: "bsc", tokenID: "bsc-bnb"},
+		{tradeType: "ton.gram", chain: "ton", tokenID: "ton-gram"},
+		{tradeType: "solana.sol", chain: "solana", tokenID: "solana-sol"},
+		{tradeType: "aptos.apt", chain: "aptos", tokenID: "aptos-apt"},
+		{tradeType: "usdt.arbitrum", chain: "arbitrum", tokenID: "arbitrum-usdt"},
+		{tradeType: "usdc.solana", chain: "solana", tokenID: "solana-usdc"},
+		{tradeType: "usdt.x-layer", chain: "x-layer", tokenID: "x-layer-usdt"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.tradeType, func(t *testing.T) {
+			chain, tokenID := resolveBepusdtTradeLabels(tc.tradeType)
+			if chain != tc.chain || tokenID != tc.tokenID {
+				t.Fatalf("resolveBepusdtTradeLabels(%q) = (%q, %q), want (%q, %q)", tc.tradeType, chain, tokenID, tc.chain, tc.tokenID)
 			}
 		})
 	}

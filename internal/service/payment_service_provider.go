@@ -175,6 +175,12 @@ func (s *PaymentService) ValidateChannel(channel *models.PaymentChannel) error {
 		if mode != constants.PaymentInteractionQR && mode != constants.PaymentInteractionRedirect {
 			return ErrPaymentChannelConfigInvalid
 		}
+		if providerType == constants.PaymentProviderBepusdt && mode == constants.PaymentInteractionQR {
+			orderMode := strings.ToLower(strings.TrimSpace(fmt.Sprint(channel.ConfigJSON["order_mode"])))
+			if orderMode == constants.PaymentBepusdtOrderModeCashier {
+				return ErrPaymentChannelConfigInvalid
+			}
+		}
 	}
 
 	if s.paymentProviderRegistry == nil {

@@ -250,7 +250,7 @@ func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *models.Paymen
 		payment.ProviderRef = input.ProviderRef
 	}
 	if input.Payload != nil {
-		payment.ProviderPayload = input.Payload
+		payment.ProviderPayload = mergeProviderPayload(payment.ProviderPayload, input.Payload)
 	}
 
 	err := s.paymentRepo.Transaction(func(tx *gorm.DB) error {
@@ -345,7 +345,7 @@ func (s *PaymentService) updateCallbackMeta(payment *models.Payment, status stri
 		updated = true
 	}
 	if input.Payload != nil {
-		payment.ProviderPayload = input.Payload
+		payment.ProviderPayload = mergeProviderPayload(payment.ProviderPayload, input.Payload)
 		updated = true
 	}
 	if status != "" && payment.Status != status {
@@ -389,7 +389,7 @@ func (s *PaymentService) applyPaymentUpdate(payment *models.Payment, order *mode
 		payment.ProviderRef = input.ProviderRef
 	}
 	if input.Payload != nil {
-		payment.ProviderPayload = input.Payload
+		payment.ProviderPayload = mergeProviderPayload(payment.ProviderPayload, input.Payload)
 	}
 
 	err := s.paymentRepo.Transaction(func(tx *gorm.DB) error {
@@ -422,6 +422,22 @@ func (s *PaymentService) applyPaymentUpdate(payment *models.Payment, order *mode
 		return nil, false, err
 	}
 	return returnVal, orderPaid, nil
+}
+
+// mergeProviderPayload 合并第三方回调原文，同时保留创建支付阶段写入的展示快照等元数据。
+// 回调字段优先覆盖同名旧字段，未出现在回调中的 display_channel_type 等字段不会丢失。
+func mergeProviderPayload(existing models.JSON, incoming models.JSON) models.JSON {
+	if incoming == nil {
+		return existing
+	}
+	merged := make(models.JSON, len(existing)+len(incoming))
+	for key, value := range existing {
+		merged[key] = value
+	}
+	for key, value := range incoming {
+		merged[key] = value
+	}
+	return merged
 }
 
 // markOrderPaid 在事务内将订单更新为已支付并处理库存

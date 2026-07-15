@@ -113,3 +113,88 @@ func TestEnsurePaymentProviderBepusdtRenameMigration_RenamesAndIsIdempotent(t *t
 		t.Fatalf("idempotency broken: bepusdt count expected 2, got %d", bepusdtCount)
 	}
 }
+
+func TestEnsurePaymentChannelBepusdtConfigMigration_NormalizesLegacyChannels(t *testing.T) {
+	db := setupPaymentProviderRenameTestDB(t)
+	tests := []struct {
+		name        string
+		channelType string
+		tradeType   string
+	}{
+		{name: "legacy-usdt", channelType: "usdt", tradeType: "usdt.trc20"},
+		{name: "legacy-usdt-trc20", channelType: "usdt-trc20", tradeType: "usdt.trc20"},
+		{name: "legacy-usdc-trc20", channelType: "usdc-trc20", tradeType: "usdt.trc20"},
+		{name: "legacy-trx", channelType: "trx", tradeType: "usdt.trc20"},
+	}
+	for _, tc := range tests {
+		if err := db.Create(&PaymentChannel{
+			Name: tc.name, ProviderType: "bepusdt", ChannelType: tc.channelType,
+			InteractionMode: "redirect", IsActive: true, ConfigJSON: JSON{"gateway_url": "https://bepusdt.example.com"},
+		}).Error; err != nil {
+			t.Fatalf("seed %s failed: %v", tc.name, err)
+		}
+	}
+	if err := db.Create(&PaymentChannel{
+		Name: "explicit", ProviderType: "bepusdt", ChannelType: "usdt-trc20",
+		InteractionMode: "redirect", IsActive: true, ConfigJSON: JSON{"trade_type": "usdt.arbitrum"},
+	}).Error; err != nil {
+		t.Fatalf("seed explicit failed: %v", err)
+	}
+	if err := db.Create(&PaymentChannel{
+		Name: "unknown", ProviderType: "bepusdt", ChannelType: "future-coin",
+		InteractionMode: "redirect", IsActive: true, ConfigJSON: JSON{},
+	}).Error; err != nil {
+		t.Fatalf("seed unknown failed: %v", err)
+	}
+
+	if err := ensurePaymentChannelBepusdtConfigMigration(); err != nil {
+		t.Fatalf("migration failed: %v", err)
+	}
+	for _, tc := range tests {
+		var channel PaymentChannel
+		if err := db.First(&channel, "name = ?", tc.name).Error; err != nil {
+			t.Fatalf("load %s failed: %v", tc.name, err)
+		}
+		if channel.ChannelType != "bepusdt" {
+			t.Fatalf("%s channel_type = %q, want bepusdt", tc.name, channel.ChannelType)
+		}
+		if got := channel.ConfigJSON["trade_type"]; got != tc.tradeType {
+			t.Fatalf("%s trade_type = %v, want %s", tc.name, got, tc.tradeType)
+		}
+		if got := channel.ConfigJSON["order_mode"]; got != "transaction" {
+			t.Fatalf("%s order_mode = %v, want transaction", tc.name, got)
+		}
+	}
+
+	var explicit PaymentChannel
+	if err := db.First(&explicit, "name = ?", "explicit").Error; err != nil {
+		t.Fatalf("load explicit failed: %v", err)
+	}
+	if got := explicit.ConfigJSON["trade_type"]; got != "usdt.arbitrum" {
+		t.Fatalf("explicit trade_type changed to %v", got)
+	}
+	if explicit.ChannelType != "bepusdt" {
+		t.Fatalf("explicit channel_type = %q, want bepusdt", explicit.ChannelType)
+	}
+	if got := explicit.ConfigJSON["order_mode"]; got != "transaction" {
+		t.Fatalf("explicit order_mode = %v, want transaction", got)
+	}
+	var unknown PaymentChannel
+	if err := db.First(&unknown, "name = ?", "unknown").Error; err != nil {
+		t.Fatalf("load unknown failed: %v", err)
+	}
+	if unknown.ChannelType != "future-coin" || len(unknown.ConfigJSON) != 0 {
+		t.Fatalf("unknown channel should stay unchanged: channel_type=%q config=%v", unknown.ChannelType, unknown.ConfigJSON)
+	}
+
+	if err := ensurePaymentChannelBepusdtConfigMigration(); err != nil {
+		t.Fatalf("second migration should be idempotent: %v", err)
+	}
+	var marker Setting
+	if err := db.First(&marker, "key = ?", paymentChannelBepusdtConfigMigrationSettingKey).Error; err != nil {
+		t.Fatalf("load marker failed: %v", err)
+	}
+	if !migrationDone(marker.ValueJSON) || marker.ValueJSON["migrated_count"] != float64(len(tests)+1) {
+		t.Fatalf("unexpected marker: %v", marker.ValueJSON)
+	}
+}

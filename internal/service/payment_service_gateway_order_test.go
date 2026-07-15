@@ -596,6 +596,25 @@ func TestValidateChannelRejectsInvalidEpayInteractionMode(t *testing.T) {
 	}
 }
 
+func TestValidateChannelRejectsBepusdtCashierQR(t *testing.T) {
+	svc, _ := setupPaymentServiceWalletTest(t)
+	channel := &models.PaymentChannel{
+		ProviderType:    constants.PaymentProviderBepusdt,
+		ChannelType:     constants.PaymentProviderBepusdt,
+		InteractionMode: constants.PaymentInteractionQR,
+		ConfigJSON: models.JSON{
+			"gateway_url": "https://bepusdt.example.com",
+			"auth_token":  "token-001",
+			"order_mode":  constants.PaymentBepusdtOrderModeCashier,
+			"notify_url":  "https://api.example.com/api/v1/payments/callback",
+			"return_url":  "https://shop.example.com/pay",
+		},
+	}
+	if err := svc.ValidateChannel(channel); err == nil {
+		t.Fatal("ValidateChannel should reject bepusdt cashier + qr")
+	}
+}
+
 func TestValidateChannelAllowsUnlimitedMaxAmount(t *testing.T) {
 	svc, _ := setupPaymentServiceWalletTest(t)
 	channel := &models.PaymentChannel{

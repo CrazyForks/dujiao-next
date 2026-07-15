@@ -183,6 +183,28 @@ func TestBuildOrderNotificationPayloadKeepsBepusdtCashierChannel(t *testing.T) {
 	}
 }
 
+func TestMergeProviderPayloadPreservesDisplayChannelType(t *testing.T) {
+	existing := models.JSON{
+		"display_channel_type": "usdt.arbitrum",
+		"data":                 map[string]interface{}{"trade_id": "CREATE-1"},
+	}
+	incoming := models.JSON{
+		"trade_id": "CALLBACK-1",
+		"status":   float64(2),
+	}
+
+	merged := mergeProviderPayload(existing, incoming)
+	if got := notificationPayloadString(merged, "display_channel_type"); got != "usdt.arbitrum" {
+		t.Fatalf("display_channel_type = %q, want usdt.arbitrum", got)
+	}
+	if got := notificationPayloadString(merged, "trade_id"); got != "CALLBACK-1" {
+		t.Fatalf("callback trade_id = %q, want CALLBACK-1", got)
+	}
+	if _, ok := existing["trade_id"]; ok {
+		t.Fatal("mergeProviderPayload must not mutate existing payload")
+	}
+}
+
 func TestBuildOrderNotificationPayloadFallsBackToChildrenItems(t *testing.T) {
 	repo := newMockSettingRepo()
 	repo.store[constants.SettingKeyNotificationCenterConfig] = models.JSON{

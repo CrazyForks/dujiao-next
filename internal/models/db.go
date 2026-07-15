@@ -19,6 +19,7 @@ const (
 	skuMigrationSettingKey                          = "migration/product_sku_v1"
 	categoryParentMigrationSettingKey               = "migration/category_parent_v1"
 	paymentProviderBepusdtRenameMigrationSettingKey = "migration/payment_provider_bepusdt_rename_v1"
+	paymentChannelBepusdtConfigMigrationSettingKey  = "migration/payment_channel_bepusdt_config_v2"
 	orderItemOriginalPriceMigrationKey              = "migration/order_item_original_price_v1"
 	manualStockUnlimitedValue                       = -1
 )
@@ -180,6 +181,9 @@ func AutoMigrate() error {
 		return err
 	}
 	if err := ensurePaymentProviderBepusdtRenameMigration(); err != nil {
+		return err
+	}
+	if err := ensurePaymentChannelBepusdtConfigMigration(); err != nil {
 		return err
 	}
 	if err := ensureOrderItemOriginalPriceMigration(); err != nil {
