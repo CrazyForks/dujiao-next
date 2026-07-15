@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
+	"github.com/dujiao-next/internal/repository"
 
 	"github.com/shopspring/decimal"
 )
@@ -292,6 +293,127 @@ func TestApplyProviderPaymentStoresDisplayChannelType(t *testing.T) {
 	}
 	if got := payment.ProviderPayload["display_channel_type"]; got != "usdt.arbitrum" {
 		t.Fatalf("display_channel_type = %v, want usdt.arbitrum", got)
+	}
+}
+
+func TestPaymentDisplayChannelTypeLifecycle(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	now := time.Now()
+
+	order := &models.Order{
+		OrderNo:                 "DJTESTDISPLAYLIFECYCLE001",
+		UserID:                  1,
+		Status:                  constants.OrderStatusPendingPayment,
+		Currency:                "CNY",
+		OriginalAmount:          models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		DiscountAmount:          models.NewMoneyFromDecimal(decimal.Zero),
+		PromotionDiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		TotalAmount:             models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		WalletPaidAmount:        models.NewMoneyFromDecimal(decimal.Zero),
+		OnlinePaidAmount:        models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		RefundedAmount:          models.NewMoneyFromDecimal(decimal.Zero),
+		CreatedAt:               now,
+		UpdatedAt:               now,
+	}
+	if err := db.Create(order).Error; err != nil {
+		t.Fatalf("create order failed: %v", err)
+	}
+
+	channel := &models.PaymentChannel{
+		Name:            "BEpusdt Arbitrum",
+		ProviderType:    constants.PaymentProviderBepusdt,
+		ChannelType:     constants.PaymentProviderBepusdt,
+		InteractionMode: constants.PaymentInteractionRedirect,
+		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
+		ConfigJSON: models.JSON{
+			"notify_url": "https://api.example.com/api/v1/payments/callback",
+		},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := db.Create(channel).Error; err != nil {
+		t.Fatalf("create channel failed: %v", err)
+	}
+
+	payment := &models.Payment{
+		OrderID:         order.ID,
+		ChannelID:       channel.ID,
+		ProviderType:    channel.ProviderType,
+		ChannelType:     channel.ChannelType,
+		InteractionMode: channel.InteractionMode,
+		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
+		FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+		Currency:        "CNY",
+		Status:          constants.PaymentStatusInitiated,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+	if err := db.Create(payment).Error; err != nil {
+		t.Fatalf("create payment failed: %v", err)
+	}
+
+	svc.paymentProviderRegistry.Register(constants.PaymentProviderBepusdt, "", emptyProviderRefProvider{
+		displayChannelType: "usdt.arbitrum",
+	})
+	if err := svc.applyProviderPayment(CreatePaymentInput{
+		ClientIP: "127.0.0.1",
+		Context:  context.Background(),
+	}, order, channel, payment); err != nil {
+		t.Fatalf("create provider payment failed: %v", err)
+	}
+	if got := notificationPayloadString(payment.ProviderPayload, "display_channel_type"); got != "usdt.arbitrum" {
+		t.Fatalf("display_channel_type after create = %q, want usdt.arbitrum", got)
+	}
+
+	paidAt := time.Now()
+	if _, err := svc.HandleCallback(PaymentCallbackInput{
+		PaymentID:   payment.ID,
+		OrderNo:     payment.GatewayOrderNo,
+		ChannelID:   channel.ID,
+		Status:      constants.PaymentStatusSuccess,
+		ProviderRef: "BEP-CALLBACK-1",
+		Amount:      payment.Amount,
+		Currency:    payment.Currency,
+		PaidAt:      &paidAt,
+		Payload: models.JSON{
+			"trade_id": "BEP-CALLBACK-1",
+			"status":   float64(2),
+		},
+	}); err != nil {
+		t.Fatalf("handle callback failed: %v", err)
+	}
+
+	storedPayment, err := svc.GetPayment(payment.ID)
+	if err != nil {
+		t.Fatalf("reload payment failed: %v", err)
+	}
+	if got := notificationPayloadString(storedPayment.ProviderPayload, "display_channel_type"); got != "usdt.arbitrum" {
+		t.Fatalf("display_channel_type after callback reload = %q, want usdt.arbitrum", got)
+	}
+	if got := notificationPayloadString(storedPayment.ProviderPayload, "trade_id"); got != "BEP-CALLBACK-1" {
+		t.Fatalf("callback trade_id after reload = %q, want BEP-CALLBACK-1", got)
+	}
+
+	notificationPayload := svc.buildOrderNotificationPayload(order, storedPayment)
+	if got := notificationPayloadString(notificationPayload, "payment_channel"); got != "bepusdt/usdt.arbitrum" {
+		t.Fatalf("notification payment_channel = %q, want bepusdt/usdt.arbitrum", got)
+	}
+
+	adminPayments, _, err := svc.ListPayments(repository.PaymentListFilter{
+		Page:        1,
+		PageSize:    10,
+		OrderID:     order.ID,
+		Lightweight: true,
+	})
+	if err != nil {
+		t.Fatalf("list admin payments failed: %v", err)
+	}
+	if len(adminPayments) != 1 {
+		t.Fatalf("admin payment count = %d, want 1", len(adminPayments))
+	}
+	if got := adminPayments[0].DisplayChannelType; got != "usdt.arbitrum" {
+		t.Fatalf("admin display_channel_type = %q, want usdt.arbitrum", got)
 	}
 }
 
