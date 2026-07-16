@@ -110,6 +110,7 @@ func (h *Handler) ExportAdminPayments(c *gin.Context) {
 		"channel_id",
 		"provider_type",
 		"channel_type",
+		"display_channel_type",
 		"status",
 		"amount",
 		"currency",
@@ -195,8 +196,8 @@ func (h *Handler) GetAdminPayment(c *gin.Context) {
 }
 
 // paymentDisplayChannelType 提取后台支付记录的展示用渠道类型。
-// 列表 lightweight 查询会把 provider_payload.display_channel_type 提取到 Payment.DisplayChannelType；
-// 详情或非 lightweight 查询保留完整 ProviderPayload，因此需要从 payload 里兜底读取。
+// CSV 导出的 lightweight 查询会把 provider_payload.display_channel_type 提取到 Payment.DisplayChannelType；
+// 后台列表和详情保留完整 ProviderPayload，因此需要从 payload 里兜底读取。
 func paymentDisplayChannelType(payment models.Payment) string {
 	if displayChannelType := strings.TrimSpace(payment.DisplayChannelType); displayChannelType != "" {
 		return displayChannelType
@@ -264,6 +265,7 @@ func (h *Handler) writeAdminPaymentCSVRows(writer *csv.Writer, payments []models
 			strconv.FormatUint(uint64(payment.ChannelID), 10),
 			payment.ProviderType,
 			payment.ChannelType,
+			paymentDisplayChannelType(payment),
 			payment.Status,
 			payment.Amount.String(),
 			payment.Currency,
