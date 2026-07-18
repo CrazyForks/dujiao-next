@@ -353,11 +353,12 @@ func (h *Handler) CreateOrderAndPay(c *gin.Context) {
 	}
 
 	result, err := h.PaymentService.CreatePayment(service.CreatePaymentInput{
-		OrderID:    order.ID,
-		ChannelID:  req.ChannelID,
-		UseBalance: req.UseBalance,
-		ClientIP:   c.ClientIP(),
-		Context:    c.Request.Context(),
+		OrderID:       order.ID,
+		ChannelID:     req.ChannelID,
+		UseBalance:    req.UseBalance,
+		ClientIP:      c.ClientIP(),
+		Context:       c.Request.Context(),
+		RequestScheme: requestSchemeFromContext(c),
 	})
 	if err != nil {
 		resp := gin.H{

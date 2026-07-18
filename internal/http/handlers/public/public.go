@@ -551,6 +551,24 @@ func isResellerTenant(tenant service.TenantContext) bool {
 	return tenant.ResellerID != nil && !tenant.IsMain && !tenant.Unavailable
 }
 
+// requestSchemeFromContext 返回当前请求的 scheme（优先 X-Forwarded-Proto，逻辑对齐 resolveSitemapBaseURL），
+// 用于分销站按下单域名动态生成支付回跳地址。
+func requestSchemeFromContext(c *gin.Context) string {
+	if c == nil || c.Request == nil {
+		return ""
+	}
+	if proto := strings.TrimSpace(c.GetHeader("X-Forwarded-Proto")); proto != "" {
+		proto = strings.ToLower(strings.TrimSpace(strings.Split(proto, ",")[0]))
+		if proto == "http" || proto == "https" {
+			return proto
+		}
+	}
+	if c.Request.TLS != nil {
+		return "https"
+	}
+	return "http"
+}
+
 func isResellerDisplayHiddenError(err error) bool {
 	return errors.Is(err, service.ErrResellerProductNotListed) ||
 		errors.Is(err, service.ErrResellerPriceBelowBase) ||
@@ -1146,11 +1164,12 @@ func (h *Handler) CreateGuestOrderAndPay(c *gin.Context) {
 	}
 
 	result, err := h.PaymentService.CreatePayment(service.CreatePaymentInput{
-		OrderID:    order.ID,
-		ChannelID:  req.ChannelID,
-		UseBalance: false,
-		ClientIP:   c.ClientIP(),
-		Context:    c.Request.Context(),
+		OrderID:       order.ID,
+		ChannelID:     req.ChannelID,
+		UseBalance:    false,
+		ClientIP:      c.ClientIP(),
+		Context:       c.Request.Context(),
+		RequestScheme: requestSchemeFromContext(c),
 	})
 	if err != nil {
 		resp := gin.H{
@@ -1384,11 +1403,12 @@ func (h *Handler) CreateGuestPayment(c *gin.Context) {
 		return
 	}
 	result, err := h.PaymentService.CreatePayment(service.CreatePaymentInput{
-		OrderID:    guestOrder.ID,
-		ChannelID:  req.ChannelID,
-		UseBalance: false,
-		ClientIP:   c.ClientIP(),
-		Context:    c.Request.Context(),
+		OrderID:       guestOrder.ID,
+		ChannelID:     req.ChannelID,
+		UseBalance:    false,
+		ClientIP:      c.ClientIP(),
+		Context:       c.Request.Context(),
+		RequestScheme: requestSchemeFromContext(c),
 	})
 	if err != nil {
 		respondPaymentCreateError(c, err)

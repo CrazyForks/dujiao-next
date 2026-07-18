@@ -112,6 +112,8 @@ type CreatePaymentInput struct {
 	ReturnBizType    string
 	ReturnBusinessNo string
 	ReturnGuest      bool
+	// RequestScheme 当前请求的 scheme（http/https），用于分销站动态生成 return_url；空值默认 https。
+	RequestScheme string
 }
 
 // CreatePaymentResult 创建支付结果
@@ -125,13 +127,14 @@ type CreatePaymentResult struct {
 
 // CreateWalletRechargePaymentInput 创建钱包充值支付请求
 type CreateWalletRechargePaymentInput struct {
-	UserID    uint
-	ChannelID uint
-	Amount    models.Money
-	Currency  string
-	Remark    string
-	ClientIP  string
-	Context   context.Context
+	UserID        uint
+	ChannelID     uint
+	Amount        models.Money
+	Currency      string
+	Remark        string
+	ClientIP      string
+	Context       context.Context
+	RequestScheme string
 }
 
 // CreateWalletRechargePaymentResult 创建钱包充值支付结果
@@ -615,6 +618,7 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 		Context:          input.Context,
 		ReturnBizType:    "recharge",
 		ReturnBusinessNo: recharge.RechargeNo,
+		RequestScheme:    input.RequestScheme,
 	}, virtualOrder, channel, payment); err != nil {
 		_ = s.paymentRepo.Transaction(func(tx *gorm.DB) error {
 			rechargeRepo := s.walletRepo.WithTx(tx)

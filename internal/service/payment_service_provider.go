@@ -1,7 +1,9 @@
 package service
 
 import (
+	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -76,7 +78,10 @@ func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *m
 		ChannelType:    channel.ChannelType,
 		Extra:          extra,
 		ReturnURLQuery: returnURLQuery,
-		// NotifyURL / ReturnURL 留空，由各 adapter 从 cfg 读取，再 append ReturnURLQuery
+		// 分销站/自定义域名下单时按当前 tenant 域名生成 ReturnURL（主站为空，
+		// 由各 adapter fallback 到 cfg 的 return_url/success_url），再 append ReturnURLQuery。
+		// NotifyURL 留空，始终由各 adapter 从 cfg 读取。
+		ReturnURL: resolveTenantReturnURL(input.Context, input.RequestScheme, channel),
 	}
 
 	result, err := p.CreatePayment(gatewayCtx, channel.ConfigJSON, createInput)
@@ -187,6 +192,54 @@ func (s *PaymentService) ValidateChannel(channel *models.PaymentChannel) error {
 		return mapProviderErrorToService(err)
 	}
 	return nil
+}
+
+// resolveTenantReturnURL 在分销站/自定义域名场景下按当前 tenant 域名生成同步回跳地址。
+// 主站 tenant 返回空串，保持渠道配置 return_url/success_url 的固定值兜底行为；
+// 分销 tenant 若回跳到主站域名，游客订单会因 tenant 隔离查不到（见 order_reseller_snapshot_test.go）。
+func resolveTenantReturnURL(ctx context.Context, requestScheme string, channel *models.PaymentChannel) string {
+	tenant, ok := TenantFromContext(ctx)
+	if !ok || tenant.IsMain || tenant.Unavailable {
+		return ""
+	}
+	host := strings.TrimSpace(tenant.Host)
+	if host == "" {
+		host = strings.TrimSpace(tenant.PrimaryDomain)
+	}
+	if host == "" {
+		return ""
+	}
+	scheme := strings.ToLower(strings.TrimSpace(requestScheme))
+	if scheme != "http" && scheme != "https" {
+		scheme = "https"
+	}
+	return scheme + "://" + host + tenantReturnPath(channel)
+}
+
+// tenantReturnPath 沿用渠道配置回跳地址中的路径与 query（站长可能自定义了路径），
+// 配置缺失或无路径时默认前台支付结果页 /pay。
+func tenantReturnPath(channel *models.PaymentChannel) string {
+	if channel != nil {
+		for _, key := range []string{"return_url", "success_url"} {
+			raw, _ := channel.ConfigJSON[key].(string)
+			if raw = strings.TrimSpace(raw); raw == "" {
+				continue
+			}
+			u, err := url.Parse(raw)
+			if err != nil {
+				continue
+			}
+			path := u.EscapedPath()
+			if path == "" || path == "/" {
+				continue
+			}
+			if u.RawQuery != "" {
+				path += "?" + u.RawQuery
+			}
+			return path
+		}
+	}
+	return "/pay"
 }
 
 func resolveTokenPayOrderUserKey(order *models.Order) string {

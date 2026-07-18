@@ -125,13 +125,14 @@ func (h *Handler) RechargeWallet(c *gin.Context) {
 		}
 	}
 	result, err := h.PaymentService.CreateWalletRechargePayment(service.CreateWalletRechargePaymentInput{
-		UserID:    uid,
-		ChannelID: req.ChannelID,
-		Amount:    models.NewMoneyFromDecimal(amount),
-		Currency:  currency,
-		Remark:    strings.TrimSpace(req.Remark),
-		ClientIP:  c.ClientIP(),
-		Context:   c.Request.Context(),
+		UserID:        uid,
+		ChannelID:     req.ChannelID,
+		Amount:        models.NewMoneyFromDecimal(amount),
+		Currency:      currency,
+		Remark:        strings.TrimSpace(req.Remark),
+		ClientIP:      c.ClientIP(),
+		Context:       c.Request.Context(),
+		RequestScheme: requestSchemeFromContext(c),
 	})
 	if err != nil {
 		switch {
