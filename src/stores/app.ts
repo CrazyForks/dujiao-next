@@ -4,7 +4,7 @@ import { configAPI } from '../api'
 import { applyCustomScripts } from '../utils/customScripts'
 import { getImageUrl } from '../utils/image'
 import { getLocalizedText } from '../utils/resellerSiteConfig'
-import { detectLocale } from '../i18n'
+import { detectLocale, setI18nLocale } from '../i18n'
 import { useHead } from '@unhead/vue'
 
 export const useAppStore = defineStore('app', () => {
@@ -24,10 +24,11 @@ export const useAppStore = defineStore('app', () => {
     })
     const canAccessResellerConsole = computed(() => !!config.value && !isResellerTenant.value)
 
-    // 设置语言
+    // 设置语言：同时驱动 vue-i18n（内部按需加载语言包）
     const setLocale = (newLocale: string) => {
         locale.value = newLocale
         localStorage.setItem('locale', newLocale)
+        void setI18nLocale(newLocale)
     }
 
     // 全局 head 默认值（标题/描述/keywords/favicon/html lang）。

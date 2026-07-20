@@ -359,7 +359,6 @@ const toggleMobileMenu = () => {
 
 const changeLanguage = (langCode: string) => {
   appStore.setLocale(langCode)
-  locale.value = langCode
   langOpen.value = false
 }
 

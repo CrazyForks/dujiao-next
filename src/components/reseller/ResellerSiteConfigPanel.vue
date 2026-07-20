@@ -353,7 +353,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, type Component } from 'vue'
+import { computed, defineAsyncComponent, onMounted, reactive, ref, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
     Compass,
@@ -388,7 +388,8 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import ResellerImageField from './ResellerImageField.vue'
 import ResellerLocaleTabs from './ResellerLocaleTabs.vue'
-import ResellerRichText from './ResellerRichText.vue'
+// TipTap 体积较大，异步加载，进入公告编辑时才拉取对应 chunk
+const ResellerRichText = defineAsyncComponent(() => import('./ResellerRichText.vue'))
 import { useAppStore } from '../../stores/app'
 import { type PageAlert } from '../../utils/alerts'
 import { processHtmlForDisplay } from '../../utils/content'

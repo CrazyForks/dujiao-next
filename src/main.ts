@@ -4,7 +4,7 @@ import { createHead } from '@unhead/vue/client'
 import './style.css'
 import App from './App.vue'
 import router, { warmupCommonRoutes } from './router'
-import i18n from './i18n'
+import i18n, { detectLocale, setI18nLocale, warmupLocaleMessages } from './i18n'
 import { useTelegramMiniAppStore } from './stores/telegramMiniApp'
 import { initTemplateOverride } from './templates/registry'
 
@@ -28,10 +28,15 @@ app.use(head)
 app.use(router)
 app.use(i18n)
 
-useTelegramMiniAppStore(pinia).init().then(() => {
+// 非默认语言的语言包为懒加载 chunk，挂载前并行加载，避免首屏文案闪现兜底语言
+Promise.all([
+  useTelegramMiniAppStore(pinia).init(),
+  setI18nLocale(detectLocale()),
+]).then(() => {
   app.mount('#app')
 })
 
 void router.isReady().then(() => {
     warmupCommonRoutes()
+    warmupLocaleMessages()
 })

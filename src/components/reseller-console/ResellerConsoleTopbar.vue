@@ -205,7 +205,7 @@ defineProps<{
   navGroups: Array<{ key: string; title: string; items: Array<{ to: string; label: string; icon: Component }> }>
 }>()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const route = useRoute()
 const appStore = useAppStore()
 const userAuthStore = useUserAuthStore()
@@ -243,7 +243,6 @@ const isActive = (path: string) => {
 
 const changeLanguage = (code: string) => {
   appStore.setLocale(code)
-  locale.value = code
   langOpen.value = false
 }
 

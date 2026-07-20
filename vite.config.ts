@@ -1,6 +1,8 @@
 import { fileURLToPath, URL } from 'node:url'
+import { dirname, resolve } from 'node:path'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 
 const cfAsyncModuleScriptPlugin = () => ({
   name: 'cfasync-module-script',
@@ -14,11 +16,23 @@ const cfAsyncModuleScriptPlugin = () => ({
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [vue(), cfAsyncModuleScriptPlugin()],
+  plugins: [
+    vue(),
+    // 语言包 JSON 构建期预编译为 AST，运行时无需 message compiler（vue-i18n 走 runtime-only 构建）
+    VueI18nPlugin({
+      include: [resolve(dirname(fileURLToPath(import.meta.url)), 'src/i18n/locales/**')],
+      dropMessageCompiler: true,
+    }),
+    cfAsyncModuleScriptPlugin(),
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
+  },
+  // vue-i18n 9.x 需显式开启 JIT，runtime 才能解释预编译的 AST 消息（v10+ 默认开启，届时可移除）
+  define: {
+    __INTLIFY_JIT_COMPILATION__: true,
   },
   esbuild: mode === 'production' ? { drop: ['console', 'debugger'] } : {},
   build: {

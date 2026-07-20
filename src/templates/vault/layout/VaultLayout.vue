@@ -143,7 +143,7 @@ import '@fontsource/nunito-sans/latin-600.css'
 import '@fontsource/nunito-sans/latin-700.css'
 import '../styles/vault.css'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const appStore = useAppStore()
 const cartStore = useCartStore()
 const userAuthStore = useUserAuthStore()
@@ -195,7 +195,6 @@ const languages = [
 
 const changeLanguage = (code: string) => {
   appStore.setLocale(code)
-  locale.value = code
   langOpen.value = false
 }
 
