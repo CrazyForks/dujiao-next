@@ -13,7 +13,8 @@ import (
 )
 
 // dujiaoPayAdapter 是 DujiaoPay 的 Provider + Webhooker 实现。
-// DujiaoPay 的 channel_type 使用文档里的 token_id，例如 tron-usdt / base-usdc。
+// transaction 模式的 channel_type 使用文档里的 token_id（tron-usdt / base-usdc 等）；
+// cashier 模式（延迟分配）channel_type 固定为 dujiaopay，付款人在托管收银台自选链/币。
 type dujiaoPayAdapter struct{}
 
 // NewDujiaoPayAdapter 实例化 DujiaoPay adapter。
@@ -35,7 +36,7 @@ func (a *dujiaoPayAdapter) parseConfig(raw models.JSON, channelType string) (*du
 		return nil, mapDujiaoPayError(err)
 	}
 	channelType = strings.ToLower(strings.TrimSpace(channelType))
-	if cfg.TokenID == "" && channelType != "" {
+	if cfg.TokenID == "" && channelType != "" && channelType != constants.PaymentProviderDujiaoPay {
 		cfg.TokenID = channelType
 	}
 	if cfg.Chain == "" && cfg.TokenID != "" {
@@ -47,26 +48,56 @@ func (a *dujiaoPayAdapter) parseConfig(raw models.JSON, channelType string) (*du
 	return cfg, nil
 }
 
+// checkDujiaoPayChannelTypeForMode 校验 channel_type 与 order_mode 的一致性：
+// cashier 渠道的 channel_type 固定为 dujiaopay，transaction 渠道为 token_id。
+func checkDujiaoPayChannelTypeForMode(cfg *dujiaopay.Config, channelType string) error {
+	if channelType == "" {
+		return nil
+	}
+	if cfg.OrderMode == constants.PaymentDujiaoPayOrderModeCashier {
+		if channelType != constants.PaymentProviderDujiaoPay {
+			return fmt.Errorf("%w: dujiaopay cashier channel_type %s", ErrUnsupportedChannel, channelType)
+		}
+		return nil
+	}
+	if channelType == constants.PaymentProviderDujiaoPay {
+		return fmt.Errorf("%w: dujiaopay transaction channel_type requires token_id", ErrUnsupportedChannel)
+	}
+	return nil
+}
+
 // ValidateConfig 验证 DujiaoPay channel.ConfigJSON。
 func (a *dujiaoPayAdapter) ValidateConfig(raw models.JSON, channelType string) error {
 	channelType = strings.ToLower(strings.TrimSpace(channelType))
-	if channelType != "" && !dujiaopay.IsSupportedTokenID(channelType) {
+	if channelType != "" && channelType != constants.PaymentProviderDujiaoPay && !dujiaopay.IsSupportedTokenID(channelType) {
 		return fmt.Errorf("%w: dujiaopay token_id %s", ErrUnsupportedChannel, channelType)
 	}
-	_, err := a.parseConfig(raw, channelType)
-	return err
+	cfg, err := a.parseConfig(raw, channelType)
+	if err != nil {
+		return err
+	}
+	return checkDujiaoPayChannelTypeForMode(cfg, channelType)
 }
 
 // CreatePayment 创建 DujiaoPay 收银台订单。
 func (a *dujiaoPayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
 	channelType := strings.ToLower(strings.TrimSpace(input.ChannelType))
-	if channelType != "" && !dujiaopay.IsSupportedTokenID(channelType) {
+	if channelType != "" && channelType != constants.PaymentProviderDujiaoPay && !dujiaopay.IsSupportedTokenID(channelType) {
 		return nil, fmt.Errorf("%w: dujiaopay token_id %s", ErrUnsupportedChannel, channelType)
 	}
 
 	cfg, err := a.parseConfig(raw, channelType)
 	if err != nil {
 		return nil, err
+	}
+	if err := checkDujiaoPayChannelTypeForMode(cfg, channelType); err != nil {
+		return nil, err
+	}
+	if cfg.OrderMode == constants.PaymentDujiaoPayOrderModeCashier {
+		// 延迟分配订单建单时没有固定收款地址/金额，无法渲染站内二维码，只支持跳转托管收银台。
+		if mode, ok := input.Extra["interaction_mode"].(string); ok && strings.ToLower(strings.TrimSpace(mode)) == constants.PaymentInteractionQR {
+			return nil, fmt.Errorf("%w: dujiaopay cashier order mode only supports redirect interaction_mode", ErrConfigInvalid)
+		}
 	}
 	if rawFiatCurrency(raw) == "" && strings.TrimSpace(input.Currency) != "" {
 		cfg.FiatCurrency = strings.ToUpper(strings.TrimSpace(input.Currency))

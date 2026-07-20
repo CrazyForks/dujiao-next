@@ -98,6 +98,12 @@ const (
 	PaymentEpusdtOrderModeCashier     = "cashier"
 )
 
+// DujiaoPay 订单接口模式常量
+const (
+	PaymentDujiaoPayOrderModeTransaction = "transaction"
+	PaymentDujiaoPayOrderModeCashier     = "cashier"
+)
+
 // 钱包交易类型常量
 const (
 	WalletTxnTypeRecharge    = "recharge"

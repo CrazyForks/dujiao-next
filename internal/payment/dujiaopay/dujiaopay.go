@@ -36,16 +36,20 @@ var (
 )
 
 // Config 是 DujiaoPay 支付通道配置。
+// OrderMode 为 transaction 时固定 chain/token_id 建单；cashier 时两者留空，
+// 由付款人在 DujiaoPay 托管收银台自选链/币（延迟分配），AllowedMethods 可限定可选范围。
 type Config struct {
-	APIBaseURL    string `json:"api_base_url"`
-	APIKeyID      string `json:"api_key_id"`
-	APISecret     string `json:"api_secret"`
-	WebhookSecret string `json:"webhook_secret"`
-	Chain         string `json:"chain"`
-	TokenID       string `json:"token_id"`
-	FiatCurrency  string `json:"fiat_currency"`
-	SuccessURL    string `json:"success_url"`
-	CancelURL     string `json:"cancel_url"`
+	APIBaseURL     string `json:"api_base_url"`
+	APIKeyID       string `json:"api_key_id"`
+	APISecret      string `json:"api_secret"`
+	WebhookSecret  string `json:"webhook_secret"`
+	OrderMode      string `json:"order_mode"` // 订单接口模式：transaction/cashier
+	Chain          string `json:"chain"`
+	TokenID        string `json:"token_id"`
+	AllowedMethods string `json:"allowed_methods"` // cashier 模式限定可选 token_id，逗号分隔；留空不限制
+	FiatCurrency   string `json:"fiat_currency"`
+	SuccessURL     string `json:"success_url"`
+	CancelURL      string `json:"cancel_url"`
 }
 
 // CreateInput 创建 DujiaoPay 订单输入。
@@ -130,11 +134,22 @@ func (c *Config) Normalize() {
 	c.APIKeyID = strings.TrimSpace(c.APIKeyID)
 	c.APISecret = strings.TrimSpace(c.APISecret)
 	c.WebhookSecret = strings.TrimSpace(c.WebhookSecret)
+	c.OrderMode = strings.ToLower(strings.TrimSpace(c.OrderMode))
 	c.Chain = strings.ToLower(strings.TrimSpace(c.Chain))
 	c.TokenID = strings.ToLower(strings.TrimSpace(c.TokenID))
+	c.AllowedMethods = strings.ToLower(strings.ReplaceAll(strings.TrimSpace(c.AllowedMethods), " ", ""))
 	c.FiatCurrency = strings.ToUpper(strings.TrimSpace(c.FiatCurrency))
 	c.SuccessURL = strings.TrimSpace(c.SuccessURL)
 	c.CancelURL = strings.TrimSpace(c.CancelURL)
+	if c.OrderMode == "" {
+		c.OrderMode = constants.PaymentDujiaoPayOrderModeTransaction
+	}
+	if c.OrderMode == constants.PaymentDujiaoPayOrderModeCashier {
+		c.Chain = ""
+		c.TokenID = ""
+	} else {
+		c.AllowedMethods = ""
+	}
 	if c.FiatCurrency == "" {
 		c.FiatCurrency = strings.ToUpper(constants.SiteCurrencyDefault)
 	}
@@ -157,13 +172,26 @@ func ValidateConfig(cfg *Config) error {
 		{"api_key_id", cfg.APIKeyID},
 		{"api_secret", cfg.APISecret},
 		{"webhook_secret", cfg.WebhookSecret},
-		{"token_id", cfg.TokenID},
 		{"fiat_currency", cfg.FiatCurrency},
 	}
 	for _, check := range checks {
 		if strings.TrimSpace(check.value) == "" {
 			return fmt.Errorf("%w: %s is required", ErrConfigInvalid, check.field)
 		}
+	}
+	if cfg.OrderMode != constants.PaymentDujiaoPayOrderModeTransaction && cfg.OrderMode != constants.PaymentDujiaoPayOrderModeCashier {
+		return fmt.Errorf("%w: order_mode is invalid", ErrConfigInvalid)
+	}
+	if cfg.OrderMode == constants.PaymentDujiaoPayOrderModeCashier {
+		for _, tokenID := range cfg.AllowedMethodList() {
+			if !IsSupportedTokenID(tokenID) {
+				return fmt.Errorf("%w: %s", ErrUnsupportedToken, tokenID)
+			}
+		}
+		return nil
+	}
+	if cfg.TokenID == "" {
+		return fmt.Errorf("%w: token_id is required", ErrConfigInvalid)
 	}
 	if !IsSupportedTokenID(cfg.TokenID) {
 		return fmt.Errorf("%w: %s", ErrUnsupportedToken, cfg.TokenID)
@@ -172,6 +200,27 @@ func ValidateConfig(cfg *Config) error {
 		return fmt.Errorf("%w: chain is required", ErrConfigInvalid)
 	}
 	return nil
+}
+
+// AllowedMethodList 返回去重后的 cashier 模式可选 token_id 列表（保持配置顺序）。
+func (c *Config) AllowedMethodList() []string {
+	if c == nil || strings.TrimSpace(c.AllowedMethods) == "" {
+		return nil
+	}
+	seen := make(map[string]struct{})
+	var list []string
+	for _, item := range strings.Split(c.AllowedMethods, ",") {
+		tokenID := strings.ToLower(strings.TrimSpace(item))
+		if tokenID == "" {
+			continue
+		}
+		if _, ok := seen[tokenID]; ok {
+			continue
+		}
+		seen[tokenID] = struct{}{}
+		list = append(list, tokenID)
+	}
+	return list
 }
 
 // ResolveChain 根据 DujiaoPay token_id 推导 chain。
@@ -260,11 +309,26 @@ func CreatePayment(ctx context.Context, cfg *Config, input CreateInput, options 
 	}
 
 	payload := map[string]interface{}{
-		"chain":             cfg.Chain,
-		"token_id":          cfg.TokenID,
 		"fiat_currency":     cfg.FiatCurrency,
 		"fiat_amount":       strings.TrimSpace(input.FiatAmount),
 		"merchant_order_id": strings.TrimSpace(input.MerchantOrderID),
+	}
+	if cfg.OrderMode == constants.PaymentDujiaoPayOrderModeCashier {
+		// 收银台模式（延迟分配）：不传 chain/token_id，付款人在托管收银台自选；
+		// allowed_methods 限定可选范围，留空表示不限制。
+		if methods := cfg.AllowedMethodList(); len(methods) > 0 {
+			allowed := make([]map[string]string, 0, len(methods))
+			for _, tokenID := range methods {
+				allowed = append(allowed, map[string]string{
+					"chain":    ResolveChain(tokenID),
+					"token_id": tokenID,
+				})
+			}
+			payload["allowed_methods"] = allowed
+		}
+	} else {
+		payload["chain"] = cfg.Chain
+		payload["token_id"] = cfg.TokenID
 	}
 	if successURL != "" {
 		payload["success_url"] = successURL
