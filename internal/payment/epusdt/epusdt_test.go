@@ -80,6 +80,28 @@ func TestValidateConfigPassesWhenAllRequiredFieldsPresent(t *testing.T) {
 	}
 }
 
+func TestValidateConfigCashierDoesNotRequireTokenAndNetwork(t *testing.T) {
+	cfg := &Config{
+		GatewayURL: "https://x", PID: "1", SecretKey: "s",
+		OrderMode: constants.PaymentEpusdtOrderModeCashier,
+		NotifyURL: "https://n", ReturnURL: "https://r",
+	}
+	if err := ValidateConfig(cfg); err != nil {
+		t.Fatalf("cashier config should not require token/network: %v", err)
+	}
+}
+
+func TestValidateConfigTransactionRequiresTokenAndNetwork(t *testing.T) {
+	base := Config{
+		GatewayURL: "https://x", PID: "1", SecretKey: "s",
+		OrderMode: constants.PaymentEpusdtOrderModeTransaction,
+		NotifyURL: "https://n", ReturnURL: "https://r",
+	}
+	if err := ValidateConfig(&base); err == nil {
+		t.Fatal("transaction config without token/network should be rejected")
+	}
+}
+
 func TestSignDeterministicAndOmitsEmptyAndSignature(t *testing.T) {
 	params := map[string]interface{}{
 		"pid":          "1000",
@@ -199,6 +221,42 @@ func TestCreatePayment_BuildsRequestAndConstructsPaymentURL(t *testing.T) {
 	}
 	if capturedBody["name"] != "VIP Plan" {
 		t.Fatalf("name mismatch: %v", capturedBody["name"])
+	}
+}
+
+func TestCreatePaymentCashierUsesCreateTransactionAndOmitsTokenNetwork(t *testing.T) {
+	var capturedBody map[string]interface{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/payments/gmpay/v1/order/create-transaction" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &capturedBody)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"trade_id":"CASHIER-1"}}`))
+	}))
+	defer srv.Close()
+
+	cfg := &Config{
+		GatewayURL: srv.URL, PID: "1000", SecretKey: "sk-test",
+		OrderMode: constants.PaymentEpusdtOrderModeCashier,
+		Currency:  "cny", NotifyURL: "https://example.com/notify", ReturnURL: "https://example.com/return",
+	}
+	result, err := CreatePayment(context.Background(), cfg, CreateInput{OrderNo: "ORD-1", Amount: "100"})
+	if err != nil {
+		t.Fatalf("CreatePayment cashier failed: %v", err)
+	}
+	if result.TradeID != "CASHIER-1" {
+		t.Fatalf("trade_id = %q, want CASHIER-1", result.TradeID)
+	}
+	if _, ok := capturedBody["token"]; ok {
+		t.Fatalf("cashier request must omit token: %v", capturedBody["token"])
+	}
+	if _, ok := capturedBody["network"]; ok {
+		t.Fatalf("cashier request must omit network: %v", capturedBody["network"])
+	}
+	if _, ok := capturedBody["signature"]; !ok {
+		t.Fatal("cashier request signature missing")
 	}
 }
 

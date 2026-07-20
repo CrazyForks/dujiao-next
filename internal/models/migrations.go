@@ -401,6 +401,86 @@ func ensurePaymentProviderBepusdtRenameMigration() error {
 	})
 }
 
+// ensurePaymentChannelBepusdtConfigMigration 把旧 BEpusdt channel_type 规范化为新配置结构。
+// 缺少显式 trade_type 时保持旧版实际行为，统一使用 usdt.trc20；未知 channel 类型保持原样，
+// 并把跳过的渠道 ID 写入 migration marker，避免静默改成错误的支付类型。
+func ensurePaymentChannelBepusdtConfigMigration() error {
+	if DB == nil {
+		return errors.New("database is not initialized")
+	}
+
+	var marker Setting
+	if err := DB.First(&marker, "key = ?", paymentChannelBepusdtConfigMigrationSettingKey).Error; err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+	} else if migrationDone(marker.ValueJSON) {
+		return nil
+	}
+
+	return DB.Transaction(func(tx *gorm.DB) error {
+		var channels []PaymentChannel
+		if err := tx.Where("provider_type = ?", "bepusdt").Find(&channels).Error; err != nil {
+			return err
+		}
+
+		legacyChannelTypes := map[string]struct{}{
+			"usdt":       {},
+			"usdt-trc20": {},
+			"usdc-trc20": {},
+			"trx":        {},
+		}
+		migratedCount := 0
+		skippedChannelIDs := make([]uint, 0)
+		for index := range channels {
+			channel := &channels[index]
+			config := channel.ConfigJSON
+			if config == nil {
+				config = JSON{}
+			}
+			channelType := strings.ToLower(strings.TrimSpace(channel.ChannelType))
+			tradeType, _ := config["trade_type"].(string)
+			tradeType = strings.TrimSpace(tradeType)
+			if tradeType == "" {
+				_, knownLegacyType := legacyChannelTypes[channelType]
+				if !knownLegacyType {
+					if channelType != "bepusdt" {
+						skippedChannelIDs = append(skippedChannelIDs, channel.ID)
+					}
+					continue
+				}
+				tradeType = "usdt.trc20"
+			}
+			if channelType == "bepusdt" {
+				continue
+			}
+
+			config["trade_type"] = tradeType
+			if orderMode, _ := config["order_mode"].(string); strings.TrimSpace(orderMode) == "" {
+				config["order_mode"] = "transaction"
+			}
+			if err := tx.Model(channel).Updates(map[string]interface{}{
+				"channel_type": "bepusdt",
+				"config_json":  config,
+			}).Error; err != nil {
+				return fmt.Errorf("migrate bepusdt channel %d: %w", channel.ID, err)
+			}
+			migratedCount++
+		}
+
+		marker := Setting{
+			Key: paymentChannelBepusdtConfigMigrationSettingKey,
+			ValueJSON: JSON{
+				"done":                true,
+				"migrated_at":         time.Now().UTC().Format(time.RFC3339),
+				"migrated_count":      migratedCount,
+				"skipped_channel_ids": skippedChannelIDs,
+			},
+		}
+		return tx.Save(&marker).Error
+	})
+}
+
 // ensureCategoryParentMigration 兼容历史单层分类数据，统一将空 parent_id 视为 0。
 func ensureCategoryParentMigration() error {
 	if DB == nil {

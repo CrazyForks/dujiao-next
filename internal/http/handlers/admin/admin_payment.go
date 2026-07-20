@@ -20,11 +20,12 @@ import (
 // AdminPaymentItem 支付记录返回
 type AdminPaymentItem struct {
 	models.Payment
-	ChannelName    string `json:"channel_name"`
-	OrderNo        string `json:"order_no,omitempty"`
-	RechargeNo     string `json:"recharge_no,omitempty"`
-	RechargeStatus string `json:"recharge_status,omitempty"`
-	RechargeUserID uint   `json:"recharge_user_id,omitempty"`
+	ChannelName        string `json:"channel_name"`
+	DisplayChannelType string `json:"display_channel_type,omitempty"`
+	OrderNo            string `json:"order_no,omitempty"`
+	RechargeNo         string `json:"recharge_no,omitempty"`
+	RechargeStatus     string `json:"recharge_status,omitempty"`
+	RechargeUserID     uint   `json:"recharge_user_id,omitempty"`
 }
 
 const adminPaymentExportBatchSize = 500
@@ -66,12 +67,13 @@ func (h *Handler) GetAdminPayments(c *gin.Context) {
 	for _, payment := range payments {
 		rechargeMeta := rechargeMetaMap[payment.ID]
 		items = append(items, AdminPaymentItem{
-			Payment:        payment,
-			ChannelName:    channelNameMap[payment.ChannelID],
-			OrderNo:        orderNoMap[payment.OrderID],
-			RechargeNo:     rechargeMeta.RechargeNo,
-			RechargeStatus: rechargeMeta.Status,
-			RechargeUserID: rechargeMeta.UserID,
+			Payment:            payment,
+			ChannelName:        channelNameMap[payment.ChannelID],
+			DisplayChannelType: paymentDisplayChannelType(payment),
+			OrderNo:            orderNoMap[payment.OrderID],
+			RechargeNo:         rechargeMeta.RechargeNo,
+			RechargeStatus:     rechargeMeta.Status,
+			RechargeUserID:     rechargeMeta.UserID,
 		})
 	}
 
@@ -108,6 +110,7 @@ func (h *Handler) ExportAdminPayments(c *gin.Context) {
 		"channel_id",
 		"provider_type",
 		"channel_type",
+		"display_channel_type",
 		"status",
 		"amount",
 		"currency",
@@ -182,13 +185,28 @@ func (h *Handler) GetAdminPayment(c *gin.Context) {
 	}
 	rechargeMeta := rechargeMetaMap[payment.ID]
 	response.Success(c, AdminPaymentItem{
-		Payment:        *payment,
-		ChannelName:    channelNameMap[payment.ChannelID],
-		OrderNo:        orderNoMap[payment.OrderID],
-		RechargeNo:     rechargeMeta.RechargeNo,
-		RechargeStatus: rechargeMeta.Status,
-		RechargeUserID: rechargeMeta.UserID,
+		Payment:            *payment,
+		ChannelName:        channelNameMap[payment.ChannelID],
+		DisplayChannelType: paymentDisplayChannelType(*payment),
+		OrderNo:            orderNoMap[payment.OrderID],
+		RechargeNo:         rechargeMeta.RechargeNo,
+		RechargeStatus:     rechargeMeta.Status,
+		RechargeUserID:     rechargeMeta.UserID,
 	})
+}
+
+// paymentDisplayChannelType 提取后台支付记录的展示用渠道类型。
+// CSV 导出的 lightweight 查询会把 provider_payload.display_channel_type 提取到 Payment.DisplayChannelType；
+// 后台列表和详情保留完整 ProviderPayload，因此需要从 payload 里兜底读取。
+func paymentDisplayChannelType(payment models.Payment) string {
+	if displayChannelType := strings.TrimSpace(payment.DisplayChannelType); displayChannelType != "" {
+		return displayChannelType
+	}
+	value, ok := payment.ProviderPayload["display_channel_type"]
+	if !ok || value == nil {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprint(value))
 }
 
 func formatTimeNullable(raw *time.Time) string {
@@ -247,6 +265,7 @@ func (h *Handler) writeAdminPaymentCSVRows(writer *csv.Writer, payments []models
 			strconv.FormatUint(uint64(payment.ChannelID), 10),
 			payment.ProviderType,
 			payment.ChannelType,
+			paymentDisplayChannelType(payment),
 			payment.Status,
 			payment.Amount.String(),
 			payment.Currency,

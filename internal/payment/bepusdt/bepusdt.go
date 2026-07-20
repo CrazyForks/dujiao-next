@@ -48,8 +48,10 @@ const (
 	bepusdtChannelTypeUSDTTRC20 = "usdt-trc20"
 	bepusdtChannelTypeUSDCTRC20 = "usdc-trc20"
 	bepusdtChannelTypeTRX       = "trx"
+	bepusdtChannelTypeCashier   = "bepusdt"
 
 	bepusdtCreateTransactionPath = "/api/v1/order/create-transaction"
+	bepusdtCreateOrderPath       = "/api/v1/order/create-order"
 	bepusdtStatusSuccessMsg      = "status is not success"
 )
 
@@ -58,6 +60,8 @@ type Config struct {
 	GatewayURL string `json:"gateway_url"` // 网关地址，如 https://usdt.example.com
 	AuthToken  string `json:"auth_token"`  // API Token
 	TradeType  string `json:"trade_type"`  // 交易类型，如 usdt.trc20
+	OrderMode  string `json:"order_mode"`  // 订单接口模式：transaction/cashier
+	Currencies string `json:"currencies"`  // 收银台模式限定交易币种，逗号分隔；留空不限制
 	Fiat       string `json:"fiat"`        // 法币类型，默认 CNY
 	NotifyURL  string `json:"notify_url"`  // 异步通知地址
 	ReturnURL  string `json:"return_url"`  // 同步跳转地址
@@ -143,6 +147,10 @@ func ValidateConfig(cfg *Config) error {
 	if strings.TrimSpace(cfg.ReturnURL) == "" {
 		return fmt.Errorf("%w: return_url is required", ErrConfigInvalid)
 	}
+	orderMode := strings.ToLower(strings.TrimSpace(cfg.OrderMode))
+	if orderMode != "" && orderMode != constants.PaymentBepusdtOrderModeTransaction && orderMode != constants.PaymentBepusdtOrderModeCashier {
+		return fmt.Errorf("%w: order_mode is invalid", ErrConfigInvalid)
+	}
 	return nil
 }
 
@@ -150,11 +158,21 @@ func (c *Config) Normalize() {
 	c.GatewayURL = strings.TrimRight(strings.TrimSpace(c.GatewayURL), "/")
 	c.AuthToken = strings.TrimSpace(c.AuthToken)
 	c.TradeType = strings.TrimSpace(c.TradeType)
+	c.OrderMode = strings.ToLower(strings.TrimSpace(c.OrderMode))
+	c.Currencies = strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(c.Currencies), " ", ""))
 	c.Fiat = strings.TrimSpace(c.Fiat)
 	c.NotifyURL = strings.TrimSpace(c.NotifyURL)
 	c.ReturnURL = strings.TrimSpace(c.ReturnURL)
-	if c.TradeType == "" {
+	if c.OrderMode == "" {
+		c.OrderMode = constants.PaymentBepusdtOrderModeTransaction
+	}
+	if c.OrderMode == constants.PaymentBepusdtOrderModeCashier {
+		c.TradeType = ""
+	} else if c.TradeType == "" {
 		c.TradeType = bepusdtTradeTypeUSDTTRC20
+	}
+	if c.OrderMode != constants.PaymentBepusdtOrderModeCashier {
+		c.Currencies = ""
 	}
 	if c.Fiat == "" {
 		c.Fiat = constants.SiteCurrencyDefault
@@ -239,6 +257,84 @@ func CreatePayment(ctx context.Context, cfg *Config, input CreateInput) (*Create
 		Token:        resp.Data.Token,
 		PaymentURL:   resp.Data.PaymentURL,
 		Raw:          raw,
+	}, nil
+}
+
+// CreateCashierOrder 创建 BEpusdt 收银台订单。
+func CreateCashierOrder(ctx context.Context, cfg *Config, input CreateInput) (*CreateResult, error) {
+	if cfg == nil {
+		return nil, ErrConfigInvalid
+	}
+	if input.OrderNo == "" || input.Amount == "" {
+		return nil, ErrConfigInvalid
+	}
+
+	notifyURL := input.NotifyURL
+	if notifyURL == "" {
+		notifyURL = cfg.NotifyURL
+	}
+	returnURL := input.ReturnURL
+	if returnURL == "" {
+		returnURL = cfg.ReturnURL
+	}
+
+	amountFloat, err := strconv.ParseFloat(input.Amount, 64)
+	if err != nil {
+		return nil, fmt.Errorf("%w: invalid amount", ErrConfigInvalid)
+	}
+
+	params := map[string]interface{}{
+		"order_id":     input.OrderNo,
+		"amount":       amountFloat,
+		"notify_url":   notifyURL,
+		"redirect_url": returnURL,
+		"fiat":         cfg.Fiat,
+	}
+	if input.Name != "" {
+		params["name"] = input.Name
+	}
+	if cfg.Currencies != "" {
+		params["currencies"] = cfg.Currencies
+	}
+
+	signature := Sign(params, cfg.AuthToken)
+	params["signature"] = signature
+
+	endpoint := cfg.GatewayURL + bepusdtCreateOrderPath
+	respBytes, err := postJSON(ctx, endpoint, params)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrRequestFailed, err)
+	}
+
+	var resp struct {
+		StatusCode int    `json:"status_code"`
+		Message    string `json:"message"`
+		Data       struct {
+			Fiat           string `json:"fiat"`
+			TradeID        string `json:"trade_id"`
+			OrderID        string `json:"order_id"`
+			Amount         string `json:"amount"`
+			ExpirationTime int    `json:"expiration_time"`
+			PaymentURL     string `json:"payment_url"`
+			Reselect       bool   `json:"reselect"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(respBytes, &resp); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrResponseInvalid, err)
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("%w: %s", ErrResponseInvalid, resp.Message)
+	}
+
+	var raw map[string]interface{}
+	_ = json.Unmarshal(respBytes, &raw)
+
+	return &CreateResult{
+		TradeID:    resp.Data.TradeID,
+		OrderID:    resp.Data.OrderID,
+		Amount:     resp.Data.Amount,
+		PaymentURL: resp.Data.PaymentURL,
+		Raw:        raw,
 	}, nil
 }
 
@@ -357,11 +453,6 @@ func postJSON(ctx context.Context, endpoint string, params map[string]interface{
 	}
 
 	return io.ReadAll(resp.Body)
-}
-
-// IsSupportedChannelType 判断是否支持的渠道类型
-func IsSupportedChannelType(channelType string) bool {
-	return ResolveTradeType(channelType) != ""
 }
 
 // ResolveTradeType 根据 channel_type 解析 trade_type

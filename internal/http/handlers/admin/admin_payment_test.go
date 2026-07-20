@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -327,6 +328,11 @@ func TestGetAdminPaymentsFiltersByUserID(t *testing.T) {
 func TestExportAdminPaymentsByUserID(t *testing.T) {
 	h, db := setupAdminPaymentHandlerTest(t)
 	fixture := seedAdminPaymentData(t, db)
+	if err := db.Model(&models.Payment{}).Where("id = ?", fixture.OrderPaymentID).Update(
+		"provider_payload", models.JSON{"display_channel_type": "usdt.arbitrum"},
+	).Error; err != nil {
+		t.Fatalf("set display channel type failed: %v", err)
+	}
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -350,14 +356,18 @@ func TestExportAdminPaymentsByUserID(t *testing.T) {
 		t.Fatalf("csv rows want 3 got %d", len(records))
 	}
 	header := strings.Join(records[0], ",")
-	if header != "id,order_id,recharge_no,recharge_status,recharge_user_id,channel_id,provider_type,channel_type,status,amount,currency,created_at,paid_at,expired_at,provider_ref" {
+	if header != "id,order_id,recharge_no,recharge_status,recharge_user_id,channel_id,provider_type,channel_type,display_channel_type,status,amount,currency,created_at,paid_at,expired_at,provider_ref" {
 		t.Fatalf("csv header mismatch, got %s", header)
 	}
 
 	foundRechargeNo := false
+	foundDisplayChannelType := false
 	for _, row := range records[1:] {
-		if len(row) < 3 {
+		if len(row) < 9 {
 			t.Fatalf("csv row columns too short: %+v", row)
+		}
+		if row[0] == strconv.FormatUint(uint64(fixture.OrderPaymentID), 10) && row[8] == "usdt.arbitrum" {
+			foundDisplayChannelType = true
 		}
 		if row[2] == fixture.RechargeNoUser1 {
 			foundRechargeNo = true
@@ -368,6 +378,9 @@ func TestExportAdminPaymentsByUserID(t *testing.T) {
 	}
 	if !foundRechargeNo {
 		t.Fatalf("csv missing user1 recharge row")
+	}
+	if !foundDisplayChannelType {
+		t.Fatalf("csv missing order payment display_channel_type")
 	}
 }
 

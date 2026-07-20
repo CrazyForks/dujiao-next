@@ -86,6 +86,18 @@ const (
 	PaymentInteractionBalance  = "balance"
 )
 
+// BEpusdt 订单接口模式常量
+const (
+	PaymentBepusdtOrderModeTransaction = "transaction"
+	PaymentBepusdtOrderModeCashier     = "cashier"
+)
+
+// Epusdt 订单接口模式常量
+const (
+	PaymentEpusdtOrderModeTransaction = "transaction"
+	PaymentEpusdtOrderModeCashier     = "cashier"
+)
+
 // 钱包交易类型常量
 const (
 	WalletTxnTypeRecharge    = "recharge"

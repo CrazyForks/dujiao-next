@@ -10,6 +10,7 @@ func TestParseConfigAndNormalizeDefaults(t *testing.T) {
 	cfg, err := ParseConfig(map[string]interface{}{
 		"gateway_url": " https://pay.example.com/ ",
 		"auth_token":  " token ",
+		"currencies":  "USDT,USDC",
 		"notify_url":  " https://example.com/notify ",
 		"return_url":  " https://example.com/return ",
 	})
@@ -24,6 +25,30 @@ func TestParseConfigAndNormalizeDefaults(t *testing.T) {
 	}
 	if cfg.GatewayURL != "https://pay.example.com" {
 		t.Fatalf("unexpected normalized gateway url: %s", cfg.GatewayURL)
+	}
+	if cfg.Currencies != "" {
+		t.Fatalf("transaction mode currencies should be empty, got %q", cfg.Currencies)
+	}
+}
+
+func TestParseConfig_CashierModeKeepsTradeTypeEmpty(t *testing.T) {
+	cfg, err := ParseConfig(map[string]interface{}{
+		"gateway_url": " https://pay.example.com/ ",
+		"auth_token":  " token ",
+		"order_mode":  constants.PaymentBepusdtOrderModeCashier,
+		"trade_type":  " usdt.trc20 ",
+		"currencies":  " usdt, usdc ",
+		"notify_url":  " https://example.com/notify ",
+		"return_url":  " https://example.com/return ",
+	})
+	if err != nil {
+		t.Fatalf("parse config failed: %v", err)
+	}
+	if cfg.TradeType != "" {
+		t.Fatalf("cashier mode trade type should stay empty, got %s", cfg.TradeType)
+	}
+	if cfg.Currencies != "USDT,USDC" {
+		t.Fatalf("cashier currencies = %q, want USDT,USDC", cfg.Currencies)
 	}
 }
 

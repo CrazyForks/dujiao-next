@@ -108,6 +108,166 @@ func TestBepusdtAdapter_CreatePayment_RedirectModeKeepsCashierURL(t *testing.T) 
 	}
 }
 
+func TestBepusdtAdapter_CreatePayment_ProviderChannelUsesConfiguredTradeType(t *testing.T) {
+	a := NewBepusdtAdapter()
+	server := newBepusdtCreatePaymentServer(t, "usdc.trc20")
+	defer server.Close()
+
+	cfg := validBepusdtConfig(server.URL)
+	cfg["trade_type"] = "usdc.trc20"
+	result, err := a.CreatePayment(context.Background(), cfg, CreateInput{
+		OrderNo:     "ORDER-PROVIDER-CHANNEL-1",
+		Subject:     "测试商品",
+		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
+		ChannelType: constants.PaymentProviderBepusdt,
+		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
+	})
+	if err != nil {
+		t.Fatalf("CreatePayment() failed: %v", err)
+	}
+	data := result.Payload["data"].(map[string]interface{})
+	if data["trade_type"] != "usdc.trc20" {
+		t.Fatalf("trade_type = %v, want usdc.trc20", data["trade_type"])
+	}
+	if result.DisplayChannelType != "usdc.trc20" {
+		t.Fatalf("DisplayChannelType = %q, want usdc.trc20", result.DisplayChannelType)
+	}
+}
+
+func TestBepusdtAdapter_CreatePayment_MissingTradeTypeUsesLegacyDefault(t *testing.T) {
+	a := NewBepusdtAdapter()
+	server := newBepusdtCreatePaymentServer(t, "usdt.trc20")
+	defer server.Close()
+
+	cfg := validBepusdtConfig(server.URL)
+	delete(cfg, "trade_type")
+	result, err := a.CreatePayment(context.Background(), cfg, CreateInput{
+		OrderNo:     "ORDER-LEGACY-CHANNEL-1",
+		Subject:     "测试商品",
+		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
+		ChannelType: constants.PaymentChannelTypeTrx,
+		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
+	})
+	if err != nil {
+		t.Fatalf("CreatePayment() failed: %v", err)
+	}
+	data := result.Payload["data"].(map[string]interface{})
+	if data["trade_type"] != "usdt.trc20" {
+		t.Fatalf("trade_type = %v, want usdt.trc20", data["trade_type"])
+	}
+	if result.DisplayChannelType != "usdt.trc20" {
+		t.Fatalf("DisplayChannelType = %q, want usdt.trc20", result.DisplayChannelType)
+	}
+}
+
+func TestBepusdtAdapter_ValidateConfig_ProviderChannelUsesDefaultTradeType(t *testing.T) {
+	a := NewBepusdtAdapter()
+	cfg := validBepusdtConfig("https://bepusdt.example")
+	delete(cfg, "trade_type")
+
+	if err := a.ValidateConfig(cfg, constants.PaymentProviderBepusdt); err != nil {
+		t.Fatalf("ValidateConfig() failed: %v", err)
+	}
+}
+
+func TestBepusdtAdapter_CreatePayment_CashierModeUsesCreateOrder(t *testing.T) {
+	a := NewBepusdtAdapter()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/order/create-order" {
+			t.Fatalf("path = %s, want /api/v1/order/create-order", r.URL.Path)
+		}
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode request failed: %v", err)
+		}
+		if _, ok := payload["trade_type"]; ok {
+			t.Fatalf("trade_type should not be sent for cashier order mode")
+		}
+		if payload["currencies"] != "USDT,USDC" {
+			t.Fatalf("currencies = %v, want USDT,USDC", payload["currencies"])
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"status_code": 200,
+			"message": "success",
+			"data": {
+				"fiat": "CNY",
+				"trade_id": "BEP-CASHIER-1",
+				"order_id": "ORDER-CASHIER-1",
+				"amount": "28.88",
+				"expiration_time": 1200,
+				"status": 1,
+				"payment_url": "https://bepusdt.example/pay/cashier/BEP-CASHIER-1",
+				"reselect": true
+			}
+		}`))
+	}))
+	defer server.Close()
+
+	cfg := validBepusdtConfig(server.URL)
+	cfg["order_mode"] = constants.PaymentBepusdtOrderModeCashier
+	cfg["trade_type"] = "usdt.trc20"
+	cfg["currencies"] = " usdt, usdc "
+	result, err := a.CreatePayment(context.Background(), cfg, CreateInput{
+		OrderNo:     "ORDER-CASHIER-1",
+		Subject:     "测试商品",
+		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
+		ChannelType: constants.PaymentProviderBepusdt,
+		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
+	})
+	if err != nil {
+		t.Fatalf("CreatePayment() failed: %v", err)
+	}
+
+	wantURL := "https://bepusdt.example/pay/cashier/BEP-CASHIER-1"
+	if result.RedirectURL != wantURL {
+		t.Fatalf("RedirectURL = %q, want %q", result.RedirectURL, wantURL)
+	}
+	data := result.Payload["data"].(map[string]interface{})
+	if data["order_mode"] != constants.PaymentBepusdtOrderModeCashier {
+		t.Fatalf("order_mode = %v, want cashier", data["order_mode"])
+	}
+	if _, ok := data["trade_type"]; ok {
+		t.Fatalf("trade_type should be empty for cashier order mode")
+	}
+	if _, ok := data["token"]; ok {
+		t.Fatalf("token should be empty for cashier order mode")
+	}
+	if result.DisplayChannelType != "" {
+		t.Fatalf("DisplayChannelType = %q, want empty for cashier order mode", result.DisplayChannelType)
+	}
+}
+
+func TestBepusdtAdapter_CreatePayment_CashierModeRejectsQR(t *testing.T) {
+	a := NewBepusdtAdapter()
+	cfg := validBepusdtConfig("https://bepusdt.example")
+	cfg["order_mode"] = constants.PaymentBepusdtOrderModeCashier
+
+	_, err := a.CreatePayment(context.Background(), cfg, CreateInput{
+		OrderNo:     "ORDER-CASHIER-QR",
+		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
+		ChannelType: constants.PaymentProviderBepusdt,
+		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionQR},
+	})
+	if !errors.Is(err, ErrConfigInvalid) {
+		t.Fatalf("expected ErrConfigInvalid, got %v", err)
+	}
+}
+
+func TestBepusdtAdapter_ValidateConfig_CashierModeRequiresCashierChannel(t *testing.T) {
+	a := NewBepusdtAdapter()
+	cfg := validBepusdtConfig("https://bepusdt.example")
+	cfg["order_mode"] = constants.PaymentBepusdtOrderModeCashier
+
+	if err := a.ValidateConfig(cfg, constants.PaymentProviderBepusdt); err != nil {
+		t.Fatalf("ValidateConfig() cashier channel failed: %v", err)
+	}
+	if err := a.ValidateConfig(cfg, constants.PaymentChannelTypeUsdtTrc20); !errors.Is(err, ErrUnsupportedChannel) {
+		t.Fatalf("expected ErrUnsupportedChannel for transaction channel in cashier mode, got %v", err)
+	}
+}
+
 func TestBepusdtAdapter_MapBepusdtError(t *testing.T) {
 	cases := []struct {
 		name string
@@ -125,6 +285,36 @@ func TestBepusdtAdapter_MapBepusdtError(t *testing.T) {
 			got := mapBepusdtError(tc.in)
 			if !errors.Is(got, tc.want) {
 				t.Fatalf("mapBepusdtError(%v) errors.Is %v = false, want true", tc.in, tc.want)
+			}
+		})
+	}
+}
+
+func TestResolveBepusdtTradeLabels(t *testing.T) {
+	tests := []struct {
+		tradeType string
+		chain     string
+		tokenID   string
+	}{
+		{tradeType: "usdt.trc20", chain: "tron", tokenID: "tron-usdt"},
+		{tradeType: "usdc.erc20", chain: "ethereum", tokenID: "ethereum-usdc"},
+		{tradeType: "usdt.bep20", chain: "bsc", tokenID: "bsc-usdt"},
+		{tradeType: "tron.trx", chain: "tron", tokenID: "tron-trx"},
+		{tradeType: "ethereum.eth", chain: "ethereum", tokenID: "ethereum-eth"},
+		{tradeType: "eth.eth", chain: "ethereum", tokenID: "ethereum-eth"},
+		{tradeType: "bsc.bnb", chain: "bsc", tokenID: "bsc-bnb"},
+		{tradeType: "ton.gram", chain: "ton", tokenID: "ton-gram"},
+		{tradeType: "solana.sol", chain: "solana", tokenID: "solana-sol"},
+		{tradeType: "aptos.apt", chain: "aptos", tokenID: "aptos-apt"},
+		{tradeType: "usdt.arbitrum", chain: "arbitrum", tokenID: "arbitrum-usdt"},
+		{tradeType: "usdc.solana", chain: "solana", tokenID: "solana-usdc"},
+		{tradeType: "usdt.x-layer", chain: "x-layer", tokenID: "x-layer-usdt"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.tradeType, func(t *testing.T) {
+			chain, tokenID := resolveBepusdtTradeLabels(tc.tradeType)
+			if chain != tc.chain || tokenID != tc.tokenID {
+				t.Fatalf("resolveBepusdtTradeLabels(%q) = (%q, %q), want (%q, %q)", tc.tradeType, chain, tokenID, tc.chain, tc.tokenID)
 			}
 		})
 	}

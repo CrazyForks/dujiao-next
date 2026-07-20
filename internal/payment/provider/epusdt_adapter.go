@@ -28,7 +28,8 @@ var (
 	_ CallbackVerifier = (*epusdtAdapter)(nil)
 )
 
-// Type 返回 provider 标识。epusdt 是单 channel type provider，返回值中 channelType 部分为空。
+// Type 返回 provider 标识。epusdt 的 channel_type 统一为 epusdt，实际币种和网络保存在配置中；
+// 注册表使用空 channelType 通配，以兼容历史 usdt-trc20、trx 等渠道记录。
 func (a *epusdtAdapter) Type() string {
 	return constants.PaymentProviderEpusdt + ":"
 }
@@ -51,7 +52,7 @@ func (a *epusdtAdapter) ValidateConfig(raw models.JSON, _ string) error {
 	return err
 }
 
-// CreatePayment 创建支付。epusdt 单 channel type，不需要 IsSupportedChannelType 校验。
+// CreatePayment 创建支付。epusdt 的实际币种和网络由配置决定，不依赖 channel_type。
 func (a *epusdtAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
@@ -77,11 +78,30 @@ func (a *epusdtAdapter) CreatePayment(ctx context.Context, raw models.JSON, inpu
 	}
 
 	return &CreateResult{
-		ProviderRef: result.TradeID,
-		RedirectURL: result.PaymentURL,
-		QRCodeURL:   result.PaymentURL, // epusdt 是 USDT 网关，PaymentURL 同时用于跳转和 QR 展示
-		Payload:     models.JSON(result.Raw),
+		ProviderRef:        result.TradeID,
+		RedirectURL:        result.PaymentURL,
+		QRCodeURL:          result.PaymentURL, // epusdt 是 USDT 网关，PaymentURL 同时用于跳转和 QR 展示
+		Payload:            models.JSON(result.Raw),
+		DisplayChannelType: epusdtDisplayChannelType(cfg),
 	}, nil
+}
+
+// epusdtDisplayChannelType 返回 epusdt 支付记录的展示用渠道类型。
+// epusdt 是单 provider 多币种/网络配置，payment.channel_type 可能只保留渠道兼容值；
+// 这里按 config_json.token/network 推导更准确的展示值，写入 display_channel_type。
+func epusdtDisplayChannelType(cfg *epusdt.Config) string {
+	if cfg == nil {
+		return ""
+	}
+	if cfg.OrderMode == constants.PaymentEpusdtOrderModeCashier {
+		return ""
+	}
+	token := strings.ToLower(strings.TrimSpace(cfg.Token))
+	network := strings.ToLower(strings.TrimSpace(cfg.Network))
+	if token == "" || network == "" {
+		return ""
+	}
+	return token + "." + network
 }
 
 // VerifyCallback 实现 CallbackVerifier。epusdt 用 JSON POST body，form 参数忽略。

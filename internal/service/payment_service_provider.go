@@ -103,6 +103,17 @@ func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *m
 	if result.Payload != nil {
 		payment.ProviderPayload = result.Payload
 	}
+	// DisplayChannelType 是 adapter 返回的“展示用渠道类型”。
+	// 例如 BEpusdt 新格式的 payment.channel_type 固定为 bepusdt，
+	// 但交易模式实际展示应使用 config_json.trade_type（如 usdt.arbitrum）。
+	// 这里统一写入 provider_payload.display_channel_type，供通知、后台列表等展示层读取，
+	// 避免修改 payment.channel_type 的数据库语义。
+	if displayChannelType := strings.TrimSpace(result.DisplayChannelType); displayChannelType != "" {
+		if payment.ProviderPayload == nil {
+			payment.ProviderPayload = models.JSON{}
+		}
+		payment.ProviderPayload["display_channel_type"] = displayChannelType
+	}
 	// P1.2c: 用 wrapper 转换后的 amount/currency 更新 payment 记录，
 	// 保持 DB 状态与实际发给网关的金额/币种一致（P1.2c Task 1 把 conversion 下沉到 wrapper）。
 	if strings.TrimSpace(result.CurrencySent) != "" {
@@ -168,6 +179,12 @@ func (s *PaymentService) ValidateChannel(channel *models.PaymentChannel) error {
 		mode := strings.ToLower(strings.TrimSpace(channel.InteractionMode))
 		if mode != constants.PaymentInteractionQR && mode != constants.PaymentInteractionRedirect {
 			return ErrPaymentChannelConfigInvalid
+		}
+		if providerType == constants.PaymentProviderBepusdt && mode == constants.PaymentInteractionQR {
+			orderMode := strings.ToLower(strings.TrimSpace(fmt.Sprint(channel.ConfigJSON["order_mode"])))
+			if orderMode == constants.PaymentBepusdtOrderModeCashier {
+				return ErrPaymentChannelConfigInvalid
+			}
 		}
 	}
 

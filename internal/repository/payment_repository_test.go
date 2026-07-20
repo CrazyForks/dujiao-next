@@ -237,7 +237,11 @@ func TestPaymentRepositoryListAdminLightweightSkipCount(t *testing.T) {
 		t.Fatalf("create order failed: %v", err)
 	}
 
-	payload := models.JSON{"foo": "bar", "nested": map[string]interface{}{"key": "value"}}
+	payload := models.JSON{
+		"display_channel_type": "usdt.arbitrum",
+		"foo":                  "bar",
+		"nested":               map[string]interface{}{"key": "value"},
+	}
 	payment := models.Payment{
 		OrderID:         order.ID,
 		ChannelID:       1,
@@ -281,5 +285,8 @@ func TestPaymentRepositoryListAdminLightweightSkipCount(t *testing.T) {
 	}
 	if len(rows[0].ProviderPayload) != 0 {
 		t.Fatalf("provider payload should be empty in lightweight query, got %+v", rows[0].ProviderPayload)
+	}
+	if rows[0].DisplayChannelType != "usdt.arbitrum" {
+		t.Fatalf("display channel type want usdt.arbitrum got %s", rows[0].DisplayChannelType)
 	}
 }

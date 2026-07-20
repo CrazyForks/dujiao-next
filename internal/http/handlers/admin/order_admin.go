@@ -240,8 +240,9 @@ func (h *Handler) AdminGetOrder(c *gin.Context) {
 	paymentItems := make([]AdminPaymentItem, 0, len(payments))
 	for _, payment := range payments {
 		paymentItems = append(paymentItems, AdminPaymentItem{
-			Payment:     payment,
-			ChannelName: channelNameMap[payment.ChannelID],
+			Payment:            payment,
+			ChannelName:        channelNameMap[payment.ChannelID],
+			DisplayChannelType: paymentDisplayChannelType(payment),
 		})
 	}
 

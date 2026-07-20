@@ -15,8 +15,8 @@ import (
 )
 
 // bepusdtAdapter 是 bepusdt 网关的 Provider + CallbackVerifier 实现。
-// 与 epusdt 相似，但多 channel type 支持（usdt-trc20 / usdc-trc20 / trx 等），
-// 需要根据 channelType 动态设置 cfg.TradeType。
+// 与 epusdt 相似，但需要兼容旧 channel type（usdt-trc20 / usdc-trc20 / trx 等）；
+// transaction 模式的交易类型由 trade_type 配置决定，缺省为 usdt.trc20，cashier 模式走 BEpusdt 收银台。
 // callback 是同步 JSON POST（不是 form），所以**不**实现 Capturer 和 Webhooker。
 type bepusdtAdapter struct{}
 
@@ -35,16 +35,11 @@ func (a *bepusdtAdapter) Type() string {
 }
 
 // parseConfig 解析并验证 bepusdt Config。
-// 关键：如果 cfg.TradeType 未显式配置且 channelType 非空，
-// 则从 channelType 自动 resolve trade_type（沿用 payment_service_provider.go 的逻辑）。
-func (a *bepusdtAdapter) parseConfig(raw models.JSON, channelType string) (*bepusdt.Config, error) {
+// transaction 模式未配置 trade_type 时，由 Config.Normalize 保持旧行为并使用 usdt.trc20。
+func (a *bepusdtAdapter) parseConfig(raw models.JSON) (*bepusdt.Config, error) {
 	cfg, err := bepusdt.ParseConfig(raw)
 	if err != nil {
 		return nil, mapBepusdtError(err)
-	}
-	// 如果配置中没有指定 trade_type，根据 channel_type 自动设置
-	if strings.TrimSpace(cfg.TradeType) == "" && channelType != "" {
-		cfg.TradeType = bepusdt.ResolveTradeType(channelType)
 	}
 	if err := bepusdt.ValidateConfig(cfg); err != nil {
 		return nil, mapBepusdtError(err)
@@ -53,26 +48,56 @@ func (a *bepusdtAdapter) parseConfig(raw models.JSON, channelType string) (*bepu
 }
 
 // ValidateConfig 验证 channel.ConfigJSON。
-// 入口先校验 channelType（如果非空）是否被 bepusdt 支持，
-// 然后调用 parseConfig 验证配置完整性。
+// 新格式 channel_type 固定为 bepusdt；旧数据继续允许 usdt-trc20 / usdc-trc20 / trx 等 legacy channel_type。
 func (a *bepusdtAdapter) ValidateConfig(raw models.JSON, channelType string) error {
-	if channelType != "" && !bepusdt.IsSupportedChannelType(channelType) {
+	normalizedChannelType := strings.ToLower(strings.TrimSpace(channelType))
+	if normalizedChannelType != "" && normalizedChannelType != constants.PaymentProviderBepusdt && !isLegacyBepusdtChannelType(normalizedChannelType) {
 		return fmt.Errorf("%w: bepusdt channel_type %s", ErrUnsupportedChannel, channelType)
 	}
-	_, err := a.parseConfig(raw, channelType)
-	return err
+	cfg, err := a.parseConfig(raw)
+	if err != nil {
+		return err
+	}
+	if normalizedChannelType == "" {
+		return nil
+	}
+	if cfg.OrderMode == constants.PaymentBepusdtOrderModeCashier {
+		if normalizedChannelType != constants.PaymentProviderBepusdt {
+			return fmt.Errorf("%w: bepusdt cashier channel_type %s", ErrUnsupportedChannel, channelType)
+		}
+		return nil
+	}
+	if normalizedChannelType == constants.PaymentProviderBepusdt {
+		if strings.TrimSpace(cfg.TradeType) == "" {
+			return fmt.Errorf("%w: bepusdt trade_type is required", ErrConfigInvalid)
+		}
+		return nil
+	}
+	if !isLegacyBepusdtChannelType(normalizedChannelType) {
+		return fmt.Errorf("%w: bepusdt channel_type %s", ErrUnsupportedChannel, channelType)
+	}
+	return nil
 }
 
 // CreatePayment 创建支付。bepusdt 多 channel type，需要先校验 channelType。
 func (a *bepusdtAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
-	// 先校验 channelType
-	if input.ChannelType != "" && !bepusdt.IsSupportedChannelType(input.ChannelType) {
-		return nil, fmt.Errorf("%w: bepusdt channel_type %s", ErrUnsupportedChannel, input.ChannelType)
-	}
-
-	cfg, err := a.parseConfig(raw, input.ChannelType)
+	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
+	}
+	channelType := strings.ToLower(strings.TrimSpace(input.ChannelType))
+	if cfg.OrderMode == constants.PaymentBepusdtOrderModeCashier {
+		if channelType != "" && channelType != constants.PaymentProviderBepusdt {
+			return nil, fmt.Errorf("%w: bepusdt cashier channel_type %s", ErrUnsupportedChannel, input.ChannelType)
+		}
+	} else if channelType != "" {
+		if channelType == constants.PaymentProviderBepusdt {
+			if strings.TrimSpace(cfg.TradeType) == "" {
+				return nil, fmt.Errorf("%w: bepusdt trade_type is required", ErrConfigInvalid)
+			}
+		} else if !isLegacyBepusdtChannelType(channelType) {
+			return nil, fmt.Errorf("%w: bepusdt channel_type %s", ErrUnsupportedChannel, input.ChannelType)
+		}
 	}
 
 	returnURL := strings.TrimSpace(input.ReturnURL)
@@ -88,13 +113,22 @@ func (a *bepusdtAdapter) CreatePayment(ctx context.Context, raw models.JSON, inp
 		NotifyURL: input.NotifyURL,
 		ReturnURL: returnURL,
 	}
-	result, err := bepusdt.CreatePayment(ctx, cfg, native)
+	mode, _ := input.Extra["interaction_mode"].(string)
+	mode = strings.ToLower(strings.TrimSpace(mode))
+
+	var result *bepusdt.CreateResult
+	if cfg.OrderMode == constants.PaymentBepusdtOrderModeCashier {
+		if mode == constants.PaymentInteractionQR {
+			return nil, fmt.Errorf("%w: bepusdt cashier order mode only supports redirect interaction_mode", ErrConfigInvalid)
+		}
+		result, err = bepusdt.CreateCashierOrder(ctx, cfg, native)
+	} else {
+		result, err = bepusdt.CreatePayment(ctx, cfg, native)
+	}
 	if err != nil {
 		return nil, mapBepusdtError(err)
 	}
 
-	mode, _ := input.Extra["interaction_mode"].(string)
-	mode = strings.ToLower(strings.TrimSpace(mode))
 	redirectURL := strings.TrimSpace(result.PaymentURL)
 	qrCodeURL := redirectURL
 	switch mode {
@@ -110,14 +144,25 @@ func (a *bepusdtAdapter) CreatePayment(ctx context.Context, raw models.JSON, inp
 	}
 
 	return &CreateResult{
-		ProviderRef: result.TradeID,
-		RedirectURL: redirectURL,
-		QRCodeURL:   qrCodeURL,
-		Payload:     buildBepusdtCreatePayload(result, cfg.TradeType),
+		ProviderRef:        result.TradeID,
+		RedirectURL:        redirectURL,
+		QRCodeURL:          qrCodeURL,
+		Payload:            buildBepusdtCreatePayload(result, cfg.TradeType, cfg.OrderMode),
+		DisplayChannelType: bepusdtDisplayChannelType(cfg),
 	}, nil
 }
 
-func buildBepusdtCreatePayload(result *bepusdt.CreateResult, tradeType string) models.JSON {
+// bepusdtDisplayChannelType 返回 BEpusdt 支付记录的展示用渠道类型。
+// 新格式下 payment.channel_type 固定保存为 bepusdt；交易模式需要展示真实 trade_type，
+// 收银台模式没有固定币种，保持空值并回退展示 bepusdt。
+func bepusdtDisplayChannelType(cfg *bepusdt.Config) string {
+	if cfg == nil || cfg.OrderMode == constants.PaymentBepusdtOrderModeCashier {
+		return ""
+	}
+	return strings.TrimSpace(cfg.TradeType)
+}
+
+func buildBepusdtCreatePayload(result *bepusdt.CreateResult, tradeType string, orderMode string) models.JSON {
 	payload := models.JSON{}
 	if result == nil {
 		return payload
@@ -129,6 +174,7 @@ func buildBepusdtCreatePayload(result *bepusdt.CreateResult, tradeType string) m
 	}
 
 	data := ensureBepusdtPayloadData(payload)
+	setBepusdtPayloadString(data, "order_mode", orderMode)
 	setBepusdtPayloadString(data, "trade_type", tradeType)
 	setBepusdtPayloadString(data, "token", result.Token)
 	setBepusdtPayloadString(data, "actual_amount", result.ActualAmount)
@@ -138,6 +184,10 @@ func buildBepusdtCreatePayload(result *bepusdt.CreateResult, tradeType string) m
 	setBepusdtPayloadString(data, "chain", chain)
 	setBepusdtPayloadString(data, "token_id", tokenID)
 	return payload
+}
+
+func isLegacyBepusdtChannelType(channelType string) bool {
+	return bepusdt.ResolveTradeType(channelType) != ""
 }
 
 func ensureBepusdtPayloadData(payload models.JSON) map[string]interface{} {
@@ -162,31 +212,45 @@ func setBepusdtPayloadString(payload map[string]interface{}, key string, value s
 }
 
 func resolveBepusdtTradeLabels(tradeType string) (chain string, tokenID string) {
-	switch strings.ToLower(strings.TrimSpace(tradeType)) {
-	case "usdt.trc20":
-		return "tron", "tron-usdt"
-	case "usdt.erc20":
-		return "ethereum", "ethereum-usdt"
-	case "usdt.bep20":
-		return "bsc", "bsc-usdt"
-	case "usdt.polygon":
-		return "polygon", "polygon-usdt"
-	case "usdc.trc20":
-		return "tron", "tron-usdc"
-	case "usdc.erc20":
-		return "ethereum", "ethereum-usdc"
-	case "usdc.polygon":
-		return "polygon", "polygon-usdc"
-	case "usdc.bep20":
-		return "bsc", "bsc-usdc"
-	case "tron.trx":
-		return "tron", "tron-trx"
-	case "eth.eth":
-		return "ethereum", "ethereum-eth"
-	case "bsc.bnb":
-		return "bsc", "bsc-bnb"
-	default:
+	normalized := strings.ToLower(strings.TrimSpace(tradeType))
+	parts := strings.Split(normalized, ".")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		return "", ""
+	}
+
+	// BEpusdt 的稳定币采用 token.network，原生币采用 network.token。
+	// 根据官方 trade type 合同识别稳定币前缀，其余类型按原生币格式解析，
+	// 从而让未来的原生代币支持比如 solana.sol、aptos.apt 等类型无需逐个维护。
+	if isBepusdtTokenPrefix(parts[0]) {
+		token := parts[0]
+		network := normalizeBepusdtNetwork(parts[1])
+		return network, network + "-" + token
+	}
+
+	network := normalizeBepusdtNetwork(parts[0])
+	token := parts[1]
+	return network, network + "-" + token
+}
+
+func isBepusdtTokenPrefix(value string) bool {
+	switch value {
+	case "usdt", "usdc":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeBepusdtNetwork(network string) string {
+	switch network {
+	case "trc20":
+		return "tron"
+	case "erc20", "eth":
+		return "ethereum"
+	case "bep20":
+		return "bsc"
+	default:
+		return network
 	}
 }
 
