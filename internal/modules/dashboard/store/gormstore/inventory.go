@@ -3,6 +3,8 @@ package gormstore
 import (
 	"strings"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/dashboard"
@@ -10,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func resolveDashboardManualAvailableStock(product models.Product) (int64, bool) {
+func resolveDashboardManualAvailableStock(product productdomain.Product) (int64, bool) {
 	activeSKUs := activeProductSKUs(product.SKUs)
 	if len(activeSKUs) == 0 {
 		if product.ManualStockTotal == constants.ManualStockUnlimited {
@@ -41,12 +43,12 @@ func resolveDashboardManualAvailableStock(product models.Product) (int64, bool) 
 func (r *Store) GetStockStats(lowStockThreshold int64) (dashboard.StockStatsRow, error) {
 	result := dashboard.StockStatsRow{}
 
-	products := make([]models.Product, 0)
+	products := make([]productdomain.Product, 0)
 	if err := r.db.
 		Preload("SKUs", func(db *gorm.DB) *gorm.DB {
-			return db.Where("is_active = ?", true).Order("sort_order DESC, created_at ASC")
+			return db.Where("deleted_at IS NULL AND is_active = ?", true).Order("sort_order DESC, created_at ASC")
 		}).
-		Where("is_active = ?", true).
+		Where("deleted_at IS NULL AND is_active = ?", true).
 		Find(&products).Error; err != nil {
 		return result, err
 	}
@@ -174,12 +176,12 @@ func (r *Store) GetStockStats(lowStockThreshold int64) (dashboard.StockStatsRow,
 
 // GetInventoryAlertItems 获取库存异常明细
 func (r *Store) GetInventoryAlertItems(lowStockThreshold int64) ([]dashboard.InventoryAlertRow, error) {
-	products := make([]models.Product, 0)
+	products := make([]productdomain.Product, 0)
 	if err := r.db.
 		Preload("SKUs", func(db *gorm.DB) *gorm.DB {
-			return db.Where("is_active = ?", true).Order("sort_order DESC, created_at ASC")
+			return db.Where("deleted_at IS NULL AND is_active = ?", true).Order("sort_order DESC, created_at ASC")
 		}).
-		Where("is_active = ?", true).
+		Where("deleted_at IS NULL AND is_active = ?", true).
 		Order("sort_order DESC, created_at DESC").
 		Find(&products).Error; err != nil {
 		return nil, err
@@ -227,7 +229,7 @@ func (r *Store) GetInventoryAlertItems(lowStockThreshold int64) ([]dashboard.Inv
 	return result, nil
 }
 
-func collectManualInventoryAlertRows(product models.Product, lowStockThreshold int64) []dashboard.InventoryAlertRow {
+func collectManualInventoryAlertRows(product productdomain.Product, lowStockThreshold int64) []dashboard.InventoryAlertRow {
 	result := make([]dashboard.InventoryAlertRow, 0)
 	activeSKUs := activeProductSKUs(product.SKUs)
 	if len(activeSKUs) == 0 {
@@ -274,7 +276,7 @@ func collectManualInventoryAlertRows(product models.Product, lowStockThreshold i
 	return result
 }
 
-func collectAutoInventoryAlertRows(product models.Product, availableMap map[uint]int64, lowStockThreshold int64) []dashboard.InventoryAlertRow {
+func collectAutoInventoryAlertRows(product productdomain.Product, availableMap map[uint]int64, lowStockThreshold int64) []dashboard.InventoryAlertRow {
 	result := make([]dashboard.InventoryAlertRow, 0)
 	activeSKUs := activeProductSKUs(product.SKUs)
 	totalAvailable := int64(0)
@@ -349,8 +351,8 @@ func collectAutoInventoryAlertRows(product models.Product, availableMap map[uint
 	return result
 }
 
-func activeProductSKUs(items []models.ProductSKU) []models.ProductSKU {
-	result := make([]models.ProductSKU, 0, len(items))
+func activeProductSKUs(items []productdomain.ProductSKU) []productdomain.ProductSKU {
+	result := make([]productdomain.ProductSKU, 0, len(items))
 	for _, item := range items {
 		if !item.IsActive {
 			continue
@@ -371,11 +373,11 @@ func classifyInventoryAlertType(available int64, lowStockThreshold int64) string
 	}
 }
 
-func resolveDashboardLegacyStockTargetSKUIndex(skus []models.ProductSKU) int {
+func resolveDashboardLegacyStockTargetSKUIndex(skus []productdomain.ProductSKU) int {
 	if len(skus) == 0 {
 		return -1
 	}
-	defaultCode := strings.ToUpper(strings.TrimSpace(models.DefaultSKUCode))
+	defaultCode := strings.ToUpper(strings.TrimSpace(productdomain.DefaultSKUCode))
 	firstActiveIdx := -1
 	for idx := range skus {
 		if !skus[idx].IsActive {

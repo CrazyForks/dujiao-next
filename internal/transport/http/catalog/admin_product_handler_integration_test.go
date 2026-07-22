@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
@@ -16,7 +19,6 @@ import (
 	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/store/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
@@ -123,8 +125,8 @@ func setupAdminProductHandlerTest(t *testing.T) (*cataloghttp.AdminProductHandle
 	}
 	if err := db.AutoMigrate(
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.CardSecret{},
 		&models.CardSecretBatch{},
 		&models.MemberLevelPrice{},
@@ -153,8 +155,8 @@ func setupAdminProductHandlerTest(t *testing.T) (*cataloghttp.AdminProductHandle
 			Products:                      productStore,
 			Categories:                    categoryStore,
 			Stock:                         cardSecretStore,
-			NotFoundError:                 catalogproduct.ErrNotFound,
-			ResellerProductNotListedError: catalogproduct.ErrResellerProductNotListed,
+			NotFoundError:                 productcontract.ErrNotFound,
+			ResellerProductNotListedError: productcontract.ErrResellerProductNotListed,
 		}),
 		AdminService: productadmin.NewAdminService(productadmin.Options{
 			Products:    productStore,
@@ -171,10 +173,10 @@ func setupAdminProductHandlerTest(t *testing.T) (*cataloghttp.AdminProductHandle
 				productMappings:   mappingStore,
 			},
 			Errors: productadmin.ErrorSet{
-				NotFound:               catalogproduct.ErrNotFound,
-				ProductCategoryInvalid: catalogproduct.ErrProductCategoryInvalid,
-				ProductHasStock:        catalogproduct.ErrProductHasStock,
-				ProductHasOrderRecord:  catalogproduct.ErrProductHasOrderRecord,
+				NotFound:               productcontract.ErrNotFound,
+				ProductCategoryInvalid: productcontract.ErrProductCategoryInvalid,
+				ProductHasStock:        productcontract.ErrProductHasStock,
+				ProductHasOrderRecord:  productcontract.ErrProductHasOrderRecord,
 			},
 		}),
 		WriteService: productwrite.NewWriteService(productwrite.Options{
@@ -188,17 +190,17 @@ func setupAdminProductHandlerTest(t *testing.T) (*cataloghttp.AdminProductHandle
 				cardSecrets: cardSecretStore,
 			},
 			Errors: productwrite.ErrorSet{
-				NotFound:                     catalogproduct.ErrNotFound,
-				SlugExists:                   catalogproduct.ErrSlugExists,
-				ProductCategoryInvalid:       catalogproduct.ErrProductCategoryInvalid,
-				ProductPurchaseInvalid:       catalogproduct.ErrProductPurchaseInvalid,
-				FulfillmentInvalid:           catalogproduct.ErrFulfillmentInvalid,
-				ProductPriceInvalid:          catalogproduct.ErrProductPriceInvalid,
-				ManualStockInvalid:           catalogproduct.ErrManualStockInvalid,
-				ProductPurchaseLimitInvalid:  catalogproduct.ErrProductPurchaseLimitInvalid,
-				ProductStockDisplayInvalid:   catalogproduct.ErrProductStockDisplayInvalid,
-				ProductSKUInvalid:            catalogproduct.ErrProductSKUInvalid,
-				ProductSKUHasCardSecretStock: catalogproduct.ErrProductSKUHasCardSecretStock,
+				NotFound:                     productcontract.ErrNotFound,
+				SlugExists:                   productcontract.ErrSlugExists,
+				ProductCategoryInvalid:       productcontract.ErrProductCategoryInvalid,
+				ProductPurchaseInvalid:       productcontract.ErrProductPurchaseInvalid,
+				FulfillmentInvalid:           productcontract.ErrFulfillmentInvalid,
+				ProductPriceInvalid:          productcontract.ErrProductPriceInvalid,
+				ManualStockInvalid:           productcontract.ErrManualStockInvalid,
+				ProductPurchaseLimitInvalid:  productcontract.ErrProductPurchaseLimitInvalid,
+				ProductStockDisplayInvalid:   productcontract.ErrProductStockDisplayInvalid,
+				ProductSKUInvalid:            productcontract.ErrProductSKUInvalid,
+				ProductSKUHasCardSecretStock: productcontract.ErrProductSKUHasCardSecretStock,
 			},
 		}),
 	}
@@ -210,7 +212,7 @@ func setupAdminProductHandlerTest(t *testing.T) (*cataloghttp.AdminProductHandle
 func TestBatchUpdateProductStatusReturnsFailureReasons(t *testing.T) {
 	h, db := setupAdminProductHandlerTest(t)
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      0,
 		Slug:            "batch-uncategorized-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "batch-uncategorized-product"},
@@ -266,7 +268,7 @@ func TestBatchUpdateProductStatusReturnsFailureReasons(t *testing.T) {
 func TestUpdateProductWholesalePricesHandlerUpdatesTiers(t *testing.T) {
 	h, db := setupAdminProductHandlerTest(t)
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:  1,
 		Slug:        "handler-wholesale-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "handler-wholesale-product"},
@@ -291,7 +293,7 @@ func TestUpdateProductWholesalePricesHandlerUpdatesTiers(t *testing.T) {
 		t.Fatalf("expected status 200, got %d body=%s", w.Code, w.Body.String())
 	}
 	var resp struct {
-		Data models.Product `json:"data"`
+		Data productdomain.Product `json:"data"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode response failed: %v body=%s", err, w.Body.String())
@@ -307,12 +309,12 @@ func TestUpdateProductWholesalePricesHandlerUpdatesTiers(t *testing.T) {
 func TestUpdateProductWholesalePricesHandlerAllowsClear(t *testing.T) {
 	h, db := setupAdminProductHandlerTest(t)
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:  1,
 		Slug:        "handler-wholesale-clear",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "handler-wholesale-clear"},
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
-		WholesalePrices: models.WholesalePriceTiers{
+		WholesalePrices: productdomain.WholesalePriceTiers{
 			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 		},
 		IsActive: true,
@@ -333,7 +335,7 @@ func TestUpdateProductWholesalePricesHandlerAllowsClear(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected status 200, got %d body=%s", w.Code, w.Body.String())
 	}
-	var got models.Product
+	var got productdomain.Product
 	if err := db.First(&got, product.ID).Error; err != nil {
 		t.Fatalf("reload product failed: %v", err)
 	}
@@ -345,7 +347,7 @@ func TestUpdateProductWholesalePricesHandlerAllowsClear(t *testing.T) {
 func TestUpdateProductWholesalePricesHandlerRejectsInvalidTier(t *testing.T) {
 	h, db := setupAdminProductHandlerTest(t)
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:  1,
 		Slug:        "handler-wholesale-invalid",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "handler-wholesale-invalid"},

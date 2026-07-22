@@ -3,12 +3,14 @@ package cataloghttp
 import (
 	"strings"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
 )
 
-func (h *PublicHandler) decorateProductStock(product *models.Product, item *publicProductView) {
+func (h *PublicHandler) decorateProductStock(product *productdomain.Product, item *publicProductView) {
 	if product == nil || item == nil {
 		return
 	}
@@ -100,7 +102,7 @@ func (h *PublicHandler) decorateProductStock(product *models.Product, item *publ
 }
 
 // decorateUpstreamStock 根据 SKU 映射的上游库存信息填充商品及 SKU 级库存状态
-func (h *PublicHandler) decorateUpstreamStock(product *models.Product, item *publicProductView) {
+func (h *PublicHandler) decorateUpstreamStock(product *productdomain.Product, item *publicProductView) {
 	// 通过本地商品 ID 查找 product mapping
 	mapping, err := h.mappings.GetByLocalProductID(product.ID)
 	if err != nil || mapping == nil {

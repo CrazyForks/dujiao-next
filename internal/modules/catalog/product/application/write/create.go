@@ -4,7 +4,6 @@ import (
 	"strconv"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -15,7 +14,7 @@ import (
 )
 
 // Create 创建商品
-func (s *WriteService) Create(input CreateProductInput) (*models.Product, error) {
+func (s *WriteService) Create(input CreateProductInput) (*productdomain.Product, error) {
 	if err := productdomain.ValidateCategoryAssignment(s.categories, input.CategoryID, 0, s.errors.ProductCategoryInvalid); err != nil {
 		return nil, err
 	}
@@ -96,7 +95,7 @@ func (s *WriteService) Create(input CreateProductInput) (*models.Product, error)
 		return nil, err
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:           input.CategoryID,
 		Slug:                 input.Slug,
 		SeoMetaJSON:          jsonmap.JSON(input.SeoMetaJSON),
@@ -107,7 +106,7 @@ func (s *WriteService) Create(input CreateProductInput) (*models.Product, error)
 		ManualFormSchemaJSON: jsonmap.JSON{},
 		PriceAmount:          money.FromDecimal(priceAmount),
 		CostPriceAmount:      money.FromDecimal(costPriceAmount),
-		WholesalePrices:      models.WholesalePriceTiers{},
+		WholesalePrices:      productdomain.WholesalePriceTiers{},
 		Images:               jsonslice.Strings(input.Images),
 		Tags:                 jsonslice.Strings(input.Tags),
 		PurchaseType:         purchaseType,
@@ -146,7 +145,7 @@ func (s *WriteService) Create(input CreateProductInput) (*models.Product, error)
 			return err
 		}
 		if input.WholesalePrices != nil {
-			var skus []models.ProductSKU
+			var skus []productdomain.ProductSKU
 			if skuRepo != nil {
 				var err error
 				skus, err = skuRepo.ListByProduct(product.ID, false)

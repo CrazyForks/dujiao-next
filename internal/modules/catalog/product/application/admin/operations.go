@@ -3,7 +3,6 @@ package productadmin
 import (
 	"strconv"
 
-	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 )
 
@@ -65,7 +64,7 @@ func (s *AdminService) Delete(id string) error {
 }
 
 // QuickUpdate 快速更新商品部分字段（如 is_active、sort_order）。
-func (s *AdminService) QuickUpdate(id string, fields map[string]interface{}) (*models.Product, error) {
+func (s *AdminService) QuickUpdate(id string, fields map[string]interface{}) (*productdomain.Product, error) {
 	product, err := s.products.GetByID(id)
 	if err != nil {
 		return nil, err
@@ -93,7 +92,7 @@ func (s *AdminService) QuickUpdate(id string, fields map[string]interface{}) (*m
 }
 
 // UpdateWholesalePrices 更新商品批发价阶梯，不修改商品其他字段。
-func (s *AdminService) UpdateWholesalePrices(id string, inputs []productdomain.WholesalePriceInput) (*models.Product, error) {
+func (s *AdminService) UpdateWholesalePrices(id string, inputs []productdomain.WholesalePriceInput) (*productdomain.Product, error) {
 	product, err := s.products.GetAdminByID(id)
 	if err != nil {
 		return nil, err

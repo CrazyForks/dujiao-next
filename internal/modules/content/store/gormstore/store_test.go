@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
@@ -27,7 +29,7 @@ func setupContentStoreTest(t *testing.T) *gorm.DB {
 	}
 	if err := db.AutoMigrate(
 		&categorydomain.Category{},
-		&models.Product{},
+		&productdomain.Product{},
 		&models.PostCategory{},
 		&models.Post{},
 		&models.PostProduct{},
@@ -51,8 +53,8 @@ func TestPostStoreQueriesAndOrderedRelations(t *testing.T) {
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create product category: %v", err)
 	}
-	firstProduct := models.Product{CategoryID: category.ID, Slug: "first-product", TitleJSON: jsonmap.JSON{"zh-CN": "first"}, IsActive: true}
-	secondProduct := models.Product{CategoryID: category.ID, Slug: "second-product", TitleJSON: jsonmap.JSON{"zh-CN": "second"}, IsActive: true}
+	firstProduct := productdomain.Product{CategoryID: category.ID, Slug: "first-product", TitleJSON: jsonmap.JSON{"zh-CN": "first"}, IsActive: true}
+	secondProduct := productdomain.Product{CategoryID: category.ID, Slug: "second-product", TitleJSON: jsonmap.JSON{"zh-CN": "second"}, IsActive: true}
 	if err := db.Create(&firstProduct).Error; err != nil {
 		t.Fatalf("create first product: %v", err)
 	}

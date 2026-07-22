@@ -4,7 +4,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -15,15 +16,15 @@ func TestSyncSingleProductSKUMultipleRowsKeepsSingleActive(t *testing.T) {
 	repo := newSyncSingleSKURepo(t)
 	productID := uint(2001)
 
-	inactiveDefault := models.ProductSKU{
+	inactiveDefault := productdomain.ProductSKU{
 		ProductID:        productID,
-		SKUCode:          models.DefaultSKUCode,
+		SKUCode:          productdomain.DefaultSKUCode,
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(10)),
 		ManualStockTotal: 9,
 		IsActive:         false,
 		SortOrder:        0,
 	}
-	firstActive := models.ProductSKU{
+	firstActive := productdomain.ProductSKU{
 		ProductID:        productID,
 		SKUCode:          "A",
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(20)),
@@ -31,7 +32,7 @@ func TestSyncSingleProductSKUMultipleRowsKeepsSingleActive(t *testing.T) {
 		IsActive:         true,
 		SortOrder:        2,
 	}
-	secondActive := models.ProductSKU{
+	secondActive := productdomain.ProductSKU{
 		ProductID:        productID,
 		SKUCode:          "B",
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(30)),
@@ -85,7 +86,7 @@ func TestSyncSingleProductSKUNoActivePrefersDefaultCode(t *testing.T) {
 	repo := newSyncSingleSKURepo(t)
 	productID := uint(2002)
 
-	inactiveA := models.ProductSKU{
+	inactiveA := productdomain.ProductSKU{
 		ProductID:        productID,
 		SKUCode:          "A",
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(10)),
@@ -93,9 +94,9 @@ func TestSyncSingleProductSKUNoActivePrefersDefaultCode(t *testing.T) {
 		IsActive:         false,
 		SortOrder:        1,
 	}
-	inactiveDefault := models.ProductSKU{
+	inactiveDefault := productdomain.ProductSKU{
 		ProductID:        productID,
-		SKUCode:          models.DefaultSKUCode,
+		SKUCode:          productdomain.DefaultSKUCode,
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(20)),
 		ManualStockTotal: 8,
 		IsActive:         false,
@@ -144,12 +145,12 @@ func TestSyncSingleProductSKUNoActivePrefersDefaultCode(t *testing.T) {
 }
 
 type memorySKURepository struct {
-	rows   []models.ProductSKU
+	rows   []productdomain.ProductSKU
 	nextID uint
 }
 
-func (repo *memorySKURepository) ListByProduct(productID uint, onlyActive bool) ([]models.ProductSKU, error) {
-	rows := make([]models.ProductSKU, 0, len(repo.rows))
+func (repo *memorySKURepository) ListByProduct(productID uint, onlyActive bool) ([]productdomain.ProductSKU, error) {
+	rows := make([]productdomain.ProductSKU, 0, len(repo.rows))
 	for _, row := range repo.rows {
 		if row.ProductID == productID && (!onlyActive || row.IsActive) {
 			rows = append(rows, row)
@@ -164,7 +165,7 @@ func (repo *memorySKURepository) ListByProduct(productID uint, onlyActive bool) 
 	return rows, nil
 }
 
-func (repo *memorySKURepository) Create(item *models.ProductSKU) error {
+func (repo *memorySKURepository) Create(item *productdomain.ProductSKU) error {
 	if item.ID == 0 {
 		repo.nextID++
 		item.ID = repo.nextID
@@ -173,7 +174,7 @@ func (repo *memorySKURepository) Create(item *models.ProductSKU) error {
 	return nil
 }
 
-func (repo *memorySKURepository) Update(item *models.ProductSKU) error {
+func (repo *memorySKURepository) Update(item *productdomain.ProductSKU) error {
 	for index := range repo.rows {
 		if repo.rows[index].ID == item.ID {
 			repo.rows[index] = *item

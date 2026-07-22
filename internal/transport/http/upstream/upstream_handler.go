@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -64,9 +66,9 @@ type CategoryRepository interface {
 }
 
 type ProductService interface {
-	ListForUpstreamSync(updatedAfter *time.Time, includeInactive bool, page, pageSize int) ([]models.Product, int64, error)
-	ApplyAutoStockCounts(products []models.Product) error
-	GetAdminByID(id string) (*models.Product, error)
+	ListForUpstreamSync(updatedAfter *time.Time, includeInactive bool, page, pageSize int) ([]productdomain.Product, int64, error)
+	ApplyAutoStockCounts(products []productdomain.Product) error
+	GetAdminByID(id string) (*productdomain.Product, error)
 }
 
 type UserRepository interface {
@@ -74,11 +76,11 @@ type UserRepository interface {
 }
 
 type ProductRepository interface {
-	GetByID(id string) (*models.Product, error)
+	GetByID(id string) (*productdomain.Product, error)
 }
 
 type SKURepository interface {
-	GetByID(id uint) (*models.ProductSKU, error)
+	GetByID(id uint) (*productdomain.ProductSKU, error)
 }
 
 type ProductMappingRepository interface {

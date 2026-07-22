@@ -2,7 +2,7 @@ package resellerintegration_test
 
 import (
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/modules/catalog/product"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
 	"github.com/dujiao-next/internal/repository"
@@ -53,7 +53,7 @@ func NewResellerManagementService(repo repository.ResellerRepository, cfg config
 func NewResellerProductSettingService(
 	settingRepo repository.ResellerProductSettingRepository,
 	resellerRepo repository.ResellerRepository,
-	productRepo product.Repository,
+	productRepo productcontract.Repository,
 ) *resellermodule.ProductSettingService {
 	return resellermodule.NewProductSettingService(
 		resellerpersistence.NewProductSettingStore(settingRepo, resellerRepo),

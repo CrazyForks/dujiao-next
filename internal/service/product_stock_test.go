@@ -3,6 +3,8 @@ package service
 import (
 	"testing"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
@@ -45,11 +47,11 @@ func TestApplyAutoStockCounts_LegacyStockPrefersDefaultSKU(t *testing.T) {
 		t.Fatalf("unexpected other sku rows: %+v", bySKUAndStatus[otherSKUID])
 	}
 
-	products := []models.Product{
+	products := []productdomain.Product{
 		{
 			ID:              productID,
 			FulfillmentType: constants.FulfillmentTypeAuto,
-			SKUs: []models.ProductSKU{
+			SKUs: []productdomain.ProductSKU{
 				{
 					ID:       otherSKUID,
 					SKUCode:  "B",
@@ -57,7 +59,7 @@ func TestApplyAutoStockCounts_LegacyStockPrefersDefaultSKU(t *testing.T) {
 				},
 				{
 					ID:       defaultSKUID,
-					SKUCode:  models.DefaultSKUCode,
+					SKUCode:  productdomain.DefaultSKUCode,
 					IsActive: true,
 				},
 			},

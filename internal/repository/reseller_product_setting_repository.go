@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"gorm.io/gorm"
 )
@@ -59,7 +61,7 @@ type ResellerProductSettingAdminListFilter struct {
 }
 
 type ResellerProductSettingProductRow struct {
-	Product  models.Product
+	Product  productdomain.Product
 	Settings []models.ResellerProductSetting
 }
 
@@ -74,9 +76,11 @@ func (r *GormResellerProductSettingRepository) ListProductsWithSettings(filter R
 	if filter.ResellerID == 0 {
 		return []ResellerProductSettingProductRow{}, 0, nil
 	}
-	query := r.db.Model(&models.Product{}).
+	query := r.db.Model(&productdomain.Product{}).
+		Where("products.deleted_at IS NULL").
 		Preload("Category", "deleted_at IS NULL").
 		Preload("SKUs", func(db *gorm.DB) *gorm.DB {
+			db = db.Where("deleted_at IS NULL")
 			if filter.OnlyActive {
 				db = db.Where("is_active = ?", true)
 			}
@@ -115,7 +119,7 @@ func (r *GormResellerProductSettingRepository) ListProductsWithSettings(filter R
 	if err := query.Session(&gorm.Session{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
-	var products []models.Product
+	var products []productdomain.Product
 	if err := applyPagination(query.Session(&gorm.Session{}), filter.Page, filter.PageSize).
 		Order("products.sort_order DESC, products.created_at DESC").
 		Find(&products).Error; err != nil {
@@ -132,11 +136,12 @@ func (r *GormResellerProductSettingRepository) GetProductWithSettings(resellerID
 	if resellerID == 0 || productID == 0 {
 		return nil, nil
 	}
-	var product models.Product
+	var product productdomain.Product
 	err := r.db.Preload("Category", "deleted_at IS NULL").
 		Preload("SKUs", func(db *gorm.DB) *gorm.DB {
-			return db.Where("is_active = ?", true).Order("sort_order DESC, id ASC")
+			return db.Where("deleted_at IS NULL AND is_active = ?", true).Order("sort_order DESC, id ASC")
 		}).
+		Where("products.deleted_at IS NULL").
 		First(&product, productID).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -144,7 +149,7 @@ func (r *GormResellerProductSettingRepository) GetProductWithSettings(resellerID
 		}
 		return nil, err
 	}
-	rows, err := r.attachSettings(resellerID, []models.Product{product})
+	rows, err := r.attachSettings(resellerID, []productdomain.Product{product})
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +159,7 @@ func (r *GormResellerProductSettingRepository) GetProductWithSettings(resellerID
 	return &rows[0], nil
 }
 
-func (r *GormResellerProductSettingRepository) attachSettings(resellerID uint, products []models.Product) ([]ResellerProductSettingProductRow, error) {
+func (r *GormResellerProductSettingRepository) attachSettings(resellerID uint, products []productdomain.Product) ([]ResellerProductSettingProductRow, error) {
 	if len(products) == 0 {
 		return []ResellerProductSettingProductRow{}, nil
 	}
@@ -228,7 +233,7 @@ func (r *GormResellerProductSettingRepository) DeleteSetting(resellerID, product
 
 func (r *GormResellerProductSettingRepository) ListAdminSettings(filter ResellerProductSettingAdminListFilter) ([]models.ResellerProductSetting, int64, error) {
 	query := r.db.Model(&models.ResellerProductSetting{}).
-		Preload("Product").
+		Preload("Product", "deleted_at IS NULL").
 		Preload("Profile").
 		Preload("Profile.User", "deleted_at IS NULL")
 	if filter.ResellerID > 0 {

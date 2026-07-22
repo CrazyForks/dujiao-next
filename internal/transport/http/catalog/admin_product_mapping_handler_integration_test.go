@@ -10,6 +10,9 @@ import (
 	"testing"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
@@ -18,7 +21,6 @@ import (
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	cataloghttp "github.com/dujiao-next/internal/transport/http/catalog"
@@ -81,8 +83,8 @@ func setupAdminProductMappingHandlerTest(t *testing.T, upstreamHandler http.Hand
 	}
 	if err := db.AutoMigrate(
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.SiteConnection{},
 		&models.ProductMapping{},
 		&models.SKUMapping{},
@@ -132,7 +134,7 @@ func setupAdminProductMappingHandlerTest(t *testing.T, upstreamHandler http.Hand
 		},
 		Errors: catalogmapping.ErrorSet{
 			ConnectionNotFound:     catalogmapping.ErrConnectionNotFound,
-			ProductCategoryInvalid: catalogproduct.ErrProductCategoryInvalid,
+			ProductCategoryInvalid: productcontract.ErrProductCategoryInvalid,
 		},
 	})
 	if err != nil {
@@ -194,7 +196,7 @@ func TestBatchImportUpstreamProductsAutoCreatesCategory(t *testing.T) {
 		t.Fatalf("expected status 200, got %d body=%s", w.Code, w.Body.String())
 	}
 
-	var imported models.Product
+	var imported productdomain.Product
 	if err := db.First(&imported).Error; err != nil {
 		t.Fatalf("load imported product failed: %v", err)
 	}
@@ -269,7 +271,7 @@ func TestBatchImportUpstreamProductsRestoresSoftDeletedAutoCategory(t *testing.T
 		t.Fatalf("expected status 200, got %d body=%s", w.Code, w.Body.String())
 	}
 
-	var imported models.Product
+	var imported productdomain.Product
 	if err := db.First(&imported).Error; err != nil {
 		t.Fatalf("load imported product failed: %v", err)
 	}

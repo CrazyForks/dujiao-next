@@ -11,11 +11,13 @@ import (
 	"testing"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"github.com/dujiao-next/internal/modules/content"
 	contentgormstore "github.com/dujiao-next/internal/modules/content/store/gormstore"
@@ -47,7 +49,7 @@ func setupPostgresIntegrationDB(t *testing.T) *gorm.DB {
 		&models.Payment{},
 		&models.Order{},
 		&models.PostProduct{},
-		&models.Product{},
+		&productdomain.Product{},
 		&categorydomain.Category{},
 		&models.Banner{},
 		&models.Post{},
@@ -56,7 +58,7 @@ func setupPostgresIntegrationDB(t *testing.T) *gorm.DB {
 
 	if err := db.AutoMigrate(
 		&categorydomain.Category{},
-		&models.Product{},
+		&productdomain.Product{},
 		&models.Post{},
 		&models.PostProduct{},
 		&models.Banner{},
@@ -91,7 +93,7 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 	}
 
 	productRepo := productgormstore.NewProductStore(db)
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:       category.ID,
 		Slug:             "pg-product-rocket",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "火箭会员"},
@@ -106,7 +108,7 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	productRows, productTotal, err := productRepo.List(catalogproduct.ListFilter{
+	productRows, productTotal, err := productRepo.List(productcontract.ListFilter{
 		Page:   1,
 		Search: "火箭",
 	})
@@ -117,7 +119,7 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 		t.Fatalf("product list search zh-CN want 1 got total=%d len=%d", productTotal, len(productRows))
 	}
 
-	productRows, productTotal, err = productRepo.List(catalogproduct.ListFilter{
+	productRows, productTotal, err = productRepo.List(productcontract.ListFilter{
 		Page:   1,
 		Search: "booster",
 	})
@@ -291,7 +293,7 @@ func TestPostgresDashboardQueries(t *testing.T) {
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "pg-dashboard-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "仪表盘商品"},

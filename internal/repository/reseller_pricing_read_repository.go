@@ -1,6 +1,9 @@
 package repository
 
-import "github.com/dujiao-next/internal/models"
+import (
+	"github.com/dujiao-next/internal/models"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+)
 
 // ListProductSettingsForPricing 批量获取分销定价所需的商品级与 SKU 级配置。
 func (r *GormResellerRepository) ListProductSettingsForPricing(resellerID uint, productIDs []uint, skuIDs []uint) ([]models.ResellerProductSetting, error) {
@@ -44,7 +47,7 @@ func (r *GormResellerRepository) ListHiddenProductIDs(resellerID uint) ([]uint, 
 	}
 
 	var skuHidden []uint
-	if err := r.db.Model(&models.ProductSKU{}).
+	if err := r.db.Model(&productdomain.ProductSKU{}).
 		Select("product_skus.product_id").
 		Joins(
 			"JOIN reseller_product_settings rps ON rps.product_id = product_skus.product_id AND rps.sku_id = product_skus.id AND rps.reseller_id = ? AND rps.is_listed = ? AND rps.deleted_at IS NULL",

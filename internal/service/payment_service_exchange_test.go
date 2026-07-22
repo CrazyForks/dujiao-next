@@ -2,9 +2,11 @@ package service
 
 import (
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
+
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
@@ -35,8 +37,8 @@ func setupExchangeTest(t *testing.T) (*PaymentService, *gorm.DB) {
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.WalletAccount{},
 		&models.WalletTransaction{},
 		&models.WalletRechargeOrder{},

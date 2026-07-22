@@ -1,8 +1,8 @@
 package dto
 
 import (
-	"github.com/dujiao-next/internal/models"
 	categorypresenter "github.com/dujiao-next/internal/modules/catalog/category/transport/presenter"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
 	"github.com/dujiao-next/internal/shared/money"
@@ -66,7 +66,7 @@ type WholesalePriceResp struct {
 }
 
 // NewWholesalePriceRespList 统一公开 API 的批发价金额格式。
-func NewWholesalePriceRespList(tiers models.WholesalePriceTiers) []WholesalePriceResp {
+func NewWholesalePriceRespList(tiers productdomain.WholesalePriceTiers) []WholesalePriceResp {
 	if len(tiers) == 0 {
 		return nil
 	}

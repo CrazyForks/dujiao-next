@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
@@ -82,8 +84,8 @@ func (r *Store) GetOverview(startAt, endAt time.Time) (dashboard.OverviewRow, er
 		return result, err
 	}
 
-	if err := r.db.Model(&models.Product{}).
-		Where("is_active = ?", true).
+	if err := r.db.Model(&productdomain.Product{}).
+		Where("deleted_at IS NULL AND is_active = ?", true).
 		Count(&result.ActiveProducts).Error; err != nil {
 		return result, err
 	}

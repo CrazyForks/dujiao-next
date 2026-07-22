@@ -6,11 +6,13 @@ import (
 	"testing"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -28,8 +30,8 @@ func setupProductStoreTest(t *testing.T) (*ProductStore, *gorm.DB) {
 	}
 	if err := db.AutoMigrate(
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.CardSecret{},
 		&models.SiteConnection{},
 		&models.ProductMapping{},
@@ -49,9 +51,9 @@ func setupProductStoreTest(t *testing.T) (*ProductStore, *gorm.DB) {
 	return NewProductStore(db), db
 }
 
-func createManualProduct(t *testing.T, repo *ProductStore, slug string, total int, locked int, sold int) *models.Product {
+func createManualProduct(t *testing.T, repo *ProductStore, slug string, total int, locked int, sold int) *productdomain.Product {
 	t.Helper()
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:        1,
 		Slug:              slug,
 		TitleJSON:         jsonmap.JSON{"zh-CN": "测试商品"},
@@ -69,9 +71,9 @@ func createManualProduct(t *testing.T, repo *ProductStore, slug string, total in
 	return product
 }
 
-func createManualSKU(t *testing.T, db *gorm.DB, productID uint, code string, total int, locked int, sold int, isActive bool) *models.ProductSKU {
+func createManualSKU(t *testing.T, db *gorm.DB, productID uint, code string, total int, locked int, sold int, isActive bool) *productdomain.ProductSKU {
 	t.Helper()
-	sku := &models.ProductSKU{
+	sku := &productdomain.ProductSKU{
 		ProductID:         productID,
 		SKUCode:           code,
 		PriceAmount:       money.FromDecimal(decimal.NewFromInt(100)),
@@ -93,9 +95,9 @@ func createManualSKU(t *testing.T, db *gorm.DB, productID uint, code string, tot
 	return sku
 }
 
-func createAutoProduct(t *testing.T, repo *ProductStore, slug string) *models.Product {
+func createAutoProduct(t *testing.T, repo *ProductStore, slug string) *productdomain.Product {
 	t.Helper()
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": "自动发货商品"},
@@ -153,7 +155,7 @@ func TestManualStockReserveReleaseConsumeLifecycle(t *testing.T) {
 		t.Fatalf("release affected want 1 got %d", affected)
 	}
 
-	var got models.Product
+	var got productdomain.Product
 	if err := db.First(&got, product.ID).Error; err != nil {
 		t.Fatalf("reload product failed: %v", err)
 	}
@@ -196,7 +198,7 @@ func TestManualStockConsumeWithLegacyUnreservedOrder(t *testing.T) {
 		t.Fatalf("consume affected want 1 got %d", affected)
 	}
 
-	var got models.Product
+	var got productdomain.Product
 	if err := db.First(&got, product.ID).Error; err != nil {
 		t.Fatalf("reload product failed: %v", err)
 	}
@@ -232,6 +234,77 @@ func TestManualStockUnlimitedDoesNotReserve(t *testing.T) {
 	}
 }
 
+func TestProductStoreSoftDeleteHidesProductAndRejectsStockMutations(t *testing.T) {
+	repo, db := setupProductStoreTest(t)
+	product := createManualProduct(t, repo, "soft-deleted-product", 10, 1, 0)
+
+	if err := repo.Delete(strconv.FormatUint(uint64(product.ID), 10)); err != nil {
+		t.Fatalf("soft delete product failed: %v", err)
+	}
+
+	var persisted productdomain.Product
+	if err := db.Where("id = ?", product.ID).First(&persisted).Error; err != nil {
+		t.Fatalf("load persisted soft-deleted product failed: %v", err)
+	}
+	if persisted.DeletedAt == nil {
+		t.Fatal("expected deleted_at to be persisted")
+	}
+
+	byID, err := repo.GetByID(strconv.FormatUint(uint64(product.ID), 10))
+	if err != nil || byID != nil {
+		t.Fatalf("soft-deleted product must be hidden by id, product=%#v err=%v", byID, err)
+	}
+	adminByID, err := repo.GetAdminByID(strconv.FormatUint(uint64(product.ID), 10))
+	if err != nil || adminByID != nil {
+		t.Fatalf("soft-deleted product must be hidden from admin lookup, product=%#v err=%v", adminByID, err)
+	}
+	bySlug, err := repo.GetBySlug(product.Slug, false)
+	if err != nil || bySlug != nil {
+		t.Fatalf("soft-deleted product must be hidden by slug, product=%#v err=%v", bySlug, err)
+	}
+	rows, total, err := repo.List(productcontract.ListFilter{})
+	if err != nil {
+		t.Fatalf("list products failed: %v", err)
+	}
+	if total != 0 || len(rows) != 0 {
+		t.Fatalf("soft-deleted product must be absent from list, total=%d rows=%#v", total, rows)
+	}
+	count, err := repo.CountBySlug(product.Slug, nil)
+	if err != nil || count != 0 {
+		t.Fatalf("soft-deleted product must be absent from slug count, count=%d err=%v", count, err)
+	}
+
+	for operation, mutate := range map[string]func() (int64, error){
+		"reserve": func() (int64, error) { return repo.ReserveManualStock(product.ID, 1) },
+		"release": func() (int64, error) { return repo.ReleaseManualStock(product.ID, 1) },
+		"consume": func() (int64, error) { return repo.ConsumeManualStock(product.ID, 1) },
+	} {
+		affected, err := mutate()
+		if err != nil || affected != 0 {
+			t.Fatalf("%s must not mutate soft-deleted product, affected=%d err=%v", operation, affected, err)
+		}
+	}
+}
+
+func TestProductStorePreloadsOnlyVisibleSKUs(t *testing.T) {
+	repo, db := setupProductStoreTest(t)
+	product := createManualProduct(t, repo, "visible-skus-only", 10, 0, 0)
+	visible := createManualSKU(t, db, product.ID, "VISIBLE", 1, 0, 0, true)
+	deleted := createManualSKU(t, db, product.ID, "DELETED", 1, 0, 0, true)
+	deletedAt := time.Now()
+	if err := db.Model(&productdomain.ProductSKU{}).Where("id = ?", deleted.ID).Update("deleted_at", deletedAt).Error; err != nil {
+		t.Fatalf("soft delete sku fixture failed: %v", err)
+	}
+
+	got, err := repo.GetAdminByID(strconv.FormatUint(uint64(product.ID), 10))
+	if err != nil {
+		t.Fatalf("get product with skus failed: %v", err)
+	}
+	if got == nil || len(got.SKUs) != 1 || got.SKUs[0].ID != visible.ID {
+		t.Fatalf("expected only visible sku %d, got %#v", visible.ID, got)
+	}
+}
+
 func TestListManualStockStatusUsesActiveSKURemaining(t *testing.T) {
 	repo, db := setupProductStoreTest(t)
 
@@ -254,7 +327,7 @@ func TestListManualStockStatusUsesActiveSKURemaining(t *testing.T) {
 	createManualSKU(t, db, unlimitedByFallback.ID, "INACTIVE-UNLIMITED", 0, 0, 0, false)
 
 	checkSlugs := func(status string, expected map[string]bool) {
-		products, _, err := repo.List(catalogproduct.ListFilter{
+		products, _, err := repo.List(productcontract.ListFilter{
 			Page:              1,
 			PageSize:          100,
 			StockStatus:       status,
@@ -313,7 +386,7 @@ func TestListStockStatusAutoUsesLowStockThreshold(t *testing.T) {
 	createAvailableCardSecrets(t, db, normal6.ID, 6)
 
 	checkSlugs := func(status string, expected map[string]bool) {
-		products, _, err := repo.List(catalogproduct.ListFilter{
+		products, _, err := repo.List(productcontract.ListFilter{
 			Page:              1,
 			PageSize:          100,
 			StockStatus:       status,
@@ -351,7 +424,7 @@ func TestListStockStatusAutoUsesLowStockThreshold(t *testing.T) {
 func TestProductRepositoryListSortOrderDescending(t *testing.T) {
 	repo, _ := setupProductStoreTest(t)
 
-	high := &models.Product{
+	high := &productdomain.Product{
 		CategoryID:  1,
 		Slug:        "high-sort-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "high"},
@@ -359,7 +432,7 @@ func TestProductRepositoryListSortOrderDescending(t *testing.T) {
 		IsActive:    true,
 		SortOrder:   100,
 	}
-	low := &models.Product{
+	low := &productdomain.Product{
 		CategoryID:  1,
 		Slug:        "low-sort-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "low"},
@@ -374,7 +447,7 @@ func TestProductRepositoryListSortOrderDescending(t *testing.T) {
 		t.Fatalf("create low sort product failed: %v", err)
 	}
 
-	rows, total, err := repo.List(catalogproduct.ListFilter{
+	rows, total, err := repo.List(productcontract.ListFilter{
 		Page:       1,
 		PageSize:   20,
 		OnlyActive: true,
@@ -396,7 +469,7 @@ func TestProductRepositoryListSortOrderDescending(t *testing.T) {
 func TestProductRepositoryListSupportsNumericIDSearch(t *testing.T) {
 	repo, _ := setupProductStoreTest(t)
 
-	target := &models.Product{
+	target := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "numeric-id-search-target",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "数字搜索目标"},
@@ -409,7 +482,7 @@ func TestProductRepositoryListSupportsNumericIDSearch(t *testing.T) {
 		t.Fatalf("create target product failed: %v", err)
 	}
 
-	other := &models.Product{
+	other := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "numeric-id-search-other",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "另一个商品"},
@@ -422,7 +495,7 @@ func TestProductRepositoryListSupportsNumericIDSearch(t *testing.T) {
 		t.Fatalf("create other product failed: %v", err)
 	}
 
-	rows, total, err := repo.List(catalogproduct.ListFilter{
+	rows, total, err := repo.List(productcontract.ListFilter{
 		Page:       1,
 		PageSize:   20,
 		Search:     strconv.FormatUint(uint64(target.ID), 10),
@@ -451,12 +524,12 @@ func TestProductRepositoryListSupportsNumericIDSearch(t *testing.T) {
 func TestProductRepositoryListFiltersWholesalePrices(t *testing.T) {
 	repo, _ := setupProductStoreTest(t)
 
-	withWholesale := &models.Product{
+	withWholesale := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "with-wholesale",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "有批发价"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		WholesalePrices: models.WholesalePriceTiers{{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))}},
+		WholesalePrices: productdomain.WholesalePriceTiers{{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))}},
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -465,7 +538,7 @@ func TestProductRepositoryListFiltersWholesalePrices(t *testing.T) {
 		t.Fatalf("create product with wholesale failed: %v", err)
 	}
 
-	withoutWholesale := &models.Product{
+	withoutWholesale := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "without-wholesale",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "无批发价"},
@@ -479,7 +552,7 @@ func TestProductRepositoryListFiltersWholesalePrices(t *testing.T) {
 	}
 
 	enabled := true
-	rows, _, err := repo.List(catalogproduct.ListFilter{Page: 1, PageSize: 20, HasWholesalePrices: &enabled})
+	rows, _, err := repo.List(productcontract.ListFilter{Page: 1, PageSize: 20, HasWholesalePrices: &enabled})
 	if err != nil {
 		t.Fatalf("list products with wholesale failed: %v", err)
 	}
@@ -488,7 +561,7 @@ func TestProductRepositoryListFiltersWholesalePrices(t *testing.T) {
 	}
 
 	disabled := false
-	rows, _, err = repo.List(catalogproduct.ListFilter{Page: 1, PageSize: 20, HasWholesalePrices: &disabled})
+	rows, _, err = repo.List(productcontract.ListFilter{Page: 1, PageSize: 20, HasWholesalePrices: &disabled})
 	if err != nil {
 		t.Fatalf("list products without wholesale failed: %v", err)
 	}

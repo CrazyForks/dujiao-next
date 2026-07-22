@@ -3,6 +3,8 @@ package service
 import (
 	"sort"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
@@ -151,7 +153,7 @@ func (r *ResellerPricingResolver) ApplyToOrderBuildResult(tenant TenantContext, 
 	return ctx, nil
 }
 
-func (r *ResellerPricingResolver) LoadDisplayPricingBatch(tenant TenantContext, products []models.Product) (*ResellerDisplayPricingBatch, error) {
+func (r *ResellerPricingResolver) LoadDisplayPricingBatch(tenant TenantContext, products []productdomain.Product) (*ResellerDisplayPricingBatch, error) {
 	if !isResellerOrderContext(tenant) {
 		return nil, nil
 	}
@@ -178,7 +180,7 @@ func (r *ResellerPricingResolver) LoadDisplayPricingBatch(tenant TenantContext, 
 	}, nil
 }
 
-func (r *ResellerPricingResolver) ResolveDisplayPrices(tenant TenantContext, product *models.Product, batch *ResellerDisplayPricingBatch) (*ResellerDisplayPriceResult, error) {
+func (r *ResellerPricingResolver) ResolveDisplayPrices(tenant TenantContext, product *productdomain.Product, batch *ResellerDisplayPricingBatch) (*ResellerDisplayPriceResult, error) {
 	if !isResellerOrderContext(tenant) {
 		return nil, nil
 	}
@@ -281,7 +283,7 @@ func resolveResellerUnitAmount(profile *models.ResellerProfile, productSetting *
 	return resellermodule.ResolveUnitAmount(profile, productSetting, skuSetting, baseUnit)
 }
 
-func validateResellerUnitAmount(profile *models.ResellerProfile, sku *models.ProductSKU, baseUnit decimal.Decimal, resellerUnit decimal.Decimal) error {
+func validateResellerUnitAmount(profile *models.ResellerProfile, sku *productdomain.ProductSKU, baseUnit decimal.Decimal, resellerUnit decimal.Decimal) error {
 	return resellermodule.ValidateUnitAmount(profile, sku, baseUnit, resellerUnit)
 }
 
@@ -303,7 +305,7 @@ func collectOrderPlanIDs(plans []childOrderPlan) ([]uint, []uint) {
 	return uniqueServiceUintSlice(productIDs), uniqueServiceUintSlice(skuIDs)
 }
 
-func collectProductIDs(products []models.Product) ([]uint, []uint) {
+func collectProductIDs(products []productdomain.Product) ([]uint, []uint) {
 	productIDs := make([]uint, 0, len(products))
 	skuIDs := []uint{}
 	for _, product := range products {

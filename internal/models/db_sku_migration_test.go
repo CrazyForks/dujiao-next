@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -30,8 +31,8 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 	db := setupSKUMigrationTestDB(t)
 
 	if err := db.AutoMigrate(
-		&Product{},
-		&ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&OrderItem{},
 		&CartItem{},
 		&CardSecret{},
@@ -41,7 +42,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	product := &Product{
+	product := &productdomain.Product{
 		CategoryID:        1,
 		Slug:              "sku-migration-legacy",
 		TitleJSON:         jsonmap.JSON{"zh-CN": "历史商品"},
@@ -117,8 +118,8 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		t.Fatalf("ensure sku migration failed: %v", err)
 	}
 
-	var sku ProductSKU
-	if err := db.Where("product_id = ? AND sku_code = ?", product.ID, DefaultSKUCode).First(&sku).Error; err != nil {
+	var sku productdomain.ProductSKU
+	if err := db.Where("product_id = ? AND sku_code = ?", product.ID, productdomain.DefaultSKUCode).First(&sku).Error; err != nil {
 		t.Fatalf("query default sku failed: %v", err)
 	}
 	if !sku.PriceAmount.Decimal.Equal(product.PriceAmount.Decimal) {
@@ -165,7 +166,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 	}
 
 	var skuCount int64
-	if err := db.Model(&ProductSKU{}).Where("product_id = ?", product.ID).Count(&skuCount).Error; err != nil {
+	if err := db.Model(&productdomain.ProductSKU{}).Where("product_id = ?", product.ID).Count(&skuCount).Error; err != nil {
 		t.Fatalf("count product sku failed: %v", err)
 	}
 	if skuCount != 1 {

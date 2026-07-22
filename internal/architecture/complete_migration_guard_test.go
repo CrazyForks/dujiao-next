@@ -153,6 +153,11 @@ var completedMigrationPaths = []string{
 	"internal/transport/http/catalog/admin_category_handler.go",
 	"internal/integration/catalog/category_service_test.go",
 	"internal/dto/product_test.go",
+	"internal/models/product.go",
+	"internal/models/product_sku.go",
+	"internal/models/wholesale_price.go",
+	"internal/modules/catalog/product/errors.go",
+	"internal/modules/catalog/product/ports.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

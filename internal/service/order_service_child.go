@@ -5,10 +5,11 @@ import (
 	"strings"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 
 	"gorm.io/gorm"
 )
@@ -22,7 +23,7 @@ func (s *OrderService) cancelOrderWithChildren(order *models.Order, rollbackCoup
 	err := s.orderRepo.Transaction(func(tx *gorm.DB) error {
 		orderRepo := s.orderRepo.WithTx(tx)
 		productRepo := s.productRepo.BindTx(tx)
-		var productSKURepo catalogproduct.SKURepository
+		var productSKURepo productcontract.SKURepository
 		if s.productSKURepo != nil {
 			productSKURepo = s.productSKURepo.BindTx(tx)
 		}
@@ -473,7 +474,7 @@ func (s *OrderService) completeParentOrderInTx(tx *gorm.DB, order *models.Order,
 func (s *OrderService) updateOrderToPaidInTx(tx *gorm.DB, orderID uint, items []models.OrderItem, now time.Time) error {
 	orderRepo := s.orderRepo.WithTx(tx)
 	productRepo := s.productRepo.BindTx(tx)
-	var productSKURepo catalogproduct.SKURepository
+	var productSKURepo productcontract.SKURepository
 	if s.productSKURepo != nil {
 		productSKURepo = s.productSKURepo.BindTx(tx)
 	}
@@ -496,7 +497,7 @@ func (s *OrderService) cancelSingleOrderInTx(tx *gorm.DB, order *models.Order, t
 	}
 	orderRepo := s.orderRepo.WithTx(tx)
 	productRepo := s.productRepo.BindTx(tx)
-	var productSKURepo catalogproduct.SKURepository
+	var productSKURepo productcontract.SKURepository
 	if s.productSKURepo != nil {
 		productSKURepo = s.productSKURepo.BindTx(tx)
 	}

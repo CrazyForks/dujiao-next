@@ -6,6 +6,8 @@ import (
 	"io/fs"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
 )
 
@@ -33,7 +35,7 @@ type PostStore interface {
 type PostProductRelationStore interface {
 	GetRelatedProductIDs(ctx context.Context, postID uint) ([]uint, error)
 	SetRelatedProductIDs(ctx context.Context, postID uint, productIDs []uint) error
-	ListRelatedProducts(ctx context.Context, postID uint) ([]models.Product, error)
+	ListRelatedProducts(ctx context.Context, postID uint) ([]productdomain.Product, error)
 	ListPostsForProduct(ctx context.Context, productID uint, postType string, onlyPublished bool, limit int) ([]models.Post, error)
 }
 

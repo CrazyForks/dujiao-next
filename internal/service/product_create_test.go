@@ -4,10 +4,11 @@ import (
 	"errors"
 	"testing"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
@@ -139,14 +140,14 @@ func TestProductServiceCreateRollsBackProductAndSKUWhenWholesaleValidationFails(
 	}
 
 	var productCount int64
-	if err := db.Model(&models.Product{}).Where("slug = ?", "write-rollback-product").Count(&productCount).Error; err != nil {
+	if err := db.Model(&productdomain.Product{}).Where("slug = ?", "write-rollback-product").Count(&productCount).Error; err != nil {
 		t.Fatalf("count products: %v", err)
 	}
 	if productCount != 0 {
 		t.Fatalf("transaction must roll back product, got %d rows", productCount)
 	}
 	var skuCount int64
-	if err := db.Model(&models.ProductSKU{}).Count(&skuCount).Error; err != nil {
+	if err := db.Model(&productdomain.ProductSKU{}).Count(&skuCount).Error; err != nil {
 		t.Fatalf("count product SKUs: %v", err)
 	}
 	if skuCount != 0 {

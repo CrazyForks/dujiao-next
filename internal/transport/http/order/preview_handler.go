@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"strconv"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/i18n"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/modules/cardsecret"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	"github.com/dujiao-next/internal/modules/coupon"
@@ -321,7 +322,7 @@ var guestOrderCreateExtraErrorRules = []mappedError{
 
 var userOrderCommonErrorRules = []mappedError{
 	{target: ErrProductSKURequired, code: response.CodeBadRequest, key: "error.order_item_invalid"},
-	{target: catalogproduct.ErrProductSKUInvalid, code: response.CodeBadRequest, key: "error.order_item_invalid"},
+	{target: productcontract.ErrProductSKUInvalid, code: response.CodeBadRequest, key: "error.order_item_invalid"},
 	{target: productdomain.ErrPurchaseQuantityInvalid, code: response.CodeBadRequest, key: "error.order_item_invalid"},
 	{target: ErrInvalidOrderAmount, code: response.CodeBadRequest, key: "error.order_amount_invalid"},
 	{target: ErrProductPurchaseNotAllowed, code: response.CodeBadRequest, key: "error.product_purchase_not_allowed"},
@@ -330,9 +331,9 @@ var userOrderCommonErrorRules = []mappedError{
 	{target: ErrManualStockInsufficient, code: response.CodeBadRequest, key: "error.manual_stock_insufficient"},
 	{target: cardsecret.ErrInsufficient, code: response.CodeBadRequest, key: "error.card_secret_insufficient"},
 	{target: ErrOrderCurrencyMismatch, code: response.CodeBadRequest, key: "error.order_currency_mismatch"},
-	{target: catalogproduct.ErrProductPriceInvalid, code: response.CodeBadRequest, key: "error.product_price_invalid"},
+	{target: productcontract.ErrProductPriceInvalid, code: response.CodeBadRequest, key: "error.product_price_invalid"},
 	{target: ErrProductNotAvailable, code: response.CodeBadRequest, key: "error.product_not_available"},
-	{target: catalogproduct.ErrResellerProductNotListed, code: response.CodeBadRequest, key: "error.reseller_product_not_listed"},
+	{target: productcontract.ErrResellerProductNotListed, code: response.CodeBadRequest, key: "error.reseller_product_not_listed"},
 	{target: resellermodule.ErrPriceBelowBase, code: response.CodeBadRequest, key: "error.reseller_price_invalid"},
 	{target: resellermodule.ErrMarkupExceeded, code: response.CodeBadRequest, key: "error.reseller_markup_exceeded"},
 	{target: ErrResellerCouponNotAllowed, code: response.CodeBadRequest, key: "error.reseller_coupon_not_allowed"},
@@ -365,7 +366,7 @@ var userOrderPreviewExtraErrorRules = []mappedError{
 
 var guestOrderCommonErrorRules = []mappedError{
 	{target: ErrProductSKURequired, code: response.CodeBadRequest, key: "error.order_item_invalid"},
-	{target: catalogproduct.ErrProductSKUInvalid, code: response.CodeBadRequest, key: "error.order_item_invalid"},
+	{target: productcontract.ErrProductSKUInvalid, code: response.CodeBadRequest, key: "error.order_item_invalid"},
 	{target: ErrGuestEmailRequired, code: response.CodeBadRequest, key: "error.guest_email_required"},
 	{target: ErrGuestPasswordRequired, code: response.CodeBadRequest, key: "error.guest_password_required"},
 	{target: ErrInvalidEmail, code: response.CodeBadRequest, key: "error.email_invalid"},
@@ -378,9 +379,9 @@ var guestOrderCommonErrorRules = []mappedError{
 	{target: ErrManualStockInsufficient, code: response.CodeBadRequest, key: "error.manual_stock_insufficient"},
 	{target: cardsecret.ErrInsufficient, code: response.CodeBadRequest, key: "error.card_secret_insufficient"},
 	{target: ErrOrderCurrencyMismatch, code: response.CodeBadRequest, key: "error.order_currency_mismatch"},
-	{target: catalogproduct.ErrProductPriceInvalid, code: response.CodeBadRequest, key: "error.product_price_invalid"},
+	{target: productcontract.ErrProductPriceInvalid, code: response.CodeBadRequest, key: "error.product_price_invalid"},
 	{target: ErrProductNotAvailable, code: response.CodeBadRequest, key: "error.product_not_available"},
-	{target: catalogproduct.ErrResellerProductNotListed, code: response.CodeBadRequest, key: "error.reseller_product_not_listed"},
+	{target: productcontract.ErrResellerProductNotListed, code: response.CodeBadRequest, key: "error.reseller_product_not_listed"},
 	{target: resellermodule.ErrPriceBelowBase, code: response.CodeBadRequest, key: "error.reseller_price_invalid"},
 	{target: resellermodule.ErrMarkupExceeded, code: response.CodeBadRequest, key: "error.reseller_markup_exceeded"},
 	{target: ErrResellerCouponNotAllowed, code: response.CodeBadRequest, key: "error.reseller_coupon_not_allowed"},

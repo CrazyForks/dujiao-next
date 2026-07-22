@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -144,13 +146,13 @@ type CategoryRepository interface {
 }
 
 type ProductService interface {
-	ListPublicExact(categoryID string, page, pageSize int) ([]models.Product, int64, error)
-	ListPublic(categoryID, search string, page, pageSize int) ([]models.Product, int64, error)
-	ApplyAutoStockCounts(products []models.Product) error
+	ListPublicExact(categoryID string, page, pageSize int) ([]productdomain.Product, int64, error)
+	ListPublic(categoryID, search string, page, pageSize int) ([]productdomain.Product, int64, error)
+	ApplyAutoStockCounts(products []productdomain.Product) error
 }
 
 type ProductRepository interface {
-	GetByID(id string) (*models.Product, error)
+	GetByID(id string) (*productdomain.Product, error)
 }
 
 type ProductMappingRepository interface {

@@ -5,32 +5,34 @@ import (
 	"reflect"
 	"testing"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/cardsecret"
-	"github.com/dujiao-next/internal/modules/catalog/product"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 )
 
 type productRepositoryStub struct {
-	filter  product.ListFilter
-	rows    []models.Product
+	filter  productcontract.ListFilter
+	rows    []productdomain.Product
 	total   int64
-	bySlug  *models.Product
-	byAdmin *models.Product
+	bySlug  *productdomain.Product
+	byAdmin *productdomain.Product
 }
 
-func (stub *productRepositoryStub) List(filter product.ListFilter) ([]models.Product, int64, error) {
+func (stub *productRepositoryStub) List(filter productcontract.ListFilter) ([]productdomain.Product, int64, error) {
 	stub.filter = filter
 	return stub.rows, stub.total, nil
 }
 
-func (stub *productRepositoryStub) GetBySlug(string, bool) (*models.Product, error) {
+func (stub *productRepositoryStub) GetBySlug(string, bool) (*productdomain.Product, error) {
 	return stub.bySlug, nil
 }
 
-func (stub *productRepositoryStub) GetAdminByID(string) (*models.Product, error) {
+func (stub *productRepositoryStub) GetAdminByID(string) (*productdomain.Product, error) {
 	return stub.byAdmin, nil
 }
 
@@ -127,12 +129,12 @@ func TestApplyAutoStockCountsAssignsLegacyStockToOneSKU(t *testing.T) {
 		{ProductID: 30, SKUID: 101, Status: models.CardSecretStatusAvailable, Total: 3},
 		{ProductID: 30, SKUID: 102, Status: models.CardSecretStatusAvailable, Total: 4},
 	}}})
-	products := []models.Product{{
+	products := []productdomain.Product{{
 		ID:              30,
 		FulfillmentType: constants.FulfillmentTypeAuto,
-		SKUs: []models.ProductSKU{
+		SKUs: []productdomain.ProductSKU{
 			{ID: 102, SKUCode: "SECOND", IsActive: true},
-			{ID: 101, SKUCode: models.DefaultSKUCode, IsActive: true},
+			{ID: 101, SKUCode: productdomain.DefaultSKUCode, IsActive: true},
 		},
 	}}
 

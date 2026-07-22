@@ -3,6 +3,8 @@ package content
 import (
 	"context"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -206,7 +208,7 @@ func (s *PostService) GetRelatedProductIDs(ctx context.Context, postID uint) ([]
 }
 
 // ListRelatedProducts 获取文章关联商品列表。
-func (s *PostService) ListRelatedProducts(ctx context.Context, postID uint) ([]models.Product, error) {
+func (s *PostService) ListRelatedProducts(ctx context.Context, postID uint) ([]productdomain.Product, error) {
 	return s.relations.ListRelatedProducts(ctx, postID)
 }
 

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
@@ -57,8 +59,8 @@ type orderResellerSnapshotFixture struct {
 	owner        userdomain.User
 	buyer        userdomain.User
 	profile      models.ResellerProfile
-	product      models.Product
-	sku          models.ProductSKU
+	product      productdomain.Product
+	sku          productdomain.ProductSKU
 	tenant       TenantContext
 }
 
@@ -73,8 +75,8 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	if err := db.AutoMigrate(
 		&userdomain.User{},
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
@@ -111,12 +113,12 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "reseller-order-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "reseller-order-product"},
 		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
-		WholesalePrices: models.WholesalePriceTiers{{MinQuantity: 2, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))}},
+		WholesalePrices: productdomain.WholesalePriceTiers{{MinQuantity: 2, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))}},
 		PurchaseType:    constants.ProductPurchaseGuest,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -126,9 +128,9 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	if err := db.Create(&product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
-	sku := models.ProductSKU{
+	sku := productdomain.ProductSKU{
 		ProductID:        product.ID,
-		SKUCode:          models.DefaultSKUCode,
+		SKUCode:          productdomain.DefaultSKUCode,
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(100)),
 		CostPriceAmount:  money.FromDecimal(decimal.NewFromInt(50)),
 		ManualStockTotal: constants.ManualStockUnlimited,
@@ -200,9 +202,9 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	}
 }
 
-func (f orderResellerSnapshotFixture) addResellerSnapshotProduct(t *testing.T, slug string, base decimal.Decimal, cost decimal.Decimal, fixedMarkup decimal.Decimal) (models.Product, models.ProductSKU) {
+func (f orderResellerSnapshotFixture) addResellerSnapshotProduct(t *testing.T, slug string, base decimal.Decimal, cost decimal.Decimal, fixedMarkup decimal.Decimal) (productdomain.Product, productdomain.ProductSKU) {
 	t.Helper()
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      f.product.CategoryID,
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": slug},
@@ -216,9 +218,9 @@ func (f orderResellerSnapshotFixture) addResellerSnapshotProduct(t *testing.T, s
 	if err := f.db.Create(&product).Error; err != nil {
 		t.Fatalf("create extra product failed: %v", err)
 	}
-	sku := models.ProductSKU{
+	sku := productdomain.ProductSKU{
 		ProductID:        product.ID,
-		SKUCode:          models.DefaultSKUCode,
+		SKUCode:          productdomain.DefaultSKUCode,
 		PriceAmount:      money.FromDecimal(base),
 		CostPriceAmount:  money.FromDecimal(cost),
 		ManualStockTotal: constants.ManualStockUnlimited,

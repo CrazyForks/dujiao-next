@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 
 	"github.com/dujiao-next/internal/cache"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 )
 
 // SitemapPost 是生成 Sitemap 所需的最小文章投影。
@@ -36,14 +37,14 @@ func (f PublishedPostReaderFunc) ListPublishedPosts(ctx context.Context, limit i
 
 // Service 生成 sitemap.xml / robots.txt 内容。
 type Service struct {
-	productRepo  catalogproduct.Repository
+	productRepo  productcontract.Repository
 	categoryRepo categorycontract.Repository
 	posts        PublishedPostReader
 }
 
 // NewService 创建 sitemap 服务。
 func NewService(
-	productRepo catalogproduct.Repository,
+	productRepo productcontract.Repository,
 	categoryRepo categorycontract.Repository,
 	posts PublishedPostReader,
 ) (*Service, error) {
@@ -170,7 +171,7 @@ func (s *Service) collectURLs(ctx context.Context, baseURL string) ([]urlEntry, 
 	}
 
 	// 3. 上架的商品（OnlyActive 已含分类启用过滤）
-	products, _, err := s.productRepo.List(catalogproduct.ListFilter{
+	products, _, err := s.productRepo.List(productcontract.ListFilter{
 		Page:       1,
 		PageSize:   sitemapMaxFetch,
 		OnlyActive: true,

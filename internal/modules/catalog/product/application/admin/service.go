@@ -3,14 +3,13 @@ package productadmin
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 )
 
 // ProductRepository 是商品管理用例所需的最小商品端口。
 type ProductRepository interface {
-	GetByID(id string) (*models.Product, error)
-	GetAdminByID(id string) (*models.Product, error)
+	GetByID(id string) (*productdomain.Product, error)
+	GetAdminByID(id string) (*productdomain.Product, error)
 	QuickUpdate(id string, fields map[string]interface{}) error
 }
 

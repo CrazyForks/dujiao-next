@@ -3,12 +3,14 @@ package productapplication
 import (
 	"strings"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 )
 
 // ApplyAutoStockCounts 聚合卡密自动发货库存信息并填充到商品中
-func (s *Service) ApplyAutoStockCounts(products []models.Product) error {
+func (s *Service) ApplyAutoStockCounts(products []productdomain.Product) error {
 	var productIDs []uint
 	for _, p := range products {
 		if p.FulfillmentType == constants.FulfillmentTypeAuto {
@@ -82,12 +84,12 @@ func (s *Service) ApplyAutoStockCounts(products []models.Product) error {
 	return nil
 }
 
-func resolveLegacyStockTargetSKUIndex(skus []models.ProductSKU) int {
+func resolveLegacyStockTargetSKUIndex(skus []productdomain.ProductSKU) int {
 	if len(skus) == 0 {
 		return -1
 	}
 
-	defaultCode := strings.ToUpper(strings.TrimSpace(models.DefaultSKUCode))
+	defaultCode := strings.ToUpper(strings.TrimSpace(productdomain.DefaultSKUCode))
 	firstActiveIdx := -1
 	for idx := range skus {
 		if !skus[idx].IsActive {

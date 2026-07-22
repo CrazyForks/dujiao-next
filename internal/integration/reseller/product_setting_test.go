@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
@@ -31,8 +33,8 @@ func openResellerProductSettingServiceTestDB(t *testing.T) *gorm.DB {
 	if err := db.AutoMigrate(
 		&userdomain.User{},
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.ResellerProfile{},
 		&models.ResellerProductSetting{},
 	); err != nil {
@@ -41,7 +43,7 @@ func openResellerProductSettingServiceTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (userdomain.User, models.ResellerProfile, models.Product, []models.ProductSKU) {
+func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (userdomain.User, models.ResellerProfile, productdomain.Product, []productdomain.ProductSKU) {
 	t.Helper()
 	user := userdomain.User{Email: fmt.Sprintf("setting-service-%d@example.test", time.Now().UnixNano()), PasswordHash: "hash", Status: constants.UserStatusActive}
 	if err := db.Create(&user).Error; err != nil {
@@ -61,7 +63,7 @@ func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (userdomai
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "service-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "服务商品", "zh-TW": "服務商品", "en-US": "Service Product"},
@@ -72,7 +74,7 @@ func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (userdomai
 	if err := db.Create(&product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
-	skus := []models.ProductSKU{
+	skus := []productdomain.ProductSKU{
 		{ProductID: product.ID, SKUCode: "A", PriceAmount: money.FromDecimal(decimal.RequireFromString("100.00")), CostPriceAmount: money.FromDecimal(decimal.RequireFromString("80.00")), IsActive: true},
 		{ProductID: product.ID, SKUCode: "B", PriceAmount: money.FromDecimal(decimal.RequireFromString("200.00")), CostPriceAmount: money.FromDecimal(decimal.RequireFromString("120.00")), IsActive: true},
 	}

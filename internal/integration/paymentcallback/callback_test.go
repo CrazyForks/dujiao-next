@@ -4,12 +4,14 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
@@ -65,8 +67,8 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},

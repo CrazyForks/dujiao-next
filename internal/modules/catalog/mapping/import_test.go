@@ -3,7 +3,8 @@ package mapping
 import (
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/dujiao-next/internal/upstream"
 
@@ -11,10 +12,10 @@ import (
 )
 
 func TestConvertUpstreamWholesalePricesRemapsUpstreamSKUScope(t *testing.T) {
-	tiers := convertUpstreamWholesalePrices(models.WholesalePriceTiers{
+	tiers := convertUpstreamWholesalePrices(productdomain.WholesalePriceTiers{
 		{SKUID: 201, MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}, decimal.NewFromInt(1), decimal.Zero, "none", buildUpstreamWholesaleSKUIndex(
-		[]models.ProductSKU{{ID: 11, SKUCode: "SKU-A"}},
+		[]productdomain.ProductSKU{{ID: 11, SKUCode: "SKU-A"}},
 		[]upstream.UpstreamSKU{{ID: 201, SKUCode: "SKU-A"}},
 		nil,
 	))
@@ -28,7 +29,7 @@ func TestConvertUpstreamWholesalePricesRemapsUpstreamSKUScope(t *testing.T) {
 }
 
 func TestConvertUpstreamWholesalePricesDropsUnmappedUpstreamSKUID(t *testing.T) {
-	tiers := convertUpstreamWholesalePrices(models.WholesalePriceTiers{
+	tiers := convertUpstreamWholesalePrices(productdomain.WholesalePriceTiers{
 		{SKUID: 201, MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}, decimal.NewFromInt(1), decimal.Zero, "none")
 

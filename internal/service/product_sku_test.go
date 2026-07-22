@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"testing"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
@@ -24,7 +26,7 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "auto-card-secret-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "auto-card-secret-product"},
@@ -37,7 +39,7 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	stockSKU := models.ProductSKU{
+	stockSKU := productdomain.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        "SKU-STOCK",
 		SpecValuesJSON: jsonmap.JSON{"zh-CN": "有库存"},
@@ -45,7 +47,7 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 		IsActive:       true,
 		SortOrder:      2,
 	}
-	spareSKU := models.ProductSKU{
+	spareSKU := productdomain.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        "SKU-SPARE",
 		SpecValuesJSON: jsonmap.JSON{"zh-CN": "无库存"},

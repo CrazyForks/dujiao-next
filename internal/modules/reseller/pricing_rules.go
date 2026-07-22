@@ -3,6 +3,8 @@ package reseller
 import (
 	"strings"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/shopspring/decimal"
 )
@@ -74,7 +76,7 @@ func ApplyMarkupPercent(baseUnit decimal.Decimal, percent decimal.Decimal) decim
 }
 
 // ValidateUnitAmount 校验分销单价不低于底价/成本价，且不超过最大加价比例。
-func ValidateUnitAmount(profile *models.ResellerProfile, sku *models.ProductSKU, baseUnit decimal.Decimal, resellerUnit decimal.Decimal) error {
+func ValidateUnitAmount(profile *models.ResellerProfile, sku *productdomain.ProductSKU, baseUnit decimal.Decimal, resellerUnit decimal.Decimal) error {
 	baseUnit = baseUnit.Round(2)
 	resellerUnit = resellerUnit.Round(2)
 	if resellerUnit.LessThanOrEqual(decimal.Zero) || resellerUnit.LessThan(baseUnit) {

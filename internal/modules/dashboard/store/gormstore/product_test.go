@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -19,7 +21,7 @@ func TestGetTopProductsIncludesChildOrderItems(t *testing.T) {
 
 	category := createDashboardCategory(t, db, "test-category")
 
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "test-dashboard-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
@@ -104,7 +106,7 @@ func TestGetTopProductsGroupsBySKU(t *testing.T) {
 	now := time.Now()
 	category := createDashboardCategory(t, db, "sku-category")
 
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "sku-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "订阅"},
@@ -117,8 +119,8 @@ func TestGetTopProductsGroupsBySKU(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	skuA := &models.ProductSKU{ProductID: product.ID, SKUCode: "MONTH-1", SpecValuesJSON: jsonmap.JSON{"zh-CN": "1个月"}, IsActive: true}
-	skuB := &models.ProductSKU{ProductID: product.ID, SKUCode: "MONTH-3", SpecValuesJSON: jsonmap.JSON{"zh-CN": "3个月"}, IsActive: true}
+	skuA := &productdomain.ProductSKU{ProductID: product.ID, SKUCode: "MONTH-1", SpecValuesJSON: jsonmap.JSON{"zh-CN": "1个月"}, IsActive: true}
+	skuB := &productdomain.ProductSKU{ProductID: product.ID, SKUCode: "MONTH-3", SpecValuesJSON: jsonmap.JSON{"zh-CN": "3个月"}, IsActive: true}
 	if err := db.Create(skuA).Error; err != nil {
 		t.Fatalf("create skuA failed: %v", err)
 	}
@@ -127,7 +129,7 @@ func TestGetTopProductsGroupsBySKU(t *testing.T) {
 	}
 
 	for i, combo := range []struct {
-		sku   *models.ProductSKU
+		sku   *productdomain.ProductSKU
 		qty   int
 		total int64
 	}{

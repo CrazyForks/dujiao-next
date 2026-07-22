@@ -24,15 +24,15 @@ var (
 
 // ItemDetail 购物车项详情（用于响应）。
 type ItemDetail struct {
-	ProductID       uint               `json:"product_id"`
-	SKUID           uint               `json:"sku_id"`
-	Quantity        int                `json:"quantity"`
-	FulfillmentType string             `json:"fulfillment_type"`
-	UnitPrice       money.Amount       `json:"unit_price"`
-	OriginalPrice   money.Amount       `json:"original_price"`
-	Currency        string             `json:"currency"`
-	Product         *models.Product    `json:"product"`
-	SKU             *models.ProductSKU `json:"sku"`
+	ProductID       uint                      `json:"product_id"`
+	SKUID           uint                      `json:"sku_id"`
+	Quantity        int                       `json:"quantity"`
+	FulfillmentType string                    `json:"fulfillment_type"`
+	UnitPrice       money.Amount              `json:"unit_price"`
+	OriginalPrice   money.Amount              `json:"original_price"`
+	Currency        string                    `json:"currency"`
+	Product         *productdomain.Product    `json:"product"`
+	SKU             *productdomain.ProductSKU `json:"sku"`
 }
 
 // UpsertItemInput 购物车更新输入。
@@ -53,13 +53,13 @@ type Repository interface {
 
 // ProductReader 是购物车服务所需的商品读取端口。
 type ProductReader interface {
-	GetByID(id string) (*models.Product, error)
+	GetByID(id string) (*productdomain.Product, error)
 }
 
 // SKUReader 是购物车服务所需的 SKU 读取端口。
 type SKUReader interface {
-	GetByID(id uint) (*models.ProductSKU, error)
-	ListByProduct(productID uint, onlyActive bool) ([]models.ProductSKU, error)
+	GetByID(id uint) (*productdomain.ProductSKU, error)
+	ListByProduct(productID uint, onlyActive bool) ([]productdomain.ProductSKU, error)
 }
 
 // CurrencyReader 是购物车服务所需的站点币种端口。
@@ -230,7 +230,7 @@ func (s *Service) siteCurrency() string {
 	return currency
 }
 
-func resolveProductSKU(repo SKUReader, product *models.Product, rawSKUID uint) (*models.ProductSKU, error) {
+func resolveProductSKU(repo SKUReader, product *productdomain.Product, rawSKUID uint) (*productdomain.ProductSKU, error) {
 	if product == nil || product.ID == 0 {
 		return nil, ErrProductUnavailable
 	}

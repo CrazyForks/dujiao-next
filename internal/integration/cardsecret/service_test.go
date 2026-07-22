@@ -3,17 +3,19 @@ package cardsecret_test
 import (
 	"bytes"
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"mime/multipart"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/cardsecret"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -39,8 +41,8 @@ var (
 func NewCardSecretService(
 	secrets repository.CardSecretRepository,
 	batches repository.CardSecretBatchRepository,
-	products catalogproduct.Repository,
-	productSKUs catalogproduct.SKURepository,
+	products productcontract.Repository,
+	productSKUs productcontract.SKURepository,
 ) *cardsecret.Service {
 	return cardsecret.NewService(cardsecret.ServiceOptions{
 		Secrets:      secrets,
@@ -61,8 +63,8 @@ func setupCardSecretServiceTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.CardSecretBatch{},
 		&models.CardSecret{},
 	); err != nil {
@@ -102,7 +104,7 @@ func newCardSecretCSVFileHeader(t *testing.T, content string) *multipart.FileHea
 func TestCreateCardSecretBatchAutoMultiSKURequiresExplicitSKU(t *testing.T) {
 	db := setupCardSecretServiceTestDB(t)
 
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "card-secret-product-default",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密商品"},
@@ -115,16 +117,16 @@ func TestCreateCardSecretBatchAutoMultiSKURequiresExplicitSKU(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	defaultSKU := &models.ProductSKU{
+	defaultSKU := &productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(20)),
 		IsActive:    true,
 	}
 	if err := db.Create(defaultSKU).Error; err != nil {
 		t.Fatalf("create default sku failed: %v", err)
 	}
-	otherSKU := &models.ProductSKU{
+	otherSKU := &productdomain.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     "PRO",
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(30)),
@@ -158,7 +160,7 @@ func TestCreateCardSecretBatchAutoMultiSKURequiresExplicitSKU(t *testing.T) {
 func TestCreateCardSecretBatchAutoSingleActiveFallsBackToOnlyActiveSKU(t *testing.T) {
 	db := setupCardSecretServiceTestDB(t)
 
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "card-secret-product-single-active",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密商品"},
@@ -171,9 +173,9 @@ func TestCreateCardSecretBatchAutoSingleActiveFallsBackToOnlyActiveSKU(t *testin
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	defaultSKU := &models.ProductSKU{
+	defaultSKU := &productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(20)),
 		IsActive:    false,
 	}
@@ -183,7 +185,7 @@ func TestCreateCardSecretBatchAutoSingleActiveFallsBackToOnlyActiveSKU(t *testin
 	if err := db.Model(defaultSKU).Update("is_active", false).Error; err != nil {
 		t.Fatalf("disable default sku failed: %v", err)
 	}
-	onlyActiveSKU := &models.ProductSKU{
+	onlyActiveSKU := &productdomain.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     "PRO",
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(30)),
@@ -220,7 +222,7 @@ func TestCreateCardSecretBatchAutoSingleActiveFallsBackToOnlyActiveSKU(t *testin
 func TestCreateCardSecretBatchDeduplicateOption(t *testing.T) {
 	db := setupCardSecretServiceTestDB(t)
 
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "card-secret-deduplicate-option",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密去重商品"},
@@ -233,9 +235,9 @@ func TestCreateCardSecretBatchDeduplicateOption(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	defaultSKU := &models.ProductSKU{
+	defaultSKU := &productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(20)),
 		IsActive:    true,
 	}
@@ -304,7 +306,7 @@ func TestCreateCardSecretBatchDeduplicateOption(t *testing.T) {
 func TestImportCardSecretCSVKeepsDuplicatesWhenDeduplicateDisabled(t *testing.T) {
 	db := setupCardSecretServiceTestDB(t)
 
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "card-secret-csv-deduplicate-option",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "CSV 卡密去重商品"},
@@ -317,9 +319,9 @@ func TestImportCardSecretCSVKeepsDuplicatesWhenDeduplicateDisabled(t *testing.T)
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	defaultSKU := &models.ProductSKU{
+	defaultSKU := &productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(20)),
 		IsActive:    true,
 	}
@@ -374,7 +376,7 @@ func TestImportCardSecretCSVKeepsDuplicatesWhenDeduplicateDisabled(t *testing.T)
 func TestCardSecretServiceSupportsBatchTargetOperations(t *testing.T) {
 	db := setupCardSecretServiceTestDB(t)
 
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "card-secret-batch-ops",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密批次商品"},
@@ -387,9 +389,9 @@ func TestCardSecretServiceSupportsBatchTargetOperations(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	defaultSKU := &models.ProductSKU{
+	defaultSKU := &productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(50)),
 		IsActive:    true,
 	}
@@ -516,7 +518,7 @@ func TestCardSecretServiceSupportsBatchTargetOperations(t *testing.T) {
 func TestExportCardSecretsWithEmptyFilterExportsCurrentResults(t *testing.T) {
 	db := setupCardSecretServiceTestDB(t)
 
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "card-secret-export-empty-filter",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密导出商品"},
@@ -528,9 +530,9 @@ func TestExportCardSecretsWithEmptyFilterExportsCurrentResults(t *testing.T) {
 	if err := db.Create(product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
-	defaultSKU := &models.ProductSKU{
+	defaultSKU := &productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(20)),
 		IsActive:    true,
 	}
@@ -569,7 +571,7 @@ func TestExportCardSecretsWithEmptyFilterExportsCurrentResults(t *testing.T) {
 func TestCardSecretServiceSupportsKeywordAndBatchNoFilters(t *testing.T) {
 	db := setupCardSecretServiceTestDB(t)
 
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "card-secret-search",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密搜索商品"},
@@ -582,9 +584,9 @@ func TestCardSecretServiceSupportsKeywordAndBatchNoFilters(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	defaultSKU := &models.ProductSKU{
+	defaultSKU := &productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(30)),
 		IsActive:    true,
 	}
@@ -646,7 +648,7 @@ func TestCardSecretServiceSupportsKeywordAndBatchNoFilters(t *testing.T) {
 func TestCardSecretServiceListBatchesReturnsRealtimeCounts(t *testing.T) {
 	db := setupCardSecretServiceTestDB(t)
 
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "card-secret-batch-summary",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密批次统计商品"},
@@ -659,9 +661,9 @@ func TestCardSecretServiceListBatchesReturnsRealtimeCounts(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	defaultSKU := &models.ProductSKU{
+	defaultSKU := &productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(88)),
 		IsActive:    true,
 	}
@@ -738,7 +740,7 @@ func TestCardSecretServiceListBatchesReturnsRealtimeCounts(t *testing.T) {
 
 func TestExportAvailableCardSecretsMarksUsed(t *testing.T) {
 	db := setupCardSecretServiceTestDB(t)
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "export-available-used",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "出库导出商品"},
@@ -750,9 +752,9 @@ func TestExportAvailableCardSecretsMarksUsed(t *testing.T) {
 	if err := db.Create(product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
-	sku := &models.ProductSKU{
+	sku := &productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(88)),
 		IsActive:    true,
 	}
@@ -813,7 +815,7 @@ func TestExportAvailableCardSecretsMarksUsed(t *testing.T) {
 
 func TestExportAvailableCardSecretsDeletesAfterExport(t *testing.T) {
 	db := setupCardSecretServiceTestDB(t)
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            "export-available-delete",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "导出删除商品"},
@@ -825,9 +827,9 @@ func TestExportAvailableCardSecretsDeletesAfterExport(t *testing.T) {
 	if err := db.Create(product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
-	sku := &models.ProductSKU{
+	sku := &productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(88)),
 		IsActive:    true,
 	}

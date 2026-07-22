@@ -138,7 +138,7 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 	}
 
 	// 创建本地商品
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:           categoryID,
 		Slug:                 slug,
 		SeoMetaJSON:          upProduct.SeoMeta,
@@ -148,7 +148,7 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 		ManualFormSchemaJSON: upProduct.ManualFormSchema,
 		PriceAmount:          money.FromDecimal(priceAmount.Round(2)),
 		CostPriceAmount:      money.FromDecimal(costPriceAmount.Round(2)),
-		WholesalePrices:      models.WholesalePriceTiers{},
+		WholesalePrices:      productdomain.WholesalePriceTiers{},
 		Images:               jsonslice.Strings(localImages),
 		Tags:                 jsonslice.Strings(upProduct.Tags),
 		PurchaseType:         constants.ProductPurchaseMember,
@@ -168,7 +168,7 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 		}
 
 		// 创建 SKU
-		localSKUs := make([]models.ProductSKU, 0, len(upProduct.SKUs))
+		localSKUs := make([]productdomain.ProductSKU, 0, len(upProduct.SKUs))
 		for _, upSKU := range upProduct.SKUs {
 			skuPrice, skuPriceErr := decimal.NewFromString(upSKU.PriceAmount)
 			if skuPriceErr != nil {
@@ -180,7 +180,7 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 				skuPrice = decimal.Zero
 			}
 			localPrice := CalculateLocalPrice(skuPrice, exchangeRate, markupPercent, roundingMode)
-			localSKU := models.ProductSKU{
+			localSKU := productdomain.ProductSKU{
 				ProductID:       product.ID,
 				SKUCode:         upSKU.SKUCode,
 				SpecValuesJSON:  upSKU.SpecValues,
@@ -197,9 +197,9 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 
 		// 如果没有 SKU，创建默认 SKU
 		if len(upProduct.SKUs) == 0 {
-			defaultSKU := models.ProductSKU{
+			defaultSKU := productdomain.ProductSKU{
 				ProductID:      product.ID,
-				SKUCode:        models.DefaultSKUCode,
+				SKUCode:        productdomain.DefaultSKUCode,
 				SpecValuesJSON: jsonmap.JSON{},
 				PriceAmount:    money.FromDecimal(priceAmount.Round(2)),
 				IsActive:       true,
@@ -273,7 +273,7 @@ func (s *Service) fetchUpstreamCategoryMap(ctx context.Context, adapter upstream
 func createSKUMappings(
 	skuMappings ImportTxSKUMappingRepository,
 	mappingID uint,
-	localSKUs []models.ProductSKU,
+	localSKUs []productdomain.ProductSKU,
 	upstreamSKUs []upstream.UpstreamSKU,
 ) error {
 	if skuMappings == nil {
@@ -330,13 +330,13 @@ type upstreamWholesaleSKUIndex struct {
 	byCode       map[string]upstreamWholesaleSKURef
 }
 
-func buildUpstreamWholesaleSKUIndex(localSKUs []models.ProductSKU, upstreamSKUs []upstream.UpstreamSKU, skuMappings []models.SKUMapping) upstreamWholesaleSKUIndex {
+func buildUpstreamWholesaleSKUIndex(localSKUs []productdomain.ProductSKU, upstreamSKUs []upstream.UpstreamSKU, skuMappings []models.SKUMapping) upstreamWholesaleSKUIndex {
 	index := upstreamWholesaleSKUIndex{
 		byUpstreamID: map[uint]upstreamWholesaleSKURef{},
 		byCode:       map[string]upstreamWholesaleSKURef{},
 	}
-	localByID := make(map[uint]models.ProductSKU, len(localSKUs))
-	localByCode := make(map[string]models.ProductSKU, len(localSKUs))
+	localByID := make(map[uint]productdomain.ProductSKU, len(localSKUs))
+	localByCode := make(map[string]productdomain.ProductSKU, len(localSKUs))
 	for _, sku := range localSKUs {
 		code := strings.TrimSpace(sku.SKUCode)
 		if sku.ID > 0 {
@@ -375,9 +375,9 @@ func buildUpstreamWholesaleSKUIndex(localSKUs []models.ProductSKU, upstreamSKUs 
 	return index
 }
 
-func convertUpstreamWholesalePrices(tiers models.WholesalePriceTiers, exchangeRate, markupPercent decimal.Decimal, roundingMode string, indexes ...upstreamWholesaleSKUIndex) models.WholesalePriceTiers {
+func convertUpstreamWholesalePrices(tiers productdomain.WholesalePriceTiers, exchangeRate, markupPercent decimal.Decimal, roundingMode string, indexes ...upstreamWholesaleSKUIndex) productdomain.WholesalePriceTiers {
 	if len(tiers) == 0 {
-		return models.WholesalePriceTiers{}
+		return productdomain.WholesalePriceTiers{}
 	}
 	index := upstreamWholesaleSKUIndex{}
 	if len(indexes) > 0 {
@@ -432,7 +432,7 @@ func convertUpstreamWholesalePrices(tiers models.WholesalePriceTiers, exchangeRa
 			"valid_tier_count", len(converted),
 			"skipped_tier_count", skipped,
 		)
-		return models.WholesalePriceTiers{}
+		return productdomain.WholesalePriceTiers{}
 	}
 	if skipped > 0 {
 		logger.Warnw("convert_upstream_wholesale_prices_skipped_invalid",
@@ -444,7 +444,7 @@ func convertUpstreamWholesalePrices(tiers models.WholesalePriceTiers, exchangeRa
 	return normalized
 }
 
-func resolveUpstreamWholesaleTierScope(tier models.WholesalePriceTier, index upstreamWholesaleSKUIndex) (uint, string, bool) {
+func resolveUpstreamWholesaleTierScope(tier productdomain.WholesalePriceTier, index upstreamWholesaleSKUIndex) (uint, string, bool) {
 	hasIndex := len(index.byCode) > 0 || len(index.byUpstreamID) > 0
 	skuCode := strings.TrimSpace(tier.SKUCode)
 	if skuCode != "" {

@@ -7,10 +7,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dujiao-next/internal/platform/http/response"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -102,7 +103,7 @@ func TestAdminFinanceHandlerMapsWithdrawStatusInvalid(t *testing.T) {
 
 func TestAdminFinanceHandlerMapsNotFound(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h := NewAdminFinanceHandler(financeServiceStub{err: catalogproduct.ErrNotFound})
+	h := NewAdminFinanceHandler(financeServiceStub{err: productcontract.ErrNotFound})
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	c.Request = httptest.NewRequest(http.MethodPost, "/admin/resellers/withdraws/1/reject", bytes.NewReader([]byte(`{"reason":"x"}`)))

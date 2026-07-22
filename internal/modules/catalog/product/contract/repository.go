@@ -1,9 +1,9 @@
-package product
+package productcontract
 
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 )
 
 // ListFilter 描述 Catalog 商品列表的持久化筛选条件。
@@ -25,13 +25,13 @@ type ListFilter struct {
 
 // Repository 定义商品领域需要的持久化能力；事务适配保留在 GORM Store。
 type Repository interface {
-	List(filter ListFilter) ([]models.Product, int64, error)
-	GetBySlug(slug string, onlyActive bool) (*models.Product, error)
-	GetByID(id string) (*models.Product, error)
-	GetAdminByID(id string) (*models.Product, error)
-	ListByIDs(ids []uint) ([]models.Product, error)
-	Create(item *models.Product) error
-	Update(item *models.Product) error
+	List(filter ListFilter) ([]productdomain.Product, int64, error)
+	GetBySlug(slug string, onlyActive bool) (*productdomain.Product, error)
+	GetByID(id string) (*productdomain.Product, error)
+	GetAdminByID(id string) (*productdomain.Product, error)
+	ListByIDs(ids []uint) ([]productdomain.Product, error)
+	Create(item *productdomain.Product) error
+	Update(item *productdomain.Product) error
 	Delete(id string) error
 	CountBySlug(slug string, excludeID *string) (int64, error)
 	ReserveManualStock(productID uint, quantity int) (int64, error)
@@ -42,13 +42,13 @@ type Repository interface {
 
 // SKURepository 定义商品 SKU 领域需要的持久化能力。
 type SKURepository interface {
-	ListByProduct(productID uint, onlyActive bool) ([]models.ProductSKU, error)
-	GetByID(id uint) (*models.ProductSKU, error)
-	GetByProductAndCode(productID uint, skuCode string) (*models.ProductSKU, error)
-	ListByIDs(ids []uint) ([]models.ProductSKU, error)
-	Create(item *models.ProductSKU) error
-	CreateBatch(items []models.ProductSKU) error
-	Update(item *models.ProductSKU) error
+	ListByProduct(productID uint, onlyActive bool) ([]productdomain.ProductSKU, error)
+	GetByID(id uint) (*productdomain.ProductSKU, error)
+	GetByProductAndCode(productID uint, skuCode string) (*productdomain.ProductSKU, error)
+	ListByIDs(ids []uint) ([]productdomain.ProductSKU, error)
+	Create(item *productdomain.ProductSKU) error
+	CreateBatch(items []productdomain.ProductSKU) error
+	Update(item *productdomain.ProductSKU) error
 	Delete(id uint) error
 	DeleteByProduct(productID uint) error
 	PurgeSoftDeletedByProductAndCode(productID uint, skuCode string) error

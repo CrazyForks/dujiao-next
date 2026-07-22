@@ -3,7 +3,8 @@ package mapping
 import (
 	"strconv"
 
-	"github.com/dujiao-next/internal/models"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/shared/money"
 )
 
@@ -52,7 +53,7 @@ func (s *Service) ReapplyMarkup(connectionID uint) (int, error) {
 }
 
 // recalcProductPrice 重新计算商品基准价格和成本价为最低活跃 SKU 价格
-func (s *Service) recalcProductPrice(product *models.Product) {
+func (s *Service) recalcProductPrice(product *productdomain.Product) {
 	allSKUs, err := s.skus.ListByProduct(product.ID, true)
 	if err != nil || len(allSKUs) == 0 {
 		return

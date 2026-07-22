@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
@@ -140,8 +141,8 @@ type ResellerProductSetting struct {
 	UpdatedAt         time.Time      `gorm:"index" json:"updated_at"`
 	DeletedAt         gorm.DeletedAt `gorm:"index" json:"-"`
 
-	Product *Product         `gorm:"foreignKey:ProductID" json:"product,omitempty"`
-	Profile *ResellerProfile `gorm:"foreignKey:ResellerID" json:"profile,omitempty"`
+	Product *productdomain.Product `gorm:"foreignKey:ProductID" json:"product,omitempty"`
+	Profile *ResellerProfile       `gorm:"foreignKey:ResellerID" json:"profile,omitempty"`
 }
 
 func (ResellerProductSetting) TableName() string { return "reseller_product_settings" }

@@ -10,6 +10,7 @@ import (
 
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
@@ -171,8 +172,8 @@ func AutoMigrate() error {
 		&CouponUsage{},
 		&Promotion{},
 		&categorydomain.Category{},
-		&Product{},
-		&ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&Post{},
 		&PostProduct{},
 		&PostCategory{},
@@ -222,8 +223,8 @@ func AutoMigrate() error {
 	}
 
 	// 移除历史遗留商品币种列，统一由站点配置提供币种。
-	if DB.Migrator().HasColumn(&Product{}, "price_currency") {
-		if err := DB.Migrator().DropColumn(&Product{}, "price_currency"); err != nil {
+	if DB.Migrator().HasColumn(&productdomain.Product{}, "price_currency") {
+		if err := DB.Migrator().DropColumn(&productdomain.Product{}, "price_currency"); err != nil {
 			return err
 		}
 	}

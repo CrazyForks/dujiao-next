@@ -3,6 +3,8 @@ package dto
 import (
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
@@ -178,7 +180,7 @@ type ResellerProductSettingDetailResp struct {
 }
 
 type ResellerProductSettingDTOInput struct {
-	Product          models.Product
+	Product          productdomain.Product
 	Settings         []models.ResellerProductSetting
 	EffectiveBySKUID map[uint]string
 	RuleBySKUID      map[uint]string

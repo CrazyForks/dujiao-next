@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
@@ -14,7 +16,6 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/coupon"
 	"github.com/dujiao-next/internal/modules/orderrisk"
@@ -69,13 +70,13 @@ type AffiliateOrderLifecycle interface {
 }
 
 type orderProductStore interface {
-	catalogproduct.Repository
-	BindTx(tx *gorm.DB) catalogproduct.Repository
+	productcontract.Repository
+	BindTx(tx *gorm.DB) productcontract.Repository
 }
 
 type orderSKUStore interface {
-	catalogproduct.SKURepository
-	BindTx(tx *gorm.DB) catalogproduct.SKURepository
+	productcontract.SKURepository
+	BindTx(tx *gorm.DB) productcontract.SKURepository
 }
 
 type orderCouponRepository interface {
@@ -200,8 +201,8 @@ type CreateOrderItem struct {
 
 // childOrderPlan 子订单计划数据
 type childOrderPlan struct {
-	Product           *models.Product
-	SKU               *models.ProductSKU
+	Product           *productdomain.Product
+	SKU               *productdomain.ProductSKU
 	Item              models.OrderItem
 	TotalAmount       decimal.Decimal
 	MemberDiscount    decimal.Decimal
@@ -561,7 +562,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 
 	err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
 		orderRepo := s.orderRepo.WithTx(tx)
-		var productSKURepo catalogproduct.SKURepository
+		var productSKURepo productcontract.SKURepository
 		if s.productSKURepo != nil {
 			productSKURepo = s.productSKURepo.BindTx(tx)
 		}

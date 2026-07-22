@@ -5,24 +5,25 @@ import (
 	"strings"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/cardsecret"
-	"github.com/dujiao-next/internal/modules/catalog/product"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	"github.com/dujiao-next/internal/modules/reseller"
 )
 
 var (
-	ErrNotFound                 = product.ErrNotFound
-	ErrResellerProductNotListed = product.ErrResellerProductNotListed
+	ErrNotFound                 = productcontract.ErrNotFound
+	ErrResellerProductNotListed = productcontract.ErrResellerProductNotListed
 )
 
 // ProductRepository 是读取应用服务所需的最小商品持久化端口。
 type ProductRepository interface {
-	List(filter product.ListFilter) ([]models.Product, int64, error)
-	GetBySlug(slug string, onlyActive bool) (*models.Product, error)
-	GetAdminByID(id string) (*models.Product, error)
+	List(filter productcontract.ListFilter) ([]productdomain.Product, int64, error)
+	GetBySlug(slug string, onlyActive bool) (*productdomain.Product, error)
+	GetAdminByID(id string) (*productdomain.Product, error)
 }
 
 // CategoryRepository 是公开分类展开所需的最小分类端口。
@@ -82,13 +83,13 @@ func NewService(options Options) *Service {
 }
 
 // ListPublic 获取公开商品列表
-func (s *Service) ListPublic(categoryID, search string, page, pageSize int) ([]models.Product, int64, error) {
+func (s *Service) ListPublic(categoryID, search string, page, pageSize int) ([]productdomain.Product, int64, error) {
 	categoryIDs, err := expandPublicCategoryIDs(s.categories, categoryID)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	filter := product.ListFilter{
+	filter := productcontract.ListFilter{
 		Page:         page,
 		PageSize:     pageSize,
 		CategoryID:   categoryID,
@@ -101,7 +102,7 @@ func (s *Service) ListPublic(categoryID, search string, page, pageSize int) ([]m
 }
 
 // ListPublicForTenant 获取当前租户上下文的公开商品列表。
-func (s *Service) ListPublicForTenant(tenant TenantContext, resellerRepo HiddenProductRepository, categoryID, search string, page, pageSize int) ([]models.Product, int64, error) {
+func (s *Service) ListPublicForTenant(tenant TenantContext, resellerRepo HiddenProductRepository, categoryID, search string, page, pageSize int) ([]productdomain.Product, int64, error) {
 	if !tenant.IsReseller() {
 		return s.ListPublic(categoryID, search, page, pageSize)
 	}
@@ -116,7 +117,7 @@ func (s *Service) ListPublicForTenant(tenant TenantContext, resellerRepo HiddenP
 	if err != nil {
 		return nil, 0, err
 	}
-	filter := product.ListFilter{
+	filter := productcontract.ListFilter{
 		Page:              page,
 		PageSize:          pageSize,
 		CategoryID:        categoryID,
@@ -131,8 +132,8 @@ func (s *Service) ListPublicForTenant(tenant TenantContext, resellerRepo HiddenP
 
 // ListForUpstreamSync 上游同步专用：可选包含已下架商品，便于下游识别下架状态
 // includeInactive=true 时返回所有未软删商品（含 is_active=false）
-func (s *Service) ListForUpstreamSync(updatedAfter *time.Time, includeInactive bool, page, pageSize int) ([]models.Product, int64, error) {
-	filter := product.ListFilter{
+func (s *Service) ListForUpstreamSync(updatedAfter *time.Time, includeInactive bool, page, pageSize int) ([]productdomain.Product, int64, error) {
+	filter := productcontract.ListFilter{
 		Page:         page,
 		PageSize:     pageSize,
 		OnlyActive:   !includeInactive,
@@ -143,8 +144,8 @@ func (s *Service) ListForUpstreamSync(updatedAfter *time.Time, includeInactive b
 }
 
 // ListPublicExact 获取公开商品列表（精确匹配分类，不展开父分类）
-func (s *Service) ListPublicExact(categoryID string, page, pageSize int) ([]models.Product, int64, error) {
-	filter := product.ListFilter{
+func (s *Service) ListPublicExact(categoryID string, page, pageSize int) ([]productdomain.Product, int64, error) {
+	filter := productcontract.ListFilter{
 		Page:         page,
 		PageSize:     pageSize,
 		CategoryID:   categoryID,
@@ -155,7 +156,7 @@ func (s *Service) ListPublicExact(categoryID string, page, pageSize int) ([]mode
 }
 
 // GetPublicBySlug 获取公开商品详情
-func (s *Service) GetPublicBySlug(slug string) (*models.Product, error) {
+func (s *Service) GetPublicBySlug(slug string) (*productdomain.Product, error) {
 	item, err := s.products.GetBySlug(slug, true)
 	if err != nil {
 		return nil, err
@@ -167,7 +168,7 @@ func (s *Service) GetPublicBySlug(slug string) (*models.Product, error) {
 }
 
 // GetPublicBySlugForTenant 获取当前租户上下文的公开商品详情。
-func (s *Service) GetPublicBySlugForTenant(tenant TenantContext, resellerRepo HiddenProductRepository, slug string) (*models.Product, error) {
+func (s *Service) GetPublicBySlugForTenant(tenant TenantContext, resellerRepo HiddenProductRepository, slug string) (*productdomain.Product, error) {
 	item, err := s.GetPublicBySlug(slug)
 	if err != nil {
 		return nil, err
@@ -191,8 +192,8 @@ func (s *Service) GetPublicBySlugForTenant(tenant TenantContext, resellerRepo Hi
 }
 
 // ListAdmin 获取后台商品列表
-func (s *Service) ListAdmin(categoryID, search, fulfillmentType, stockStatus string, hasWholesalePrices *bool, lowStockThreshold int, page, pageSize int) ([]models.Product, int64, error) {
-	filter := product.ListFilter{
+func (s *Service) ListAdmin(categoryID, search, fulfillmentType, stockStatus string, hasWholesalePrices *bool, lowStockThreshold int, page, pageSize int) ([]productdomain.Product, int64, error) {
+	filter := productcontract.ListFilter{
 		Page:               page,
 		PageSize:           pageSize,
 		CategoryID:         categoryID,
@@ -208,7 +209,7 @@ func (s *Service) ListAdmin(categoryID, search, fulfillmentType, stockStatus str
 }
 
 // GetAdminByID 获取后台商品详情
-func (s *Service) GetAdminByID(id string) (*models.Product, error) {
+func (s *Service) GetAdminByID(id string) (*productdomain.Product, error) {
 	item, err := s.products.GetAdminByID(id)
 	if err != nil {
 		return nil, err

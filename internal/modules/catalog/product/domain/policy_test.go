@@ -7,11 +7,10 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 )
 
 func TestValidatePurchaseQuantityKeepsLimitSemantics(t *testing.T) {
-	product := &models.Product{MinPurchaseQuantity: 2, MaxPurchaseQuantity: 5}
+	product := &Product{MinPurchaseQuantity: 2, MaxPurchaseQuantity: 5}
 	tests := []struct {
 		name     string
 		quantity int
@@ -46,11 +45,11 @@ func TestNormalizePurchaseQuantityLimitDisablesNonPositiveValues(t *testing.T) {
 }
 
 func TestManualSKUStockPolicyPreservesLegacyDefaultFallback(t *testing.T) {
-	product := &models.Product{SKUs: []models.ProductSKU{
-		{SKUCode: models.DefaultSKUCode, IsActive: true},
+	product := &Product{SKUs: []ProductSKU{
+		{SKUCode: DefaultSKUCode, IsActive: true},
 		{SKUCode: "SECOND", IsActive: true},
 	}}
-	legacyDefault := &models.ProductSKU{SKUCode: models.DefaultSKUCode, ManualStockTotal: -2}
+	legacyDefault := &ProductSKU{SKUCode: DefaultSKUCode, ManualStockTotal: -2}
 	if !ShouldEnforceManualSKUStock(product, legacyDefault) {
 		t.Fatal("legacy DEFAULT SKU must enforce stock when multiple active SKUs exist")
 	}
@@ -58,7 +57,7 @@ func TestManualSKUStockPolicyPreservesLegacyDefaultFallback(t *testing.T) {
 		t.Fatalf("legacy negative stock want 0 available got %d", got)
 	}
 
-	unlimited := &models.ProductSKU{SKUCode: "SECOND", ManualStockTotal: constants.ManualStockUnlimited}
+	unlimited := &ProductSKU{SKUCode: "SECOND", ManualStockTotal: constants.ManualStockUnlimited}
 	if ShouldEnforceManualSKUStock(product, unlimited) {
 		t.Fatal("unlimited SKU must not enforce manual stock")
 	}

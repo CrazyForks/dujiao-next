@@ -4,9 +4,10 @@ import (
 	"strconv"
 	"testing"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
@@ -32,14 +33,14 @@ func TestProductServiceListPublicIncludesChildProductsForParentCategory(t *testi
 		t.Fatalf("create child category failed: %v", err)
 	}
 
-	parentProduct := models.Product{
+	parentProduct := productdomain.Product{
 		CategoryID:  parent.ID,
 		Slug:        "parent-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "parent-product"},
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
-	childProduct := models.Product{
+	childProduct := productdomain.Product{
 		CategoryID:  child.ID,
 		Slug:        "child-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "child-product"},
@@ -77,7 +78,7 @@ func TestProductServiceListPublicSortOrderDescending(t *testing.T) {
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	high := models.Product{
+	high := productdomain.Product{
 		CategoryID:  category.ID,
 		Slug:        "high-sort-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "high"},
@@ -85,7 +86,7 @@ func TestProductServiceListPublicSortOrderDescending(t *testing.T) {
 		IsActive:    true,
 		SortOrder:   100,
 	}
-	low := models.Product{
+	low := productdomain.Product{
 		CategoryID:  category.ID,
 		Slug:        "low-sort-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "low"},
@@ -127,7 +128,7 @@ func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:  category.ID,
 		Slug:        "sku-order-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "sku-order-product"},
@@ -139,7 +140,7 @@ func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	high := models.ProductSKU{
+	high := productdomain.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        "HIGH",
 		SpecValuesJSON: jsonmap.JSON{},
@@ -147,7 +148,7 @@ func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 		IsActive:       true,
 		SortOrder:      100,
 	}
-	low := models.ProductSKU{
+	low := productdomain.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        "LOW",
 		SpecValuesJSON: jsonmap.JSON{},
@@ -180,7 +181,7 @@ func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 func TestProductServiceGetAdminByIDIncludesInactiveSKUs(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:  1,
 		Slug:        "admin-all-skus-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "admin-all-skus-product"},
@@ -191,7 +192,7 @@ func TestProductServiceGetAdminByIDIncludesInactiveSKUs(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	activeSKU := models.ProductSKU{
+	activeSKU := productdomain.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        "ACTIVE",
 		SpecValuesJSON: jsonmap.JSON{},
@@ -199,7 +200,7 @@ func TestProductServiceGetAdminByIDIncludesInactiveSKUs(t *testing.T) {
 		IsActive:       true,
 		SortOrder:      10,
 	}
-	inactiveSKU := models.ProductSKU{
+	inactiveSKU := productdomain.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        "INACTIVE",
 		SpecValuesJSON: jsonmap.JSON{},

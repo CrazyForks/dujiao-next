@@ -3,10 +3,11 @@ package service
 import (
 	"errors"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	"github.com/dujiao-next/internal/modules/giftcard"
@@ -18,9 +19,9 @@ import (
 )
 
 var (
-	ErrNotFound                            = catalogproduct.ErrNotFound
-	ErrSlugExists                          = catalogproduct.ErrSlugExists
-	ErrProductCategoryInvalid              = catalogproduct.ErrProductCategoryInvalid
+	ErrNotFound                            = productcontract.ErrNotFound
+	ErrSlugExists                          = productcontract.ErrSlugExists
+	ErrProductCategoryInvalid              = productcontract.ErrProductCategoryInvalid
 	ErrInvalidEmail                        = errors.New("invalid email")
 	ErrEmailServiceDisabled                = errors.New("email service disabled")
 	ErrEmailServiceNotConfigured           = errors.New("email service not configured")
@@ -30,14 +31,14 @@ var (
 	ErrCaptchaRequired                     = captcha.ErrRequired
 	ErrCaptchaInvalid                      = captcha.ErrInvalid
 	ErrCaptchaVerifyFailed                 = captcha.ErrVerifyFailed
-	ErrProductPriceInvalid                 = catalogproduct.ErrProductPriceInvalid
-	ErrProductPurchaseInvalid              = catalogproduct.ErrProductPurchaseInvalid
+	ErrProductPriceInvalid                 = productcontract.ErrProductPriceInvalid
+	ErrProductPurchaseInvalid              = productcontract.ErrProductPurchaseInvalid
 	ErrProductMaxPurchaseExceeded          = productdomain.ErrMaxPurchaseExceeded
 	ErrProductMinPurchaseNotMet            = productdomain.ErrMinPurchaseNotMet
-	ErrProductPurchaseLimitInvalid         = catalogproduct.ErrProductPurchaseLimitInvalid
-	ErrProductStockDisplayInvalid          = catalogproduct.ErrProductStockDisplayInvalid
+	ErrProductPurchaseLimitInvalid         = productcontract.ErrProductPurchaseLimitInvalid
+	ErrProductStockDisplayInvalid          = productcontract.ErrProductStockDisplayInvalid
 	ErrWholesalePriceInvalid               = productdomain.ErrWholesalePriceInvalid
-	ErrManualStockInvalid                  = catalogproduct.ErrManualStockInvalid
+	ErrManualStockInvalid                  = productcontract.ErrManualStockInvalid
 	ErrManualStockInsufficient             = errors.New("manual stock insufficient")
 	ErrUpstreamStockInsufficient           = catalogmapping.ErrUpstreamStockInsufficient
 	ErrManualFormSchemaInvalid             = manualform.ErrSchemaInvalid
@@ -48,8 +49,8 @@ var (
 	ErrProductFetchFailed                  = errors.New("product fetch failed")
 	ErrProductNotFound                     = errors.New("product not found")
 	ErrProductSKURequired                  = errors.New("product sku required")
-	ErrProductSKUInvalid                   = catalogproduct.ErrProductSKUInvalid
-	ErrProductSKUHasCardSecretStock        = catalogproduct.ErrProductSKUHasCardSecretStock
+	ErrProductSKUInvalid                   = productcontract.ErrProductSKUInvalid
+	ErrProductSKUHasCardSecretStock        = productcontract.ErrProductSKUHasCardSecretStock
 	ErrInvalidOrderItem                    = productdomain.ErrPurchaseQuantityInvalid
 	ErrInvalidOrderAmount                  = errors.New("invalid order amount")
 	ErrOrderCurrencyMismatch               = errors.New("order currency mismatch")
@@ -66,7 +67,7 @@ var (
 	ErrGuestEmailRequired                  = errors.New("guest email required")
 	ErrGuestPasswordRequired               = errors.New("guest password required")
 	ErrGuestCouponNotAllowed               = errors.New("guest coupon not allowed")
-	ErrFulfillmentInvalid                  = catalogproduct.ErrFulfillmentInvalid
+	ErrFulfillmentInvalid                  = productcontract.ErrFulfillmentInvalid
 	ErrFulfillmentExists                   = errors.New("fulfillment exists")
 	ErrFulfillmentCreateFailed             = errors.New("fulfillment create failed")
 	ErrPaymentInvalid                      = errors.New("payment invalid")
@@ -145,11 +146,11 @@ var (
 	ErrPaymentChannelNotAllowedForProduct  = errors.New("payment channel not allowed for product")
 	ErrPaymentChannelNotAllowedForRecharge = errors.New("payment channel not allowed for wallet recharge")
 	ErrWalletOnlyPaymentRequired           = walletmodule.ErrOnlyPaymentRequired
-	ErrResellerProductNotListed            = catalogproduct.ErrResellerProductNotListed
+	ErrResellerProductNotListed            = productcontract.ErrResellerProductNotListed
 	ErrResellerPriceBelowBase              = resellermodule.ErrPriceBelowBase
 	ErrResellerMarkupExceeded              = resellermodule.ErrMarkupExceeded
 	ErrResellerCouponNotAllowed            = errors.New("reseller coupon not allowed")
 	ErrResellerPricingModeInvalid          = resellermodule.ErrPricingModeInvalid
-	ErrProductHasStock                     = catalogproduct.ErrProductHasStock
-	ErrProductHasOrderRecord               = catalogproduct.ErrProductHasOrderRecord
+	ErrProductHasStock                     = productcontract.ErrProductHasStock
+	ErrProductHasOrderRecord               = productcontract.ErrProductHasOrderRecord
 )

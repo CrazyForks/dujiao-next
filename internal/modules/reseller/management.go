@@ -5,10 +5,11 @@ import (
 	"strings"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
@@ -68,7 +69,7 @@ func (s *ManagementService) GetUserManagementSnapshot(userID uint) (*models.Rese
 
 func (s *ManagementService) ApplyUserReseller(userID uint, input ResellerApplyInput) (*models.ResellerProfile, error) {
 	if s == nil || s.store == nil || userID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	if !s.cfg.Enabled || !s.cfg.SelfApplyEnabled {
 		return nil, ErrApplyDisabled
@@ -112,7 +113,7 @@ func (s *ManagementService) ApplyUserReseller(userID uint, input ResellerApplyIn
 
 func (s *ManagementService) ApproveProfile(ctx context.Context, adminID, profileID uint, input ResellerApproveInput) (*ResellerApproveResult, error) {
 	if s == nil || s.store == nil || adminID == 0 || profileID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	if err := validateResellerProfileMarkup(input.DefaultMarkupPercent, input.MaxMarkupPercent); err != nil {
 		return nil, err
@@ -124,7 +125,7 @@ func (s *ManagementService) ApproveProfile(ctx context.Context, adminID, profile
 			return err
 		}
 		if profile == nil {
-			return catalogproduct.ErrNotFound
+			return productcontract.ErrNotFound
 		}
 		if profile.Status != models.ResellerProfileStatusPendingReview && profile.Status != models.ResellerProfileStatusRejected {
 			return ErrProfileStatusInvalid
@@ -154,7 +155,7 @@ func (s *ManagementService) ApproveProfile(ctx context.Context, adminID, profile
 
 func (s *ManagementService) AssignSystemSubdomain(ctx context.Context, adminID, profileID uint, input ResellerSystemDomainInput) (*models.ResellerDomain, error) {
 	if s == nil || s.store == nil || adminID == 0 || profileID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	base := NormalizeHost(s.cfg.SubdomainBase)
 	if base == "" {
@@ -172,7 +173,7 @@ func (s *ManagementService) AssignSystemSubdomain(ctx context.Context, adminID, 
 			return err
 		}
 		if profile == nil {
-			return catalogproduct.ErrNotFound
+			return productcontract.ErrNotFound
 		}
 		existingHost, err := repoTx.FindDomainByHost(nextDomain)
 		if err != nil {
@@ -271,7 +272,7 @@ func (s *ManagementService) RestoreProfile(adminID, profileID uint) (*models.Res
 
 func (s *ManagementService) UpdateProfileOperationalConfig(adminID, profileID uint, input ResellerProfileUpdateInput) (*models.ResellerProfile, error) {
 	if s == nil || s.store == nil || adminID == 0 || profileID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	if err := validateResellerProfileMarkup(input.DefaultMarkupPercent, input.MaxMarkupPercent); err != nil {
 		return nil, err
@@ -287,7 +288,7 @@ func (s *ManagementService) UpdateProfileOperationalConfig(adminID, profileID ui
 			return err
 		}
 		if profile == nil {
-			return catalogproduct.ErrNotFound
+			return productcontract.ErrNotFound
 		}
 		now := time.Now()
 		profile.DefaultMarkupPercent = money.FromDecimal(input.DefaultMarkupPercent)
@@ -307,14 +308,14 @@ func (s *ManagementService) UpdateProfileOperationalConfig(adminID, profileID ui
 		return nil, err
 	}
 	if updated == nil {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	return s.store.GetProfileByID(profileID)
 }
 
 func (s *ManagementService) SubmitUserCustomDomain(userID uint, rawDomain string) (*models.ResellerDomain, error) {
 	if s == nil || s.store == nil || userID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	profile, err := s.store.GetProfileByUserID(userID)
 	if err != nil {
@@ -358,7 +359,7 @@ func (s *ManagementService) DisableDomain(ctx context.Context, adminID, domainID
 
 func (s *ManagementService) SetPrimaryDomain(ctx context.Context, adminID, domainID uint) (*models.ResellerDomain, error) {
 	if s == nil || s.store == nil || adminID == 0 || domainID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	cacheDomains := make([]string, 0, 4)
 	err := s.store.WithinTransaction(func(repoTx ManagementStore) error {
@@ -367,7 +368,7 @@ func (s *ManagementService) SetPrimaryDomain(ctx context.Context, adminID, domai
 			return err
 		}
 		if target == nil {
-			return catalogproduct.ErrNotFound
+			return productcontract.ErrNotFound
 		}
 		if target.Status != models.ResellerDomainStatusActive || target.VerificationStatus != models.ResellerDomainVerificationVerified {
 			return ErrDomainStatusInvalid
@@ -406,7 +407,7 @@ func (s *ManagementService) SetPrimaryDomain(ctx context.Context, adminID, domai
 
 func (s *ManagementService) updateProfileReviewStatus(adminID, profileID uint, targetStatus, reason string) (*models.ResellerProfile, error) {
 	if s == nil || s.store == nil || adminID == 0 || profileID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	cacheDomains := make([]string, 0, 4)
 	err := s.store.WithinTransaction(func(repoTx ManagementStore) error {
@@ -415,7 +416,7 @@ func (s *ManagementService) updateProfileReviewStatus(adminID, profileID uint, t
 			return err
 		}
 		if profile == nil {
-			return catalogproduct.ErrNotFound
+			return productcontract.ErrNotFound
 		}
 		switch targetStatus {
 		case models.ResellerProfileStatusRejected:
@@ -464,7 +465,7 @@ func (s *ManagementService) updateProfileReviewStatus(adminID, profileID uint, t
 
 func (s *ManagementService) updateDomainStatus(ctx context.Context, adminID, domainID uint, targetStatus string) (*models.ResellerDomain, error) {
 	if s == nil || s.store == nil || adminID == 0 || domainID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	cacheDomains := make([]string, 0, 4)
 	err := s.store.WithinTransaction(func(repoTx ManagementStore) error {
@@ -473,7 +474,7 @@ func (s *ManagementService) updateDomainStatus(ctx context.Context, adminID, dom
 			return err
 		}
 		if domain == nil {
-			return catalogproduct.ErrNotFound
+			return productcontract.ErrNotFound
 		}
 		domains, err := repoTx.ListDomainsByResellerID(domain.ResellerID)
 		if err != nil {

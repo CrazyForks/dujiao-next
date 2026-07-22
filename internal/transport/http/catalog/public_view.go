@@ -5,12 +5,14 @@ import (
 	"errors"
 	"strings"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/models"
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
 	categorypresenter "github.com/dujiao-next/internal/modules/catalog/category/transport/presenter"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/shared/money"
@@ -18,14 +20,14 @@ import (
 
 // publicSKUView 内部 SKU 计算结构，用于装饰逻辑
 type publicSKUView struct {
-	models.ProductSKU
+	productdomain.ProductSKU
 	PromotionPriceAmount *money.Amount
 	MemberPriceAmount    *money.Amount
 }
 
 // publicProductView 内部商品计算结构，装饰完成后转换为 dto.ProductResp
 type publicProductView struct {
-	models.Product
+	productdomain.Product
 	PromotionID          *uint
 	PromotionName        string
 	PromotionType        string
@@ -149,13 +151,13 @@ func (v *publicProductView) skuStockState(sv publicSKUView) (string, int64) {
 }
 
 func isResellerDisplayHiddenError(err error) bool {
-	return errors.Is(err, catalogproduct.ErrResellerProductNotListed) ||
+	return errors.Is(err, productcontract.ErrResellerProductNotListed) ||
 		errors.Is(err, reseller.ErrPriceBelowBase) ||
 		errors.Is(err, reseller.ErrMarkupExceeded) ||
 		errors.Is(err, reseller.ErrPricingModeInvalid)
 }
 
-func (h *PublicHandler) decoratePublicProduct(product *models.Product, promotions ProductPromotionDecorator, userMemberLevelID ...uint) (dto.ProductResp, error) {
+func (h *PublicHandler) decoratePublicProduct(product *productdomain.Product, promotions ProductPromotionDecorator, userMemberLevelID ...uint) (dto.ProductResp, error) {
 	if product == nil {
 		return dto.ProductResp{}, nil
 	}
@@ -255,7 +257,7 @@ func (h *PublicHandler) decoratePublicProduct(product *models.Product, promotion
 }
 
 func (h *PublicHandler) decoratePublicProductForTenant(
-	product *models.Product,
+	product *productdomain.Product,
 	promotions ProductPromotionDecorator,
 	tenant reseller.TenantContext,
 	resellerBatch *reseller.DisplayPricingBatch,
@@ -268,23 +270,23 @@ func (h *PublicHandler) decoratePublicProductForTenant(
 		return dto.ProductResp{}, nil
 	}
 	if h == nil || h.pricer == nil {
-		return dto.ProductResp{}, catalogproduct.ErrResellerProductNotListed
+		return dto.ProductResp{}, productcontract.ErrResellerProductNotListed
 	}
 	display, err := h.pricer.ResolveDisplayPrices(tenant, product, resellerBatch)
 	if err != nil {
 		if isResellerDisplayHiddenError(err) {
-			return dto.ProductResp{}, catalogproduct.ErrResellerProductNotListed
+			return dto.ProductResp{}, productcontract.ErrResellerProductNotListed
 		}
 		return dto.ProductResp{}, err
 	}
 	if display == nil || !display.Visible {
-		return dto.ProductResp{}, catalogproduct.ErrResellerProductNotListed
+		return dto.ProductResp{}, productcontract.ErrResellerProductNotListed
 	}
 
 	productCopy := *product
 	productCopy.PriceAmount = display.DisplayPrice
 	productCopy.WholesalePrices = nil
-	filteredSKUs := make([]models.ProductSKU, 0, len(product.SKUs))
+	filteredSKUs := make([]productdomain.ProductSKU, 0, len(product.SKUs))
 	for _, sku := range product.SKUs {
 		if !sku.IsActive || display.HiddenSKUIDs[sku.ID] {
 			continue
@@ -295,7 +297,7 @@ func (h *PublicHandler) decoratePublicProductForTenant(
 		filteredSKUs = append(filteredSKUs, sku)
 	}
 	if len(product.SKUs) > 0 && len(filteredSKUs) == 0 {
-		return dto.ProductResp{}, catalogproduct.ErrResellerProductNotListed
+		return dto.ProductResp{}, productcontract.ErrResellerProductNotListed
 	}
 	productCopy.SKUs = filteredSKUs
 
@@ -309,7 +311,7 @@ func (h *PublicHandler) decoratePublicProductForTenant(
 	return item.toProductResp(), nil
 }
 
-func resolvePublicDisplayPrice(product *models.Product) money.Amount {
+func resolvePublicDisplayPrice(product *productdomain.Product) money.Amount {
 	if product == nil {
 		return money.Amount{}
 	}
@@ -322,7 +324,7 @@ func resolvePublicDisplayPrice(product *models.Product) money.Amount {
 	return product.PriceAmount
 }
 
-func resolvePublicDisplaySKUID(product *models.Product) uint {
+func resolvePublicDisplaySKUID(product *productdomain.Product) uint {
 	if product == nil {
 		return 0
 	}

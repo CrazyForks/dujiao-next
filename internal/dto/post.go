@@ -3,6 +3,8 @@ package dto
 import (
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -31,7 +33,7 @@ type RelatedProductCard struct {
 }
 
 // NewRelatedProductCardList 将 Product 列表转为关联卡片列表
-func NewRelatedProductCardList(products []models.Product) []RelatedProductCard {
+func NewRelatedProductCardList(products []productdomain.Product) []RelatedProductCard {
 	cards := make([]RelatedProductCard, 0, len(products))
 	for i := range products {
 		p := &products[i]

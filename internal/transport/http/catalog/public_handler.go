@@ -5,9 +5,11 @@ import (
 	"errors"
 	"strings"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -21,21 +23,21 @@ const publicRelatedPostsLimit = 6
 
 // PublicProductQueries 是公开商品列表/详情所需的最小用例接口。
 type PublicProductQueries interface {
-	ListPublicForTenant(tenant reseller.TenantContext, categoryID, search string, page, pageSize int) ([]models.Product, int64, error)
-	GetPublicBySlugForTenant(tenant reseller.TenantContext, slug string) (*models.Product, error)
-	ApplyAutoStockCounts(products []models.Product) error
+	ListPublicForTenant(tenant reseller.TenantContext, categoryID, search string, page, pageSize int) ([]productdomain.Product, int64, error)
+	GetPublicBySlugForTenant(tenant reseller.TenantContext, slug string) (*productdomain.Product, error)
+	ApplyAutoStockCounts(products []productdomain.Product) error
 }
 
 // ResellerDisplayPricer 是分销站展示价解析端口。
 type ResellerDisplayPricer interface {
-	LoadDisplayPricingBatch(tenant reseller.TenantContext, products []models.Product) (*reseller.DisplayPricingBatch, error)
-	ResolveDisplayPrices(tenant reseller.TenantContext, product *models.Product, batch *reseller.DisplayPricingBatch) (*reseller.DisplayPriceResult, error)
+	LoadDisplayPricingBatch(tenant reseller.TenantContext, products []productdomain.Product) (*reseller.DisplayPricingBatch, error)
+	ResolveDisplayPrices(tenant reseller.TenantContext, product *productdomain.Product, batch *reseller.DisplayPricingBatch) (*reseller.DisplayPriceResult, error)
 }
 
 // ProductPromotionDecorator 是公开商品促销装饰端口。
 type ProductPromotionDecorator interface {
 	GetProductPromotions(productID uint) ([]models.Promotion, error)
-	ApplyPromotion(product *models.Product, quantity int) (*models.Promotion, money.Amount, error)
+	ApplyPromotion(product *productdomain.Product, quantity int) (*models.Promotion, money.Amount, error)
 }
 
 // MemberLevelPricing 是公开商品会员价装饰端口。
@@ -137,7 +139,7 @@ func (h *PublicHandler) GetProducts(c *gin.Context) {
 	for i := range products {
 		item, derr := h.decoratePublicProductForTenant(&products[i], h.promotions, tenant, resellerBatch)
 		if derr != nil {
-			if errors.Is(derr, catalogproduct.ErrResellerProductNotListed) {
+			if errors.Is(derr, productcontract.ErrResellerProductNotListed) {
 				continue
 			}
 			ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", derr)
@@ -157,7 +159,7 @@ func (h *PublicHandler) GetProductBySlug(c *gin.Context) {
 
 	product, err := h.products.GetPublicBySlugForTenant(tenant, slug)
 	if err != nil {
-		if errors.Is(err, catalogproduct.ErrNotFound) {
+		if errors.Is(err, productcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
@@ -165,7 +167,7 @@ func (h *PublicHandler) GetProductBySlug(c *gin.Context) {
 		return
 	}
 
-	temp := []models.Product{*product}
+	temp := []productdomain.Product{*product}
 	if err := h.products.ApplyAutoStockCounts(temp); err != nil {
 		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		return
@@ -178,7 +180,7 @@ func (h *PublicHandler) GetProductBySlug(c *gin.Context) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
-		resellerBatch, err = h.pricer.LoadDisplayPricingBatch(tenant, []models.Product{*product})
+		resellerBatch, err = h.pricer.LoadDisplayPricingBatch(tenant, []productdomain.Product{*product})
 		if err != nil {
 			ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 			return
@@ -187,7 +189,7 @@ func (h *PublicHandler) GetProductBySlug(c *gin.Context) {
 
 	decorated, derr := h.decoratePublicProductForTenant(product, h.promotions, tenant, resellerBatch)
 	if derr != nil {
-		if errors.Is(derr, catalogproduct.ErrResellerProductNotListed) {
+		if errors.Is(derr, productcontract.ErrResellerProductNotListed) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}

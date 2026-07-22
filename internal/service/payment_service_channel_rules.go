@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"strings"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/repository"
 
 	"gorm.io/gorm"
@@ -48,7 +50,7 @@ func EncodeChannelIDs(ids []uint) string {
 // computeProductChannelIntersection 计算多个商品允许支付渠道的交集
 // 空列表表示不限制（全部允许），不参与交集计算
 // 返回 nil 表示无限制，返回空切片表示交集为空（无可用渠道）
-func computeProductChannelIntersection(products []models.Product) []uint {
+func computeProductChannelIntersection(products []productdomain.Product) []uint {
 	var intersection map[uint]struct{}
 	hasRestriction := false
 
@@ -103,7 +105,7 @@ func (s *PaymentService) validateProductPaymentChannel(items []models.OrderItem,
 	for id := range productIDSet {
 		productIDs = append(productIDs, id)
 	}
-	var repo catalogproduct.Repository = s.productRepo
+	var repo productcontract.Repository = s.productRepo
 	if len(tx) > 0 && tx[0] != nil {
 		repo = s.productRepo.BindTx(tx[0])
 	}

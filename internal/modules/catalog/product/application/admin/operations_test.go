@@ -6,7 +6,6 @@ import (
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
-	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/shopspring/decimal"
 )
@@ -15,7 +14,7 @@ func TestAdminServiceDeleteStopsBeforeTransactionWhenStockExists(t *testing.T) {
 	hasStock := errors.New("product has stock")
 	transactions := &unitOfWorkStub{}
 	service := NewAdminService(Options{
-		Products:     &productRepositoryStub{product: &models.Product{ID: 7}},
+		Products:     &productRepositoryStub{product: &productdomain.Product{ID: 7}},
 		CardSecrets:  stockRepositoryStub{available: 1},
 		Orders:       orderRepositoryStub{},
 		Transactions: transactions,
@@ -45,7 +44,7 @@ func TestAdminServiceDeleteUsesAllCascadePorts(t *testing.T) {
 	}
 	transactions := &unitOfWorkStub{repositories: repositories}
 	service := NewAdminService(Options{
-		Products:     &productRepositoryStub{product: &models.Product{ID: 9}},
+		Products:     &productRepositoryStub{product: &productdomain.Product{ID: 9}},
 		CardSecrets:  stockRepositoryStub{},
 		Orders:       orderRepositoryStub{},
 		Transactions: transactions,
@@ -66,7 +65,7 @@ func TestAdminServiceDeleteUsesAllCascadePorts(t *testing.T) {
 
 func TestAdminServiceQuickUpdateValidatesActivationCategory(t *testing.T) {
 	invalidCategory := errors.New("invalid product category")
-	products := &productRepositoryStub{product: &models.Product{ID: 11, CategoryID: 3}}
+	products := &productRepositoryStub{product: &productdomain.Product{ID: 11, CategoryID: 3}}
 	service := NewAdminService(Options{
 		Products:   products,
 		Categories: categoryRepositoryStub{categories: map[string]*categorydomain.Category{"5": {ID: 5, IsActive: true}}},
@@ -99,9 +98,9 @@ func TestAdminServiceQuickUpdateValidatesActivationCategory(t *testing.T) {
 }
 
 func TestAdminServiceUpdateWholesalePricesCanonicalizesSKU(t *testing.T) {
-	products := &productRepositoryStub{adminProduct: &models.Product{
+	products := &productRepositoryStub{adminProduct: &productdomain.Product{
 		ID: 13,
-		SKUs: []models.ProductSKU{{
+		SKUs: []productdomain.ProductSKU{{
 			ID:       21,
 			SKUCode:  "SKU-A",
 			IsActive: true,
@@ -120,7 +119,7 @@ func TestAdminServiceUpdateWholesalePricesCanonicalizesSKU(t *testing.T) {
 	if updated == nil || products.quickUpdates != 1 {
 		t.Fatalf("expected one persisted wholesale update, got product=%+v updates=%d", updated, products.quickUpdates)
 	}
-	tiers, ok := products.lastFields["wholesale_prices"].(models.WholesalePriceTiers)
+	tiers, ok := products.lastFields["wholesale_prices"].(productdomain.WholesalePriceTiers)
 	if !ok || len(tiers) != 1 {
 		t.Fatalf("expected one normalized wholesale tier, got %#v", products.lastFields["wholesale_prices"])
 	}
@@ -133,24 +132,24 @@ func TestAdminServiceUpdateWholesalePricesCanonicalizesSKU(t *testing.T) {
 }
 
 type productRepositoryStub struct {
-	product      *models.Product
-	adminProduct *models.Product
+	product      *productdomain.Product
+	adminProduct *productdomain.Product
 	quickUpdates int
 	lastFields   map[string]interface{}
 }
 
-func (repository *productRepositoryStub) GetByID(string) (*models.Product, error) {
+func (repository *productRepositoryStub) GetByID(string) (*productdomain.Product, error) {
 	return repository.product, nil
 }
 
-func (repository *productRepositoryStub) GetAdminByID(string) (*models.Product, error) {
+func (repository *productRepositoryStub) GetAdminByID(string) (*productdomain.Product, error) {
 	return repository.adminProduct, nil
 }
 
 func (repository *productRepositoryStub) QuickUpdate(_ string, fields map[string]interface{}) error {
 	repository.quickUpdates++
 	repository.lastFields = fields
-	if tiers, ok := fields["wholesale_prices"].(models.WholesalePriceTiers); ok && repository.adminProduct != nil {
+	if tiers, ok := fields["wholesale_prices"].(productdomain.WholesalePriceTiers); ok && repository.adminProduct != nil {
 		repository.adminProduct.WholesalePrices = tiers
 	}
 	return nil

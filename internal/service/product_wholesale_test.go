@@ -8,7 +8,6 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -125,8 +124,8 @@ func TestNormalizeWholesalePriceInputsAllowsSameQuantityForDifferentSKUs(t *test
 }
 
 func TestResolveWholesaleUnitPriceMatchesBestTier(t *testing.T) {
-	product := &models.Product{
-		WholesalePrices: models.WholesalePriceTiers{
+	product := &productdomain.Product{
+		WholesalePrices: productdomain.WholesalePriceTiers{
 			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 			{MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(70))},
 		},
@@ -145,8 +144,8 @@ func TestResolveWholesaleUnitPriceMatchesBestTier(t *testing.T) {
 }
 
 func TestResolveWholesaleUnitPriceDoesNotMatchBelowQuantity(t *testing.T) {
-	product := &models.Product{
-		WholesalePrices: models.WholesalePriceTiers{
+	product := &productdomain.Product{
+		WholesalePrices: productdomain.WholesalePriceTiers{
 			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 		},
 	}
@@ -161,8 +160,8 @@ func TestResolveWholesaleUnitPriceDoesNotMatchBelowQuantity(t *testing.T) {
 }
 
 func TestResolveWholesaleUnitPriceForSKUPrefersSpecificTier(t *testing.T) {
-	product := &models.Product{
-		WholesalePrices: models.WholesalePriceTiers{
+	product := &productdomain.Product{
+		WholesalePrices: productdomain.WholesalePriceTiers{
 			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 			{SKUID: 11, SKUCode: "SKU-A", MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(70))},
 		},
@@ -181,8 +180,8 @@ func TestResolveWholesaleUnitPriceForSKUPrefersSpecificTier(t *testing.T) {
 }
 
 func TestResolveWholesaleUnitPriceForSKURequiresIDAndCodeToMatch(t *testing.T) {
-	product := &models.Product{
-		WholesalePrices: models.WholesalePriceTiers{
+	product := &productdomain.Product{
+		WholesalePrices: productdomain.WholesalePriceTiers{
 			{SKUID: 11, SKUCode: "SKU-A", MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(70))},
 		},
 	}
@@ -196,8 +195,8 @@ func TestResolveWholesaleUnitPriceForSKURequiresIDAndCodeToMatch(t *testing.T) {
 }
 
 func TestResolveWholesaleUnitPriceForSKUDoesNotFallbackWhenSpecificTierExists(t *testing.T) {
-	product := &models.Product{
-		WholesalePrices: models.WholesalePriceTiers{
+	product := &productdomain.Product{
+		WholesalePrices: productdomain.WholesalePriceTiers{
 			{MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 			{SKUID: 11, SKUCode: "SKU-A", MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(70))},
 		},
@@ -213,8 +212,8 @@ func TestResolveWholesaleUnitPriceForSKUDoesNotFallbackWhenSpecificTierExists(t 
 }
 
 func TestResolveWholesaleUnitPriceForSKUUsesProductQuantityForUniversalTier(t *testing.T) {
-	product := &models.Product{
-		WholesalePrices: models.WholesalePriceTiers{
+	product := &productdomain.Product{
+		WholesalePrices: productdomain.WholesalePriceTiers{
 			{MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 		},
 	}
@@ -234,8 +233,8 @@ func TestResolveWholesaleUnitPriceForSKUUsesProductQuantityForUniversalTier(t *t
 // TestResolveWholesaleUnitPricePicksCheapestTierForLegacyData 验证即便历史脏数据
 // 存在非单调阶梯（高门槛档单价反而更高），选档也按单价最低者成交，避免「买更多反而更贵」。
 func TestResolveWholesaleUnitPricePicksCheapestTierForLegacyData(t *testing.T) {
-	product := &models.Product{
-		WholesalePrices: models.WholesalePriceTiers{
+	product := &productdomain.Product{
+		WholesalePrices: productdomain.WholesalePriceTiers{
 			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 			{MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(90))},
 		},
@@ -255,8 +254,8 @@ func TestResolveWholesaleUnitPricePicksCheapestTierForLegacyData(t *testing.T) {
 }
 
 func TestResolveWholesaleUnitPriceIgnoresHigherTierPrice(t *testing.T) {
-	product := &models.Product{
-		WholesalePrices: models.WholesalePriceTiers{
+	product := &productdomain.Product{
+		WholesalePrices: productdomain.WholesalePriceTiers{
 			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(120))},
 		},
 	}
@@ -351,7 +350,7 @@ func TestProductServiceUpdateWholesalePricesOnlyTouchesWholesaleField(t *testing
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:       category.ID,
 		Slug:             "wholesale-narrow-product",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "原商品名"},
@@ -384,7 +383,7 @@ func TestProductServiceUpdateWholesalePricesOnlyTouchesWholesaleField(t *testing
 		t.Fatalf("expected second tier sorted as min=10 price=70.00, got %+v", updated.WholesalePrices[1])
 	}
 
-	var got models.Product
+	var got productdomain.Product
 	if err := db.First(&got, product.ID).Error; err != nil {
 		t.Fatalf("reload product failed: %v", err)
 	}
@@ -399,12 +398,12 @@ func TestProductServiceUpdateWholesalePricesOnlyTouchesWholesaleField(t *testing
 func TestProductServiceUpdateWholesalePricesClearsTiers(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:  1,
 		Slug:        "wholesale-clear-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "wholesale-clear-product"},
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
-		WholesalePrices: models.WholesalePriceTiers{
+		WholesalePrices: productdomain.WholesalePriceTiers{
 			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 		},
 		IsActive: true,
@@ -425,12 +424,12 @@ func TestProductServiceUpdateWholesalePricesClearsTiers(t *testing.T) {
 func TestProductServiceUpdateWholesalePricesRejectsInvalidInputs(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:  1,
 		Slug:        "wholesale-invalid-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "wholesale-invalid-product"},
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
-		WholesalePrices: models.WholesalePriceTiers{
+		WholesalePrices: productdomain.WholesalePriceTiers{
 			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 		},
 		IsActive: true,
@@ -458,7 +457,7 @@ func TestProductServiceUpdateWholesalePricesRejectsInvalidInputs(t *testing.T) {
 			if !errors.Is(err, ErrWholesalePriceInvalid) {
 				t.Fatalf("expected ErrWholesalePriceInvalid, got %v", err)
 			}
-			var got models.Product
+			var got productdomain.Product
 			if err := db.First(&got, product.ID).Error; err != nil {
 				t.Fatalf("reload product failed: %v", err)
 			}
@@ -472,7 +471,7 @@ func TestProductServiceUpdateWholesalePricesRejectsInvalidInputs(t *testing.T) {
 func TestProductServiceUpdateWholesalePricesValidatesSKUBelonging(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:  1,
 		Slug:        "wholesale-sku-owner-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "wholesale-sku-owner-product"},
@@ -482,7 +481,7 @@ func TestProductServiceUpdateWholesalePricesValidatesSKUBelonging(t *testing.T) 
 	if err := db.Create(&product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
-	skuA := models.ProductSKU{
+	skuA := productdomain.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     "SKU-A",
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
@@ -493,7 +492,7 @@ func TestProductServiceUpdateWholesalePricesValidatesSKUBelonging(t *testing.T) 
 		t.Fatalf("create sku a failed: %v", err)
 	}
 
-	otherProduct := models.Product{
+	otherProduct := productdomain.Product{
 		CategoryID:  1,
 		Slug:        "wholesale-sku-owner-other",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "wholesale-sku-owner-other"},
@@ -503,7 +502,7 @@ func TestProductServiceUpdateWholesalePricesValidatesSKUBelonging(t *testing.T) 
 	if err := db.Create(&otherProduct).Error; err != nil {
 		t.Fatalf("create other product failed: %v", err)
 	}
-	foreignSKU := models.ProductSKU{
+	foreignSKU := productdomain.ProductSKU{
 		ProductID:   otherProduct.ID,
 		SKUCode:     "SKU-X",
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),

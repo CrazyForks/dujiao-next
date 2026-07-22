@@ -3,8 +3,9 @@ package productwrite
 import (
 	"strings"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -23,9 +24,9 @@ func (s *WriteService) syncSingleProductSKU(skuRepo SKURepository, productID uin
 		if !createWhenMissing {
 			return nil
 		}
-		return skuRepo.Create(&models.ProductSKU{
+		return skuRepo.Create(&productdomain.ProductSKU{
 			ProductID:         productID,
-			SKUCode:           models.DefaultSKUCode,
+			SKUCode:           productdomain.DefaultSKUCode,
 			SpecValuesJSON:    jsonmap.JSON{},
 			PriceAmount:       money.FromDecimal(priceAmount),
 			CostPriceAmount:   money.FromDecimal(costPriceAmount),
@@ -47,7 +48,7 @@ func (s *WriteService) syncSingleProductSKU(skuRepo SKURepository, productID uin
 	target.ManualStockTotal = manualStockTotal
 	target.IsActive = true
 	if strings.TrimSpace(target.SKUCode) == "" {
-		target.SKUCode = models.DefaultSKUCode
+		target.SKUCode = productdomain.DefaultSKUCode
 	}
 	if err := skuRepo.Update(&target); err != nil {
 		return err
@@ -64,11 +65,11 @@ func (s *WriteService) syncSingleProductSKU(skuRepo SKURepository, productID uin
 	return nil
 }
 
-func pickSingleModeTargetSKUIndex(skus []models.ProductSKU) int {
+func pickSingleModeTargetSKUIndex(skus []productdomain.ProductSKU) int {
 	if len(skus) == 0 {
 		return -1
 	}
-	defaultCode := strings.ToUpper(strings.TrimSpace(models.DefaultSKUCode))
+	defaultCode := strings.ToUpper(strings.TrimSpace(productdomain.DefaultSKUCode))
 
 	for i := range skus {
 		if !skus[i].IsActive {
@@ -102,7 +103,7 @@ type normalizedProductSKU struct {
 	SortOrder        int
 }
 
-func (s *WriteService) normalizeProductSKUInputs(inputs []ProductSKUInput, fulfillmentType string, existingSKUMap map[uint]models.ProductSKU) ([]normalizedProductSKU, decimal.Decimal, int, error) {
+func (s *WriteService) normalizeProductSKUInputs(inputs []ProductSKUInput, fulfillmentType string, existingSKUMap map[uint]productdomain.ProductSKU) ([]normalizedProductSKU, decimal.Decimal, int, error) {
 	if len(inputs) == 0 {
 		return nil, decimal.Zero, 0, s.errors.ProductSKUInvalid
 	}
@@ -224,8 +225,8 @@ func (s *WriteService) applyProductSKUsWithStockGuard(
 	if err != nil {
 		return err
 	}
-	existingByID := make(map[uint]models.ProductSKU, len(existingRows))
-	existingByCode := make(map[string]models.ProductSKU, len(existingRows))
+	existingByID := make(map[uint]productdomain.ProductSKU, len(existingRows))
+	existingByCode := make(map[string]productdomain.ProductSKU, len(existingRows))
 	for _, row := range existingRows {
 		existingByID[row.ID] = row
 		existingByCode[strings.ToLower(strings.TrimSpace(row.SKUCode))] = row
@@ -275,7 +276,7 @@ func (s *WriteService) applyProductSKUsWithStockGuard(
 		if err := skuRepo.PurgeSoftDeletedByProductAndCode(productID, row.SKUCode); err != nil {
 			return err
 		}
-		item := models.ProductSKU{
+		item := productdomain.ProductSKU{
 			ProductID:         productID,
 			SKUCode:           row.SKUCode,
 			SpecValuesJSON:    row.SpecValuesJSON,
@@ -308,10 +309,10 @@ func (s *WriteService) ensureAutoSKUCardSecretStockSafe(
 	cardSecretRepo CardSecretStockRepository,
 	productID uint,
 	fulfillmentType string,
-	existingRows []models.ProductSKU,
+	existingRows []productdomain.ProductSKU,
 	rows []normalizedProductSKU,
-	existingByID map[uint]models.ProductSKU,
-	existingByCode map[string]models.ProductSKU,
+	existingByID map[uint]productdomain.ProductSKU,
+	existingByCode map[string]productdomain.ProductSKU,
 ) error {
 	if cardSecretRepo == nil || productID == 0 || strings.TrimSpace(fulfillmentType) != constants.FulfillmentTypeAuto {
 		return nil

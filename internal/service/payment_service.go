@@ -3,7 +3,7 @@ package service
 import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/logger"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
@@ -52,13 +52,13 @@ type ProcurementCreator interface {
 }
 
 type paymentProductStore interface {
-	catalogproduct.Repository
-	BindTx(tx *gorm.DB) catalogproduct.Repository
+	productcontract.Repository
+	BindTx(tx *gorm.DB) productcontract.Repository
 }
 
 type paymentSKUStore interface {
-	catalogproduct.SKURepository
-	BindTx(tx *gorm.DB) catalogproduct.SKURepository
+	productcontract.SKURepository
+	BindTx(tx *gorm.DB) productcontract.SKURepository
 }
 
 // AffiliatePaymentLifecycle 是支付成功回调所需的推广返利用例端口。

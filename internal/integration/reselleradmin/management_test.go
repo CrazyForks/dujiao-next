@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
@@ -55,8 +57,8 @@ func setupAdminResellerManagementHandlerTest(t *testing.T) (*adminResellerFixtur
 		&admindomain.Admin{},
 		&models.AuthzAuditLog{},
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.ResellerProfile{},
@@ -499,13 +501,13 @@ func TestAdminResellerManagementSetPrimaryDomainRejectsUnverifiedDomain(t *testi
 	}
 }
 
-func seedResellerProductSettingProductForAdminHandler(t *testing.T, db *gorm.DB) (models.Product, []models.ProductSKU) {
+func seedResellerProductSettingProductForAdminHandler(t *testing.T, db *gorm.DB) (productdomain.Product, []productdomain.ProductSKU) {
 	t.Helper()
 	category := categorydomain.Category{Slug: fmt.Sprintf("admin-setting-cat-%d", time.Now().UnixNano()), NameJSON: jsonmap.JSON{"zh-CN": "分类"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            fmt.Sprintf("admin-setting-product-%d", time.Now().UnixNano()),
 		TitleJSON:       jsonmap.JSON{"zh-CN": "后台商品", "zh-TW": "後台商品", "en-US": "Admin Product"},
@@ -516,7 +518,7 @@ func seedResellerProductSettingProductForAdminHandler(t *testing.T, db *gorm.DB)
 	if err := db.Create(&product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
-	skus := []models.ProductSKU{
+	skus := []productdomain.ProductSKU{
 		{ProductID: product.ID, SKUCode: "A", PriceAmount: money.FromDecimal(decimal.RequireFromString("100.00")), CostPriceAmount: money.FromDecimal(decimal.RequireFromString("80.00")), IsActive: true},
 	}
 	if err := db.Create(&skus).Error; err != nil {

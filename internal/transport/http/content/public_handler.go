@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strconv"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/models"
@@ -18,7 +20,7 @@ import (
 type PublicPostQueries interface {
 	ListPublic(ctx context.Context, query domaincontent.PublicPostQuery) ([]models.Post, int64, error)
 	GetPublicBySlug(ctx context.Context, slug string) (*models.Post, error)
-	ListRelatedProducts(ctx context.Context, postID uint) ([]models.Product, error)
+	ListRelatedProducts(ctx context.Context, postID uint) ([]productdomain.Product, error)
 }
 
 // PublicPostCategoryQueries 是公开 Handler 实际需要的分类读取能力。

@@ -5,8 +5,10 @@ import (
 	"strconv"
 	"strings"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
@@ -14,10 +16,10 @@ import (
 // ProductSettingService 分销商品改价/上架配置用例。
 type ProductSettingService struct {
 	store       ProductSettingStore
-	productRepo catalogproduct.Repository
+	productRepo productcontract.Repository
 }
 
-func NewProductSettingService(store ProductSettingStore, productRepo catalogproduct.Repository) *ProductSettingService {
+func NewProductSettingService(store ProductSettingStore, productRepo productcontract.Repository) *ProductSettingService {
 	return &ProductSettingService{store: store, productRepo: productRepo}
 }
 
@@ -58,7 +60,7 @@ type ProductSettingAdminListInput struct {
 
 type ProductSettingDetail struct {
 	Profile          *models.ResellerProfile
-	Product          models.Product
+	Product          productdomain.Product
 	Settings         []models.ResellerProductSetting
 	EffectiveBySKUID map[uint]decimal.Decimal
 	RuleBySKUID      map[uint]string
@@ -66,7 +68,7 @@ type ProductSettingDetail struct {
 
 type ProductSettingListRow struct {
 	Profile          *models.ResellerProfile
-	Product          models.Product
+	Product          productdomain.Product
 	Settings         []models.ResellerProductSetting
 	EffectiveBySKUID map[uint]decimal.Decimal
 	RuleBySKUID      map[uint]string
@@ -189,7 +191,7 @@ func (s *ProductSettingService) ResetAdminProductSetting(resellerID, productID, 
 
 func (s *ProductSettingService) requireActiveProfileByUser(userID uint) (*models.ResellerProfile, error) {
 	if s == nil || s.store == nil || s.productRepo == nil || userID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	profile, err := s.store.GetProfileByUserID(userID)
 	if err != nil {
@@ -206,14 +208,14 @@ func (s *ProductSettingService) requireActiveProfileByUser(userID uint) (*models
 
 func (s *ProductSettingService) requireActiveProfileByID(resellerID uint) (*models.ResellerProfile, error) {
 	if s == nil || s.store == nil || s.productRepo == nil || resellerID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	profile, err := s.store.GetProfileByID(resellerID)
 	if err != nil {
 		return nil, err
 	}
 	if profile == nil {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	if profile.Status != models.ResellerProfileStatusActive {
 		return nil, ErrProfileInactive
@@ -223,14 +225,14 @@ func (s *ProductSettingService) requireActiveProfileByID(resellerID uint) (*mode
 
 func (s *ProductSettingService) getDetail(profile *models.ResellerProfile, productID uint) (*ProductSettingDetail, error) {
 	if profile == nil || productID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	row, err := s.store.GetProductWithSettings(profile.ID, productID)
 	if err != nil {
 		return nil, err
 	}
 	if row == nil {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	effective, rules, err := computeProductEffectivePrices(profile, row.Product, row.Settings)
 	if err != nil {
@@ -250,14 +252,14 @@ func (s *ProductSettingService) decorateRows(profile *models.ResellerProfile, ro
 
 func (s *ProductSettingService) saveSettings(profile *models.ResellerProfile, productID uint, input ProductSettingSaveInput) error {
 	if profile == nil || productID == 0 {
-		return catalogproduct.ErrNotFound
+		return productcontract.ErrNotFound
 	}
 	product, err := s.productRepo.GetAdminByID(strconv.FormatUint(uint64(productID), 10))
 	if err != nil {
 		return err
 	}
 	if product == nil {
-		return catalogproduct.ErrNotFound
+		return productcontract.ErrNotFound
 	}
 	normalizedSettings := make([]models.ResellerProductSetting, 0, len(input.Settings))
 	for _, item := range input.Settings {
@@ -279,9 +281,9 @@ func (s *ProductSettingService) saveSettings(profile *models.ResellerProfile, pr
 	})
 }
 
-func normalizeProductSettingInput(profile *models.ResellerProfile, product *models.Product, input ProductSettingInput) (models.ResellerProductSetting, error) {
+func normalizeProductSettingInput(profile *models.ResellerProfile, product *productdomain.Product, input ProductSettingInput) (models.ResellerProductSetting, error) {
 	if product == nil {
-		return models.ResellerProductSetting{}, catalogproduct.ErrNotFound
+		return models.ResellerProductSetting{}, productcontract.ErrNotFound
 	}
 	mode := strings.TrimSpace(input.PricingMode)
 	if mode == "" {
@@ -307,7 +309,7 @@ func normalizeProductSettingInput(profile *models.ResellerProfile, product *mode
 	if input.SKUID > 0 {
 		sku := findProductSKU(product.SKUs, input.SKUID)
 		if sku == nil || !sku.IsActive {
-			return models.ResellerProductSetting{}, catalogproduct.ErrProductSKUInvalid
+			return models.ResellerProductSetting{}, productcontract.ErrProductSKUInvalid
 		}
 		price, _, err := ResolveUnitAmount(profile, nil, &setting, sku.PriceAmount.Decimal.Round(2))
 		if err != nil {
@@ -351,14 +353,14 @@ func normalizeProductSettingInput(profile *models.ResellerProfile, product *mode
 
 func (s *ProductSettingService) previewSettings(profile *models.ResellerProfile, productID uint, input ProductSettingSaveInput) ([]ProductSettingPreviewItem, error) {
 	if profile == nil || productID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	row, err := s.store.GetProductWithSettings(profile.ID, productID)
 	if err != nil {
 		return nil, err
 	}
 	if row == nil {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	product := row.Product
 
@@ -454,7 +456,7 @@ func buildPreviewSetting(input ProductSettingInput) (models.ResellerProductSetti
 	}, nil
 }
 
-func previewValidateProductRuleAcrossSKUs(profile *models.ResellerProfile, product models.Product, productSetting *models.ResellerProductSetting) (bool, string) {
+func previewValidateProductRuleAcrossSKUs(profile *models.ResellerProfile, product productdomain.Product, productSetting *models.ResellerProductSetting) (bool, string) {
 	for i := range product.SKUs {
 		sku := &product.SKUs[i]
 		if !sku.IsActive {
@@ -483,7 +485,7 @@ func previewErrorCode(err error) string {
 	}
 }
 
-func computeProductEffectivePrices(profile *models.ResellerProfile, product models.Product, settings []models.ResellerProductSetting) (map[uint]decimal.Decimal, map[uint]string, error) {
+func computeProductEffectivePrices(profile *models.ResellerProfile, product productdomain.Product, settings []models.ResellerProductSetting) (map[uint]decimal.Decimal, map[uint]string, error) {
 	effective := map[uint]decimal.Decimal{}
 	rules := map[uint]string{}
 	byProduct, bySKU := indexProductSettings(settings)
@@ -538,7 +540,7 @@ func indexProductSettings(settings []models.ResellerProductSetting) (map[uint]*m
 	return byProduct, bySKU
 }
 
-func findProductSKU(items []models.ProductSKU, skuID uint) *models.ProductSKU {
+func findProductSKU(items []productdomain.ProductSKU, skuID uint) *productdomain.ProductSKU {
 	for i := range items {
 		if items[i].ID == skuID {
 			return &items[i]

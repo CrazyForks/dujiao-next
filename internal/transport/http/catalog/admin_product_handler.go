@@ -5,10 +5,11 @@ import (
 	"strconv"
 	"strings"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
@@ -21,21 +22,21 @@ import (
 
 // ProductQueries 是后台商品列表/详情读取所需的最小用例接口。
 type ProductQueries interface {
-	ListAdmin(categoryID, search, fulfillmentType, stockStatus string, hasWholesalePrices *bool, lowStockThreshold int, page, pageSize int) ([]models.Product, int64, error)
-	GetAdminByID(id string) (*models.Product, error)
-	ApplyAutoStockCounts(products []models.Product) error
+	ListAdmin(categoryID, search, fulfillmentType, stockStatus string, hasWholesalePrices *bool, lowStockThreshold int, page, pageSize int) ([]productdomain.Product, int64, error)
+	GetAdminByID(id string) (*productdomain.Product, error)
+	ApplyAutoStockCounts(products []productdomain.Product) error
 }
 
 // ProductWriter 是商品创建与完整更新用例。
 type ProductWriter interface {
-	Create(input productwrite.CreateProductInput) (*models.Product, error)
-	Update(id string, input productwrite.CreateProductInput) (*models.Product, error)
+	Create(input productwrite.CreateProductInput) (*productdomain.Product, error)
+	Update(id string, input productwrite.CreateProductInput) (*productdomain.Product, error)
 }
 
 // ProductAdminCommands 是商品管理与删除用例。
 type ProductAdminCommands interface {
-	UpdateWholesalePrices(id string, prices []productwrite.WholesalePriceInput) (*models.Product, error)
-	QuickUpdate(id string, fields map[string]interface{}) (*models.Product, error)
+	UpdateWholesalePrices(id string, prices []productwrite.WholesalePriceInput) (*productdomain.Product, error)
+	QuickUpdate(id string, fields map[string]interface{}) (*productdomain.Product, error)
 	Delete(id string) error
 }
 
@@ -160,7 +161,7 @@ func (h *AdminProductHandler) GetAdminProduct(c *gin.Context) {
 
 	product, err := h.products.GetAdminByID(id)
 	if err != nil {
-		if errors.Is(err, catalogproduct.ErrNotFound) {
+		if errors.Is(err, productcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
@@ -168,7 +169,7 @@ func (h *AdminProductHandler) GetAdminProduct(c *gin.Context) {
 		return
 	}
 
-	temp := []models.Product{*product}
+	temp := []productdomain.Product{*product}
 	if err := h.products.ApplyAutoStockCounts(temp); err != nil {
 		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		return
@@ -302,23 +303,23 @@ func (h *AdminProductHandler) CreateProduct(c *gin.Context) {
 		SortOrder:            req.SortOrder,
 	})
 	if err != nil {
-		if errors.Is(err, catalogproduct.ErrSlugExists) {
+		if errors.Is(err, productcontract.ErrSlugExists) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductPriceInvalid) {
+		if errors.Is(err, productcontract.ErrProductPriceInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_price_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductPurchaseInvalid) {
+		if errors.Is(err, productcontract.ErrProductPurchaseInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_purchase_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductCategoryInvalid) {
+		if errors.Is(err, productcontract.ErrProductCategoryInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_category_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrFulfillmentInvalid) {
+		if errors.Is(err, productcontract.ErrFulfillmentInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.fulfillment_invalid", nil)
 			return
 		}
@@ -326,15 +327,15 @@ func (h *AdminProductHandler) CreateProduct(c *gin.Context) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.manual_form_schema_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrManualStockInvalid) {
+		if errors.Is(err, productcontract.ErrManualStockInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.manual_stock_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductPurchaseLimitInvalid) {
+		if errors.Is(err, productcontract.ErrProductPurchaseLimitInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_purchase_limit_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductStockDisplayInvalid) {
+		if errors.Is(err, productcontract.ErrProductStockDisplayInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 			return
 		}
@@ -342,11 +343,11 @@ func (h *AdminProductHandler) CreateProduct(c *gin.Context) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.wholesale_price_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductSKUInvalid) {
+		if errors.Is(err, productcontract.ErrProductSKUInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductSKUHasCardSecretStock) {
+		if errors.Is(err, productcontract.ErrProductSKUHasCardSecretStock) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_sku_has_card_secret_stock", nil)
 			return
 		}
@@ -394,27 +395,27 @@ func (h *AdminProductHandler) UpdateProduct(c *gin.Context) {
 		SortOrder:            req.SortOrder,
 	})
 	if err != nil {
-		if errors.Is(err, catalogproduct.ErrNotFound) {
+		if errors.Is(err, productcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrSlugExists) {
+		if errors.Is(err, productcontract.ErrSlugExists) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_used", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductPriceInvalid) {
+		if errors.Is(err, productcontract.ErrProductPriceInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_price_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductPurchaseInvalid) {
+		if errors.Is(err, productcontract.ErrProductPurchaseInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_purchase_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductCategoryInvalid) {
+		if errors.Is(err, productcontract.ErrProductCategoryInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_category_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrFulfillmentInvalid) {
+		if errors.Is(err, productcontract.ErrFulfillmentInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.fulfillment_invalid", nil)
 			return
 		}
@@ -422,15 +423,15 @@ func (h *AdminProductHandler) UpdateProduct(c *gin.Context) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.manual_form_schema_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrManualStockInvalid) {
+		if errors.Is(err, productcontract.ErrManualStockInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.manual_stock_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductPurchaseLimitInvalid) {
+		if errors.Is(err, productcontract.ErrProductPurchaseLimitInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_purchase_limit_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductStockDisplayInvalid) {
+		if errors.Is(err, productcontract.ErrProductStockDisplayInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 			return
 		}
@@ -438,11 +439,11 @@ func (h *AdminProductHandler) UpdateProduct(c *gin.Context) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.wholesale_price_invalid", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductSKUInvalid) {
+		if errors.Is(err, productcontract.ErrProductSKUInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductSKUHasCardSecretStock) {
+		if errors.Is(err, productcontract.ErrProductSKUHasCardSecretStock) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_sku_has_card_secret_stock", nil)
 			return
 		}
@@ -481,7 +482,7 @@ func (h *AdminProductHandler) UpdateProductWholesalePrices(c *gin.Context) {
 
 	product, err := h.admin.UpdateWholesalePrices(id, *inputs)
 	if err != nil {
-		if errors.Is(err, catalogproduct.ErrNotFound) {
+		if errors.Is(err, productcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
@@ -523,11 +524,11 @@ func (h *AdminProductHandler) QuickUpdateProduct(c *gin.Context) {
 
 	product, err := h.admin.QuickUpdate(id, fields)
 	if err != nil {
-		if errors.Is(err, catalogproduct.ErrNotFound) {
+		if errors.Is(err, productcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductCategoryInvalid) {
+		if errors.Is(err, productcontract.ErrProductCategoryInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_category_invalid", nil)
 			return
 		}
@@ -539,7 +540,7 @@ func (h *AdminProductHandler) QuickUpdateProduct(c *gin.Context) {
 }
 
 // applyUpstreamDisplayTypes 将 upstream 类型商品的 FulfillmentType 替换为上游的实际交付类型，并填充库存字段
-func (h *AdminProductHandler) applyUpstreamDisplayTypes(products []models.Product) {
+func (h *AdminProductHandler) applyUpstreamDisplayTypes(products []productdomain.Product) {
 	var upstreamIDs []uint
 	idxMap := make(map[uint]int) // localProductID -> products slice index
 	for i := range products {
@@ -651,9 +652,9 @@ type batchProductFailureItem struct {
 func productBatchFailureFromError(locale string, id uint, err error) batchProductFailureItem {
 	errorCode := "product_update_failed"
 	switch {
-	case errors.Is(err, catalogproduct.ErrProductCategoryInvalid):
+	case errors.Is(err, productcontract.ErrProductCategoryInvalid):
 		errorCode = "product_category_invalid"
-	case errors.Is(err, catalogproduct.ErrNotFound):
+	case errors.Is(err, productcontract.ErrNotFound):
 		errorCode = "product_not_found"
 	}
 	return batchProductFailureItem{
@@ -725,15 +726,15 @@ func (h *AdminProductHandler) DeleteProduct(c *gin.Context) {
 	id := c.Param("id")
 
 	if err := h.admin.Delete(id); err != nil {
-		if errors.Is(err, catalogproduct.ErrNotFound) {
+		if errors.Is(err, productcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductHasStock) {
+		if errors.Is(err, productcontract.ErrProductHasStock) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_has_stock", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductHasOrderRecord) {
+		if errors.Is(err, productcontract.ErrProductHasOrderRecord) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_has_order_record", nil)
 			return
 		}

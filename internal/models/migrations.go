@@ -7,6 +7,7 @@ import (
 	"time"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
@@ -28,16 +29,16 @@ func ensureManualStockRemainingMigration() error {
 	}
 
 	return DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&Product{}).
-			Where("manual_stock_total >= ?", manualStockUnlimitedValue+1).
+		if err := tx.Model(&productdomain.Product{}).
+			Where("deleted_at IS NULL AND manual_stock_total >= ?", manualStockUnlimitedValue+1).
 			Update("manual_stock_total",
 				gorm.Expr("CASE WHEN (manual_stock_total - manual_stock_locked - manual_stock_sold) < 0 THEN 0 ELSE (manual_stock_total - manual_stock_locked - manual_stock_sold) END")).
 			Error; err != nil {
 			return err
 		}
 
-		if err := tx.Model(&ProductSKU{}).
-			Where("manual_stock_total >= ?", manualStockUnlimitedValue+1).
+		if err := tx.Model(&productdomain.ProductSKU{}).
+			Where("deleted_at IS NULL AND manual_stock_total >= ?", manualStockUnlimitedValue+1).
 			Update("manual_stock_total",
 				gorm.Expr("CASE WHEN (manual_stock_total - manual_stock_locked - manual_stock_sold) < 0 THEN 0 ELSE (manual_stock_total - manual_stock_locked - manual_stock_sold) END")).
 			Error; err != nil {
@@ -174,7 +175,7 @@ func ensureProductSKUMigration() error {
 
 // ensureDefaultProductSKUs 为每个历史商品补一条 DEFAULT SKU。
 func ensureDefaultProductSKUs() error {
-	var products []Product
+	var products []productdomain.Product
 	if err := DB.Unscoped().
 		Select("id, price_amount, manual_stock_total, manual_stock_locked, manual_stock_sold, is_active").
 		Find(&products).Error; err != nil {
@@ -188,7 +189,7 @@ func ensureDefaultProductSKUs() error {
 		ProductID uint
 	}
 	var existing []skuProductRow
-	if err := DB.Unscoped().Model(&ProductSKU{}).
+	if err := DB.Unscoped().Model(&productdomain.ProductSKU{}).
 		Select("DISTINCT product_id").
 		Scan(&existing).Error; err != nil {
 		return err
@@ -198,14 +199,14 @@ func ensureDefaultProductSKUs() error {
 		existingMap[row.ProductID] = struct{}{}
 	}
 
-	createRows := make([]ProductSKU, 0)
+	createRows := make([]productdomain.ProductSKU, 0)
 	for _, product := range products {
 		if _, ok := existingMap[product.ID]; ok {
 			continue
 		}
-		createRows = append(createRows, ProductSKU{
+		createRows = append(createRows, productdomain.ProductSKU{
 			ProductID:         product.ID,
-			SKUCode:           DefaultSKUCode,
+			SKUCode:           productdomain.DefaultSKUCode,
 			SpecValuesJSON:    jsonmap.JSON{},
 			PriceAmount:       product.PriceAmount,
 			ManualStockTotal:  product.ManualStockTotal,
@@ -230,7 +231,7 @@ func buildProductSKUMap() (map[uint]uint, error) {
 		SKUCode   string
 	}
 	var rows []skuRow
-	if err := DB.Unscoped().Model(&ProductSKU{}).
+	if err := DB.Unscoped().Model(&productdomain.ProductSKU{}).
 		Select("id, product_id, sku_code").
 		Order("id asc").
 		Find(&rows).Error; err != nil {
@@ -247,7 +248,7 @@ func buildProductSKUMap() (map[uint]uint, error) {
 			result[row.ProductID] = row.ID
 			continue
 		}
-		if strings.EqualFold(strings.TrimSpace(row.SKUCode), DefaultSKUCode) {
+		if strings.EqualFold(strings.TrimSpace(row.SKUCode), productdomain.DefaultSKUCode) {
 			result[row.ProductID] = row.ID
 			continue
 		}

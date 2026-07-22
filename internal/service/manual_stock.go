@@ -4,9 +4,10 @@ import (
 	"strconv"
 	"strings"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 )
 
 type manualStockSummary struct {
@@ -38,7 +39,7 @@ func summarizeManualStockItems(items []models.OrderItem) manualStockSummary {
 	return result
 }
 
-func releaseManualStockByItems(productRepo catalogproduct.Repository, productSKURepo catalogproduct.SKURepository, items []models.OrderItem) error {
+func releaseManualStockByItems(productRepo productcontract.Repository, productSKURepo productcontract.SKURepository, items []models.OrderItem) error {
 	var skuOp func(uint, int) (int64, error)
 	if productSKURepo != nil {
 		skuOp = productSKURepo.ReleaseManualStock
@@ -50,7 +51,7 @@ func releaseManualStockByItems(productRepo catalogproduct.Repository, productSKU
 	return applyManualStockByItems(productRepo, productSKURepo, items, skuOp, productOp)
 }
 
-func consumeManualStockByItems(productRepo catalogproduct.Repository, productSKURepo catalogproduct.SKURepository, items []models.OrderItem) error {
+func consumeManualStockByItems(productRepo productcontract.Repository, productSKURepo productcontract.SKURepository, items []models.OrderItem) error {
 	var skuOp func(uint, int) (int64, error)
 	if productSKURepo != nil {
 		skuOp = productSKURepo.ConsumeManualStock
@@ -63,8 +64,8 @@ func consumeManualStockByItems(productRepo catalogproduct.Repository, productSKU
 }
 
 func applyManualStockByItems(
-	productRepo catalogproduct.Repository,
-	productSKURepo catalogproduct.SKURepository,
+	productRepo productcontract.Repository,
+	productSKURepo productcontract.SKURepository,
 	items []models.OrderItem,
 	updateSKU func(uint, int) (int64, error),
 	updateProduct func(uint, int) (int64, error),

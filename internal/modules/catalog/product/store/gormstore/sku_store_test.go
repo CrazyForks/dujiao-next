@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
@@ -21,7 +22,7 @@ func setupSKUStoreTest(t *testing.T) (*SKUStore, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.ProductSKU{}); err != nil {
+	if err := db.AutoMigrate(&productdomain.ProductSKU{}); err != nil {
 		t.Fatalf("migrate product sku failed: %v", err)
 	}
 	return NewSKUStore(db), db
@@ -30,7 +31,7 @@ func setupSKUStoreTest(t *testing.T) (*SKUStore, *gorm.DB) {
 func TestSKUStoreListByProductSortOrderDescending(t *testing.T) {
 	repo, _ := setupSKUStoreTest(t)
 
-	high := &models.ProductSKU{
+	high := &productdomain.ProductSKU{
 		ProductID:      1,
 		SKUCode:        "HIGH",
 		PriceAmount:    money.FromDecimal(decimal.NewFromInt(100)),
@@ -38,7 +39,7 @@ func TestSKUStoreListByProductSortOrderDescending(t *testing.T) {
 		SortOrder:      100,
 		SpecValuesJSON: jsonmap.JSON{},
 	}
-	low := &models.ProductSKU{
+	low := &productdomain.ProductSKU{
 		ProductID:      1,
 		SKUCode:        "LOW",
 		PriceAmount:    money.FromDecimal(decimal.NewFromInt(100)),
@@ -67,7 +68,7 @@ func TestSKUStoreListByProductSortOrderDescending(t *testing.T) {
 
 func TestProductSKUManualStockLifecycleMatchesProductSemantics(t *testing.T) {
 	repo, db := setupSKUStoreTest(t)
-	sku := &models.ProductSKU{
+	sku := &productdomain.ProductSKU{
 		ProductID:        1,
 		SKUCode:          "STOCK-LIFECYCLE",
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(100)),
@@ -95,7 +96,7 @@ func TestProductSKUManualStockLifecycleMatchesProductSemantics(t *testing.T) {
 	affected, err = repo.ReleaseManualStock(sku.ID, 1)
 	assertAffected("release", affected, err)
 
-	var reloaded models.ProductSKU
+	var reloaded productdomain.ProductSKU
 	if err := db.First(&reloaded, sku.ID).Error; err != nil {
 		t.Fatalf("reload stock sku: %v", err)
 	}
@@ -103,7 +104,7 @@ func TestProductSKUManualStockLifecycleMatchesProductSemantics(t *testing.T) {
 		t.Fatalf("unexpected stock lifecycle result: %#v", reloaded)
 	}
 
-	unlimited := &models.ProductSKU{
+	unlimited := &productdomain.ProductSKU{
 		ProductID:        1,
 		SKUCode:          "STOCK-UNLIMITED",
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(100)),
@@ -118,5 +119,55 @@ func TestProductSKUManualStockLifecycleMatchesProductSemantics(t *testing.T) {
 	}
 	if affected, err := repo.ConsumeManualStock(unlimited.ID, 1); err != nil || affected != 0 {
 		t.Fatalf("unlimited consume should be no-op, affected=%d err=%v", affected, err)
+	}
+}
+
+func TestSKUStoreDeleteByProductHidesRowsAndRejectsStockMutations(t *testing.T) {
+	repo, db := setupSKUStoreTest(t)
+	sku := &productdomain.ProductSKU{
+		ProductID:         7,
+		SKUCode:           "SOFT-DELETED",
+		PriceAmount:       money.FromDecimal(decimal.NewFromInt(100)),
+		ManualStockTotal:  10,
+		ManualStockLocked: 1,
+		IsActive:          true,
+	}
+	if err := repo.Create(sku); err != nil {
+		t.Fatalf("create sku: %v", err)
+	}
+	if err := repo.DeleteByProduct(sku.ProductID); err != nil {
+		t.Fatalf("soft delete skus by product: %v", err)
+	}
+
+	var persisted productdomain.ProductSKU
+	if err := db.Where("id = ?", sku.ID).First(&persisted).Error; err != nil {
+		t.Fatalf("load persisted soft-deleted sku: %v", err)
+	}
+	if persisted.DeletedAt == nil {
+		t.Fatal("expected deleted_at to be persisted")
+	}
+
+	byID, err := repo.GetByID(sku.ID)
+	if err != nil || byID != nil {
+		t.Fatalf("soft-deleted sku must be hidden by id, sku=%#v err=%v", byID, err)
+	}
+	byCode, err := repo.GetByProductAndCode(sku.ProductID, sku.SKUCode)
+	if err != nil || byCode != nil {
+		t.Fatalf("soft-deleted sku must be hidden by code, sku=%#v err=%v", byCode, err)
+	}
+	rows, err := repo.ListByProduct(sku.ProductID, false)
+	if err != nil || len(rows) != 0 {
+		t.Fatalf("soft-deleted sku must be hidden from list, rows=%#v err=%v", rows, err)
+	}
+
+	for operation, mutate := range map[string]func() (int64, error){
+		"reserve": func() (int64, error) { return repo.ReserveManualStock(sku.ID, 1) },
+		"release": func() (int64, error) { return repo.ReleaseManualStock(sku.ID, 1) },
+		"consume": func() (int64, error) { return repo.ConsumeManualStock(sku.ID, 1) },
+	} {
+		affected, err := mutate()
+		if err != nil || affected != 0 {
+			t.Fatalf("%s must not mutate soft-deleted sku, affected=%d err=%v", operation, affected, err)
+		}
 	}
 }

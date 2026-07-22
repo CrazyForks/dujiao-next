@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
@@ -39,10 +41,10 @@ func TestDecoratePublicProductPromotionUsesDisplayPrice(t *testing.T) {
 	}
 
 	h := &PublicHandler{}
-	product := &models.Product{
+	product := &productdomain.Product{
 		ID:          1,
 		PriceAmount: money.FromDecimal(decimal.RequireFromString("59.90")),
-		SKUs: []models.ProductSKU{
+		SKUs: []productdomain.ProductSKU{
 			{
 				ID:          21,
 				IsActive:    true,

@@ -3,19 +3,20 @@ package cataloghttp
 import (
 	"testing"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 )
 
 func TestDecorateProductStock_AutoSkipsInactiveSKUs(t *testing.T) {
 	h := &PublicHandler{}
-	product := &models.Product{
+	product := &productdomain.Product{
 		ID:              1,
 		FulfillmentType: constants.FulfillmentTypeAuto,
-		SKUs: []models.ProductSKU{
+		SKUs: []productdomain.ProductSKU{
 			{
 				ID:                 11,
-				SKUCode:            models.DefaultSKUCode,
+				SKUCode:            productdomain.DefaultSKUCode,
 				IsActive:           true,
 				AutoStockAvailable: 2,
 				AutoStockTotal:     3,
@@ -56,14 +57,14 @@ func TestDecorateProductStock_AutoSkipsInactiveSKUs(t *testing.T) {
 
 func TestPublicProductResponseStatusModeMasksExactStock(t *testing.T) {
 	h := &PublicHandler{}
-	product := &models.Product{
+	product := &productdomain.Product{
 		ID:               1,
 		FulfillmentType:  constants.FulfillmentTypeManual,
 		StockDisplayMode: constants.ProductStockDisplayStatus,
-		SKUs: []models.ProductSKU{
+		SKUs: []productdomain.ProductSKU{
 			{
 				ID:               11,
-				SKUCode:          models.DefaultSKUCode,
+				SKUCode:          productdomain.DefaultSKUCode,
 				IsActive:         true,
 				ManualStockTotal: 37,
 			},
@@ -107,14 +108,14 @@ func TestPublicProductResponseStatusModeMasksExactStock(t *testing.T) {
 
 func TestPublicProductResponseRangeModeReturnsBucketOnly(t *testing.T) {
 	h := &PublicHandler{}
-	product := &models.Product{
+	product := &productdomain.Product{
 		ID:               1,
 		FulfillmentType:  constants.FulfillmentTypeManual,
 		StockDisplayMode: constants.ProductStockDisplayRange,
-		SKUs: []models.ProductSKU{
+		SKUs: []productdomain.ProductSKU{
 			{
 				ID:               11,
-				SKUCode:          models.DefaultSKUCode,
+				SKUCode:          productdomain.DefaultSKUCode,
 				IsActive:         true,
 				ManualStockTotal: 42,
 			},

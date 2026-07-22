@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -29,8 +31,8 @@ func openResellerPricingRepoTestDB(t *testing.T) *gorm.DB {
 	if err := db.AutoMigrate(
 		&userdomain.User{},
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
@@ -44,7 +46,7 @@ func openResellerPricingRepoTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func seedResellerPricingProduct(t *testing.T, db *gorm.DB, slug string, activeSKUCount int) (models.Product, []models.ProductSKU) {
+func seedResellerPricingProduct(t *testing.T, db *gorm.DB, slug string, activeSKUCount int) (productdomain.Product, []productdomain.ProductSKU) {
 	t.Helper()
 	var category categorydomain.Category
 	if err := db.FirstOrCreate(&category, categorydomain.Category{
@@ -54,7 +56,7 @@ func seedResellerPricingProduct(t *testing.T, db *gorm.DB, slug string, activeSK
 	}).Error; err != nil {
 		t.Fatalf("seed category failed: %v", err)
 	}
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": slug},
@@ -68,9 +70,9 @@ func seedResellerPricingProduct(t *testing.T, db *gorm.DB, slug string, activeSK
 	if err := db.Create(&product).Error; err != nil {
 		t.Fatalf("create product %s failed: %v", slug, err)
 	}
-	skus := make([]models.ProductSKU, 0, activeSKUCount)
+	skus := make([]productdomain.ProductSKU, 0, activeSKUCount)
 	for i := 0; i < activeSKUCount; i++ {
-		sku := models.ProductSKU{
+		sku := productdomain.ProductSKU{
 			ProductID:        product.ID,
 			SKUCode:          fmt.Sprintf("%s-sku-%d", slug, i+1),
 			PriceAmount:      money.FromDecimal(decimal.NewFromInt(100 + int64(i))),

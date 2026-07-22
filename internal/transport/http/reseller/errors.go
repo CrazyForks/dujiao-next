@@ -3,7 +3,8 @@ package resellerhttp
 import (
 	"errors"
 
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -67,7 +68,7 @@ func isUploadValidationError(err error) bool {
 
 func respondAdminManagementError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, catalogproduct.ErrNotFound):
+	case errors.Is(err, productcontract.ErrNotFound):
 		ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
 	case errors.Is(err, resellermodule.ErrProfileStatusInvalid),
 		errors.Is(err, resellermodule.ErrDomainStatusInvalid),
@@ -86,7 +87,7 @@ func respondAdminManagementError(c *gin.Context, err error) {
 var userProductSettingErrorRules = []mappedError{
 	{target: resellermodule.ErrNotOpened, code: response.CodeBadRequest, key: "error.bad_request"},
 	{target: resellermodule.ErrProfileInactive, code: response.CodeBadRequest, key: "error.forbidden"},
-	{target: catalogproduct.ErrProductSKUInvalid, code: response.CodeBadRequest, key: "error.order_item_invalid"},
+	{target: productcontract.ErrProductSKUInvalid, code: response.CodeBadRequest, key: "error.order_item_invalid"},
 	{target: resellermodule.ErrPriceBelowBase, code: response.CodeBadRequest, key: "error.reseller_price_invalid"},
 	{target: resellermodule.ErrMarkupExceeded, code: response.CodeBadRequest, key: "error.reseller_markup_exceeded"},
 	{target: resellermodule.ErrPricingModeInvalid, code: response.CodeBadRequest, key: "error.reseller_price_invalid"},
@@ -99,7 +100,7 @@ func respondUserProductSettingError(c *gin.Context, err error, fallbackKey strin
 			return
 		}
 	}
-	if errors.Is(err, catalogproduct.ErrNotFound) {
+	if errors.Is(err, productcontract.ErrNotFound) {
 		ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 		return
 	}
@@ -108,11 +109,11 @@ func respondUserProductSettingError(c *gin.Context, err error, fallbackKey strin
 
 func respondAdminProductSettingError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, catalogproduct.ErrNotFound):
+	case errors.Is(err, productcontract.ErrNotFound):
 		ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 	case errors.Is(err, resellermodule.ErrProfileInactive):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
-	case errors.Is(err, catalogproduct.ErrProductSKUInvalid):
+	case errors.Is(err, productcontract.ErrProductSKUInvalid):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
 	case errors.Is(err, resellermodule.ErrPriceBelowBase),
 		errors.Is(err, resellermodule.ErrPricingModeInvalid):

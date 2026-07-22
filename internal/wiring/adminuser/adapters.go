@@ -5,13 +5,15 @@ import (
 	"errors"
 	"fmt"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/modules/coupon"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
@@ -112,10 +114,10 @@ func (a adminUserCouponAdapter) ListByIDs(ids []uint) ([]models.Coupon, error) {
 }
 
 type adminUserProductAdapter struct {
-	products catalogproduct.Repository
+	products productcontract.Repository
 }
 
-func (a adminUserProductAdapter) ListByIDs(ids []uint) ([]models.Product, error) {
+func (a adminUserProductAdapter) ListByIDs(ids []uint) ([]productdomain.Product, error) {
 	return a.products.ListByIDs(ids)
 }
 

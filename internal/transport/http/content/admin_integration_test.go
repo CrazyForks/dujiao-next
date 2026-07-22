@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/models"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
 	localfilestore "github.com/dujiao-next/internal/modules/content/filestore/local"
 	"github.com/dujiao-next/internal/modules/content/store/gormstore"
+	"github.com/dujiao-next/internal/platform/http/response"
 	contenttransport "github.com/dujiao-next/internal/transport/http/content"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"

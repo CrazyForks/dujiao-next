@@ -148,6 +148,7 @@ func TestCatalogCategoryLegacyFlatFilesStayRemoved(t *testing.T) {
 func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	productRoot := filepath.Join(repositoryRoot, "internal", "modules", "catalog", "product")
+	contractRoot := filepath.Join(productRoot, "contract")
 	applicationRoot := filepath.Join(productRoot, "application")
 	adminRoot := filepath.Join(applicationRoot, "admin")
 	writeRoot := filepath.Join(applicationRoot, "write")
@@ -156,11 +157,11 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 	storeRoot := filepath.Join(productRoot, "store", "gormstore")
 	sharedGORMRoot := filepath.Join(repositoryRoot, "internal", "persistence", "gormutil")
 
-	assertFileDeclaresTypes(t, filepath.Join(productRoot, "ports.go"), []string{
+	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "repository.go"), []string{
 		"ListFilter", "Repository", "SKURepository",
 	})
-	if _, err := os.Stat(filepath.Join(productRoot, "errors.go")); err != nil {
-		t.Fatalf("catalog product errors.go must exist: %v", err)
+	if _, err := os.Stat(filepath.Join(contractRoot, "errors.go")); err != nil {
+		t.Fatalf("catalog product contract errors.go must exist: %v", err)
 	}
 	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "query.go"), []string{
 		"ProductRepository", "CategoryRepository", "HiddenProductRepository", "StockCounter",
@@ -207,6 +208,11 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 		"TestSyncSingleProductSKUNoActivePrefersDefaultCode",
 	})
 	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "pricing.go"), []string{"WholesalePriceInput"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "product.go"), []string{"Product"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "sku.go"), []string{"ProductSKU"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "wholesale_price.go"), []string{
+		"WholesalePriceTier", "WholesalePriceTiers",
+	})
 	assertFileDeclaresFunctions(t, filepath.Join(domainRoot, "pricing.go"), []string{
 		"NormalizeWholesalePrices", "NormalizeWholesalePricesForSKUs",
 		"ResolveWholesaleUnitPrice", "ResolveWholesaleUnitPriceWithMatchQuantity", "ResolveWholesaleUnitPriceForSKU",
@@ -226,11 +232,12 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "sku_store.go"), []string{"SKUStore"})
 	assertFileDeclaresFunctions(t, filepath.Join(storeRoot, "sku_store.go"), []string{"NewSKUStore"})
 
-	assertDirectoryGoFileBudget(t, productRoot, 3)
+	assertDirectoryGoFileBudget(t, productRoot, 0)
+	assertDirectoryGoFileBudget(t, contractRoot, 2)
 	assertDirectoryGoFileBudget(t, applicationRoot, 4)
 	assertDirectoryGoFileBudget(t, adminRoot, 4)
 	assertDirectoryGoFileBudget(t, writeRoot, 6)
-	assertDirectoryGoFileBudget(t, domainRoot, 6)
+	assertDirectoryGoFileBudget(t, domainRoot, 7)
 	assertDirectoryGoFileBudget(t, manualFormRoot, 2)
 	assertDirectoryGoFileBudget(t, storeRoot, 4)
 	assertDirectoryGoFileBudget(t, sharedGORMRoot, 2)
@@ -338,6 +345,11 @@ func TestCatalogProductLegacyRepositoryFilesStayRemoved(t *testing.T) {
 func TestCatalogProductLegacyFlatFilesStayRemoved(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	legacyFiles := []string{
+		"internal/models/product.go",
+		"internal/models/product_sku.go",
+		"internal/models/wholesale_price.go",
+		"internal/modules/catalog/product/errors.go",
+		"internal/modules/catalog/product/ports.go",
 		"internal/service/product_create.go",
 		"internal/service/product_admin.go",
 		"internal/service/product_query.go",

@@ -3,9 +3,10 @@ package cataloghttp
 import (
 	"errors"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/models"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/upstream"
@@ -151,11 +152,11 @@ func (h *AdminProductMappingHandler) ImportUpstreamProduct(c *gin.Context) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.upstream_product_not_found", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrSlugExists) {
+		if errors.Is(err, productcontract.ErrSlugExists) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
 			return
 		}
-		if errors.Is(err, catalogproduct.ErrProductCategoryInvalid) {
+		if errors.Is(err, productcontract.ErrProductCategoryInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_category_invalid", nil)
 			return
 		}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	"github.com/dujiao-next/internal/provider"
@@ -40,15 +42,15 @@ type productServiceAdapter struct {
 	products *productapplication.Service
 }
 
-func (a productServiceAdapter) ListForUpstreamSync(updatedAfter *time.Time, includeInactive bool, page, pageSize int) ([]models.Product, int64, error) {
+func (a productServiceAdapter) ListForUpstreamSync(updatedAfter *time.Time, includeInactive bool, page, pageSize int) ([]productdomain.Product, int64, error) {
 	return a.products.ListForUpstreamSync(updatedAfter, includeInactive, page, pageSize)
 }
 
-func (a productServiceAdapter) ApplyAutoStockCounts(products []models.Product) error {
+func (a productServiceAdapter) ApplyAutoStockCounts(products []productdomain.Product) error {
 	return a.products.ApplyAutoStockCounts(products)
 }
 
-func (a productServiceAdapter) GetAdminByID(id string) (*models.Product, error) {
+func (a productServiceAdapter) GetAdminByID(id string) (*productdomain.Product, error) {
 	product, err := a.products.GetAdminByID(id)
 	if errors.Is(err, service.ErrNotFound) {
 		return nil, fmt.Errorf("%w: %v", upstreamtransport.ErrProductNotFound, err)

@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
@@ -98,8 +100,8 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 	}
 	if err := db.AutoMigrate(
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.SiteConnection{},
 		&models.ProductMapping{},
 	); err != nil {
@@ -178,7 +180,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 	}
 
 	var productCount int64
-	if err := db.Model(&models.Product{}).Count(&productCount).Error; err != nil {
+	if err := db.Model(&productdomain.Product{}).Count(&productCount).Error; err != nil {
 		t.Fatalf("count products failed: %v", err)
 	}
 	if productCount != 0 {
@@ -186,7 +188,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 	}
 
 	var skuCount int64
-	if err := db.Model(&models.ProductSKU{}).Count(&skuCount).Error; err != nil {
+	if err := db.Model(&productdomain.ProductSKU{}).Count(&skuCount).Error; err != nil {
 		t.Fatalf("count product skus failed: %v", err)
 	}
 	if skuCount != 0 {
@@ -211,8 +213,8 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 	}
 	if err := db.AutoMigrate(
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.SiteConnection{},
 		&models.ProductMapping{},
 		&models.SKUMapping{},
@@ -228,7 +230,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 	}
 
 	productRepo := productgormstore.NewProductStore(db)
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      1,
 		Slug:            "p",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "P"},
@@ -241,7 +243,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 		t.Fatalf("create product failed: %v", err)
 	}
 	skuRepo := productgormstore.NewSKUStore(db)
-	sku := models.ProductSKU{ProductID: product.ID, SKUCode: "SKU-A", PriceAmount: money.FromDecimal(decimal.NewFromInt(10)), IsActive: true}
+	sku := productdomain.ProductSKU{ProductID: product.ID, SKUCode: "SKU-A", PriceAmount: money.FromDecimal(decimal.NewFromInt(10)), IsActive: true}
 	if err := skuRepo.Create(&sku); err != nil {
 		t.Fatalf("create sku failed: %v", err)
 	}
@@ -317,7 +319,7 @@ func TestSyncProductMarksDeletedWhenUpstreamSoftDeleted(t *testing.T) {
 		t.Fatalf("expected mapping to be deactivated for deleted upstream")
 	}
 
-	var product models.Product
+	var product productdomain.Product
 	if err := db.First(&product, mapping.LocalProductID).Error; err != nil {
 		t.Fatalf("reload product failed: %v", err)
 	}
@@ -368,7 +370,7 @@ func TestSyncProductMarksInactiveWhenUpstreamReturnsInactive(t *testing.T) {
 		t.Fatalf("expected mapping to remain active for inactive upstream (only deleted should auto-disable)")
 	}
 
-	var product models.Product
+	var product productdomain.Product
 	if err := db.First(&product, mapping.LocalProductID).Error; err != nil {
 		t.Fatalf("reload product failed: %v", err)
 	}
@@ -400,10 +402,10 @@ func TestSyncProductKeepsLocalWholesalePricesWhenUpstreamOmitsWholesalePrices(t 
 	)
 	defer cleanup()
 
-	localWholesalePrices := models.WholesalePriceTiers{
+	localWholesalePrices := productdomain.WholesalePriceTiers{
 		{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}
-	if err := db.Model(&models.Product{}).
+	if err := db.Model(&productdomain.Product{}).
 		Where("id = ?", mapping.LocalProductID).
 		Update("wholesale_prices", localWholesalePrices).Error; err != nil {
 		t.Fatalf("seed local wholesale prices failed: %v", err)
@@ -413,7 +415,7 @@ func TestSyncProductKeepsLocalWholesalePricesWhenUpstreamOmitsWholesalePrices(t 
 		t.Fatalf("SyncProduct returned error: %v", err)
 	}
 
-	var product models.Product
+	var product productdomain.Product
 	if err := db.First(&product, mapping.LocalProductID).Error; err != nil {
 		t.Fatalf("reload product failed: %v", err)
 	}
@@ -442,7 +444,7 @@ func TestSyncProductRemapsUpstreamWholesaleSKUID(t *testing.T) {
 					SKUs: []upstream.UpstreamSKU{
 						{ID: 201, SKUCode: "SKU-A", PriceAmount: "10.00", IsActive: true, StockQuantity: 100},
 					},
-					WholesalePrices: models.WholesalePriceTiers{
+					WholesalePrices: productdomain.WholesalePriceTiers{
 						{SKUID: 201, MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(8))},
 					},
 				},
@@ -451,7 +453,7 @@ func TestSyncProductRemapsUpstreamWholesaleSKUID(t *testing.T) {
 	)
 	defer cleanup()
 
-	var localSKU models.ProductSKU
+	var localSKU productdomain.ProductSKU
 	if err := db.Where("product_id = ? AND sku_code = ?", mapping.LocalProductID, "SKU-A").First(&localSKU).Error; err != nil {
 		t.Fatalf("load local sku failed: %v", err)
 	}
@@ -463,7 +465,7 @@ func TestSyncProductRemapsUpstreamWholesaleSKUID(t *testing.T) {
 		t.Fatalf("SyncProduct returned error: %v", err)
 	}
 
-	var product models.Product
+	var product productdomain.Product
 	if err := db.First(&product, mapping.LocalProductID).Error; err != nil {
 		t.Fatalf("reload product failed: %v", err)
 	}
@@ -514,7 +516,7 @@ func TestSyncConnectionStockMarksDeletedWhenFullSyncMissing(t *testing.T) {
 		t.Fatalf("expected mapping to be deactivated when upstream marks deleted")
 	}
 
-	var product models.Product
+	var product productdomain.Product
 	if err := db.First(&product, mapping.LocalProductID).Error; err != nil {
 		t.Fatalf("reload product failed: %v", err)
 	}
@@ -547,7 +549,7 @@ func TestSyncConnectionStockKeepsLegacyUpstreamMissing(t *testing.T) {
 		t.Fatalf("legacy upstream missing must not deactivate mapping")
 	}
 
-	var product models.Product
+	var product productdomain.Product
 	if err := db.First(&product, mapping.LocalProductID).Error; err != nil {
 		t.Fatalf("reload product failed: %v", err)
 	}
@@ -624,7 +626,7 @@ func TestEnsureUpstreamStockReturnsNilWhenCachedStockSufficient(t *testing.T) {
 	)
 	defer cleanup()
 
-	var sku models.ProductSKU
+	var sku productdomain.ProductSKU
 	if err := db.First(&sku).Error; err != nil {
 		t.Fatalf("load sku failed: %v", err)
 	}
@@ -686,7 +688,7 @@ func TestEnsureUpstreamStockRejectsWhenUpstreamReportsZero(t *testing.T) {
 		t.Fatalf("reset stock failed: %v", err)
 	}
 
-	var sku models.ProductSKU
+	var sku productdomain.ProductSKU
 	if err := db.First(&sku).Error; err != nil {
 		t.Fatalf("load sku failed: %v", err)
 	}
@@ -713,7 +715,7 @@ func TestEnsureUpstreamStockFailsOpenWhenUpstreamDown(t *testing.T) {
 		t.Fatalf("reset stock failed: %v", err)
 	}
 
-	var sku models.ProductSKU
+	var sku productdomain.ProductSKU
 	if err := db.First(&sku).Error; err != nil {
 		t.Fatalf("load sku failed: %v", err)
 	}
@@ -775,8 +777,8 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 	}
 	if err := db.AutoMigrate(
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.SiteConnection{},
 		&models.ProductMapping{},
 		&models.SKUMapping{},
@@ -831,7 +833,7 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 	}
 
 	var productCount int64
-	if err := db.Model(&models.Product{}).Count(&productCount).Error; err != nil {
+	if err := db.Model(&productdomain.Product{}).Count(&productCount).Error; err != nil {
 		t.Fatalf("count products failed: %v", err)
 	}
 	if productCount != 0 {

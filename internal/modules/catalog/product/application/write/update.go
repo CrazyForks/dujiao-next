@@ -6,7 +6,6 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -17,7 +16,7 @@ import (
 )
 
 // Update 更新商品
-func (s *WriteService) Update(id string, input CreateProductInput) (*models.Product, error) {
+func (s *WriteService) Update(id string, input CreateProductInput) (*productdomain.Product, error) {
 	priceAmount := input.PriceAmount.Round(2)
 	if len(input.SKUs) == 0 && priceAmount.LessThanOrEqual(decimal.Zero) {
 		return nil, s.errors.ProductPriceInvalid
@@ -126,7 +125,7 @@ func (s *WriteService) Update(id string, input CreateProductInput) (*models.Prod
 		if listErr != nil {
 			return nil, listErr
 		}
-		existingSKUMap := make(map[uint]models.ProductSKU, len(existingSKUs))
+		existingSKUMap := make(map[uint]productdomain.ProductSKU, len(existingSKUs))
 		for _, sku := range existingSKUs {
 			existingSKUMap[sku.ID] = sku
 		}
@@ -159,7 +158,7 @@ func (s *WriteService) Update(id string, input CreateProductInput) (*models.Prod
 		// 仅当请求显式携带批发价字段时才覆盖，省略字段（nil）保留原有配置，
 		// 避免不关心批发价的局部更新静默清空已配阶梯。
 		if input.WholesalePrices != nil {
-			var skus []models.ProductSKU
+			var skus []productdomain.ProductSKU
 			if skuRepo != nil {
 				var err error
 				skus, err = skuRepo.ListByProduct(product.ID, false)

@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
@@ -45,7 +47,7 @@ func assertBuildOrderResultRejectsPurchaseQuantity(t *testing.T, fixture orderPu
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}, &models.ProductSKU{}, &models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -60,7 +62,7 @@ func assertBuildOrderResultRejectsPurchaseQuantity(t *testing.T, fixture orderPu
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:          category.ID,
 		Slug:                fixture.productSlug,
 		TitleJSON:           jsonmap.JSON{"zh-CN": "测试商品"},
@@ -77,9 +79,9 @@ func assertBuildOrderResultRejectsPurchaseQuantity(t *testing.T, fixture orderPu
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	sku := models.ProductSKU{
+	sku := productdomain.ProductSKU{
 		ProductID:         product.ID,
-		SKUCode:           models.DefaultSKUCode,
+		SKUCode:           productdomain.DefaultSKUCode,
 		PriceAmount:       money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:          true,
 		ManualStockTotal:  constants.ManualStockUnlimited,
@@ -120,7 +122,7 @@ func TestBuildOrderResultRejectsZeroPromotionPrice(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}, &models.ProductSKU{}, &models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -135,7 +137,7 @@ func TestBuildOrderResultRejectsZeroPromotionPrice(t *testing.T) {
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "test-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
@@ -150,9 +152,9 @@ func TestBuildOrderResultRejectsZeroPromotionPrice(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	sku := models.ProductSKU{
+	sku := productdomain.ProductSKU{
 		ProductID:         product.ID,
-		SKUCode:           models.DefaultSKUCode,
+		SKUCode:           productdomain.DefaultSKUCode,
 		PriceAmount:       money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:          true,
 		ManualStockTotal:  constants.ManualStockUnlimited,
@@ -210,8 +212,8 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 	}
 	if err := db.AutoMigrate(
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.Promotion{},
 		&userdomain.User{},
 		&models.MemberLevel{},
@@ -253,7 +255,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 		t.Fatalf("create user failed: %v", err)
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "manual-member-preview-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "人工发货商品"},
@@ -278,9 +280,9 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	sku := models.ProductSKU{
+	sku := productdomain.ProductSKU{
 		ProductID:         product.ID,
-		SKUCode:           models.DefaultSKUCode,
+		SKUCode:           productdomain.DefaultSKUCode,
 		PriceAmount:       money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:          true,
 		ManualStockTotal:  constants.ManualStockUnlimited,
@@ -341,8 +343,8 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 	}
 	if err := db.AutoMigrate(
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.Promotion{},
 		&userdomain.User{},
 		&models.MemberLevel{},
@@ -384,7 +386,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 		t.Fatalf("create user failed: %v", err)
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "stack-promo-member-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "叠加优惠商品"},
@@ -398,9 +400,9 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 	if err := db.Create(&product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
-	sku := models.ProductSKU{
+	sku := productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 		CreatedAt:   now,
@@ -512,7 +514,7 @@ func TestBuildOrderResultOriginalAmountBeforePromotion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}, &models.ProductSKU{}, &models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -527,7 +529,7 @@ func TestBuildOrderResultOriginalAmountBeforePromotion(t *testing.T) {
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "test-product-original",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
@@ -542,9 +544,9 @@ func TestBuildOrderResultOriginalAmountBeforePromotion(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	sku := models.ProductSKU{
+	sku := productdomain.ProductSKU{
 		ProductID:         product.ID,
-		SKUCode:           models.DefaultSKUCode,
+		SKUCode:           productdomain.DefaultSKUCode,
 		PriceAmount:       money.FromDecimal(decimal.RequireFromString("59.90")),
 		IsActive:          true,
 		ManualStockTotal:  constants.ManualStockUnlimited,
@@ -617,7 +619,7 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}, &models.ProductSKU{}, &models.Coupon{}, &models.CouponUsage{}, &models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.Coupon{}, &models.CouponUsage{}, &models.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -632,7 +634,7 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "test-product-coupon",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
@@ -647,9 +649,9 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	sku := models.ProductSKU{
+	sku := productdomain.ProductSKU{
 		ProductID:         product.ID,
-		SKUCode:           models.DefaultSKUCode,
+		SKUCode:           productdomain.DefaultSKUCode,
 		PriceAmount:       money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:          true,
 		ManualStockTotal:  constants.ManualStockUnlimited,

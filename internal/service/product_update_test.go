@@ -5,10 +5,11 @@ import (
 	"strconv"
 	"testing"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
@@ -25,7 +26,7 @@ func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T)
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:       category.ID,
 		Slug:             "mapped-product",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "mapped-product"},
@@ -40,9 +41,9 @@ func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T)
 		t.Fatalf("create mapped product failed: %v", err)
 	}
 
-	sku := models.ProductSKU{
+	sku := productdomain.ProductSKU{
 		ProductID:      product.ID,
-		SKUCode:        models.DefaultSKUCode,
+		SKUCode:        productdomain.DefaultSKUCode,
 		SpecValuesJSON: jsonmap.JSON{},
 		PriceAmount:    money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
@@ -95,7 +96,7 @@ func TestProductServiceUpdateFiltersUnavailablePaymentChannels(t *testing.T) {
 	}
 
 	deletedChannel := createProductTestPaymentChannel(t, db, "Deleted", true, true)
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:        category.ID,
 		Slug:              "payment-channel-update",
 		TitleJSON:         jsonmap.JSON{"zh-CN": "payment-channel-update"},

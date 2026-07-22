@@ -1,4 +1,4 @@
-package models
+package productdomain
 
 import (
 	"database/sql/driver"

@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -27,10 +29,10 @@ func setupDashboardRepositoryTest(t *testing.T) (*Store, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&userdomain.User{}, &categorydomain.Category{}, &models.Product{}, &models.Order{}, &models.OrderItem{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &categorydomain.Category{}, &productdomain.Product{}, &models.Order{}, &models.OrderItem{}); err != nil {
 		t.Fatalf("migrate dashboard models failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.ProductSKU{}); err != nil {
+	if err := db.AutoMigrate(&productdomain.ProductSKU{}); err != nil {
 		t.Fatalf("migrate dashboard sku models failed: %v", err)
 	}
 	if err := db.AutoMigrate(&models.PaymentChannel{}, &models.Payment{}, &models.OrderRefundRecord{}); err != nil {
@@ -54,7 +56,7 @@ func createDashboardCategory(t *testing.T, db *gorm.DB, slug string) *categorydo
 func createDashboardProfitOrderWithItem(
 	t *testing.T,
 	db *gorm.DB,
-	product *models.Product,
+	product *productdomain.Product,
 	orderNo string,
 	status string,
 	amount int64,

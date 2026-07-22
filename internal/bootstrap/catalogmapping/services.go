@@ -3,10 +3,11 @@ package catalogmappingbootstrap
 import (
 	"errors"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/modules/siteconnection"
 
 	"gorm.io/gorm"
@@ -14,15 +15,15 @@ import (
 
 // ProductStore 是映射服务装配所需的商品持久化与事务能力。
 type ProductStore interface {
-	catalogproduct.Repository
+	productcontract.Repository
 	Transaction(fn func(tx *gorm.DB) error) error
-	BindTx(tx *gorm.DB) catalogproduct.Repository
+	BindTx(tx *gorm.DB) productcontract.Repository
 }
 
 // SKUStore 是映射服务装配所需的 SKU 持久化与事务绑定能力。
 type SKUStore interface {
-	catalogproduct.SKURepository
-	BindTx(tx *gorm.DB) catalogproduct.SKURepository
+	productcontract.SKURepository
+	BindTx(tx *gorm.DB) productcontract.SKURepository
 }
 
 // MappingStore 是映射持久化与事务绑定能力。
@@ -61,7 +62,7 @@ func New(dependencies Dependencies) (*catalogmapping.Service, error) {
 		Transactions: newUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.Mappings, dependencies.SKUMappings),
 		Errors: catalogmapping.ErrorSet{
 			ConnectionNotFound:     siteconnection.ErrNotFound,
-			ProductCategoryInvalid: catalogproduct.ErrProductCategoryInvalid,
+			ProductCategoryInvalid: productcontract.ErrProductCategoryInvalid,
 		},
 	})
 	if err != nil {

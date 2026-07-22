@@ -3,10 +3,11 @@ package catalogproductbootstrap
 import (
 	"errors"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
@@ -21,15 +22,15 @@ type memberLevelPriceCleaner interface {
 
 // ProductStore 是装配层需要的 Product 持久化与事务能力。
 type ProductStore interface {
-	catalogproduct.Repository
+	productcontract.Repository
 	Transaction(fn func(tx *gorm.DB) error) error
-	BindTx(tx *gorm.DB) catalogproduct.Repository
+	BindTx(tx *gorm.DB) productcontract.Repository
 }
 
 // SKUStore 是装配层需要的 SKU 持久化与事务绑定能力。
 type SKUStore interface {
-	catalogproduct.SKURepository
-	BindTx(tx *gorm.DB) catalogproduct.SKURepository
+	productcontract.SKURepository
+	BindTx(tx *gorm.DB) productcontract.SKURepository
 }
 
 // MappingStore 是商品级联删除所需的映射持久化与事务能力。
@@ -175,8 +176,8 @@ func New(dependencies Dependencies) Services {
 		Products:                      dependencies.Products,
 		Categories:                    dependencies.Categories,
 		Stock:                         dependencies.CardSecrets,
-		NotFoundError:                 catalogproduct.ErrNotFound,
-		ResellerProductNotListedError: catalogproduct.ErrResellerProductNotListed,
+		NotFoundError:                 productcontract.ErrNotFound,
+		ResellerProductNotListedError: productcontract.ErrResellerProductNotListed,
 	})
 	admin := productadmin.NewAdminService(productadmin.Options{
 		Products:     dependencies.Products,
@@ -185,10 +186,10 @@ func New(dependencies Dependencies) Services {
 		Orders:       dependencies.Orders,
 		Transactions: newProductAdminUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.CardSecrets, dependencies.CardSecretBatches, dependencies.MemberLevelPrices, dependencies.Carts, dependencies.ProductMappings),
 		Errors: productadmin.ErrorSet{
-			NotFound:               catalogproduct.ErrNotFound,
-			ProductCategoryInvalid: catalogproduct.ErrProductCategoryInvalid,
-			ProductHasStock:        catalogproduct.ErrProductHasStock,
-			ProductHasOrderRecord:  catalogproduct.ErrProductHasOrderRecord,
+			NotFound:               productcontract.ErrNotFound,
+			ProductCategoryInvalid: productcontract.ErrProductCategoryInvalid,
+			ProductHasStock:        productcontract.ErrProductHasStock,
+			ProductHasOrderRecord:  productcontract.ErrProductHasOrderRecord,
 		},
 	})
 	write := productwrite.NewWriteService(productwrite.Options{
@@ -198,17 +199,17 @@ func New(dependencies Dependencies) Services {
 		PaymentChannels: dependencies.PaymentChannels,
 		Transactions:    newProductWriteUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.CardSecrets),
 		Errors: productwrite.ErrorSet{
-			NotFound:                     catalogproduct.ErrNotFound,
-			SlugExists:                   catalogproduct.ErrSlugExists,
-			ProductCategoryInvalid:       catalogproduct.ErrProductCategoryInvalid,
-			ProductPurchaseInvalid:       catalogproduct.ErrProductPurchaseInvalid,
-			FulfillmentInvalid:           catalogproduct.ErrFulfillmentInvalid,
-			ProductPriceInvalid:          catalogproduct.ErrProductPriceInvalid,
-			ManualStockInvalid:           catalogproduct.ErrManualStockInvalid,
-			ProductPurchaseLimitInvalid:  catalogproduct.ErrProductPurchaseLimitInvalid,
-			ProductStockDisplayInvalid:   catalogproduct.ErrProductStockDisplayInvalid,
-			ProductSKUInvalid:            catalogproduct.ErrProductSKUInvalid,
-			ProductSKUHasCardSecretStock: catalogproduct.ErrProductSKUHasCardSecretStock,
+			NotFound:                     productcontract.ErrNotFound,
+			SlugExists:                   productcontract.ErrSlugExists,
+			ProductCategoryInvalid:       productcontract.ErrProductCategoryInvalid,
+			ProductPurchaseInvalid:       productcontract.ErrProductPurchaseInvalid,
+			FulfillmentInvalid:           productcontract.ErrFulfillmentInvalid,
+			ProductPriceInvalid:          productcontract.ErrProductPriceInvalid,
+			ManualStockInvalid:           productcontract.ErrManualStockInvalid,
+			ProductPurchaseLimitInvalid:  productcontract.ErrProductPurchaseLimitInvalid,
+			ProductStockDisplayInvalid:   productcontract.ErrProductStockDisplayInvalid,
+			ProductSKUInvalid:            productcontract.ErrProductSKUInvalid,
+			ProductSKUHasCardSecretStock: productcontract.ErrProductSKUHasCardSecretStock,
 		},
 	})
 	return Services{Read: read, Admin: admin, Write: write}

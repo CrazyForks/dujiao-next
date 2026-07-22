@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
@@ -35,8 +37,8 @@ func newSitemapServiceForTest(t *testing.T, reader sitemap.PublishedPostReader) 
 	}
 	if err := db.AutoMigrate(
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.Post{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
@@ -137,7 +139,7 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 		t.Fatalf("update inactive category: %v", err)
 	}
 
-	visibleProduct := models.Product{
+	visibleProduct := productdomain.Product{
 		CategoryID:      activeCategory.ID,
 		Slug:            "visible-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "p"},
@@ -150,7 +152,7 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 		t.Fatalf("create product: %v", err)
 	}
 
-	hiddenByProductInactive := models.Product{
+	hiddenByProductInactive := productdomain.Product{
 		CategoryID:      activeCategory.ID,
 		Slug:            "draft-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "p"},
@@ -163,7 +165,7 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 		t.Fatalf("create draft product: %v", err)
 	}
 
-	hiddenByCategoryInactive := models.Product{
+	hiddenByCategoryInactive := productdomain.Product{
 		CategoryID:      inactiveCategory.ID,
 		Slug:            "in-hidden-category",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "p"},

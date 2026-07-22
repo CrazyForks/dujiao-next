@@ -4,10 +4,9 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 )
 
-func hasMultipleActiveSKUs(product *models.Product) bool {
+func hasMultipleActiveSKUs(product *Product) bool {
 	if product == nil || len(product.SKUs) == 0 {
 		return false
 	}
@@ -25,7 +24,7 @@ func hasMultipleActiveSKUs(product *models.Product) bool {
 }
 
 // ManualSKUAvailable 返回 SKU 当前可用于规则判断的手工库存；无限库存映射为最大 int。
-func ManualSKUAvailable(sku *models.ProductSKU) int {
+func ManualSKUAvailable(sku *ProductSKU) int {
 	if sku == nil {
 		return 0
 	}
@@ -39,7 +38,7 @@ func ManualSKUAvailable(sku *models.ProductSKU) int {
 }
 
 // ShouldEnforceManualSKUStock 判断当前 SKU 是否需要执行手工库存约束。
-func ShouldEnforceManualSKUStock(product *models.Product, sku *models.ProductSKU) bool {
+func ShouldEnforceManualSKUStock(product *Product, sku *ProductSKU) bool {
 	if product == nil || sku == nil {
 		return false
 	}
@@ -49,7 +48,7 @@ func ShouldEnforceManualSKUStock(product *models.Product, sku *models.ProductSKU
 	if sku.ManualStockTotal >= 0 {
 		return true
 	}
-	if strings.ToUpper(strings.TrimSpace(sku.SKUCode)) != models.DefaultSKUCode {
+	if strings.ToUpper(strings.TrimSpace(sku.SKUCode)) != DefaultSKUCode {
 		return true
 	}
 	return hasMultipleActiveSKUs(product)

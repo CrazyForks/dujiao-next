@@ -13,7 +13,7 @@ func ReserveManualStock(db *gorm.DB, model interface{}, id uint, quantity int) (
 		return 0, errors.New("invalid manual stock reserve params")
 	}
 	result := db.Model(model).
-		Where("id = ? AND manual_stock_total >= 0 AND manual_stock_total >= ?", id, quantity).
+		Where("id = ? AND deleted_at IS NULL AND manual_stock_total >= 0 AND manual_stock_total >= ?", id, quantity).
 		Updates(map[string]interface{}{
 			"manual_stock_total":  gorm.Expr("manual_stock_total - ?", quantity),
 			"manual_stock_locked": gorm.Expr("manual_stock_locked + ?", quantity),
@@ -29,7 +29,7 @@ func ReleaseManualStock(db *gorm.DB, model interface{}, id uint, quantity int) (
 		return 0, errors.New("invalid manual stock release params")
 	}
 	result := db.Model(model).
-		Where("id = ? AND manual_stock_total >= 0 AND manual_stock_locked >= ?", id, quantity).
+		Where("id = ? AND deleted_at IS NULL AND manual_stock_total >= 0 AND manual_stock_locked >= ?", id, quantity).
 		Updates(map[string]interface{}{
 			"manual_stock_total":  gorm.Expr("manual_stock_total + ?", quantity),
 			"manual_stock_locked": gorm.Expr("manual_stock_locked - ?", quantity),
@@ -45,7 +45,7 @@ func ConsumeManualStock(db *gorm.DB, model interface{}, id uint, quantity int) (
 		return 0, errors.New("invalid manual stock consume params")
 	}
 	result := db.Model(model).
-		Where("id = ? AND manual_stock_total >= ? AND (manual_stock_locked >= ? OR (manual_stock_locked < ? AND manual_stock_total >= (? - manual_stock_locked)))",
+		Where("id = ? AND deleted_at IS NULL AND manual_stock_total >= ? AND (manual_stock_locked >= ? OR (manual_stock_locked < ? AND manual_stock_total >= (? - manual_stock_locked)))",
 			id, constants.ManualStockUnlimited+1, quantity, quantity, quantity).
 		Updates(map[string]interface{}{
 			"manual_stock_total":  gorm.Expr("manual_stock_total - CASE WHEN manual_stock_locked >= ? THEN 0 ELSE ? - manual_stock_locked END", quantity, quantity),

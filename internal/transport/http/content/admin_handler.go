@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strconv"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
@@ -18,7 +20,7 @@ type AdminPostUseCases interface {
 	Create(ctx context.Context, input domaincontent.CreatePostInput) (*models.Post, error)
 	Update(ctx context.Context, id string, input domaincontent.CreatePostInput) (*models.Post, error)
 	Delete(ctx context.Context, id string) error
-	ListRelatedProducts(ctx context.Context, postID uint) ([]models.Product, error)
+	ListRelatedProducts(ctx context.Context, postID uint) ([]productdomain.Product, error)
 }
 
 // AdminPostCategoryUseCases 是后台 Handler 实际需要的文章分类能力。

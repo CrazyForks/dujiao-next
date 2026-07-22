@@ -1,6 +1,9 @@
 package reseller
 
-import "github.com/dujiao-next/internal/models"
+import (
+	"github.com/dujiao-next/internal/models"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+)
 
 // DomainLookupRepository 是租户解析所需的最小域名查询端口。
 type DomainLookupRepository interface {
@@ -59,7 +62,7 @@ type ProductSettingAdminListFilter struct {
 
 // ProductSettingProductRow 商品及其分销配置。
 type ProductSettingProductRow struct {
-	Product  models.Product
+	Product  productdomain.Product
 	Settings []models.ResellerProductSetting
 }
 

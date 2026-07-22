@@ -5,9 +5,11 @@ import (
 	"strconv"
 	"testing"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
@@ -25,7 +27,7 @@ import (
 func TestProductServiceQuickUpdateRejectsActivationWithoutCategory(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      0,
 		Slug:            "uncategorized-imported-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "uncategorized-imported-product"},
@@ -43,7 +45,7 @@ func TestProductServiceQuickUpdateRejectsActivationWithoutCategory(t *testing.T)
 		t.Fatalf("expected ErrProductCategoryInvalid, got %v", err)
 	}
 
-	var got models.Product
+	var got productdomain.Product
 	if err := db.First(&got, product.ID).Error; err != nil {
 		t.Fatalf("reload product failed: %v", err)
 	}
@@ -62,7 +64,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	}
 
 	// 创建商品
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      cat.ID,
 		Slug:            "test-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "test-product"},
@@ -76,7 +78,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	productID := strconv.FormatUint(uint64(product.ID), 10)
 
 	// 创建关联 SKU
-	sku := models.ProductSKU{
+	sku := productdomain.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     "DEFAULT",
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
@@ -136,7 +138,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 
 	// 验证所有关联数据已被软删除
 	var skuCount int64
-	db.Model(&models.ProductSKU{}).Where("product_id = ?", product.ID).Count(&skuCount)
+	db.Model(&productdomain.ProductSKU{}).Where("product_id = ? AND deleted_at IS NULL", product.ID).Count(&skuCount)
 	if skuCount != 0 {
 		t.Errorf("expected 0 SKUs after delete, got %d", skuCount)
 	}
@@ -167,9 +169,13 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 
 	// 验证商品本身已被软删除
 	var productCount int64
-	db.Model(&models.Product{}).Where("id = ?", product.ID).Count(&productCount)
+	db.Model(&productdomain.Product{}).Where("id = ? AND deleted_at IS NULL", product.ID).Count(&productCount)
 	if productCount != 0 {
 		t.Errorf("expected product to be soft-deleted, but still found %d", productCount)
+	}
+	var deletedProduct productdomain.Product
+	if err := db.Where("id = ? AND deleted_at IS NOT NULL", product.ID).First(&deletedProduct).Error; err != nil {
+		t.Fatalf("expected soft-deleted product row to remain persisted: %v", err)
 	}
 }
 
@@ -196,7 +202,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 		repository.NewPaymentChannelRepository(db),
 	)
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      1,
 		Slug:            "rollback-product-delete",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "rollback-product-delete"},
@@ -207,9 +213,9 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 	if err := db.Create(&product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
-	sku := models.ProductSKU{
+	sku := productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
@@ -240,16 +246,16 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 		t.Fatalf("expected injected delete failure, got %v", err)
 	}
 
-	assertProductRelationCount(t, db, &models.Product{}, "id = ?", product.ID, 1)
-	assertProductRelationCount(t, db, &models.ProductSKU{}, "product_id = ?", product.ID, 1)
+	assertProductRelationCount(t, db, &productdomain.Product{}, "id = ?", product.ID, 1)
+	assertProductRelationCount(t, db, &productdomain.ProductSKU{}, "product_id = ?", product.ID, 1)
 	assertProductRelationCount(t, db, &models.CartItem{}, "product_id = ?", product.ID, 1)
 	assertProductRelationCount(t, db, &models.ProductMapping{}, "local_product_id = ?", product.ID, 1)
 }
 
 type failingProductDeleteRepository struct {
-	catalogproduct.Repository
+	productcontract.Repository
 	transaction func(func(*gorm.DB) error) error
-	binder      func(*gorm.DB) catalogproduct.Repository
+	binder      func(*gorm.DB) productcontract.Repository
 	err         error
 }
 
@@ -261,7 +267,7 @@ func (repo *failingProductDeleteRepository) Transaction(fn func(*gorm.DB) error)
 	return repo.transaction(fn)
 }
 
-func (repo *failingProductDeleteRepository) BindTx(tx *gorm.DB) catalogproduct.Repository {
+func (repo *failingProductDeleteRepository) BindTx(tx *gorm.DB) productcontract.Repository {
 	return &failingProductDeleteRepository{
 		Repository: repo.binder(tx),
 		err:        repo.err,

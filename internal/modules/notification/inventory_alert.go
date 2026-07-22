@@ -5,8 +5,9 @@ import (
 	"sort"
 	"strings"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/dashboard"
 	"github.com/dujiao-next/internal/queue"
 )
@@ -165,7 +166,7 @@ func buildInventoryAlertSKUSummary(row dashboard.InventoryAlertRow, locale strin
 		return specText
 	}
 	code := strings.TrimSpace(row.SKUCode)
-	if code == "" || strings.EqualFold(code, models.DefaultSKUCode) {
+	if code == "" || strings.EqualFold(code, productdomain.DefaultSKUCode) {
 		return ""
 	}
 	return code

@@ -3,9 +3,10 @@ package resellerhttp
 import (
 	"errors"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -137,7 +138,7 @@ func (h *AdminProfileDetailHandler) GetProfileDetail(c *gin.Context) {
 
 func respondAdminProfileDetailError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, catalogproduct.ErrNotFound):
+	case errors.Is(err, productcontract.ErrNotFound):
 		ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
 	default:
 		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)

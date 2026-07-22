@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -23,13 +22,13 @@ type WholesalePriceInput struct {
 }
 
 // NormalizeWholesalePrices 校验、排序并规范化批发价阶梯。
-func NormalizeWholesalePrices(inputs []WholesalePriceInput) (models.WholesalePriceTiers, error) {
+func NormalizeWholesalePrices(inputs []WholesalePriceInput) (WholesalePriceTiers, error) {
 	if len(inputs) == 0 {
-		return models.WholesalePriceTiers{}, nil
+		return WholesalePriceTiers{}, nil
 	}
 
 	seen := make(map[string]struct{}, len(inputs))
-	tiers := make(models.WholesalePriceTiers, 0, len(inputs))
+	tiers := make(WholesalePriceTiers, 0, len(inputs))
 	for _, input := range inputs {
 		skuCode := strings.TrimSpace(input.SKUCode)
 		minQuantity := input.MinQuantity
@@ -42,7 +41,7 @@ func NormalizeWholesalePrices(inputs []WholesalePriceInput) (models.WholesalePri
 			return nil, ErrWholesalePriceInvalid
 		}
 		seen[key] = struct{}{}
-		tiers = append(tiers, models.WholesalePriceTier{
+		tiers = append(tiers, WholesalePriceTier{
 			SKUID:       input.SKUID,
 			SKUCode:     skuCode,
 			MinQuantity: minQuantity,
@@ -77,13 +76,13 @@ func NormalizeWholesalePrices(inputs []WholesalePriceInput) (models.WholesalePri
 }
 
 // NormalizeWholesalePricesForSKUs 校验 SKU 归属并把 SKU 编码规范为商品当前值。
-func NormalizeWholesalePricesForSKUs(inputs []WholesalePriceInput, skus []models.ProductSKU) (models.WholesalePriceTiers, error) {
+func NormalizeWholesalePricesForSKUs(inputs []WholesalePriceInput, skus []ProductSKU) (WholesalePriceTiers, error) {
 	if len(inputs) == 0 {
 		return NormalizeWholesalePrices(inputs)
 	}
 
-	skuByID := make(map[uint]models.ProductSKU, len(skus))
-	skuByCode := make(map[string]models.ProductSKU, len(skus))
+	skuByID := make(map[uint]ProductSKU, len(skus))
+	skuByCode := make(map[string]ProductSKU, len(skus))
 	for _, sku := range skus {
 		code := strings.TrimSpace(sku.SKUCode)
 		if sku.ID > 0 {
@@ -138,32 +137,32 @@ func wholesaleTierScopeKey(skuID uint, skuCode string) string {
 
 // ResolveWholesaleUnitPrice 根据商品批发价阶梯解析成交单价。
 // 仅在阶梯单价低于当前基准单价时生效，避免错误配置导致价格上浮。
-func ResolveWholesaleUnitPrice(product *models.Product, baseUnitPrice decimal.Decimal, quantity int) (unitPrice decimal.Decimal, discount decimal.Decimal, matched bool) {
+func ResolveWholesaleUnitPrice(product *Product, baseUnitPrice decimal.Decimal, quantity int) (unitPrice decimal.Decimal, discount decimal.Decimal, matched bool) {
 	return resolveWholesaleUnitPrice(product, baseUnitPrice, 0, "", quantity, quantity)
 }
 
 // ResolveWholesaleUnitPriceWithMatchQuantity 按 matchQuantity 判断批发档位，按 quantity 计算当前行优惠。
 // 商品存在多 SKU 时，批发门槛按同一商品总购买数判断，但每个订单行只计算自己的优惠金额。
-func ResolveWholesaleUnitPriceWithMatchQuantity(product *models.Product, baseUnitPrice decimal.Decimal, matchQuantity, quantity int) (unitPrice decimal.Decimal, discount decimal.Decimal, matched bool) {
+func ResolveWholesaleUnitPriceWithMatchQuantity(product *Product, baseUnitPrice decimal.Decimal, matchQuantity, quantity int) (unitPrice decimal.Decimal, discount decimal.Decimal, matched bool) {
 	return resolveWholesaleUnitPrice(product, baseUnitPrice, 0, "", matchQuantity, quantity)
 }
 
 // ResolveWholesaleUnitPriceForSKU 按指定 SKU 的批发价阶梯解析成交单价。
-func ResolveWholesaleUnitPriceForSKU(product *models.Product, baseUnitPrice decimal.Decimal, skuID uint, skuCode string, matchQuantity, quantity int) (unitPrice decimal.Decimal, discount decimal.Decimal, matched bool) {
+func ResolveWholesaleUnitPriceForSKU(product *Product, baseUnitPrice decimal.Decimal, skuID uint, skuCode string, matchQuantity, quantity int) (unitPrice decimal.Decimal, discount decimal.Decimal, matched bool) {
 	return resolveWholesaleUnitPrice(product, baseUnitPrice, skuID, skuCode, matchQuantity, quantity)
 }
 
 // resolveWholesaleUnitPrice 解析单个订单行的批发成交价。
 // matchQuantity 用于判定通用档位，quantity 为当前行数量、仅用于计算本行优惠金额。
 // SKU 专属批发价优先于通用批发价；某 SKU 配了专属阶梯后，不再回退通用阶梯。
-func resolveWholesaleUnitPrice(product *models.Product, baseUnitPrice decimal.Decimal, skuID uint, skuCode string, matchQuantity, quantity int) (unitPrice decimal.Decimal, discount decimal.Decimal, matched bool) {
+func resolveWholesaleUnitPrice(product *Product, baseUnitPrice decimal.Decimal, skuID uint, skuCode string, matchQuantity, quantity int) (unitPrice decimal.Decimal, discount decimal.Decimal, matched bool) {
 	base := baseUnitPrice.Round(2)
 	if product == nil || matchQuantity <= 0 || quantity <= 0 || base.LessThanOrEqual(decimal.Zero) || len(product.WholesalePrices) == 0 {
 		return base, decimal.Zero, false
 	}
 
 	hasSpecificTier := hasWholesaleSpecificTier(product.WholesalePrices, skuID, skuCode)
-	var best *models.WholesalePriceTier
+	var best *WholesalePriceTier
 	for i := range product.WholesalePrices {
 		tier := &product.WholesalePrices[i]
 		if tier.MinQuantity <= 0 || tier.UnitPrice.Decimal.LessThanOrEqual(decimal.Zero) {
@@ -203,7 +202,7 @@ func resolveWholesaleUnitPrice(product *models.Product, baseUnitPrice decimal.De
 	return tierPrice, discount, true
 }
 
-func hasWholesaleSpecificTier(tiers models.WholesalePriceTiers, skuID uint, skuCode string) bool {
+func hasWholesaleSpecificTier(tiers WholesalePriceTiers, skuID uint, skuCode string) bool {
 	for i := range tiers {
 		if wholesaleTierMatchPriority(&tiers[i], skuID, skuCode) >= 2 {
 			return true
@@ -212,7 +211,7 @@ func hasWholesaleSpecificTier(tiers models.WholesalePriceTiers, skuID uint, skuC
 	return false
 }
 
-func wholesaleTierMatchPriority(tier *models.WholesalePriceTier, skuID uint, skuCode string) int {
+func wholesaleTierMatchPriority(tier *WholesalePriceTier, skuID uint, skuCode string) int {
 	if tier == nil {
 		return 0
 	}

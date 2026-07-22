@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/dashboard"
@@ -19,7 +21,7 @@ func TestGetProfitOverviewDeductsRefundRecords(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 
 	category := createDashboardCategory(t, db, "dashboard-profit-refund-category")
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "dashboard-profit-refund-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "利润测试商品"},
@@ -87,7 +89,7 @@ func TestGetProfitTrendsDeductsRefundRecords(t *testing.T) {
 	base := time.Date(2026, 3, 1, 10, 0, 0, 0, time.UTC)
 
 	category := createDashboardCategory(t, db, "dashboard-profit-trend-refund-category")
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "dashboard-profit-trend-refund-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "利润趋势测试商品"},
@@ -166,7 +168,7 @@ func TestGetProfitOverviewDeductsInWindowRefundForOutOfWindowOrder(t *testing.T)
 	endAt := now.Add(time.Hour)
 
 	category := createDashboardCategory(t, db, "dashboard-profit-period-refund-category")
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "dashboard-profit-period-refund-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "周期退款测试商品"},
@@ -271,7 +273,7 @@ func TestGetProfitTrendsIncludesRefundOnlyDayInWindow(t *testing.T) {
 	day2 := time.Date(2026, 3, 2, 11, 0, 0, 0, time.UTC)
 
 	category := createDashboardCategory(t, db, "dashboard-profit-refund-only-day-category")
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "dashboard-profit-refund-only-day-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "退款单日测试商品"},

@@ -1,8 +1,8 @@
-package product
+package productcontract
 
 import "errors"
 
-// 商品后台/写入相关哨兵。Service 兼容层与 HTTP transport 共用同一 identity。
+// 商品查询、后台与写入用例共享的稳定错误 identity。
 var (
 	ErrNotFound                     = errors.New("not found")
 	ErrSlugExists                   = errors.New("slug exists")

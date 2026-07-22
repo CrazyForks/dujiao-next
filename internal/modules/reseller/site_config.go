@@ -9,10 +9,11 @@ import (
 	"net/url"
 	"strings"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -272,7 +273,7 @@ func (s *SiteConfigService) buildModel(resellerID uint, input ResellerSiteConfig
 
 func (s *SiteConfigService) GetUserSiteConfig(userID uint) (*models.ResellerProfile, *models.ResellerSiteConfig, bool, error) {
 	if s == nil || s.repo == nil || userID == 0 {
-		return nil, nil, false, catalogproduct.ErrNotFound
+		return nil, nil, false, productcontract.ErrNotFound
 	}
 	profile, err := s.repo.GetProfileByUserID(userID)
 	if err != nil {
@@ -311,14 +312,14 @@ func (s *SiteConfigService) UpdateUserSiteConfig(ctx context.Context, userID uin
 
 func (s *SiteConfigService) UpdateAdminSiteConfig(ctx context.Context, resellerID uint, input ResellerSiteConfigInput) (*models.ResellerSiteConfig, error) {
 	if resellerID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	profile, err := s.repo.GetProfileByID(resellerID)
 	if err != nil {
 		return nil, err
 	}
 	if profile == nil {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	row, err := s.buildModel(resellerID, input)
 	if err != nil {
@@ -334,14 +335,14 @@ func (s *SiteConfigService) UpdateAdminSiteConfig(ctx context.Context, resellerI
 
 func (s *SiteConfigService) ResetAdminSiteConfig(ctx context.Context, resellerID uint) error {
 	if resellerID == 0 {
-		return catalogproduct.ErrNotFound
+		return productcontract.ErrNotFound
 	}
 	profile, err := s.repo.GetProfileByID(resellerID)
 	if err != nil {
 		return err
 	}
 	if profile == nil {
-		return catalogproduct.ErrNotFound
+		return productcontract.ErrNotFound
 	}
 	if err := s.repo.DeleteSiteConfigByResellerID(resellerID); err != nil {
 		return err

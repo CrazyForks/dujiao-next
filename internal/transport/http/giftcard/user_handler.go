@@ -40,7 +40,7 @@ func NewUserHandler(cards UserService, captcha CaptchaVerifier) *UserHandler {
 }
 
 type redeemRequest struct {
-	Code           string                       `json:"code" binding:"required"`
+	Code           string                            `json:"code" binding:"required"`
 	CaptchaPayload captchahttp.CaptchaPayloadRequest `json:"captcha_payload"`
 }
 

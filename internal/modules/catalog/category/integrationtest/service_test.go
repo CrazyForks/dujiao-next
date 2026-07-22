@@ -5,7 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
@@ -24,7 +25,7 @@ func newCategoryServiceForTest(t *testing.T) (*categoryapp.Service, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}); err != nil {
 		t.Fatalf("auto migrate category/product failed: %v", err)
 	}
 
@@ -50,7 +51,7 @@ func createCategoryFixture(t *testing.T, db *gorm.DB, slug string, parentID uint
 func createProductFixture(t *testing.T, db *gorm.DB, categoryID uint, slug string) {
 	t.Helper()
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:  categoryID,
 		Slug:        slug,
 		TitleJSON:   jsonmap.JSON{"zh-CN": slug},

@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/models"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
 	uploadmodule "github.com/dujiao-next/internal/modules/upload"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -27,8 +29,8 @@ func openResellerProductSettingRepoTestDB(t *testing.T) *gorm.DB {
 	if err := db.AutoMigrate(
 		&userdomain.User{},
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.ResellerProfile{},
 		&models.ResellerProductSetting{},
 	); err != nil {
@@ -56,13 +58,13 @@ func seedResellerProductSettingProfile(t *testing.T, db *gorm.DB, email string) 
 	return profile
 }
 
-func seedResellerProductSettingProduct(t *testing.T, db *gorm.DB, slug string) (models.Product, []models.ProductSKU) {
+func seedResellerProductSettingProduct(t *testing.T, db *gorm.DB, slug string) (productdomain.Product, []productdomain.ProductSKU) {
 	t.Helper()
 	category := categorydomain.Category{Slug: "cat-" + slug, NameJSON: jsonmap.JSON{"zh-CN": "分类"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": "商品 " + slug, "zh-TW": "商品 " + slug, "en-US": "Product " + slug},
@@ -74,7 +76,7 @@ func seedResellerProductSettingProduct(t *testing.T, db *gorm.DB, slug string) (
 	if err := db.Create(&product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
-	skus := []models.ProductSKU{
+	skus := []productdomain.ProductSKU{
 		{
 			ProductID:       product.ID,
 			SKUCode:         "MONTH-1",

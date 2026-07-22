@@ -5,8 +5,9 @@ import (
 	"strings"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -151,7 +152,7 @@ func (h *AdminFinanceHandler) PayWithdraw(c *gin.Context) {
 
 func respondAdminWithdrawReviewError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, catalogproduct.ErrNotFound):
+	case errors.Is(err, productcontract.ErrNotFound):
 		ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
 	case errors.Is(err, resellermodule.ErrWithdrawStatusInvalid):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)

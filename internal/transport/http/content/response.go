@@ -2,6 +2,7 @@ package contenthttp
 
 import (
 	"github.com/dujiao-next/internal/models"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -13,7 +14,7 @@ type AdminPostProductRef struct {
 	Image string       `json:"image,omitempty"`
 }
 
-func newAdminPostProductRefs(products []models.Product) []AdminPostProductRef {
+func newAdminPostProductRefs(products []productdomain.Product) []AdminPostProductRef {
 	refs := make([]AdminPostProductRef, 0, len(products))
 	for index := range products {
 		product := &products[index]

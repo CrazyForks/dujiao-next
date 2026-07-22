@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -29,25 +30,25 @@ type upstreamCategory struct {
 
 // upstreamProduct 上游商品响应格式
 type upstreamProduct struct {
-	ID               uint                       `json:"id"`
-	Slug             string                     `json:"slug"`
-	SeoMeta          jsonmap.JSON               `json:"seo_meta"`
-	Title            jsonmap.JSON               `json:"title"`
-	Description      jsonmap.JSON               `json:"description"`
-	Content          jsonmap.JSON               `json:"content"`
-	Images           jsonslice.Strings          `json:"images"`
-	Tags             jsonslice.Strings          `json:"tags"`
-	PriceAmount      string                     `json:"price_amount"`
-	OriginalPrice    string                     `json:"original_price,omitempty"`
-	MemberPrice      string                     `json:"member_price,omitempty"`
-	WholesalePrices  models.WholesalePriceTiers `json:"wholesale_prices,omitempty"`
-	FulfillmentType  string                     `json:"fulfillment_type"`
-	ManualFormSchema jsonmap.JSON               `json:"manual_form_schema"`
-	IsActive         bool                       `json:"is_active"`
-	CategoryID       uint                       `json:"category_id"`
-	SKUs             []upstreamSKU              `json:"skus"`
-	CreatedAt        time.Time                  `json:"created_at"`
-	UpdatedAt        time.Time                  `json:"updated_at"`
+	ID               uint                              `json:"id"`
+	Slug             string                            `json:"slug"`
+	SeoMeta          jsonmap.JSON                      `json:"seo_meta"`
+	Title            jsonmap.JSON                      `json:"title"`
+	Description      jsonmap.JSON                      `json:"description"`
+	Content          jsonmap.JSON                      `json:"content"`
+	Images           jsonslice.Strings                 `json:"images"`
+	Tags             jsonslice.Strings                 `json:"tags"`
+	PriceAmount      string                            `json:"price_amount"`
+	OriginalPrice    string                            `json:"original_price,omitempty"`
+	MemberPrice      string                            `json:"member_price,omitempty"`
+	WholesalePrices  productdomain.WholesalePriceTiers `json:"wholesale_prices,omitempty"`
+	FulfillmentType  string                            `json:"fulfillment_type"`
+	ManualFormSchema jsonmap.JSON                      `json:"manual_form_schema"`
+	IsActive         bool                              `json:"is_active"`
+	CategoryID       uint                              `json:"category_id"`
+	SKUs             []upstreamSKU                     `json:"skus"`
+	CreatedAt        time.Time                         `json:"created_at"`
+	UpdatedAt        time.Time                         `json:"updated_at"`
 }
 
 type upstreamSKU struct {
@@ -171,7 +172,7 @@ func (h *Handler) GetProduct(c *gin.Context) {
 	// 这样下游可在不下单的前提下感知下架状态、自动同步本地下架
 
 	// 补充自动发货库存计数
-	products := []models.Product{*product}
+	products := []productdomain.Product{*product}
 	if err := h.Products.ApplyAutoStockCounts(products); err != nil {
 		logger.Warnw("upstream_apply_stock_counts_failed", "error", err)
 	}
@@ -200,7 +201,7 @@ func (h *Handler) GetProduct(c *gin.Context) {
 
 // applyUpstreamStockToProducts 为 upstream 类型商品的 SKU 填充上游库存数据
 // 从 SKU 映射中读取 UpstreamStock，写入 ProductSKU 的虚拟字段，供 computeSKUStock 使用
-func (h *Handler) applyUpstreamStockToProducts(products []models.Product) {
+func (h *Handler) applyUpstreamStockToProducts(products []productdomain.Product) {
 	for i := range products {
 		p := &products[i]
 		if p.FulfillmentType != constants.FulfillmentTypeUpstream {
@@ -220,7 +221,7 @@ func (h *Handler) applyUpstreamStockToProducts(products []models.Product) {
 
 // resolveEffectiveFulfillmentTypes 批量解析映射商品的真实交付类型
 // 对于映射商品（FulfillmentType="upstream"），返回 ProductMapping 中保存的原始交付类型
-func (h *Handler) resolveEffectiveFulfillmentTypes(products []models.Product) map[uint]string {
+func (h *Handler) resolveEffectiveFulfillmentTypes(products []productdomain.Product) map[uint]string {
 	result := make(map[uint]string)
 	var mappedIDs []uint
 	for _, p := range products {
@@ -246,7 +247,7 @@ func (h *Handler) resolveEffectiveFulfillmentTypes(products []models.Product) ma
 	return result
 }
 
-func (h *Handler) toUpstreamProductWithMemberPrice(p models.Product, memberLevelID uint, fulfillmentTypeMap map[uint]string) upstreamProduct {
+func (h *Handler) toUpstreamProductWithMemberPrice(p productdomain.Product, memberLevelID uint, fulfillmentTypeMap map[uint]string) upstreamProduct {
 	skus := make([]upstreamSKU, 0, len(p.SKUs))
 	for _, s := range p.SKUs {
 		if !s.IsActive {
@@ -312,7 +313,7 @@ func (h *Handler) toUpstreamProductWithMemberPrice(p models.Product, memberLevel
 }
 
 // computeSKUStock 计算 SKU 的库存状态和实际可用量
-func computeSKUStock(p models.Product, s models.ProductSKU) (status string, quantity int) {
+func computeSKUStock(p productdomain.Product, s productdomain.ProductSKU) (status string, quantity int) {
 	var available int64
 	switch p.FulfillmentType {
 	case constants.FulfillmentTypeManual:

@@ -1,4 +1,4 @@
-package models
+package productdomain
 
 import (
 	"time"
@@ -7,7 +7,6 @@ import (
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
 	"github.com/dujiao-next/internal/shared/money"
-	"gorm.io/gorm"
 )
 
 // Product 商品表
@@ -45,7 +44,7 @@ type Product struct {
 	SortOrder            int                 `gorm:"default:0;index" json:"sort_order"`                                   // 排序权重
 	CreatedAt            time.Time           `gorm:"index" json:"created_at"`                                             // 创建时间
 	UpdatedAt            time.Time           `json:"updated_at"`                                                          // 更新时间
-	DeletedAt            gorm.DeletedAt      `gorm:"index" json:"-"`                                                      // 软删除时间
+	DeletedAt            *time.Time          `gorm:"index" json:"-"`                                                      // 软删除时间
 
 	// 关联
 	Category categorydomain.Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"` // 分类信息

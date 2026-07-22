@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 
@@ -273,7 +275,7 @@ func (s *Service) calculateCommissionBaseAmount(order *models.Order) (decimal.De
 	if err != nil {
 		return decimal.Zero, err
 	}
-	productMap := make(map[uint]models.Product, len(products))
+	productMap := make(map[uint]productdomain.Product, len(products))
 	for _, product := range products {
 		productMap[product.ID] = product
 	}

@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
@@ -153,7 +155,7 @@ func (s *Service) SyncProduct(mappingID uint) error {
 
 		skuPrice, _ := decimal.NewFromString(upSKU.PriceAmount)
 		localPrice := CalculateLocalPrice(skuPrice, conn.ExchangeRate, conn.PriceMarkupPercent, conn.PriceRoundingMode)
-		newLocalSKU := models.ProductSKU{
+		newLocalSKU := productdomain.ProductSKU{
 			ProductID:       mapping.LocalProductID,
 			SKUCode:         upSKU.SKUCode,
 			SpecValuesJSON:  upSKU.SpecValues,
@@ -705,7 +707,7 @@ func (s *Service) syncProductFromData(mapping *models.ProductMapping, conn *mode
 			continue
 		}
 		localPrice := CalculateLocalPrice(skuPrice, conn.ExchangeRate, conn.PriceMarkupPercent, conn.PriceRoundingMode)
-		newLocalSKU := models.ProductSKU{
+		newLocalSKU := productdomain.ProductSKU{
 			ProductID:       mapping.LocalProductID,
 			SKUCode:         upSKU.SKUCode,
 			SpecValuesJSON:  upSKU.SpecValues,

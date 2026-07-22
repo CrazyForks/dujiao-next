@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -50,24 +52,24 @@ type ProductListResult struct {
 
 // UpstreamProduct 上游商品信息
 type UpstreamProduct struct {
-	ID               uint                       `json:"id"`
-	SeoMeta          jsonmap.JSON               `json:"seo_meta"`
-	Title            jsonmap.JSON               `json:"title"`
-	Description      jsonmap.JSON               `json:"description"`
-	Content          jsonmap.JSON               `json:"content"`
-	Images           []string                   `json:"images"`
-	Tags             []string                   `json:"tags"`
-	PriceAmount      string                     `json:"price_amount"`
-	OriginalPrice    string                     `json:"original_price,omitempty"`
-	MemberPrice      string                     `json:"member_price,omitempty"`
-	WholesalePrices  models.WholesalePriceTiers `json:"wholesale_prices,omitempty"`
-	Currency         string                     `json:"currency"`
-	FulfillmentType  string                     `json:"fulfillment_type"`
-	ManualFormSchema jsonmap.JSON               `json:"manual_form_schema"`
-	IsActive         bool                       `json:"is_active"`
-	CategoryID       uint                       `json:"category_id"`
-	SKUs             []UpstreamSKU              `json:"skus"`
-	UpdatedAt        time.Time                  `json:"updated_at"`
+	ID               uint                              `json:"id"`
+	SeoMeta          jsonmap.JSON                      `json:"seo_meta"`
+	Title            jsonmap.JSON                      `json:"title"`
+	Description      jsonmap.JSON                      `json:"description"`
+	Content          jsonmap.JSON                      `json:"content"`
+	Images           []string                          `json:"images"`
+	Tags             []string                          `json:"tags"`
+	PriceAmount      string                            `json:"price_amount"`
+	OriginalPrice    string                            `json:"original_price,omitempty"`
+	MemberPrice      string                            `json:"member_price,omitempty"`
+	WholesalePrices  productdomain.WholesalePriceTiers `json:"wholesale_prices,omitempty"`
+	Currency         string                            `json:"currency"`
+	FulfillmentType  string                            `json:"fulfillment_type"`
+	ManualFormSchema jsonmap.JSON                      `json:"manual_form_schema"`
+	IsActive         bool                              `json:"is_active"`
+	CategoryID       uint                              `json:"category_id"`
+	SKUs             []UpstreamSKU                     `json:"skus"`
+	UpdatedAt        time.Time                         `json:"updated_at"`
 }
 
 // UpstreamCategory 上游分类信息

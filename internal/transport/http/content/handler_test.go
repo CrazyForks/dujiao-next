@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
 	"github.com/gin-gonic/gin"
@@ -81,7 +83,7 @@ func (s *publicPostQueriesStub) GetPublicBySlug(context.Context, string) (*model
 	return nil, domaincontent.ErrNotFound
 }
 
-func (s *publicPostQueriesStub) ListRelatedProducts(context.Context, uint) ([]models.Product, error) {
+func (s *publicPostQueriesStub) ListRelatedProducts(context.Context, uint) ([]productdomain.Product, error) {
 	return nil, nil
 }
 

@@ -4,6 +4,8 @@ import (
 	"strings"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
@@ -29,7 +31,7 @@ func (s *Service) GetProductPromotions(productID uint) ([]models.Promotion, erro
 }
 
 // ApplyPromotion 应用活动价规则（支持阶梯匹配）
-func (s *Service) ApplyPromotion(product *models.Product, quantity int) (*models.Promotion, money.Amount, error) {
+func (s *Service) ApplyPromotion(product *productdomain.Product, quantity int) (*models.Promotion, money.Amount, error) {
 	if product == nil || quantity <= 0 {
 		return nil, money.Amount{}, ErrInvalid
 	}

@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
-	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
@@ -18,14 +20,14 @@ type ProductStore struct {
 	db *gorm.DB
 }
 
-var _ catalogproduct.Repository = (*ProductStore)(nil)
+var _ productcontract.Repository = (*ProductStore)(nil)
 
 func NewProductStore(db *gorm.DB) *ProductStore {
 	return &ProductStore{db: db}
 }
 
 // BindTx 将 Store 绑定到调用方事务，并仅暴露 Product 端口。
-func (r *ProductStore) BindTx(tx *gorm.DB) catalogproduct.Repository {
+func (r *ProductStore) BindTx(tx *gorm.DB) productcontract.Repository {
 	if tx == nil {
 		return r
 	}
@@ -40,10 +42,10 @@ func (r *ProductStore) Transaction(fn func(tx *gorm.DB) error) error {
 }
 
 // List 商品列表
-func (r *ProductStore) List(filter catalogproduct.ListFilter) ([]models.Product, int64, error) {
-	var products []models.Product
+func (r *ProductStore) List(filter productcontract.ListFilter) ([]productdomain.Product, int64, error) {
+	var products []productdomain.Product
 
-	query := r.db.Model(&models.Product{})
+	query := r.db.Model(&productdomain.Product{}).Where("products.deleted_at IS NULL")
 	if filter.WithCategory {
 		query = query.Preload("Category", "deleted_at IS NULL")
 	}
@@ -51,11 +53,11 @@ func (r *ProductStore) List(filter catalogproduct.ListFilter) ([]models.Product,
 		query = query.Where("products.is_active = ?", true)
 		query = query.Where("EXISTS (SELECT 1 FROM categories c WHERE c.id = products.category_id AND c.is_active = ? AND c.deleted_at IS NULL)", true)
 		query = query.Preload("SKUs", func(db *gorm.DB) *gorm.DB {
-			return db.Where("is_active = ?", true).Order("sort_order DESC, id ASC")
+			return db.Where("deleted_at IS NULL AND is_active = ?", true).Order("sort_order DESC, id ASC")
 		})
 	} else {
 		query = query.Preload("SKUs", func(db *gorm.DB) *gorm.DB {
-			return db.Order("sort_order DESC, id ASC")
+			return db.Where("deleted_at IS NULL").Order("sort_order DESC, id ASC")
 		})
 	}
 	if len(filter.CategoryIDs) > 0 {
@@ -176,21 +178,21 @@ func applyStockStatusFilter(query *gorm.DB, status string, lowStockThreshold int
 }
 
 // GetBySlug 根据 slug 获取商品
-func (r *ProductStore) GetBySlug(slug string, onlyActive bool) (*models.Product, error) {
-	query := r.db.Preload("Category", "deleted_at IS NULL").Where("products.slug = ?", slug)
+func (r *ProductStore) GetBySlug(slug string, onlyActive bool) (*productdomain.Product, error) {
+	query := r.db.Preload("Category", "deleted_at IS NULL").Where("products.deleted_at IS NULL AND products.slug = ?", slug)
 	if onlyActive {
 		query = query.Where("products.is_active = ?", true)
 		query = query.Where("EXISTS (SELECT 1 FROM categories c WHERE c.id = products.category_id AND c.is_active = ? AND c.deleted_at IS NULL)", true)
 		query = query.Preload("SKUs", func(db *gorm.DB) *gorm.DB {
-			return db.Where("is_active = ?", true).Order("sort_order DESC, id ASC")
+			return db.Where("deleted_at IS NULL AND is_active = ?", true).Order("sort_order DESC, id ASC")
 		})
 	} else {
 		query = query.Preload("SKUs", func(db *gorm.DB) *gorm.DB {
-			return db.Order("sort_order DESC, id ASC")
+			return db.Where("deleted_at IS NULL").Order("sort_order DESC, id ASC")
 		})
 	}
 
-	var product models.Product
+	var product productdomain.Product
 	if err := query.First(&product).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -201,12 +203,13 @@ func (r *ProductStore) GetBySlug(slug string, onlyActive bool) (*models.Product,
 }
 
 // GetByID 根据 ID 获取商品
-func (r *ProductStore) GetByID(id string) (*models.Product, error) {
-	var product models.Product
+func (r *ProductStore) GetByID(id string) (*productdomain.Product, error) {
+	var product productdomain.Product
 	if err := r.db.Preload("Category", "deleted_at IS NULL").
 		Preload("SKUs", func(db *gorm.DB) *gorm.DB {
-			return db.Where("is_active = ?", true).Order("sort_order DESC, id ASC")
+			return db.Where("deleted_at IS NULL AND is_active = ?", true).Order("sort_order DESC, id ASC")
 		}).
+		Where("products.deleted_at IS NULL").
 		First(&product, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -217,12 +220,13 @@ func (r *ProductStore) GetByID(id string) (*models.Product, error) {
 }
 
 // GetAdminByID 根据 ID 获取后台商品详情，包含全部 SKU
-func (r *ProductStore) GetAdminByID(id string) (*models.Product, error) {
-	var product models.Product
+func (r *ProductStore) GetAdminByID(id string) (*productdomain.Product, error) {
+	var product productdomain.Product
 	if err := r.db.Preload("Category", "deleted_at IS NULL").
 		Preload("SKUs", func(db *gorm.DB) *gorm.DB {
-			return db.Order("sort_order DESC, id ASC")
+			return db.Where("deleted_at IS NULL").Order("sort_order DESC, id ASC")
 		}).
+		Where("products.deleted_at IS NULL").
 		First(&product, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -233,41 +237,41 @@ func (r *ProductStore) GetAdminByID(id string) (*models.Product, error) {
 }
 
 // ListByIDs 批量获取商品
-func (r *ProductStore) ListByIDs(ids []uint) ([]models.Product, error) {
+func (r *ProductStore) ListByIDs(ids []uint) ([]productdomain.Product, error) {
 	if len(ids) == 0 {
-		return []models.Product{}, nil
+		return []productdomain.Product{}, nil
 	}
-	var products []models.Product
-	if err := r.db.Where("id IN ?", ids).Find(&products).Error; err != nil {
+	var products []productdomain.Product
+	if err := r.db.Where("deleted_at IS NULL AND id IN ?", ids).Find(&products).Error; err != nil {
 		return nil, err
 	}
 	return products, nil
 }
 
 // Create 创建商品
-func (r *ProductStore) Create(product *models.Product) error {
+func (r *ProductStore) Create(product *productdomain.Product) error {
 	return r.db.Create(product).Error
 }
 
 // Update 更新商品
-func (r *ProductStore) Update(product *models.Product) error {
+func (r *ProductStore) Update(product *productdomain.Product) error {
 	return r.db.Save(product).Error
 }
 
 // QuickUpdate 快速更新商品指定字段
 func (r *ProductStore) QuickUpdate(id string, fields map[string]interface{}) error {
-	return r.db.Model(&models.Product{}).Where("id = ?", id).Updates(fields).Error
+	return r.db.Model(&productdomain.Product{}).Where("id = ? AND deleted_at IS NULL", id).Updates(fields).Error
 }
 
 // Delete 删除商品
 func (r *ProductStore) Delete(id string) error {
-	return r.db.Delete(&models.Product{}, id).Error
+	return r.db.Model(&productdomain.Product{}).Where("id = ? AND deleted_at IS NULL", id).Update("deleted_at", time.Now()).Error
 }
 
 // CountBySlug 统计 slug 数量
 func (r *ProductStore) CountBySlug(slug string, excludeID *string) (int64, error) {
 	var count int64
-	query := r.db.Model(&models.Product{}).Where("slug = ?", slug)
+	query := r.db.Model(&productdomain.Product{}).Where("deleted_at IS NULL AND slug = ?", slug)
 	if excludeID != nil {
 		query = query.Where("id != ?", *excludeID)
 	}
@@ -279,15 +283,15 @@ func (r *ProductStore) CountBySlug(slug string, excludeID *string) (int64, error
 
 // ReserveManualStock 预占手动库存
 func (r *ProductStore) ReserveManualStock(productID uint, quantity int) (int64, error) {
-	return gormutil.ReserveManualStock(r.db, &models.Product{}, productID, quantity)
+	return gormutil.ReserveManualStock(r.db, &productdomain.Product{}, productID, quantity)
 }
 
 // ReleaseManualStock 释放手动库存占用
 func (r *ProductStore) ReleaseManualStock(productID uint, quantity int) (int64, error) {
-	return gormutil.ReleaseManualStock(r.db, &models.Product{}, productID, quantity)
+	return gormutil.ReleaseManualStock(r.db, &productdomain.Product{}, productID, quantity)
 }
 
 // ConsumeManualStock 消耗手动库存（支付成功后占用转已售）
 func (r *ProductStore) ConsumeManualStock(productID uint, quantity int) (int64, error) {
-	return gormutil.ConsumeManualStock(r.db, &models.Product{}, productID, quantity)
+	return gormutil.ConsumeManualStock(r.db, &productdomain.Product{}, productID, quantity)
 }

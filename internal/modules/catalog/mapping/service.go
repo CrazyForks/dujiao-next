@@ -6,12 +6,13 @@ import (
 	"strconv"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 	"github.com/dujiao-next/internal/upstream"
@@ -73,17 +74,17 @@ type SKUMappingRepository interface {
 
 // ProductRepository 是映射上下文所需的最小本地商品端口。
 type ProductRepository interface {
-	GetByID(id string) (*models.Product, error)
-	Update(item *models.Product) error
+	GetByID(id string) (*productdomain.Product, error)
+	Update(item *productdomain.Product) error
 	QuickUpdate(id string, fields map[string]interface{}) error
 }
 
 // SKURepository 是映射上下文所需的最小本地 SKU 端口。
 type SKURepository interface {
-	GetByID(id uint) (*models.ProductSKU, error)
-	ListByProduct(productID uint, onlyActive bool) ([]models.ProductSKU, error)
-	Create(item *models.ProductSKU) error
-	Update(item *models.ProductSKU) error
+	GetByID(id uint) (*productdomain.ProductSKU, error)
+	ListByProduct(productID uint, onlyActive bool) ([]productdomain.ProductSKU, error)
+	Create(item *productdomain.ProductSKU) error
+	Update(item *productdomain.ProductSKU) error
 }
 
 // CategoryRepository 分类查找与复活端口（含商品分类归属校验）。
@@ -118,13 +119,13 @@ type SettingsProvider interface {
 
 // ImportTxProductRepository 导入事务内的本地商品写入端口。
 type ImportTxProductRepository interface {
-	Create(item *models.Product) error
+	Create(item *productdomain.Product) error
 	QuickUpdate(id string, fields map[string]interface{}) error
 }
 
 // ImportTxSKURepository 导入事务内的本地 SKU 写入端口。
 type ImportTxSKURepository interface {
-	Create(item *models.ProductSKU) error
+	Create(item *productdomain.ProductSKU) error
 }
 
 // ImportTxMappingRepository 导入事务内的映射写入端口。
@@ -203,7 +204,7 @@ func NewService(options Options) (*Service, error) {
 func resolveErrorSet(values ErrorSet) ErrorSet {
 	return ErrorSet{
 		ConnectionNotFound:     errorOrDefault(values.ConnectionNotFound, ErrConnectionNotFound),
-		ProductCategoryInvalid: errorOrDefault(values.ProductCategoryInvalid, catalogproduct.ErrProductCategoryInvalid),
+		ProductCategoryInvalid: errorOrDefault(values.ProductCategoryInvalid, productcontract.ErrProductCategoryInvalid),
 	}
 }
 

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 )
@@ -90,13 +92,13 @@ type UnitOfWork interface {
 }
 
 type ProductRepository interface {
-	GetByID(id string) (*models.Product, error)
+	GetByID(id string) (*productdomain.Product, error)
 }
 
 type ProductSKURepository interface {
-	ListByProduct(productID uint, includeInactive bool) ([]models.ProductSKU, error)
-	GetByID(id uint) (*models.ProductSKU, error)
-	GetByProductAndCode(productID uint, skuCode string) (*models.ProductSKU, error)
+	ListByProduct(productID uint, includeInactive bool) ([]productdomain.ProductSKU, error)
+	GetByID(id uint) (*productdomain.ProductSKU, error)
+	GetByProductAndCode(productID uint, skuCode string) (*productdomain.ProductSKU, error)
 }
 
 type ServiceOptions struct {
@@ -126,7 +128,7 @@ func NewService(options ServiceOptions) *Service {
 	}
 }
 
-func (s *Service) resolveCardSecretSKU(productID, rawSKUID uint) (*models.ProductSKU, error) {
+func (s *Service) resolveCardSecretSKU(productID, rawSKUID uint) (*productdomain.ProductSKU, error) {
 	if productID == 0 || s.productSKURepo == nil {
 		return nil, ErrProductSKUInvalid
 	}
@@ -141,7 +143,7 @@ func (s *Service) resolveCardSecretSKU(productID, rawSKUID uint) (*models.Produc
 	if err != nil {
 		return nil, err
 	}
-	activeSKUs := make([]models.ProductSKU, 0, len(skus))
+	activeSKUs := make([]productdomain.ProductSKU, 0, len(skus))
 	for _, sku := range skus {
 		if !sku.IsActive {
 			continue
@@ -172,7 +174,7 @@ func (s *Service) resolveCardSecretSKU(productID, rawSKUID uint) (*models.Produc
 		}
 	}
 
-	defaultSKU, err := s.productSKURepo.GetByProductAndCode(productID, models.DefaultSKUCode)
+	defaultSKU, err := s.productSKURepo.GetByProductAndCode(productID, productdomain.DefaultSKUCode)
 	if err != nil {
 		return nil, err
 	}

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/models"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	uploadmodule "github.com/dujiao-next/internal/modules/upload"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )

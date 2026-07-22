@@ -5,8 +5,9 @@ import (
 	"strings"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
@@ -150,7 +151,7 @@ func (s *AccountingWithdrawService) ApplyWithdraw(resellerID uint, input Withdra
 
 func (s *AccountingWithdrawService) ReviewWithdraw(adminID uint, withdrawID uint, action string, rejectReason string) (*models.ResellerWithdrawRequest, error) {
 	if s == nil || s.store == nil || withdrawID == 0 {
-		return nil, catalogproduct.ErrNotFound
+		return nil, productcontract.ErrNotFound
 	}
 	act := strings.ToLower(strings.TrimSpace(action))
 	if act != WithdrawActionReject && act != WithdrawActionPay {
@@ -162,7 +163,7 @@ func (s *AccountingWithdrawService) ReviewWithdraw(adminID uint, withdrawID uint
 			return err
 		}
 		if req == nil {
-			return catalogproduct.ErrNotFound
+			return productcontract.ErrNotFound
 		}
 		if req.Status != models.ResellerWithdrawStatusPending {
 			return ErrWithdrawStatusInvalid

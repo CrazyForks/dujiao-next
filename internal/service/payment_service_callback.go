@@ -4,9 +4,10 @@ import (
 	"strings"
 	"time"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -251,7 +252,7 @@ func (s *PaymentService) markOrderPaid(tx *gorm.DB, order *models.Order, now tim
 	}
 	orderRepo := s.orderRepo.WithTx(tx)
 	productRepo := s.productRepo.BindTx(tx)
-	var productSKURepo catalogproduct.SKURepository
+	var productSKURepo productcontract.SKURepository
 	if s.productSKURepo != nil {
 		productSKURepo = s.productSKURepo.BindTx(tx)
 	}

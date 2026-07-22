@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
@@ -64,14 +65,14 @@ func (s *OrderQueryService) ListUserOrders(userID uint, input OrderListInput) ([
 
 func (s *OrderQueryService) ListAdminOrders(resellerID uint, input OrderListInput) ([]OrderListItem, int64, error) {
 	if s == nil || s.store == nil || resellerID == 0 {
-		return nil, 0, catalogproduct.ErrNotFound
+		return nil, 0, productcontract.ErrNotFound
 	}
 	profile, err := s.store.GetProfileByID(resellerID)
 	if err != nil {
 		return nil, 0, err
 	}
 	if profile == nil {
-		return nil, 0, catalogproduct.ErrNotFound
+		return nil, 0, productcontract.ErrNotFound
 	}
 	rows, total, err := s.store.ListOrderSnapshotsByReseller(orderSnapshotFilter(resellerID, input))
 	if err != nil {

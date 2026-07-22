@@ -4,8 +4,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
@@ -16,20 +17,20 @@ type stubResellerDisplayPricer struct {
 	err    error
 }
 
-func (s stubResellerDisplayPricer) LoadDisplayPricingBatch(tenant reseller.TenantContext, products []models.Product) (*reseller.DisplayPricingBatch, error) {
+func (s stubResellerDisplayPricer) LoadDisplayPricingBatch(tenant reseller.TenantContext, products []productdomain.Product) (*reseller.DisplayPricingBatch, error) {
 	return &reseller.DisplayPricingBatch{Tenant: tenant}, nil
 }
 
-func (s stubResellerDisplayPricer) ResolveDisplayPrices(tenant reseller.TenantContext, product *models.Product, batch *reseller.DisplayPricingBatch) (*reseller.DisplayPriceResult, error) {
+func (s stubResellerDisplayPricer) ResolveDisplayPrices(tenant reseller.TenantContext, product *productdomain.Product, batch *reseller.DisplayPricingBatch) (*reseller.DisplayPriceResult, error) {
 	return s.result, s.err
 }
 
 func TestDecoratePublicProductDisplayPricePrefersFirstActiveSKU(t *testing.T) {
 	h := &PublicHandler{}
-	product := &models.Product{
+	product := &productdomain.Product{
 		ID:          1,
 		PriceAmount: money.FromDecimal(decimal.RequireFromString("59.90")),
-		SKUs: []models.ProductSKU{
+		SKUs: []productdomain.ProductSKU{
 			{
 				ID:          11,
 				IsActive:    true,
@@ -56,14 +57,14 @@ func TestDecoratePublicProductDisplayPricePrefersFirstActiveSKU(t *testing.T) {
 }
 
 func TestDecoratePublicProductForTenantUsesResellerPricesAndHidesMainDiscounts(t *testing.T) {
-	product := &models.Product{
+	product := &productdomain.Product{
 		ID:          1,
 		Slug:        "reseller-display",
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
-		WholesalePrices: models.WholesalePriceTiers{
+		WholesalePrices: productdomain.WholesalePriceTiers{
 			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 		},
-		SKUs: []models.ProductSKU{
+		SKUs: []productdomain.ProductSKU{
 			{
 				ID:          11,
 				ProductID:   1,
@@ -118,16 +119,16 @@ func TestDecoratePublicProductForTenantUsesResellerPricesAndHidesMainDiscounts(t
 func TestDecoratePublicProductForTenantHiddenProduct(t *testing.T) {
 	h := &PublicHandler{pricer: stubResellerDisplayPricer{result: &reseller.DisplayPriceResult{Visible: false}}}
 	tenant := reseller.ResellerTenantContext("shop.example.test", 10, 99, "shop.example.test")
-	product := &models.Product{
+	product := &productdomain.Product{
 		ID:          1,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
-		SKUs: []models.ProductSKU{
+		SKUs: []productdomain.ProductSKU{
 			{ID: 11, ProductID: 1, IsActive: true, PriceAmount: money.FromDecimal(decimal.NewFromInt(100))},
 		},
 	}
 
 	_, err := h.decoratePublicProductForTenant(product, nil, tenant, &reseller.DisplayPricingBatch{})
-	if !errors.Is(err, catalogproduct.ErrResellerProductNotListed) {
+	if !errors.Is(err, productcontract.ErrResellerProductNotListed) {
 		t.Fatalf("expected ErrResellerProductNotListed, got %v", err)
 	}
 }
@@ -139,17 +140,17 @@ func TestDecoratePublicProductForTenantAllHiddenSKUsReturnsNotListed(t *testing.
 		HiddenSKUIDs: map[uint]bool{11: true, 12: true},
 	}}}
 	tenant := reseller.ResellerTenantContext("shop.example.test", 10, 99, "shop.example.test")
-	product := &models.Product{
+	product := &productdomain.Product{
 		ID:          1,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
-		SKUs: []models.ProductSKU{
+		SKUs: []productdomain.ProductSKU{
 			{ID: 11, ProductID: 1, IsActive: true, PriceAmount: money.FromDecimal(decimal.NewFromInt(100))},
 			{ID: 12, ProductID: 1, IsActive: true, PriceAmount: money.FromDecimal(decimal.NewFromInt(120))},
 		},
 	}
 
 	_, err := h.decoratePublicProductForTenant(product, nil, tenant, &reseller.DisplayPricingBatch{})
-	if !errors.Is(err, catalogproduct.ErrResellerProductNotListed) {
+	if !errors.Is(err, productcontract.ErrResellerProductNotListed) {
 		t.Fatalf("expected ErrResellerProductNotListed, got %v", err)
 	}
 }
@@ -162,22 +163,22 @@ func TestDecoratePublicProductForTenantInvalidDisplayPricingIsHidden(t *testing.
 		{name: "below base", err: reseller.ErrPriceBelowBase},
 		{name: "markup exceeds max", err: reseller.ErrMarkupExceeded},
 		{name: "unknown pricing mode", err: reseller.ErrPricingModeInvalid},
-		{name: "already not listed", err: catalogproduct.ErrResellerProductNotListed},
+		{name: "already not listed", err: productcontract.ErrResellerProductNotListed},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			h := &PublicHandler{pricer: stubResellerDisplayPricer{err: tt.err}}
 			tenant := reseller.ResellerTenantContext("shop.example.test", 10, 99, "shop.example.test")
-			product := &models.Product{
+			product := &productdomain.Product{
 				ID:          1,
 				PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
-				SKUs: []models.ProductSKU{
+				SKUs: []productdomain.ProductSKU{
 					{ID: 11, ProductID: 1, IsActive: true, PriceAmount: money.FromDecimal(decimal.NewFromInt(100))},
 				},
 			}
 			_, err := h.decoratePublicProductForTenant(product, nil, tenant, &reseller.DisplayPricingBatch{})
-			if !errors.Is(err, catalogproduct.ErrResellerProductNotListed) {
+			if !errors.Is(err, productcontract.ErrResellerProductNotListed) {
 				t.Fatalf("expected ErrResellerProductNotListed, got %v", err)
 			}
 		})

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
@@ -88,7 +90,7 @@ type CouponDirectory interface {
 
 // ProductDirectory 商品查询端口。
 type ProductDirectory interface {
-	ListByIDs(ids []uint) ([]models.Product, error)
+	ListByIDs(ids []uint) ([]productdomain.Product, error)
 }
 
 // AuthStateCache 用户鉴权状态缓存端口。

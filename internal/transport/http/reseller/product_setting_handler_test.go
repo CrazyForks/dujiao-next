@@ -9,9 +9,11 @@ import (
 	"strings"
 	"testing"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/money"
@@ -130,7 +132,7 @@ func TestUserProductSettingHandlerMapsInactiveProfile(t *testing.T) {
 func TestAdminProductSettingHandlerRecordsAuditOnSave(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	detail := &resellermodule.ProductSettingDetail{
-		Product:  models.Product{ID: 3},
+		Product:  productdomain.Product{ID: 3},
 		Settings: []models.ResellerProductSetting{{SKUID: 7, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: money.FromDecimal(decimal.RequireFromString("130.00"))}},
 	}
 	stub := &productSettingStub{detail: detail}
@@ -155,7 +157,7 @@ func TestAdminProductSettingHandlerRecordsAuditOnSave(t *testing.T) {
 
 func TestAdminProductSettingHandlerMapsNotFound(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	stub := &productSettingStub{err: catalogproduct.ErrNotFound}
+	stub := &productSettingStub{err: productcontract.ErrNotFound}
 	h := NewAdminProductSettingHandler(stub, &auditStub{})
 	c, recorder := newProductSettingHandlerContext(http.MethodGet, "/admin/resellers/product-settings/2/3", nil, 0)
 	c.Params = gin.Params{{Key: "reseller_id", Value: "2"}, {Key: "product_id", Value: "3"}}

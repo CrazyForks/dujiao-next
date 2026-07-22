@@ -1,8 +1,8 @@
 package catalogwiring
 
 import (
-	"github.com/dujiao-next/internal/models"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/reseller"
 )
 
@@ -16,17 +16,17 @@ func (a catalogPublicProductAdapter) ListPublicForTenant(
 	tenant reseller.TenantContext,
 	categoryID, search string,
 	page, pageSize int,
-) ([]models.Product, int64, error) {
+) ([]productdomain.Product, int64, error) {
 	return a.products.ListPublicForTenant(tenant, a.hidden, categoryID, search, page, pageSize)
 }
 
 func (a catalogPublicProductAdapter) GetPublicBySlugForTenant(
 	tenant reseller.TenantContext,
 	slug string,
-) (*models.Product, error) {
+) (*productdomain.Product, error) {
 	return a.products.GetPublicBySlugForTenant(tenant, a.hidden, slug)
 }
 
-func (a catalogPublicProductAdapter) ApplyAutoStockCounts(products []models.Product) error {
+func (a catalogPublicProductAdapter) ApplyAutoStockCounts(products []productdomain.Product) error {
 	return a.products.ApplyAutoStockCounts(products)
 }

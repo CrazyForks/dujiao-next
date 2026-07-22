@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"gorm.io/gorm"
 )
 
@@ -18,8 +19,8 @@ type CartItem struct {
 	UpdatedAt       time.Time      `gorm:"index" json:"updated_at"`                                                              // 更新时间
 	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`                                                                       // 软删除时间
 
-	Product *Product    `gorm:"foreignKey:ProductID" json:"product,omitempty"` // 关联商品
-	SKU     *ProductSKU `gorm:"foreignKey:SKUID" json:"sku,omitempty"`         // 关联SKU
+	Product *productdomain.Product    `gorm:"foreignKey:ProductID" json:"product,omitempty"` // 关联商品
+	SKU     *productdomain.ProductSKU `gorm:"foreignKey:SKUID" json:"sku,omitempty"`         // 关联SKU
 }
 
 // TableName 指定表名

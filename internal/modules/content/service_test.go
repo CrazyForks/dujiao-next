@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 )
@@ -126,7 +128,7 @@ func (s *postStoreStub) GetRelatedProductIDs(context.Context, uint) ([]uint, err
 func (s *postStoreStub) SetRelatedProductIDs(context.Context, uint, []uint) error {
 	return nil
 }
-func (s *postStoreStub) ListRelatedProducts(context.Context, uint) ([]models.Product, error) {
+func (s *postStoreStub) ListRelatedProducts(context.Context, uint) ([]productdomain.Product, error) {
 	return nil, nil
 }
 func (s *postStoreStub) ListPostsForProduct(context.Context, uint, string, bool, int) ([]models.Post, error) {

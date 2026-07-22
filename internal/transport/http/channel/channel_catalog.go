@@ -5,6 +5,8 @@ import (
 	"math"
 	"strings"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
@@ -99,7 +101,7 @@ type channelWholesalePrice struct {
 	UnitPrice   string `json:"unit_price"`
 }
 
-func normalizeChannelWholesalePrices(tiers models.WholesalePriceTiers) []channelWholesalePrice {
+func normalizeChannelWholesalePrices(tiers productdomain.WholesalePriceTiers) []channelWholesalePrice {
 	if len(tiers) == 0 {
 		return nil
 	}
@@ -126,7 +128,7 @@ func (h *Handler) GetProducts(c *gin.Context) {
 	page, pageSize := ginutil.ParsePaginationWithBounds(c, "page", "page_size", 5, 20)
 	exact := c.DefaultQuery("exact", "") == "1"
 
-	var products []models.Product
+	var products []productdomain.Product
 	var total int64
 	var err error
 	if exact {
@@ -260,8 +262,8 @@ func (h *Handler) GetProductDetail(c *gin.Context) {
 		return
 	}
 
-	// 计算库存（ApplyAutoStockCounts 接受 []models.Product 并修改 slice 元素）
-	stockSlice := []models.Product{*product}
+	// 计算库存（ApplyAutoStockCounts 接受 []productdomain.Product 并修改 slice 元素）
+	stockSlice := []productdomain.Product{*product}
 	if err := h.ProductService.ApplyAutoStockCounts(stockSlice); err != nil {
 		logger.Warnw("channel_catalog_apply_stock_detail", "error", err)
 	}
@@ -492,7 +494,7 @@ func normalizeChannelMinPurchaseQuantity(value int) int {
 // 降级语义（与 web 端 decorateUpstreamStock 一致）：
 //   - 没有 ProductMapping：视作有货（写无限库存），避免脏数据导致误报缺货；
 //   - 有 mapping 但所有 SKU 映射均未激活：视作缺货（库存写 0）。
-func (h *Handler) applyUpstreamMappings(products []models.Product) map[uint]string {
+func (h *Handler) applyUpstreamMappings(products []productdomain.Product) map[uint]string {
 	ftMap := make(map[uint]string)
 
 	var mappedIDs []uint
@@ -604,7 +606,7 @@ func (h *Handler) applyUpstreamMappings(products []models.Product) map[uint]stri
 }
 
 // writeProductStock 按 displayType 把库存值写回 Product 的对应字段。stock<0 表示无限。
-func writeProductStock(p *models.Product, displayType string, stock int) {
+func writeProductStock(p *productdomain.Product, displayType string, stock int) {
 	if displayType == constants.FulfillmentTypeAuto {
 		if stock < 0 {
 			p.AutoStockAvailable = -1
@@ -621,7 +623,7 @@ func writeProductStock(p *models.Product, displayType string, stock int) {
 }
 
 // writeSKUStock 同 writeProductStock，作用于 SKU。
-func writeSKUStock(sku *models.ProductSKU, displayType string, stock int) {
+func writeSKUStock(sku *productdomain.ProductSKU, displayType string, stock int) {
 	if displayType == constants.FulfillmentTypeAuto {
 		if stock < 0 {
 			sku.AutoStockAvailable = -1
@@ -638,7 +640,7 @@ func writeSKUStock(sku *models.ProductSKU, displayType string, stock int) {
 }
 
 // setProductsUnlimited 把 ftMap 中列出的所有商品（含其 SKU）置为无限库存。用于查询失败的降级。
-func setProductsUnlimited(products []models.Product, ftMap map[uint]string) {
+func setProductsUnlimited(products []productdomain.Product, ftMap map[uint]string) {
 	for i := range products {
 		p := &products[i]
 		dt, ok := ftMap[p.ID]

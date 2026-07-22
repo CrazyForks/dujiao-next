@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
@@ -26,8 +28,6 @@ import (
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
-
-	"github.com/dujiao-next/internal/models"
 )
 
 type channelCatalogTestResponse struct {
@@ -41,7 +41,7 @@ func TestGetCategoriesIncludesParentIDAndVisibleParent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -68,7 +68,7 @@ func TestGetCategoriesIncludesParentIDAndVisibleParent(t *testing.T) {
 		t.Fatalf("create hidden category failed: %v", err)
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:  child.ID,
 		Slug:        "steam-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "Steam Product"},
@@ -152,7 +152,7 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}, &models.ProductSKU{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -165,7 +165,7 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	product := models.Product{
+	product := productdomain.Product{
 		CategoryID:          category.ID,
 		Slug:                "stock-display-product",
 		TitleJSON:           jsonmap.JSON{"zh-CN": "库存展示商品"},
@@ -183,7 +183,7 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	sku := models.ProductSKU{
+	sku := productdomain.ProductSKU{
 		ProductID:        product.ID,
 		SKUCode:          "vip-year",
 		SpecValuesJSON:   jsonmap.JSON{"zh-CN": "年卡"},
@@ -257,13 +257,13 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 		t.Fatalf("expected sku stock_quantity_hidden=true, got %v", skuData["stock_quantity_hidden"])
 	}
 
-	if err := db.Model(&models.Product{}).Where("id = ?", product.ID).Updates(map[string]interface{}{
+	if err := db.Model(&productdomain.Product{}).Where("id = ?", product.ID).Updates(map[string]interface{}{
 		"manual_stock_total": 5,
 		"stock_display_mode": constants.ProductStockDisplayStatus,
 	}).Error; err != nil {
 		t.Fatalf("update product to low stock: %v", err)
 	}
-	if err := db.Model(&models.ProductSKU{}).Where("id = ?", sku.ID).Update("manual_stock_total", 5).Error; err != nil {
+	if err := db.Model(&productdomain.ProductSKU{}).Where("id = ?", sku.ID).Update("manual_stock_total", 5).Error; err != nil {
 		t.Fatalf("update sku to low stock: %v", err)
 	}
 

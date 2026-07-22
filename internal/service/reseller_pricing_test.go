@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
@@ -269,8 +271,8 @@ func testOrderBuildResult(items ...struct {
 }) *orderBuildResult {
 	plans := make([]childOrderPlan, 0, len(items))
 	for _, item := range items {
-		product := &models.Product{ID: item.productID, TitleJSON: jsonmap.JSON{"zh-CN": fmt.Sprintf("p%d", item.productID)}}
-		sku := &models.ProductSKU{
+		product := &productdomain.Product{ID: item.productID, TitleJSON: jsonmap.JSON{"zh-CN": fmt.Sprintf("p%d", item.productID)}}
+		sku := &productdomain.ProductSKU{
 			ID:              item.skuID,
 			ProductID:       item.productID,
 			PriceAmount:     money.FromDecimal(item.base),
@@ -760,18 +762,18 @@ func TestResellerPricingResolverDisplayBatchUsesSingleSettingsLookup(t *testing.
 		},
 	}
 	resolver := NewResellerPricingResolver(repo)
-	products := []models.Product{
+	products := []productdomain.Product{
 		{
 			ID:          1,
 			PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
-			SKUs: []models.ProductSKU{
+			SKUs: []productdomain.ProductSKU{
 				{ID: 11, ProductID: 1, PriceAmount: money.FromDecimal(decimal.NewFromInt(100)), CostPriceAmount: money.FromDecimal(decimal.NewFromInt(50)), IsActive: true},
 			},
 		},
 		{
 			ID:          2,
 			PriceAmount: money.FromDecimal(decimal.NewFromInt(80)),
-			SKUs: []models.ProductSKU{
+			SKUs: []productdomain.ProductSKU{
 				{ID: 22, ProductID: 2, PriceAmount: money.FromDecimal(decimal.NewFromInt(80)), CostPriceAmount: money.FromDecimal(decimal.NewFromInt(40)), IsActive: true},
 			},
 		},
@@ -813,11 +815,11 @@ func TestResellerPricingResolverDisplayHidesInvalidSKUWithoutFailing(t *testing.
 		},
 	}
 	resolver := NewResellerPricingResolver(repo)
-	products := []models.Product{
+	products := []productdomain.Product{
 		{
 			ID:          1,
 			PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
-			SKUs: []models.ProductSKU{
+			SKUs: []productdomain.ProductSKU{
 				{ID: 11, ProductID: 1, PriceAmount: money.FromDecimal(decimal.NewFromInt(100)), CostPriceAmount: money.FromDecimal(decimal.NewFromInt(50)), IsActive: true},
 				{ID: 12, ProductID: 1, PriceAmount: money.FromDecimal(decimal.NewFromInt(100)), CostPriceAmount: money.FromDecimal(decimal.NewFromInt(50)), IsActive: true},
 			},

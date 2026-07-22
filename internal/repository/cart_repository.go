@@ -40,7 +40,12 @@ func (r *GormCartRepository) WithTx(tx *gorm.DB) *GormCartRepository {
 // ListByUser 获取用户购物车项
 func (r *GormCartRepository) ListByUser(userID uint) ([]models.CartItem, error) {
 	var items []models.CartItem
-	if err := r.db.Preload("Product").Preload("SKU").Where("user_id = ?", userID).Order("updated_at desc").Find(&items).Error; err != nil {
+	if err := r.db.
+		Preload("Product", "deleted_at IS NULL").
+		Preload("SKU", "deleted_at IS NULL").
+		Where("user_id = ?", userID).
+		Order("updated_at desc").
+		Find(&items).Error; err != nil {
 		return nil, err
 	}
 	return items, nil

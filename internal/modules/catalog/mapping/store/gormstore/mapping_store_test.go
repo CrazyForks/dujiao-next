@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
@@ -27,8 +29,8 @@ func setupMappingStoreTest(t *testing.T) (*MappingStore, *SKUMappingStore, *gorm
 	}
 	if err := db.AutoMigrate(
 		&categorydomain.Category{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.SiteConnection{},
 		&models.ProductMapping{},
 		&models.SKUMapping{},
@@ -47,9 +49,9 @@ func setupMappingStoreTest(t *testing.T) (*MappingStore, *SKUMappingStore, *gorm
 	return NewMappingStore(db), NewSKUMappingStore(db), db
 }
 
-func createMappedProduct(t *testing.T, db *gorm.DB, slug, title string) *models.Product {
+func createMappedProduct(t *testing.T, db *gorm.DB, slug, title string) *productdomain.Product {
 	t.Helper()
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      1,
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": title},

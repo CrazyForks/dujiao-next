@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/content"
 	"gorm.io/gorm"
@@ -161,11 +163,11 @@ func (s *PostStore) SetRelatedProductIDs(ctx context.Context, postID uint, produ
 	})
 }
 
-func (s *PostStore) ListRelatedProducts(ctx context.Context, postID uint) ([]models.Product, error) {
-	var products []models.Product
+func (s *PostStore) ListRelatedProducts(ctx context.Context, postID uint) ([]productdomain.Product, error) {
+	var products []productdomain.Product
 	err := withContext(s.db, ctx).
 		Joins("INNER JOIN post_products pp ON pp.product_id = products.id").
-		Where("pp.post_id = ?", postID).
+		Where("pp.post_id = ? AND products.deleted_at IS NULL", postID).
 		Order("pp.sort ASC, pp.id ASC").
 		Find(&products).Error
 	return products, err

@@ -3,13 +3,14 @@ package upstreamhttp
 import (
 	"testing"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 )
 
 func TestComputeSKUStockUsesRemainingManualStockWithoutSubtractingLockedAgain(t *testing.T) {
-	product := models.Product{FulfillmentType: constants.FulfillmentTypeManual}
-	sku := models.ProductSKU{
+	product := productdomain.Product{FulfillmentType: constants.FulfillmentTypeManual}
+	sku := productdomain.ProductSKU{
 		ManualStockTotal:  5,
 		ManualStockLocked: 4,
 	}

@@ -8,7 +8,6 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 )
 
 var (
@@ -105,14 +104,14 @@ func NormalizePurchaseQuantityLimit(value int) int {
 	return value
 }
 
-func productMaxPurchaseQuantity(product *models.Product) int {
+func productMaxPurchaseQuantity(product *Product) int {
 	if product == nil {
 		return 0
 	}
 	return NormalizePurchaseQuantityLimit(product.MaxPurchaseQuantity)
 }
 
-func productMinPurchaseQuantity(product *models.Product) int {
+func productMinPurchaseQuantity(product *Product) int {
 	if product == nil {
 		return 0
 	}
@@ -120,7 +119,7 @@ func productMinPurchaseQuantity(product *models.Product) int {
 }
 
 // ValidatePurchaseQuantity 校验单次购买数量是否在商品上下限内。
-func ValidatePurchaseQuantity(product *models.Product, quantity int) error {
+func ValidatePurchaseQuantity(product *Product, quantity int) error {
 	if quantity <= 0 {
 		return ErrPurchaseQuantityInvalid
 	}

@@ -3,6 +3,8 @@ package contract
 import (
 	"time"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate/domain"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
@@ -16,7 +18,7 @@ type OrderReader interface {
 
 // ProductReader 是 Affiliate 计算可返利金额所需的最小商品读取端口。
 type ProductReader interface {
-	ListByIDs(ids []uint) ([]models.Product, error)
+	ListByIDs(ids []uint) ([]productdomain.Product, error)
 }
 
 // SettingsReader 是 Affiliate 所需的动态设置读取端口。

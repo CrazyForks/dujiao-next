@@ -2,9 +2,11 @@ package service
 
 import (
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
+
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -27,8 +29,8 @@ func TestCancelExpiredOrderExpiresPendingPayments(t *testing.T) {
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.Coupon{},
 		&models.CouponUsage{},
 		&models.Payment{},
@@ -142,8 +144,8 @@ func setupCancelPaymentTestDB(t *testing.T, namespace string) *gorm.DB {
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
-		&models.Product{},
-		&models.ProductSKU{},
+		&productdomain.Product{},
+		&productdomain.ProductSKU{},
 		&models.Coupon{},
 		&models.CouponUsage{},
 		&models.Payment{},

@@ -12,18 +12,18 @@ import (
 
 // ProductRepository 是商品创建和更新所需的最小持久化端口。
 type ProductRepository interface {
-	GetByID(id string) (*models.Product, error)
-	Create(item *models.Product) error
-	Update(item *models.Product) error
+	GetByID(id string) (*productdomain.Product, error)
+	Create(item *productdomain.Product) error
+	Update(item *productdomain.Product) error
 	CountBySlug(slug string, excludeID *string) (int64, error)
 	QuickUpdate(id string, fields map[string]interface{}) error
 }
 
 // SKURepository 是商品写入用例所需的 SKU 持久化端口。
 type SKURepository interface {
-	ListByProduct(productID uint, onlyActive bool) ([]models.ProductSKU, error)
-	Create(item *models.ProductSKU) error
-	Update(item *models.ProductSKU) error
+	ListByProduct(productID uint, onlyActive bool) ([]productdomain.ProductSKU, error)
+	Create(item *productdomain.ProductSKU) error
+	Update(item *productdomain.ProductSKU) error
 	Delete(id uint) error
 	PurgeSoftDeletedByProductAndCode(productID uint, skuCode string) error
 }

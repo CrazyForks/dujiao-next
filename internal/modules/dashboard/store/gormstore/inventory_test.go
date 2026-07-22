@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -16,7 +18,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 	repo, db := setupDashboardRepositoryTest(t)
 	category := createDashboardCategory(t, db, "dashboard-manual-stock")
 
-	lowStockProduct := &models.Product{
+	lowStockProduct := &productdomain.Product{
 		CategoryID:       category.ID,
 		Slug:             "manual-low-stock",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "多 SKU 手动商品"},
@@ -29,7 +31,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 	if err := db.Create(lowStockProduct).Error; err != nil {
 		t.Fatalf("create low stock product failed: %v", err)
 	}
-	for idx, sku := range []models.ProductSKU{
+	for idx, sku := range []productdomain.ProductSKU{
 		{ProductID: lowStockProduct.ID, SKUCode: "A", PriceAmount: money.FromDecimal(decimal.NewFromInt(99)), ManualStockTotal: 2, IsActive: true},
 		{ProductID: lowStockProduct.ID, SKUCode: "B", PriceAmount: money.FromDecimal(decimal.NewFromInt(99)), ManualStockTotal: 3, IsActive: true},
 		{ProductID: lowStockProduct.ID, SKUCode: "DISABLED", PriceAmount: money.FromDecimal(decimal.NewFromInt(99)), ManualStockTotal: 100, IsActive: false},
@@ -45,7 +47,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 		}
 	}
 
-	unlimitedProduct := &models.Product{
+	unlimitedProduct := &productdomain.Product{
 		CategoryID:       category.ID,
 		Slug:             "manual-unlimited-sku",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "无限库存商品"},
@@ -58,7 +60,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 	if err := db.Create(unlimitedProduct).Error; err != nil {
 		t.Fatalf("create unlimited product failed: %v", err)
 	}
-	unlimitedSKU := &models.ProductSKU{
+	unlimitedSKU := &productdomain.ProductSKU{
 		ProductID:        unlimitedProduct.ID,
 		SKUCode:          "UNLIMITED",
 		PriceAmount:      money.FromDecimal(decimal.NewFromInt(88)),
@@ -69,7 +71,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 		t.Fatalf("create unlimited sku failed: %v", err)
 	}
 
-	outOfStockProduct := &models.Product{
+	outOfStockProduct := &productdomain.Product{
 		CategoryID:       category.ID,
 		Slug:             "manual-fallback-zero",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "回退零库存商品"},
@@ -105,7 +107,7 @@ func TestGetInventoryAlertItemsFallsBackToProductLevelWhenOnlyInactiveAutoSKUHas
 	}
 
 	category := createDashboardCategory(t, db, "dashboard-auto-legacy-stock")
-	product := &models.Product{
+	product := &productdomain.Product{
 		CategoryID:      category.ID,
 		Slug:            "dashboard-auto-legacy-stock",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "自动发货商品"},
@@ -118,14 +120,14 @@ func TestGetInventoryAlertItemsFallsBackToProductLevelWhenOnlyInactiveAutoSKUHas
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	legacySKU := &models.ProductSKU{
+	legacySKU := &productdomain.ProductSKU{
 		ProductID:   product.ID,
-		SKUCode:     models.DefaultSKUCode,
+		SKUCode:     productdomain.DefaultSKUCode,
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(99)),
 		IsActive:    false,
 		SortOrder:   0,
 	}
-	activeSKU := &models.ProductSKU{
+	activeSKU := &productdomain.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     "SKU-2",
 		PriceAmount: money.FromDecimal(decimal.NewFromInt(99)),
