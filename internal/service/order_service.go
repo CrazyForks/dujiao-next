@@ -52,7 +52,7 @@ type OrderService struct {
 	resellerPricingResolver *ResellerPricingResolver
 	resellerAccountingSvc   *ResellerAccountingService
 	riskControlSvc          *orderrisk.Service
-	productMappingService   *ProductMappingService
+	productMappingService   upstreamStockEnsurer
 	expireMinutes           int
 }
 
@@ -94,6 +94,11 @@ type orderQueueClient interface {
 	EnqueueOrderStatusEmail(payload queue.OrderStatusEmailPayload, opts ...asynq.Option) error
 }
 
+// upstreamStockEnsurer 是下单校验依赖的最小 Catalog Mapping 用例端口。
+type upstreamStockEnsurer interface {
+	EnsureUpstreamStockForOrder(localSKUID uint, quantity int) error
+}
+
 // OrderServiceOptions 订单服务构造参数
 type OrderServiceOptions struct {
 	OrderRepo                 repository.OrderRepository
@@ -116,13 +121,13 @@ type OrderServiceOptions struct {
 	ResellerPricingResolver   *ResellerPricingResolver
 	ResellerAccountingService *ResellerAccountingService
 	RiskControlService        *orderrisk.Service
-	ProductMappingService     *ProductMappingService
+	ProductMappingService     upstreamStockEnsurer
 	ExpireMinutes             int
 }
 
 // SetProductMappingService 注入商品映射服务（用于下单前上游库存兜底校验）。
 // 由 provider 在 ProductMappingService 构造之后调用，避免构造顺序耦合。
-func (s *OrderService) SetProductMappingService(svc *ProductMappingService) {
+func (s *OrderService) SetProductMappingService(svc upstreamStockEnsurer) {
 	if s == nil {
 		return
 	}

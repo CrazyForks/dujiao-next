@@ -10,6 +10,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
@@ -56,7 +57,7 @@ func newProductServiceForResellerPublicTest(t *testing.T) (*ProductService, repo
 		cataloggormstore.NewCategoryStore(db),
 		memberlevelgormstore.NewPriceStore(db),
 		repository.NewCartRepository(db),
-		repository.NewProductMappingRepository(db),
+		mappinggormstore.NewMappingStore(db),
 		repository.NewOrderRepository(db),
 		repository.NewPaymentChannelRepository(db),
 	)

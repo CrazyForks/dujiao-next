@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	"github.com/dujiao-next/internal/modules/cart"
 	"github.com/dujiao-next/internal/modules/catalog"
+	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
@@ -156,7 +157,7 @@ type Container struct {
 	ResellerOperationsService     *reseller.OperationsService
 	ApiCredentialService          *apicredential.Service
 	SiteConnectionService         *siteconnection.Service
-	ProductMappingService         *service.ProductMappingService
+	ProductMappingService         *catalogmapping.Service
 	ProcurementOrderService       *procurement.Service
 	DownstreamCallbackService     *downstreamcallback.Service
 	ReconciliationService         *reconciliation.Service

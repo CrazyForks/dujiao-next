@@ -15,7 +15,7 @@ import (
 )
 
 // MarkupReapplier 在连接定价配置（汇率/加价/取整）变更后，按新配置重算该连接已映射商品的本地售价。
-// 由 ProductMappingService 实现，通过 setter 注入以避免与本服务的循环依赖。
+// 由 Catalog Mapping 应用服务实现，通过 setter 注入以避免与本服务的循环依赖。
 type MarkupReapplier interface {
 	ReapplyMarkup(connectionID uint) (int, error)
 }

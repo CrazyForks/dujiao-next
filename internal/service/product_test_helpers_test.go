@@ -9,7 +9,7 @@ import (
 	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/catalog"
-	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
+	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
@@ -42,7 +42,7 @@ func NewProductService(
 	categories catalog.CategoryRepository,
 	memberLevelPrices memberLevelPriceCleaner,
 	carts repository.CartRepository,
-	productMappings catalogmapping.MappingRepository,
+	productMappings catalogproductbootstrap.MappingStore,
 	orders repository.OrderRepository,
 	paymentChannels repository.PaymentChannelRepository,
 ) *ProductService {
@@ -111,7 +111,7 @@ func newProductServiceForTest(t *testing.T) (*ProductService, *gorm.DB) {
 		cataloggormstore.NewCategoryStore(db),
 		memberlevelgormstore.NewPriceStore(db),
 		repository.NewCartRepository(db),
-		repository.NewProductMappingRepository(db),
+		mappinggormstore.NewMappingStore(db),
 		repository.NewOrderRepository(db),
 		repository.NewPaymentChannelRepository(db),
 	), db

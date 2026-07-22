@@ -1,4 +1,4 @@
-package service
+package catalogmappingbootstrap
 
 import (
 	"context"
@@ -11,6 +11,9 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/catalog"
+	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
+	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	"github.com/dujiao-next/internal/modules/siteconnection"
 	"github.com/dujiao-next/internal/repository"
@@ -26,8 +29,28 @@ type noopLocalMediaRecorder struct{}
 
 func (noopLocalMediaRecorder) RecordLocalFile(context.Context, string, string) {}
 
-func TestNewProductMappingServiceRejectsNilMediaRecorder(t *testing.T) {
-	if _, err := NewProductMappingService(nil, nil, nil, nil, nil, nil, nil); !errors.Is(err, ErrMediaRecorderRequired) {
+func newTestMappingService(
+	mappingRepo MappingStore,
+	skuMappingRepo SKUMappingStore,
+	productRepo ProductStore,
+	productSKURepo SKUStore,
+	categoryRepo catalog.CategoryRepository,
+	connService *siteconnection.Service,
+	mediaRecorder catalogmapping.MediaRecorder,
+) (*catalogmapping.Service, error) {
+	return New(Dependencies{
+		Mappings:    mappingRepo,
+		SKUMappings: skuMappingRepo,
+		Products:    productRepo,
+		SKUs:        productSKURepo,
+		Categories:  categoryRepo,
+		Connections: connService,
+		Media:       mediaRecorder,
+	})
+}
+
+func TestNewRejectsNilMediaRecorder(t *testing.T) {
+	if _, err := newTestMappingService(nil, nil, nil, nil, nil, nil, nil); !errors.Is(err, catalogmapping.ErrMediaRecorderRequired) {
 		t.Fatalf("error = %v, want ErrMediaRecorderRequired", err)
 	}
 }
@@ -48,7 +71,7 @@ func (r *failingSKUMappingRepo) ListByProductMappingIDs(productMappingIDs []uint
 	return nil, nil
 }
 
-func (r *failingSKUMappingRepo) WithTx(tx *gorm.DB) repository.SKUMappingRepository {
+func (r *failingSKUMappingRepo) BindTx(tx *gorm.DB) catalogmapping.SKUMappingRepository {
 	return r
 }
 
@@ -134,8 +157,8 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 		t.Fatalf("create connection failed: %v", err)
 	}
 
-	svc, err := NewProductMappingService(
-		repository.NewProductMappingRepository(db),
+	svc, err := newTestMappingService(
+		mappinggormstore.NewMappingStore(db),
 		&failingSKUMappingRepo{err: errors.New("inject sku mapping failure")},
 		productgormstore.NewProductStore(db),
 		productgormstore.NewSKUStore(db),
@@ -177,7 +200,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 }
 
 // setupMappingWithUpstreamHandler 准备一份本地映射 + 启动可定制响应的上游 httptest server
-func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.HandlerFunc) (*ProductMappingService, *gorm.DB, *models.ProductMapping, func()) {
+func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.HandlerFunc) (*catalogmapping.Service, *gorm.DB, *models.ProductMapping, func()) {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -232,8 +255,8 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 		t.Fatalf("create connection failed: %v", err)
 	}
 
-	mappingRepo := repository.NewProductMappingRepository(db)
-	skuMappingRepo := repository.NewSKUMappingRepository(db)
+	mappingRepo := mappinggormstore.NewMappingStore(db)
+	skuMappingRepo := mappinggormstore.NewSKUMappingStore(db)
 	mapping := &models.ProductMapping{
 		ConnectionID:      conn.ID,
 		LocalProductID:    product.ID,
@@ -254,7 +277,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 		t.Fatalf("create sku mapping failed: %v", err)
 	}
 
-	svc, err := NewProductMappingService(mappingRepo, skuMappingRepo, productRepo, skuRepo, categoryRepo, connService, noopLocalMediaRecorder{})
+	svc, err := newTestMappingService(mappingRepo, skuMappingRepo, productRepo, skuRepo, categoryRepo, connService, noopLocalMediaRecorder{})
 	if err != nil {
 		t.Fatalf("create product mapping service: %v", err)
 	}
@@ -666,7 +689,7 @@ func TestEnsureUpstreamStockRejectsWhenUpstreamReportsZero(t *testing.T) {
 	}
 
 	err := svc.EnsureUpstreamStockForOrder(sku.ID, 1)
-	if !errors.Is(err, ErrUpstreamStockInsufficient) {
+	if !errors.Is(err, catalogmapping.ErrUpstreamStockInsufficient) {
 		t.Fatalf("expected ErrUpstreamStockInsufficient, got %v", err)
 	}
 }
@@ -786,9 +809,9 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 		t.Fatalf("create connection failed: %v", err)
 	}
 
-	svc, err := NewProductMappingService(
-		repository.NewProductMappingRepository(db),
-		repository.NewSKUMappingRepository(db),
+	svc, err := newTestMappingService(
+		mappinggormstore.NewMappingStore(db),
+		mappinggormstore.NewSKUMappingStore(db),
 		productgormstore.NewProductStore(db),
 		productgormstore.NewSKUStore(db),
 		categoryRepo,
@@ -800,7 +823,7 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 	}
 
 	_, importErr := svc.ImportUpstreamProduct(conn.ID, 202, 1, "")
-	if !errors.Is(importErr, ErrUpstreamProductNotFound) {
+	if !errors.Is(importErr, catalogmapping.ErrUpstreamProductNotFound) {
 		t.Fatalf("expected ErrUpstreamProductNotFound for inactive upstream product, got %v", importErr)
 	}
 

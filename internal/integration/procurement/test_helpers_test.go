@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/models"
+	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	"github.com/dujiao-next/internal/modules/procurement"
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/store/gormstore"
 	"github.com/dujiao-next/internal/modules/siteconnection"
@@ -110,8 +111,8 @@ func newTestProcurementService(db *gorm.DB, connections *SiteConnectionService) 
 	return procurement.NewService(procurement.ServiceOptions{
 		Repository:      procurementgormstore.New(db),
 		Orders:          orders,
-		ProductMappings: repository.NewProductMappingRepository(db),
-		SKUMappings:     repository.NewSKUMappingRepository(db),
+		ProductMappings: mappinggormstore.NewMappingStore(db),
+		SKUMappings:     mappinggormstore.NewSKUMappingStore(db),
 		Connections:     connections,
 		OrderLifecycle: service.NewProcurementOrderLifecycle(
 			orders,

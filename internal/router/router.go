@@ -127,7 +127,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 		c.ProductMappingRepo,
 		c.SKUMappingRepo,
 	)
-	adminCatalogProductMappingHandler := catalogtransport.NewAdminProductMappingHandler(c.ProductMappingService.Service)
+	adminCatalogProductMappingHandler := catalogtransport.NewAdminProductMappingHandler(c.ProductMappingService)
 	userAuditLogHandler := auditlogtransport.NewUserHandler(c.UserLoginLogService)
 	adminCouponHandler := coupontransport.NewAdminHandler(c.CouponAdminService)
 	adminGiftCardHandler := giftcardtransport.NewAdminHandler(c.GiftCardService)

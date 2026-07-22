@@ -33,8 +33,7 @@ var legacyRootGoFileBudgets = map[string]int{
 // migration baseline. They may be deleted, but no replacement shim may be
 // introduced. The final migration gate requires this set to become empty.
 var baselineCompatibilityFiles = map[string]struct{}{
-	"internal/repository/card_secret_compat.go":     {},
-	"internal/repository/product_mapping_compat.go": {},
+	"internal/repository/card_secret_compat.go": {},
 }
 
 type packageFileBudget struct {
@@ -144,6 +143,9 @@ var completedMigrationPaths = []string{
 	"internal/service/product_service.go",
 	"internal/service/product_application_compat.go",
 	"internal/repository/product_compat.go",
+	"internal/repository/product_mapping_compat.go",
+	"internal/service/product_mapping_service.go",
+	"internal/service/product_mapping_service_test.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

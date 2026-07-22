@@ -28,6 +28,11 @@ func (r *SKUMappingStore) WithTx(tx *gorm.DB) *SKUMappingStore {
 	return NewSKUMappingStore(tx)
 }
 
+// BindTx 将事务内 store 暴露为导入用例所需的窄写入端口。
+func (r *SKUMappingStore) BindTx(tx *gorm.DB) catalogmapping.SKUMappingRepository {
+	return r.WithTx(tx)
+}
+
 func (r *SKUMappingStore) GetByLocalSKUID(skuID uint) (*models.SKUMapping, error) {
 	var m models.SKUMapping
 	if err := r.db.Where("local_sku_id = ?", skuID).First(&m).Error; err != nil {

@@ -29,6 +29,11 @@ func (r *MappingStore) WithTx(tx *gorm.DB) *MappingStore {
 	return NewMappingStore(tx)
 }
 
+// BindTx 将事务内 store 暴露为导入用例所需的窄写入端口。
+func (r *MappingStore) BindTx(tx *gorm.DB) catalogmapping.MappingRepository {
+	return r.WithTx(tx)
+}
+
 func (r *MappingStore) GetByID(id uint) (*models.ProductMapping, error) {
 	var m models.ProductMapping
 	if err := r.db.Preload("Connection").Preload("Product").First(&m, id).Error; err != nil {

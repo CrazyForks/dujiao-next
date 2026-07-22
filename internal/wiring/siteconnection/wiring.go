@@ -1,11 +1,9 @@
 package siteconnectionwiring
 
-import (
-	"github.com/dujiao-next/internal/service"
-)
-
 type siteConnectionMarkupAdapter struct {
-	svc *service.ProductMappingService
+	svc interface {
+		ReapplyMarkup(connectionID uint) (int, error)
+	}
 }
 
 func (a siteConnectionMarkupAdapter) ReapplyMarkup(connectionID uint) (int, error) {

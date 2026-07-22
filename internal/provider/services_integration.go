@@ -1,6 +1,7 @@
 package provider
 
 import (
+	catalogmappingbootstrap "github.com/dujiao-next/internal/bootstrap/catalogmapping"
 	telegrambroadcast "github.com/dujiao-next/internal/bootstrap/telegrambroadcast"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
@@ -43,22 +44,22 @@ func (c *Container) initIntegrationServices() {
 		content.WarningLoggerFunc(logger.Warnw),
 	)
 	c.ContentMediaService = mediaCore
-	productMappingService, err := service.NewProductMappingService(
-		c.ProductMappingRepo,
-		c.SKUMappingRepo,
-		c.ProductRepo,
-		c.ProductSKURepo,
-		c.CategoryRepo,
-		c.SiteConnectionService,
-		mediaCore,
-	)
+	productMappingService, err := catalogmappingbootstrap.New(catalogmappingbootstrap.Dependencies{
+		Mappings:    c.ProductMappingRepo,
+		SKUMappings: c.SKUMappingRepo,
+		Products:    c.ProductRepo,
+		SKUs:        c.ProductSKURepo,
+		Categories:  c.CategoryRepo,
+		Connections: c.SiteConnectionService,
+		Media:       mediaCore,
+	})
 	if err != nil {
 		logger.Errorw("provider_init_product_mapping_failed", "error", err)
 		panic(err)
 	}
 	c.ProductMappingService = productMappingService
-	c.ProductMappingService.SetCategoryService(c.CategoryService)
-	c.ProductMappingService.SetSettingService(c.SettingService)
+	c.ProductMappingService.SetCategoryCreator(c.CategoryService)
+	c.ProductMappingService.SetSettings(c.SettingService)
 	c.SiteConnectionService.SetMarkupReapplier(c.ProductMappingService)
 	c.OrderService.SetProductMappingService(c.ProductMappingService)
 	c.DownstreamCallbackService = downstreamcallback.NewService(c.DownstreamOrderRefRepo, c.OrderRepo, c.ApiCredentialRepo, c.QueueClient)
@@ -69,7 +70,7 @@ func (c *Container) initIntegrationServices() {
 		PaymentRepo:               c.PaymentRepo,
 		ChannelRepo:               c.PaymentChannelRepo,
 		WalletRepo:                c.WalletRepo,
-		UserStore:                  c.UserStore,
+		UserStore:                 c.UserStore,
 		ExternalIdentityStore:     c.ExternalIdentityStore,
 		QueueClient:               c.QueueClient,
 		WalletService:             c.WalletService,

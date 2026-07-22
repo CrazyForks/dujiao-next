@@ -5,7 +5,6 @@ import (
 
 	"github.com/dujiao-next/internal/modules/catalog"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
-	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
@@ -32,6 +31,12 @@ type SKUStore interface {
 	BindTx(tx *gorm.DB) catalogproduct.SKURepository
 }
 
+// MappingStore 是商品级联删除所需的映射持久化与事务能力。
+type MappingStore interface {
+	catalogmapping.MappingRepository
+	BindTx(tx *gorm.DB) catalogmapping.MappingRepository
+}
+
 // Dependencies 是 Product 三组应用用例的装配依赖。
 type Dependencies struct {
 	Products          ProductStore
@@ -41,7 +46,7 @@ type Dependencies struct {
 	Categories        catalog.CategoryRepository
 	MemberLevelPrices memberLevelPriceCleaner
 	Carts             repository.CartRepository
-	ProductMappings   catalogmapping.MappingRepository
+	ProductMappings   MappingStore
 	Orders            repository.OrderRepository
 	PaymentChannels   repository.PaymentChannelRepository
 }
@@ -104,7 +109,7 @@ type productAdminUnitOfWork struct {
 	cardSecretBatches repository.CardSecretBatchRepository
 	memberLevelPrices memberLevelPriceCleaner
 	carts             repository.CartRepository
-	productMappings   catalogmapping.MappingRepository
+	productMappings   MappingStore
 }
 
 func newProductAdminUnitOfWork(
@@ -114,7 +119,7 @@ func newProductAdminUnitOfWork(
 	cardSecretBatches repository.CardSecretBatchRepository,
 	memberLevelPrices memberLevelPriceCleaner,
 	carts repository.CartRepository,
-	productMappings catalogmapping.MappingRepository,
+	productMappings MappingStore,
 ) productadmin.UnitOfWork {
 	return &productAdminUnitOfWork{
 		products:          products,
@@ -147,19 +152,11 @@ func (unit *productAdminUnitOfWork) WithinTransaction(fn func(productadmin.Delet
 	})
 }
 
-func bindMappingDeleteTx(repo catalogmapping.MappingRepository, tx *gorm.DB) productadmin.ProductMappingDeleteRepository {
-	switch binder := repo.(type) {
-	case interface {
-		WithTx(tx *gorm.DB) *mappinggormstore.MappingStore
-	}:
-		return binder.WithTx(tx)
-	case interface {
-		WithTx(tx *gorm.DB) repository.ProductMappingRepository
-	}:
-		return binder.WithTx(tx)
-	default:
-		return repo
+func bindMappingDeleteTx(repo MappingStore, tx *gorm.DB) productadmin.ProductMappingDeleteRepository {
+	if repo == nil {
+		return nil
 	}
+	return repo.BindTx(tx)
 }
 
 type memberLevelPriceDeleteAdapter struct {
