@@ -28,10 +28,11 @@ import (
 	notificationtransport "github.com/dujiao-next/internal/modules/notification/transport/http"
 	promotiontransport "github.com/dujiao-next/internal/modules/promotion/transport/http"
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
+	sitemapbrand "github.com/dujiao-next/internal/modules/sitemap/infrastructure/settingsbrand"
+	sitemaptransport "github.com/dujiao-next/internal/modules/sitemap/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	cardsecrettransport "github.com/dujiao-next/internal/transport/http/cardsecret"
 	procurementtransport "github.com/dujiao-next/internal/transport/http/procurement"
-	sitemaptransport "github.com/dujiao-next/internal/transport/http/sitemap"
 	"github.com/dujiao-next/internal/web"
 	adminauthwiring "github.com/dujiao-next/internal/wiring/adminauth"
 	adminauthzwiring "github.com/dujiao-next/internal/wiring/adminauthz"
@@ -43,7 +44,6 @@ import (
 	paymentwiring "github.com/dujiao-next/internal/wiring/payment"
 	publicconfigwiring "github.com/dujiao-next/internal/wiring/publicconfig"
 	resellerwiring "github.com/dujiao-next/internal/wiring/reseller"
-	sitemapwiring "github.com/dujiao-next/internal/wiring/sitemap"
 	telegramwiring "github.com/dujiao-next/internal/wiring/telegram"
 	upstreamwiring "github.com/dujiao-next/internal/wiring/upstream"
 	userauthwiring "github.com/dujiao-next/internal/wiring/userauth"
@@ -204,7 +204,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 	r.Static("/uploads", "./uploads")
 
 	// SEO 资源（动态生成）。
-	sitemaptransport.RegisterRoutes(r, sitemapwiring.NewHandler(c))
+	sitemaptransport.RegisterRoutes(r, sitemaptransport.NewHandler(c.SitemapService, sitemapbrand.New(c.SettingService)))
 
 	apiV1 := r.Group("/api/v1")
 	registerStorefrontRoutes(apiV1, cfg, c, publicContentHandler, publicCatalogHandler, publicCategoryHandler, userResellerHandler, userResellerProductSettingHandler, userResellerFinanceHandler, userResellerOrderHandler, userApiCredentialHandler, userAuditLogHandler, userGiftCardHandler, publicMemberLevelHandler, userProfileHandler, userEmailHandler, userPasswordHandler, userVerifyHandler, userTelegramOIDCHandler, userTelegramHandler, userLoginHandler, user2FAHandler, publicConfigHandler, userCartHandler, userOrderHandler, guestOrderHandler, orderPreviewHandler, orderCreateHandler, paymentLatestHandler, paymentWriteHandler, userWalletHandler, redisClient, loginRule)

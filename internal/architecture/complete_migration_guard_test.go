@@ -323,6 +323,10 @@ var completedMigrationPaths = []string{
 	"internal/integration/compliance",
 	"internal/transport/http/compliance",
 	"internal/wiring/compliance",
+	"internal/modules/sitemap/service.go",
+	"internal/integration/sitemap",
+	"internal/transport/http/sitemap",
+	"internal/wiring/sitemap",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

@@ -1,4 +1,4 @@
-package sitemap
+package application
 
 import (
 	"context"
@@ -8,53 +8,30 @@ import (
 	"strings"
 	"time"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-
-	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
-
-	"github.com/dujiao-next/internal/cache"
+	"github.com/dujiao-next/internal/modules/sitemap/contract"
+	"github.com/dujiao-next/internal/modules/sitemap/domain"
 )
-
-// SitemapPost 是生成 Sitemap 所需的最小文章投影。
-type SitemapPost struct {
-	Slug        string
-	CreatedAt   time.Time
-	PublishedAt *time.Time
-}
-
-// PublishedPostReader 由 Sitemap 消费方拥有，只读取可索引文章。
-type PublishedPostReader interface {
-	ListPublishedPosts(ctx context.Context, limit int) ([]SitemapPost, error)
-}
-
-// PublishedPostReaderFunc 将装配层函数适配为 PublishedPostReader。
-type PublishedPostReaderFunc func(ctx context.Context, limit int) ([]SitemapPost, error)
-
-// ListPublishedPosts 实现 PublishedPostReader。
-func (f PublishedPostReaderFunc) ListPublishedPosts(ctx context.Context, limit int) ([]SitemapPost, error) {
-	return f(ctx, limit)
-}
 
 // Service 生成 sitemap.xml / robots.txt 内容。
 type Service struct {
-	productRepo  productcontract.Repository
-	categoryRepo categorycontract.Repository
-	posts        PublishedPostReader
+	catalog contract.CatalogReader
+	posts   contract.PublishedPostReader
+	cache   contract.Cache
 }
 
 // NewService 创建 sitemap 服务。
 func NewService(
-	productRepo productcontract.Repository,
-	categoryRepo categorycontract.Repository,
-	posts PublishedPostReader,
+	catalog contract.CatalogReader,
+	posts contract.PublishedPostReader,
+	cacheStore contract.Cache,
 ) (*Service, error) {
-	if productRepo == nil || categoryRepo == nil || posts == nil {
+	if catalog == nil || posts == nil || cacheStore == nil {
 		return nil, fmt.Errorf("sitemap: required dependency is nil")
 	}
 	return &Service{
-		productRepo:  productRepo,
-		categoryRepo: categoryRepo,
-		posts:        posts,
+		catalog: catalog,
+		posts:   posts,
+		cache:   cacheStore,
 	}, nil
 }
 
@@ -72,7 +49,7 @@ func (s *Service) Generate(ctx context.Context, baseURL string) (string, error) 
 	}
 
 	cacheKey := sitemapCachePrefix + baseURL
-	if cached, err := cache.GetString(ctx, cacheKey); err == nil && cached != "" {
+	if cached, err := s.cache.GetString(ctx, cacheKey); err == nil && cached != "" {
 		return cached, nil
 	}
 
@@ -86,7 +63,7 @@ func (s *Service) Generate(ctx context.Context, baseURL string) (string, error) 
 		return "", err
 	}
 
-	_ = cache.SetString(ctx, cacheKey, xmlStr, sitemapCacheTTL)
+	_ = s.cache.SetString(ctx, cacheKey, xmlStr, sitemapCacheTTL)
 	return xmlStr, nil
 }
 
@@ -114,8 +91,8 @@ func (s *Service) GenerateRobots(baseURL string) string {
 	return b.String()
 }
 
-// urlEntry sitemap.xml 中的单条 URL
-type urlEntry struct {
+// xmlEntry 是 sitemap.xml 的传输结构。
+type xmlEntry struct {
 	XMLName    xml.Name `xml:"url"`
 	Loc        string   `xml:"loc"`
 	LastMod    string   `xml:"lastmod,omitempty"`
@@ -126,12 +103,12 @@ type urlEntry struct {
 type urlSet struct {
 	XMLName xml.Name   `xml:"urlset"`
 	Xmlns   string     `xml:"xmlns,attr"`
-	URLs    []urlEntry `xml:"url"`
+	URLs    []xmlEntry `xml:"url"`
 }
 
-func (s *Service) collectURLs(ctx context.Context, baseURL string) ([]urlEntry, error) {
+func (s *Service) collectURLs(ctx context.Context, baseURL string) ([]domain.URL, error) {
 	now := time.Now().UTC().Format("2006-01-02")
-	entries := make([]urlEntry, 0, 64)
+	entries := make([]domain.URL, 0, 64)
 
 	// 1. 静态页面
 	staticPages := []struct {
@@ -148,43 +125,39 @@ func (s *Service) collectURLs(ctx context.Context, baseURL string) ([]urlEntry, 
 		{"/privacy", "yearly", "0.2"},
 	}
 	for _, p := range staticPages {
-		entries = append(entries, urlEntry{
-			Loc:        baseURL + p.Path,
-			LastMod:    now,
-			ChangeFreq: p.ChangeFreq,
-			Priority:   p.Priority,
+		entries = append(entries, domain.URL{
+			Location:        baseURL + p.Path,
+			LastModified:    now,
+			ChangeFrequency: p.ChangeFreq,
+			Priority:        p.Priority,
 		})
 	}
 
 	// 2. 启用的分类
-	categories, err := s.categoryRepo.ListActive()
+	categories, err := s.catalog.ListActiveCategories()
 	if err != nil {
 		return nil, fmt.Errorf("sitemap: list categories: %w", err)
 	}
 	for _, cat := range categories {
-		entries = append(entries, urlEntry{
-			Loc:        baseURL + "/categories/" + url.PathEscape(cat.Slug),
-			LastMod:    cat.CreatedAt.UTC().Format("2006-01-02"),
-			ChangeFreq: "weekly",
-			Priority:   "0.7",
+		entries = append(entries, domain.URL{
+			Location:        baseURL + "/categories/" + url.PathEscape(cat.Slug),
+			LastModified:    cat.CreatedAt.UTC().Format("2006-01-02"),
+			ChangeFrequency: "weekly",
+			Priority:        "0.7",
 		})
 	}
 
 	// 3. 上架的商品（OnlyActive 已含分类启用过滤）
-	products, _, err := s.productRepo.List(productcontract.ListFilter{
-		Page:       1,
-		PageSize:   sitemapMaxFetch,
-		OnlyActive: true,
-	})
+	products, err := s.catalog.ListActiveProducts(sitemapMaxFetch)
 	if err != nil {
 		return nil, fmt.Errorf("sitemap: list products: %w", err)
 	}
 	for _, p := range products {
-		entries = append(entries, urlEntry{
-			Loc:        baseURL + "/products/" + url.PathEscape(p.Slug),
-			LastMod:    p.UpdatedAt.UTC().Format("2006-01-02"),
-			ChangeFreq: "daily",
-			Priority:   "0.8",
+		entries = append(entries, domain.URL{
+			Location:        baseURL + "/products/" + url.PathEscape(p.Slug),
+			LastModified:    p.UpdatedAt.UTC().Format("2006-01-02"),
+			ChangeFrequency: "daily",
+			Priority:        "0.8",
 		})
 	}
 
@@ -199,21 +172,30 @@ func (s *Service) collectURLs(ctx context.Context, baseURL string) ([]urlEntry, 
 			lastmod = *post.PublishedAt
 		}
 		// blog 与 notice 共用 /blog/:slug 详情页（user 前台 Notice.vue 跳转到 /blog/{slug}）
-		entries = append(entries, urlEntry{
-			Loc:        baseURL + "/blog/" + url.PathEscape(post.Slug),
-			LastMod:    lastmod.UTC().Format("2006-01-02"),
-			ChangeFreq: "monthly",
-			Priority:   "0.5",
+		entries = append(entries, domain.URL{
+			Location:        baseURL + "/blog/" + url.PathEscape(post.Slug),
+			LastModified:    lastmod.UTC().Format("2006-01-02"),
+			ChangeFrequency: "monthly",
+			Priority:        "0.5",
 		})
 	}
 
 	return entries, nil
 }
 
-func renderSitemapXML(entries []urlEntry) (string, error) {
+func renderSitemapXML(entries []domain.URL) (string, error) {
+	xmlEntries := make([]xmlEntry, 0, len(entries))
+	for _, entry := range entries {
+		xmlEntries = append(xmlEntries, xmlEntry{
+			Loc:        entry.Location,
+			LastMod:    entry.LastModified,
+			ChangeFreq: entry.ChangeFrequency,
+			Priority:   entry.Priority,
+		})
+	}
 	set := urlSet{
 		Xmlns: "http://www.sitemaps.org/schemas/sitemap/0.9",
-		URLs:  entries,
+		URLs:  xmlEntries,
 	}
 	body, err := xml.MarshalIndent(set, "", "  ")
 	if err != nil {

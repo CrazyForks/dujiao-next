@@ -20,7 +20,10 @@ import (
 	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
 	"github.com/dujiao-next/internal/modules/orderrisk"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
-	"github.com/dujiao-next/internal/modules/sitemap"
+	sitemapapp "github.com/dujiao-next/internal/modules/sitemap/application"
+	sitemapcontract "github.com/dujiao-next/internal/modules/sitemap/contract"
+	sitemapcache "github.com/dujiao-next/internal/modules/sitemap/infrastructure/cacheadapter"
+	sitemapcatalog "github.com/dujiao-next/internal/modules/sitemap/infrastructure/catalogreader"
 	"github.com/dujiao-next/internal/service"
 )
 
@@ -37,10 +40,9 @@ func (c *Container) initApplicationServices() {
 	)
 	c.ContentPostCategoryService = contentapp.NewPostCategoryService(postCategoryStore)
 	c.CategoryService = categoryapp.NewService(c.CategoryRepo)
-	sitemapService, err := sitemap.NewService(
-		c.ProductRepo,
-		c.CategoryRepo,
-		sitemap.PublishedPostReaderFunc(func(ctx context.Context, limit int) ([]sitemap.SitemapPost, error) {
+	sitemapService, err := sitemapapp.NewService(
+		sitemapcatalog.New(c.ProductRepo, c.CategoryRepo),
+		sitemapcontract.PublishedPostReaderFunc(func(ctx context.Context, limit int) ([]sitemapcontract.PublishedPost, error) {
 			posts, _, listErr := c.ContentPostService.ListPublic(ctx, contentapp.PublicPostQuery{
 				Page:     1,
 				PageSize: limit,
@@ -48,9 +50,9 @@ func (c *Container) initApplicationServices() {
 			if listErr != nil {
 				return nil, listErr
 			}
-			result := make([]sitemap.SitemapPost, 0, len(posts))
+			result := make([]sitemapcontract.PublishedPost, 0, len(posts))
 			for _, post := range posts {
-				result = append(result, sitemap.SitemapPost{
+				result = append(result, sitemapcontract.PublishedPost{
 					Slug:        post.Slug,
 					CreatedAt:   post.CreatedAt,
 					PublishedAt: post.PublishedAt,
@@ -58,6 +60,7 @@ func (c *Container) initApplicationServices() {
 			}
 			return result, nil
 		}),
+		sitemapcache.New(),
 	)
 	if err != nil {
 		logger.Errorw("provider_init_sitemap_failed", "error", err)

@@ -58,7 +58,7 @@ import (
 	settingscontract "github.com/dujiao-next/internal/modules/settings/contract"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
-	"github.com/dujiao-next/internal/modules/sitemap"
+	sitemapapp "github.com/dujiao-next/internal/modules/sitemap/application"
 	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
 	broadcastcontract "github.com/dujiao-next/internal/modules/telegram/broadcast/contract"
 	"github.com/dujiao-next/internal/modules/upload"
@@ -137,7 +137,7 @@ type Container struct {
 	ContentMediaService           *contentapp.MediaService
 	CategoryService               *categoryapp.Service
 	SettingService                *settingsapp.Service
-	SitemapService                *sitemap.Service
+	SitemapService                *sitemapapp.Service
 	CartService                   *cartapp.Service
 	WalletService                 *service.WalletService
 	OrderRefundService            *service.OrderRefundService

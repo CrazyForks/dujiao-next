@@ -18,7 +18,9 @@ import (
 	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
 	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
 	"github.com/dujiao-next/internal/modules/content/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/modules/sitemap"
+	sitemapapp "github.com/dujiao-next/internal/modules/sitemap/application"
+	sitemapcontract "github.com/dujiao-next/internal/modules/sitemap/contract"
+	sitemapcatalog "github.com/dujiao-next/internal/modules/sitemap/infrastructure/catalogreader"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -27,7 +29,14 @@ import (
 	"gorm.io/gorm"
 )
 
-func newSitemapServiceForTest(t *testing.T, reader sitemap.PublishedPostReader) (*sitemap.Service, *gorm.DB) {
+type noopCache struct{}
+
+func (noopCache) GetString(context.Context, string) (string, error) { return "", nil }
+func (noopCache) SetString(context.Context, string, string, time.Duration) error {
+	return nil
+}
+
+func newSitemapServiceForTest(t *testing.T, reader sitemapcontract.PublishedPostReader) (*sitemapapp.Service, *gorm.DB) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:sitemap_service_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -46,7 +55,7 @@ func newSitemapServiceForTest(t *testing.T, reader sitemap.PublishedPostReader) 
 
 	postStore := gormstore.NewPostStore(db)
 	if reader == nil {
-		reader = sitemap.PublishedPostReaderFunc(func(ctx context.Context, limit int) ([]sitemap.SitemapPost, error) {
+		reader = sitemapcontract.PublishedPostReaderFunc(func(ctx context.Context, limit int) ([]sitemapcontract.PublishedPost, error) {
 			posts, _, err := postStore.List(ctx, contentcontract.PostQuery{
 				Page:          1,
 				PageSize:      limit,
@@ -56,9 +65,9 @@ func newSitemapServiceForTest(t *testing.T, reader sitemap.PublishedPostReader) 
 			if err != nil {
 				return nil, err
 			}
-			result := make([]sitemap.SitemapPost, 0, len(posts))
+			result := make([]sitemapcontract.PublishedPost, 0, len(posts))
 			for _, post := range posts {
-				result = append(result, sitemap.SitemapPost{
+				result = append(result, sitemapcontract.PublishedPost{
 					Slug:        post.Slug,
 					CreatedAt:   post.CreatedAt,
 					PublishedAt: post.PublishedAt,
@@ -67,10 +76,10 @@ func newSitemapServiceForTest(t *testing.T, reader sitemap.PublishedPostReader) 
 			return result, nil
 		})
 	}
-	svc, err := sitemap.NewService(
-		productgormstore.NewProductStore(db),
-		categorygormstore.NewCategoryStore(db),
+	svc, err := sitemapapp.NewService(
+		sitemapcatalog.New(productgormstore.NewProductStore(db), categorygormstore.NewCategoryStore(db)),
 		reader,
+		noopCache{},
 	)
 	if err != nil {
 		t.Fatalf("create sitemap service: %v", err)
@@ -79,7 +88,7 @@ func newSitemapServiceForTest(t *testing.T, reader sitemap.PublishedPostReader) 
 }
 
 func TestNewSitemapServiceRejectsNilPublishedPostReader(t *testing.T) {
-	if _, err := sitemap.NewService(nil, nil, nil); err == nil {
+	if _, err := sitemapapp.NewService(nil, nil, nil); err == nil {
 		t.Fatal("expected nil dependencies to be rejected")
 	}
 }
@@ -89,10 +98,10 @@ type recordingPublishedPostReader struct {
 	limit int
 }
 
-func (r *recordingPublishedPostReader) ListPublishedPosts(ctx context.Context, limit int) ([]sitemap.SitemapPost, error) {
+func (r *recordingPublishedPostReader) ListPublishedPosts(ctx context.Context, limit int) ([]sitemapcontract.PublishedPost, error) {
 	r.ctx = ctx
 	r.limit = limit
-	return []sitemap.SitemapPost{}, nil
+	return []sitemapcontract.PublishedPost{}, nil
 }
 
 func TestSitemapServicePassesCallerContextToPublishedPostReader(t *testing.T) {
@@ -114,7 +123,7 @@ func TestSitemapServicePassesCallerContextToPublishedPostReader(t *testing.T) {
 
 func TestSitemapServicePropagatesPublishedPostReaderFailure(t *testing.T) {
 	wantErr := fmt.Errorf("published posts unavailable")
-	svc, _ := newSitemapServiceForTest(t, sitemap.PublishedPostReaderFunc(func(context.Context, int) ([]sitemap.SitemapPost, error) {
+	svc, _ := newSitemapServiceForTest(t, sitemapcontract.PublishedPostReaderFunc(func(context.Context, int) ([]sitemapcontract.PublishedPost, error) {
 		return nil, wantErr
 	}))
 
