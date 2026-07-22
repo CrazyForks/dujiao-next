@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/modules/catalog"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/modules/siteconnection"
 	"github.com/dujiao-next/internal/repository"
 
@@ -33,6 +34,17 @@ type LocalMediaRecorder = catalogmapping.MediaRecorder
 type BatchUpstreamProductImportOutcome = catalogmapping.BatchUpstreamProductImportOutcome
 type BatchImportByCategoryResult = catalogmapping.BatchImportByCategoryResult
 
+type productMappingProductStore interface {
+	catalogproduct.Repository
+	Transaction(fn func(tx *gorm.DB) error) error
+	BindTx(tx *gorm.DB) catalogproduct.Repository
+}
+
+type productMappingSKUStore interface {
+	catalogproduct.SKURepository
+	BindTx(tx *gorm.DB) catalogproduct.SKURepository
+}
+
 // ProductMappingService 商品映射业务服务（兼容门面）
 type ProductMappingService struct {
 	*catalogmapping.Service
@@ -42,8 +54,8 @@ type ProductMappingService struct {
 func NewProductMappingService(
 	mappingRepo catalogmapping.MappingRepository,
 	skuMappingRepo catalogmapping.SKUMappingRepository,
-	productRepo repository.ProductRepository,
-	productSKURepo repository.ProductSKURepository,
+	productRepo productMappingProductStore,
+	productSKURepo productMappingSKUStore,
 	categoryRepo catalog.CategoryRepository,
 	connService *siteconnection.Service,
 	mediaRecorder LocalMediaRecorder,
@@ -86,15 +98,15 @@ func (s *ProductMappingService) SetSettingService(ss *settingsapp.Service) {
 
 // productMappingUnitOfWork 把商品事务与映射端口绑定收口在兼容边界内。
 type productMappingUnitOfWork struct {
-	products    repository.ProductRepository
-	skus        repository.ProductSKURepository
+	products    productMappingProductStore
+	skus        productMappingSKUStore
 	mappings    catalogmapping.MappingRepository
 	skuMappings catalogmapping.SKUMappingRepository
 }
 
 func newProductMappingUnitOfWork(
-	products repository.ProductRepository,
-	skus repository.ProductSKURepository,
+	products productMappingProductStore,
+	skus productMappingSKUStore,
 	mappings catalogmapping.MappingRepository,
 	skuMappings catalogmapping.SKUMappingRepository,
 ) catalogmapping.UnitOfWork {
@@ -116,10 +128,10 @@ func (unit *productMappingUnitOfWork) WithinTransaction(fn func(catalogmapping.I
 	return unit.products.Transaction(func(tx *gorm.DB) error {
 		var skus catalogmapping.ImportTxSKURepository
 		if unit.skus != nil {
-			skus = unit.skus.WithTx(tx)
+			skus = unit.skus.BindTx(tx)
 		}
 		return fn(catalogmapping.ImportRepositories{
-			Products:    unit.products.WithTx(tx),
+			Products:    unit.products.BindTx(tx),
 			SKUs:        skus,
 			Mappings:    bindMappingImportTx(unit.mappings, tx),
 			SKUMappings: bindSKUMappingImportTx(unit.skuMappings, tx),

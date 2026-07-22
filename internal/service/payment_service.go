@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/logger"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
@@ -14,13 +15,14 @@ import (
 
 	"github.com/shopspring/decimal"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 // PaymentService 支付服务
 type PaymentService struct {
 	orderRepo               repository.OrderRepository
-	productRepo             repository.ProductRepository
-	productSKURepo          repository.ProductSKURepository
+	productRepo             paymentProductStore
+	productSKURepo          paymentSKUStore
 	paymentRepo             repository.PaymentRepository
 	channelRepo             repository.PaymentChannelRepository
 	walletRepo              repository.WalletRepository
@@ -49,6 +51,16 @@ type ProcurementCreator interface {
 	CreateForOrder(orderID uint) error
 }
 
+type paymentProductStore interface {
+	catalogproduct.Repository
+	BindTx(tx *gorm.DB) catalogproduct.Repository
+}
+
+type paymentSKUStore interface {
+	catalogproduct.SKURepository
+	BindTx(tx *gorm.DB) catalogproduct.SKURepository
+}
+
 // AffiliatePaymentLifecycle 是支付成功回调所需的推广返利用例端口。
 type AffiliatePaymentLifecycle interface {
 	HandleOrderPaid(orderID uint) error
@@ -72,8 +84,8 @@ func (s *PaymentService) SetMemberLevelService(svc MemberLevelProgressor) {
 // PaymentServiceOptions 支付服务构造参数
 type PaymentServiceOptions struct {
 	OrderRepo                 repository.OrderRepository
-	ProductRepo               repository.ProductRepository
-	ProductSKURepo            repository.ProductSKURepository
+	ProductRepo               paymentProductStore
+	ProductSKURepo            paymentSKUStore
 	PaymentRepo               repository.PaymentRepository
 	ChannelRepo               repository.PaymentChannelRepository
 	WalletRepo                repository.WalletRepository

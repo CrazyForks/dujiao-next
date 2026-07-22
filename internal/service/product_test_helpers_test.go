@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
 
@@ -34,8 +35,8 @@ type memberLevelPriceCleaner interface {
 }
 
 func NewProductService(
-	products repository.ProductRepository,
-	skus repository.ProductSKURepository,
+	products catalogproductbootstrap.ProductStore,
+	skus catalogproductbootstrap.SKUStore,
 	cardSecrets repository.CardSecretRepository,
 	cardSecretBatches repository.CardSecretBatchRepository,
 	categories catalog.CategoryRepository,
@@ -103,8 +104,8 @@ func newProductServiceForTest(t *testing.T) (*ProductService, *gorm.DB) {
 	}
 
 	return NewProductService(
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
 		cataloggormstore.NewCategoryStore(db),

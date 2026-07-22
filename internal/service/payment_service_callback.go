@@ -6,7 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -250,10 +250,10 @@ func (s *PaymentService) markOrderPaid(tx *gorm.DB, order *models.Order, now tim
 		return ErrOrderStatusInvalid
 	}
 	orderRepo := s.orderRepo.WithTx(tx)
-	productRepo := s.productRepo.WithTx(tx)
-	var productSKURepo repository.ProductSKURepository
+	productRepo := s.productRepo.BindTx(tx)
+	var productSKURepo catalogproduct.SKURepository
 	if s.productSKURepo != nil {
-		productSKURepo = s.productSKURepo.WithTx(tx)
+		productSKURepo = s.productSKURepo.BindTx(tx)
 	}
 
 	onlineAmount := normalizeOrderAmount(order.TotalAmount.Decimal.Sub(order.WalletPaidAmount.Decimal))

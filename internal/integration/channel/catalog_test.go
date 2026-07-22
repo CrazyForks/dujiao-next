@@ -3,6 +3,7 @@ package channel_test
 import (
 	"encoding/json"
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,7 +16,6 @@ import (
 	"github.com/dujiao-next/internal/modules/catalog"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
@@ -193,7 +193,7 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 		t.Fatalf("create sku failed: %v", err)
 	}
 
-	productRepo := repository.NewProductRepository(db)
+	productRepo := productgormstore.NewProductStore(db)
 	handler := &channeltransport.Handler{Dependencies: channeltransport.Dependencies{
 		ProductRepo:    productRepo,
 		ProductService: productapplication.NewService(productapplication.Options{Products: productRepo}),

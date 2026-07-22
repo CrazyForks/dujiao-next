@@ -2,6 +2,8 @@ package service
 
 import (
 	"errors"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"strconv"
 	"testing"
 
@@ -170,13 +172,16 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T) {
 	_, db := newProductServiceForTest(t)
 	deleteFailure := errors.New("delete product failed")
+	baseProductStore := productgormstore.NewProductStore(db)
 	productRepo := &failingProductDeleteRepository{
-		ProductRepository: repository.NewProductRepository(db),
-		err:               deleteFailure,
+		Repository:  baseProductStore,
+		transaction: baseProductStore.Transaction,
+		binder:      baseProductStore.BindTx,
+		err:         deleteFailure,
 	}
 	service := NewProductService(
 		productRepo,
-		repository.NewProductSKURepository(db),
+		productgormstore.NewSKUStore(db),
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
 		cataloggormstore.NewCategoryStore(db),
@@ -238,18 +243,24 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 }
 
 type failingProductDeleteRepository struct {
-	repository.ProductRepository
-	err error
+	catalogproduct.Repository
+	transaction func(func(*gorm.DB) error) error
+	binder      func(*gorm.DB) catalogproduct.Repository
+	err         error
 }
 
 func (repo *failingProductDeleteRepository) Delete(string) error {
 	return repo.err
 }
 
-func (repo *failingProductDeleteRepository) WithTx(tx *gorm.DB) repository.ProductRepository {
+func (repo *failingProductDeleteRepository) Transaction(fn func(*gorm.DB) error) error {
+	return repo.transaction(fn)
+}
+
+func (repo *failingProductDeleteRepository) BindTx(tx *gorm.DB) catalogproduct.Repository {
 	return &failingProductDeleteRepository{
-		ProductRepository: repo.ProductRepository.WithTx(tx),
-		err:               repo.err,
+		Repository: repo.binder(tx),
+		err:        repo.err,
 	}
 }
 

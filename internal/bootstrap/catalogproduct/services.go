@@ -19,10 +19,23 @@ type memberLevelPriceCleaner interface {
 	DeleteByProductInTx(tx *gorm.DB, productID uint) error
 }
 
+// ProductStore 是装配层需要的 Product 持久化与事务能力。
+type ProductStore interface {
+	catalogproduct.Repository
+	Transaction(fn func(tx *gorm.DB) error) error
+	BindTx(tx *gorm.DB) catalogproduct.Repository
+}
+
+// SKUStore 是装配层需要的 SKU 持久化与事务绑定能力。
+type SKUStore interface {
+	catalogproduct.SKURepository
+	BindTx(tx *gorm.DB) catalogproduct.SKURepository
+}
+
 // Dependencies 是 Product 三组应用用例的装配依赖。
 type Dependencies struct {
-	Products          repository.ProductRepository
-	SKUs              repository.ProductSKURepository
+	Products          ProductStore
+	SKUs              SKUStore
 	CardSecrets       repository.CardSecretRepository
 	CardSecretBatches repository.CardSecretBatchRepository
 	Categories        catalog.CategoryRepository
@@ -42,14 +55,14 @@ type Services struct {
 
 // productWriteUnitOfWork 将 Product Application 所需端口绑定到同一事务。
 type productWriteUnitOfWork struct {
-	products    repository.ProductRepository
-	skus        repository.ProductSKURepository
+	products    ProductStore
+	skus        SKUStore
 	cardSecrets repository.CardSecretRepository
 }
 
 func newProductWriteUnitOfWork(
-	products repository.ProductRepository,
-	skus repository.ProductSKURepository,
+	products ProductStore,
+	skus SKUStore,
 	cardSecrets repository.CardSecretRepository,
 ) productwrite.UnitOfWork {
 	return &productWriteUnitOfWork{
@@ -69,14 +82,14 @@ func (unit *productWriteUnitOfWork) WithinTransaction(fn func(repositories produ
 	return unit.products.Transaction(func(tx *gorm.DB) error {
 		var skus productwrite.SKURepository
 		if unit.skus != nil {
-			skus = unit.skus.WithTx(tx)
+			skus = unit.skus.BindTx(tx)
 		}
 		var cardSecrets productwrite.CardSecretStockRepository
 		if unit.cardSecrets != nil {
 			cardSecrets = unit.cardSecrets.WithTx(tx)
 		}
 		return fn(productwrite.TransactionRepositories{
-			Products:    unit.products.WithTx(tx),
+			Products:    unit.products.BindTx(tx),
 			SKUs:        skus,
 			CardSecrets: cardSecrets,
 		})
@@ -85,8 +98,8 @@ func (unit *productWriteUnitOfWork) WithinTransaction(fn func(repositories produ
 
 // productAdminUnitOfWork 将商品级联删除涉及的端口绑定到同一事务。
 type productAdminUnitOfWork struct {
-	products          repository.ProductRepository
-	productSKUs       repository.ProductSKURepository
+	products          ProductStore
+	productSKUs       SKUStore
 	cardSecrets       repository.CardSecretRepository
 	cardSecretBatches repository.CardSecretBatchRepository
 	memberLevelPrices memberLevelPriceCleaner
@@ -95,8 +108,8 @@ type productAdminUnitOfWork struct {
 }
 
 func newProductAdminUnitOfWork(
-	products repository.ProductRepository,
-	productSKUs repository.ProductSKURepository,
+	products ProductStore,
+	productSKUs SKUStore,
 	cardSecrets repository.CardSecretRepository,
 	cardSecretBatches repository.CardSecretBatchRepository,
 	memberLevelPrices memberLevelPriceCleaner,
@@ -123,10 +136,10 @@ func (unit *productAdminUnitOfWork) WithinTransaction(fn func(productadmin.Delet
 	}
 	return unit.products.Transaction(func(tx *gorm.DB) error {
 		return fn(productadmin.DeleteRepositories{
-			Products:          unit.products.WithTx(tx),
+			Products:          unit.products.BindTx(tx),
 			CardSecrets:       unit.cardSecrets.WithTx(tx),
 			CardSecretBatches: unit.cardSecretBatches.WithTx(tx),
-			SKUs:              unit.productSKUs.WithTx(tx),
+			SKUs:              unit.productSKUs.BindTx(tx),
 			MemberLevelPrices: memberLevelPriceDeleteAdapter{tx: tx, cleaner: unit.memberLevelPrices},
 			Carts:             unit.carts.WithTx(tx),
 			ProductMappings:   bindMappingDeleteTx(unit.productMappings, tx),

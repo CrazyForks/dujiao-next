@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -149,8 +150,8 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 	orderRepo := repository.NewOrderRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	channelRepo := repository.NewPaymentChannelRepository(db)
-	productRepo := repository.NewProductRepository(db)
-	productSKURepo := repository.NewProductSKURepository(db)
+	productRepo := productgormstore.NewProductStore(db)
+	productSKURepo := productgormstore.NewSKUStore(db)
 
 	registry := paymentprovider.NewRegistry()
 	registry.Register(constants.PaymentProviderOkpay, "", paymentprovider.NewOkpayAdapter())

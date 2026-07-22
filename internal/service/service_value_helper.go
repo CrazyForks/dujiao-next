@@ -7,7 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 
 	"github.com/shopspring/decimal"
 )
@@ -43,7 +43,7 @@ func resolveOrderPaymentExpireMinutes(settingService *settingsapp.Service, defau
 }
 
 // resolveProductOrderSKU 统一解析下单相关场景的 SKU 选择逻辑。
-func resolveProductOrderSKU(productSKURepo repository.ProductSKURepository, product *models.Product, rawSKUID uint) (*models.ProductSKU, error) {
+func resolveProductOrderSKU(productSKURepo catalogproduct.SKURepository, product *models.Product, rawSKUID uint) (*models.ProductSKU, error) {
 	if product == nil || product.ID == 0 {
 		return nil, ErrProductNotAvailable
 	}

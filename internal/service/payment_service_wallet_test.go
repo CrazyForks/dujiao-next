@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
 
@@ -46,8 +47,8 @@ func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	models.DB = db
 
 	orderRepo := repository.NewOrderRepository(db)
-	productRepo := repository.NewProductRepository(db)
-	productSKURepo := repository.NewProductSKURepository(db)
+	productRepo := productgormstore.NewProductStore(db)
+	productSKURepo := productgormstore.NewSKUStore(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	channelRepo := repository.NewPaymentChannelRepository(db)
 	walletRepo := repository.NewWalletRepository(db)

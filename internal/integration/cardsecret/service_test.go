@@ -3,6 +3,7 @@ package cardsecret_test
 import (
 	"bytes"
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"mime/multipart"
 	"net/http/httptest"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/cardsecret"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -37,8 +39,8 @@ var (
 func NewCardSecretService(
 	secrets repository.CardSecretRepository,
 	batches repository.CardSecretBatchRepository,
-	products repository.ProductRepository,
-	productSKUs repository.ProductSKURepository,
+	products catalogproduct.Repository,
+	productSKUs catalogproduct.SKURepository,
 ) *cardsecret.Service {
 	return cardsecret.NewService(cardsecret.ServiceOptions{
 		Secrets:      secrets,
@@ -135,8 +137,8 @@ func TestCreateCardSecretBatchAutoMultiSKURequiresExplicitSKU(t *testing.T) {
 	svc := NewCardSecretService(
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 	)
 
 	batch, created, err := svc.CreateCardSecretBatch(CreateCardSecretBatchInput{
@@ -194,8 +196,8 @@ func TestCreateCardSecretBatchAutoSingleActiveFallsBackToOnlyActiveSKU(t *testin
 	svc := NewCardSecretService(
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 	)
 
 	batch, created, err := svc.CreateCardSecretBatch(CreateCardSecretBatchInput{
@@ -244,8 +246,8 @@ func TestCreateCardSecretBatchDeduplicateOption(t *testing.T) {
 	svc := NewCardSecretService(
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 	)
 
 	defaultBatch, created, err := svc.CreateCardSecretBatch(CreateCardSecretBatchInput{
@@ -328,8 +330,8 @@ func TestImportCardSecretCSVKeepsDuplicatesWhenDeduplicateDisabled(t *testing.T)
 	svc := NewCardSecretService(
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 	)
 
 	keepDuplicates := false
@@ -399,8 +401,8 @@ func TestCardSecretServiceSupportsBatchTargetOperations(t *testing.T) {
 	svc := NewCardSecretService(
 		secretRepo,
 		repository.NewCardSecretBatchRepository(db),
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 	)
 
 	batchA, created, err := svc.CreateCardSecretBatch(CreateCardSecretBatchInput{
@@ -539,8 +541,8 @@ func TestExportCardSecretsWithEmptyFilterExportsCurrentResults(t *testing.T) {
 	svc := NewCardSecretService(
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 	)
 	if _, _, err := svc.CreateCardSecretBatch(CreateCardSecretBatchInput{
 		ProductID: product.ID,
@@ -593,8 +595,8 @@ func TestCardSecretServiceSupportsKeywordAndBatchNoFilters(t *testing.T) {
 	svc := NewCardSecretService(
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 	)
 
 	if _, _, err := svc.CreateCardSecretBatch(CreateCardSecretBatchInput{
@@ -670,8 +672,8 @@ func TestCardSecretServiceListBatchesReturnsRealtimeCounts(t *testing.T) {
 	svc := NewCardSecretService(
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 	)
 
 	batchA, _, err := svc.CreateCardSecretBatch(CreateCardSecretBatchInput{
@@ -761,8 +763,8 @@ func TestExportAvailableCardSecretsMarksUsed(t *testing.T) {
 	svc := NewCardSecretService(
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 	)
 	batch, _, err := svc.CreateCardSecretBatch(CreateCardSecretBatchInput{
 		ProductID: product.ID,
@@ -836,8 +838,8 @@ func TestExportAvailableCardSecretsDeletesAfterExport(t *testing.T) {
 	svc := NewCardSecretService(
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 	)
 	batch, _, err := svc.CreateCardSecretBatch(CreateCardSecretBatchInput{
 		ProductID: product.ID,

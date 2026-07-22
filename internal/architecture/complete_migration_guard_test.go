@@ -34,7 +34,6 @@ var legacyRootGoFileBudgets = map[string]int{
 // introduced. The final migration gate requires this set to become empty.
 var baselineCompatibilityFiles = map[string]struct{}{
 	"internal/repository/card_secret_compat.go":     {},
-	"internal/repository/product_compat.go":         {},
 	"internal/repository/product_mapping_compat.go": {},
 }
 
@@ -144,6 +143,7 @@ var completedMigrationPaths = []string{
 	"internal/integration/affiliate",
 	"internal/service/product_service.go",
 	"internal/service/product_application_compat.go",
+	"internal/repository/product_compat.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

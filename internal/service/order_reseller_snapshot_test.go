@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"strings"
 	"testing"
 	"time"
@@ -170,8 +171,8 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		OrderRepo:               orderRepo,
 		PaymentRepo:             repository.NewPaymentRepository(db),
 		UserStore:               userstore.New(db),
-		ProductRepo:             repository.NewProductRepository(db),
-		ProductSKURepo:          repository.NewProductSKURepository(db),
+		ProductRepo:             productgormstore.NewProductStore(db),
+		ProductSKURepo:          productgormstore.NewSKUStore(db),
 		CardSecretRepo:          repository.NewCardSecretRepository(db),
 		CouponRepo:              coupongormstore.New(db),
 		CouponUsageRepo:         coupongormstore.NewUsageStore(db),
@@ -427,7 +428,7 @@ func TestPreviewAndCreateOrderResellerRejectServicePersistedHiddenProductWithout
 	f := newOrderResellerSnapshotFixture(t)
 	settingSvc := resellermodule.NewProductSettingService(
 		resellerpersistence.NewProductSettingStore(repository.NewResellerProductSettingRepository(f.db), f.resellerRepo),
-		repository.NewProductRepository(f.db),
+		productgormstore.NewProductStore(f.db),
 	)
 	if _, err := settingSvc.SaveUserProductSettings(f.owner.ID, f.product.ID, resellermodule.ProductSettingSaveInput{
 		Settings: []resellermodule.ProductSettingInput{

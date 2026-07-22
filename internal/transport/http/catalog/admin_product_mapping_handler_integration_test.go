@@ -60,8 +60,8 @@ func (unit *mappingImportUoW) WithinTransaction(fn func(catalogmapping.ImportRep
 	}
 	return unit.products.Transaction(func(tx *gorm.DB) error {
 		return fn(catalogmapping.ImportRepositories{
-			Products:    unit.products.WithTx(tx),
-			SKUs:        unit.skus.WithTx(tx),
+			Products:    unit.products.BindTx(tx),
+			SKUs:        unit.skus.BindTx(tx),
 			Mappings:    unit.mappings.WithTx(tx),
 			SKUMappings: unit.skuMappings.WithTx(tx),
 		})

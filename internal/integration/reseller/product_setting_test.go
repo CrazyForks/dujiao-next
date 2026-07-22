@@ -2,6 +2,7 @@ package resellerintegration_test
 
 import (
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
 
@@ -82,7 +83,7 @@ func newResellerProductSettingServiceForTest(db *gorm.DB) *ResellerProductSettin
 	return NewResellerProductSettingService(
 		repository.NewResellerProductSettingRepository(db),
 		repository.NewResellerRepository(db),
-		repository.NewProductRepository(db),
+		productgormstore.NewProductStore(db),
 	)
 }
 

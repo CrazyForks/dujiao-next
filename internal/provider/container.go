@@ -17,6 +17,7 @@ import (
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
 	channelclientcontract "github.com/dujiao-next/internal/modules/channelclient/contract"
 	"github.com/dujiao-next/internal/modules/compliance"
@@ -75,8 +76,8 @@ type Container struct {
 	CardSecretBatchRepo        repository.CardSecretBatchRepository
 	GiftCardRepo               *giftcardgormstore.Store
 	FulfillmentRepo            repository.FulfillmentRepository
-	ProductRepo                repository.ProductRepository
-	ProductSKURepo             repository.ProductSKURepository
+	ProductRepo                *productgormstore.ProductStore
+	ProductSKURepo             *productgormstore.SKUStore
 	CartRepo                   repository.CartRepository
 	CouponRepo                 *coupongormstore.Store
 	CouponUsageRepo            *coupongormstore.UsageStore

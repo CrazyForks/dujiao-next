@@ -22,8 +22,8 @@ func NewSKUStore(db *gorm.DB) *SKUStore {
 	return &SKUStore{db: db}
 }
 
-// WithTx 绑定事务
-func (r *SKUStore) WithTx(tx *gorm.DB) *SKUStore {
+// BindTx 将 Store 绑定到调用方事务，并仅暴露 SKU 端口。
+func (r *SKUStore) BindTx(tx *gorm.DB) catalogproduct.SKURepository {
 	if tx == nil {
 		return r
 	}

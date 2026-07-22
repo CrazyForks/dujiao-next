@@ -11,11 +11,11 @@ import (
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/modules/coupon"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/money"
 	adminusertransport "github.com/dujiao-next/internal/transport/http/adminuser"
@@ -112,7 +112,7 @@ func (a adminUserCouponAdapter) ListByIDs(ids []uint) ([]models.Coupon, error) {
 }
 
 type adminUserProductAdapter struct {
-	products repository.ProductRepository
+	products catalogproduct.Repository
 }
 
 func (a adminUserProductAdapter) ListByIDs(ids []uint) ([]models.Product, error) {

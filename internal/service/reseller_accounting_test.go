@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
 
@@ -396,8 +397,8 @@ func TestPaymentSuccessTransactionPostsResellerLedger(t *testing.T) {
 	accounting := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
 	orderRepo := repository.NewOrderRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
-	productRepo := repository.NewProductRepository(db)
-	productSKURepo := repository.NewProductSKURepository(db)
+	productRepo := productgormstore.NewProductStore(db)
+	productSKURepo := productgormstore.NewSKUStore(db)
 	paymentSvc := NewPaymentService(PaymentServiceOptions{
 		OrderRepo:                 orderRepo,
 		PaymentRepo:               paymentRepo,

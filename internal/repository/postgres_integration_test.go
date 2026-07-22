@@ -13,6 +13,8 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"github.com/dujiao-next/internal/modules/content"
 	contentgormstore "github.com/dujiao-next/internal/modules/content/store/gormstore"
 	dashboardgormstore "github.com/dujiao-next/internal/modules/dashboard/store/gormstore"
@@ -86,7 +88,7 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	productRepo := NewProductRepository(db)
+	productRepo := productgormstore.NewProductStore(db)
 	product := &models.Product{
 		CategoryID:       category.ID,
 		Slug:             "pg-product-rocket",
@@ -102,7 +104,7 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	productRows, productTotal, err := productRepo.List(ProductListFilter{
+	productRows, productTotal, err := productRepo.List(catalogproduct.ListFilter{
 		Page:   1,
 		Search: "火箭",
 	})
@@ -113,7 +115,7 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 		t.Fatalf("product list search zh-CN want 1 got total=%d len=%d", productTotal, len(productRows))
 	}
 
-	productRows, productTotal, err = productRepo.List(ProductListFilter{
+	productRows, productTotal, err = productRepo.List(catalogproduct.ListFilter{
 		Page:   1,
 		Search: "booster",
 	})

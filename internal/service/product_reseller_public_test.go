@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
 
@@ -48,8 +49,8 @@ func newProductServiceForResellerPublicTest(t *testing.T) (*ProductService, repo
 	}
 
 	svc := NewProductService(
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
 		cataloggormstore.NewCategoryStore(db),

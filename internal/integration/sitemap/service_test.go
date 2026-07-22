@@ -3,6 +3,7 @@ package sitemap_test
 import (
 	"context"
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"strings"
 	"testing"
 	"time"
@@ -13,7 +14,6 @@ import (
 	domaincontent "github.com/dujiao-next/internal/modules/content"
 	"github.com/dujiao-next/internal/modules/content/store/gormstore"
 	"github.com/dujiao-next/internal/modules/sitemap"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -63,7 +63,7 @@ func newSitemapServiceForTest(t *testing.T, reader sitemap.PublishedPostReader) 
 		})
 	}
 	svc, err := sitemap.NewService(
-		repository.NewProductRepository(db),
+		productgormstore.NewProductStore(db),
 		cataloggormstore.NewCategoryStore(db),
 		reader,
 	)

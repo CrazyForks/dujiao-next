@@ -8,7 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 
 	"gorm.io/gorm"
 )
@@ -21,10 +21,10 @@ func (s *OrderService) cancelOrderWithChildren(order *models.Order, rollbackCoup
 	now := time.Now()
 	err := s.orderRepo.Transaction(func(tx *gorm.DB) error {
 		orderRepo := s.orderRepo.WithTx(tx)
-		productRepo := s.productRepo.WithTx(tx)
-		var productSKURepo repository.ProductSKURepository
+		productRepo := s.productRepo.BindTx(tx)
+		var productSKURepo catalogproduct.SKURepository
 		if s.productSKURepo != nil {
-			productSKURepo = s.productSKURepo.WithTx(tx)
+			productSKURepo = s.productSKURepo.BindTx(tx)
 		}
 		updates := map[string]interface{}{
 			"canceled_at": now,
@@ -472,10 +472,10 @@ func (s *OrderService) completeParentOrderInTx(tx *gorm.DB, order *models.Order,
 
 func (s *OrderService) updateOrderToPaidInTx(tx *gorm.DB, orderID uint, items []models.OrderItem, now time.Time) error {
 	orderRepo := s.orderRepo.WithTx(tx)
-	productRepo := s.productRepo.WithTx(tx)
-	var productSKURepo repository.ProductSKURepository
+	productRepo := s.productRepo.BindTx(tx)
+	var productSKURepo catalogproduct.SKURepository
 	if s.productSKURepo != nil {
-		productSKURepo = s.productSKURepo.WithTx(tx)
+		productSKURepo = s.productSKURepo.BindTx(tx)
 	}
 	updates := map[string]interface{}{
 		"paid_at":    now,
@@ -495,10 +495,10 @@ func (s *OrderService) cancelSingleOrderInTx(tx *gorm.DB, order *models.Order, t
 		return ErrOrderNotFound
 	}
 	orderRepo := s.orderRepo.WithTx(tx)
-	productRepo := s.productRepo.WithTx(tx)
-	var productSKURepo repository.ProductSKURepository
+	productRepo := s.productRepo.BindTx(tx)
+	var productSKURepo catalogproduct.SKURepository
 	if s.productSKURepo != nil {
-		productSKURepo = s.productSKURepo.WithTx(tx)
+		productSKURepo = s.productSKURepo.BindTx(tx)
 	}
 	if err := orderRepo.UpdateStatus(order.ID, target, updates); err != nil {
 		return ErrOrderUpdateFailed

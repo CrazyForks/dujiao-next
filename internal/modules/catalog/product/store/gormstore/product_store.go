@@ -24,8 +24,8 @@ func NewProductStore(db *gorm.DB) *ProductStore {
 	return &ProductStore{db: db}
 }
 
-// WithTx 绑定事务
-func (r *ProductStore) WithTx(tx *gorm.DB) *ProductStore {
+// BindTx 将 Store 绑定到调用方事务，并仅暴露 Product 端口。
+func (r *ProductStore) BindTx(tx *gorm.DB) catalogproduct.Repository {
 	if tx == nil {
 		return r
 	}

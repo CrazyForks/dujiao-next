@@ -47,8 +47,8 @@ func (unit *productWriteUoW) WithinTransaction(fn func(productwrite.TransactionR
 	}
 	return unit.products.Transaction(func(tx *gorm.DB) error {
 		return fn(productwrite.TransactionRepositories{
-			Products:    unit.products.WithTx(tx),
-			SKUs:        unit.skus.WithTx(tx),
+			Products:    unit.products.BindTx(tx),
+			SKUs:        unit.skus.BindTx(tx),
 			CardSecrets: unit.cardSecrets.WithTx(tx),
 		})
 	})
@@ -80,10 +80,10 @@ func (unit *productAdminUoW) WithinTransaction(fn func(productadmin.DeleteReposi
 	}
 	return unit.products.Transaction(func(tx *gorm.DB) error {
 		return fn(productadmin.DeleteRepositories{
-			Products:          unit.products.WithTx(tx),
+			Products:          unit.products.BindTx(tx),
 			CardSecrets:       unit.cardSecrets.WithTx(tx),
 			CardSecretBatches: unit.cardSecretBatches.WithTx(tx),
-			SKUs:              unit.productSKUs.WithTx(tx),
+			SKUs:              unit.productSKUs.BindTx(tx),
 			MemberLevelPrices: memberlevelgormstore.NewPriceStore(tx),
 			Carts:             unit.carts.WithTx(tx),
 			ProductMappings:   unit.productMappings.WithTx(tx),

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"strings"
 	"testing"
 	"time"
@@ -19,7 +20,6 @@ import (
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -144,8 +144,8 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 	priceRepo := memberlevelgormstore.NewPriceStore(db)
 	svc := NewOrderService(OrderServiceOptions{
 		UserStore:          userRepo,
-		ProductRepo:        repository.NewProductRepository(db),
-		ProductSKURepo:     repository.NewProductSKURepository(db),
+		ProductRepo:        productgormstore.NewProductStore(db),
+		ProductSKURepo:     productgormstore.NewSKUStore(db),
 		PromotionRepo:      promotiongormstore.New(db),
 		CouponRepo:         coupongormstore.New(db),
 		CouponUsageRepo:    coupongormstore.NewUsageStore(db),

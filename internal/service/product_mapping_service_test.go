@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -136,8 +137,8 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 	svc, err := NewProductMappingService(
 		repository.NewProductMappingRepository(db),
 		&failingSKUMappingRepo{err: errors.New("inject sku mapping failure")},
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 		categoryRepo,
 		connService,
 		noopLocalMediaRecorder{},
@@ -200,7 +201,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	productRepo := repository.NewProductRepository(db)
+	productRepo := productgormstore.NewProductStore(db)
 	product := models.Product{
 		CategoryID:      1,
 		Slug:            "p",
@@ -213,7 +214,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 	if err := productRepo.Create(&product); err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
-	skuRepo := repository.NewProductSKURepository(db)
+	skuRepo := productgormstore.NewSKUStore(db)
 	sku := models.ProductSKU{ProductID: product.ID, SKUCode: "SKU-A", PriceAmount: money.FromDecimal(decimal.NewFromInt(10)), IsActive: true}
 	if err := skuRepo.Create(&sku); err != nil {
 		t.Fatalf("create sku failed: %v", err)
@@ -788,8 +789,8 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 	svc, err := NewProductMappingService(
 		repository.NewProductMappingRepository(db),
 		repository.NewSKUMappingRepository(db),
-		repository.NewProductRepository(db),
-		repository.NewProductSKURepository(db),
+		productgormstore.NewProductStore(db),
+		productgormstore.NewSKUStore(db),
 		categoryRepo,
 		connService,
 		noopLocalMediaRecorder{},

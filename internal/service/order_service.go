@@ -14,6 +14,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/coupon"
 	"github.com/dujiao-next/internal/modules/orderrisk"
@@ -35,8 +36,8 @@ type OrderService struct {
 	orderRefundRecordRepo   repository.OrderRefundRecordRepository
 	paymentRepo             repository.PaymentRepository
 	userRepo                usercontract.Store
-	productRepo             repository.ProductRepository
-	productSKURepo          repository.ProductSKURepository
+	productRepo             orderProductStore
+	productSKURepo          orderSKUStore
 	cardSecretRepo          repository.CardSecretRepository
 	resellerRepo            repository.ResellerRepository
 	couponRepo              orderCouponRepository
@@ -67,6 +68,16 @@ type AffiliateOrderLifecycle interface {
 	HandleOrderCanceled(orderID uint, reason string) error
 }
 
+type orderProductStore interface {
+	catalogproduct.Repository
+	BindTx(tx *gorm.DB) catalogproduct.Repository
+}
+
+type orderSKUStore interface {
+	catalogproduct.SKURepository
+	BindTx(tx *gorm.DB) catalogproduct.SKURepository
+}
+
 type orderCouponRepository interface {
 	coupon.Repository
 	WithTx(tx *gorm.DB) coupon.Repository
@@ -89,8 +100,8 @@ type OrderServiceOptions struct {
 	OrderRefundRecordRepo     repository.OrderRefundRecordRepository
 	PaymentRepo               repository.PaymentRepository
 	UserStore                 usercontract.Store
-	ProductRepo               repository.ProductRepository
-	ProductSKURepo            repository.ProductSKURepository
+	ProductRepo               orderProductStore
+	ProductSKURepo            orderSKUStore
 	CardSecretRepo            repository.CardSecretRepository
 	ResellerRepo              repository.ResellerRepository
 	CouponRepo                orderCouponRepository
@@ -545,9 +556,9 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 
 	err = s.orderRepo.Transaction(func(tx *gorm.DB) error {
 		orderRepo := s.orderRepo.WithTx(tx)
-		var productSKURepo repository.ProductSKURepository
+		var productSKURepo catalogproduct.SKURepository
 		if s.productSKURepo != nil {
-			productSKURepo = s.productSKURepo.WithTx(tx)
+			productSKURepo = s.productSKURepo.BindTx(tx)
 		}
 		if err := orderRepo.Create(order, nil); err != nil {
 			return err

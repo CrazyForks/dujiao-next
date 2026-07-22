@@ -3,6 +3,7 @@ package reselleradmin_test
 import (
 	"encoding/json"
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -72,7 +73,7 @@ func setupAdminResellerManagementHandlerTest(t *testing.T) (*adminResellerFixtur
 
 	resellerRepo := repository.NewResellerRepository(db)
 	settingRepo := repository.NewResellerProductSettingRepository(db)
-	productRepo := repository.NewProductRepository(db)
+	productRepo := productgormstore.NewProductStore(db)
 	auditRepo := auditloggormstore.NewAuthzStore(db)
 	return &adminResellerFixture{Container: &provider.Container{
 		ResellerRepo:               resellerRepo,

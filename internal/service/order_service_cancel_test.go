@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
 
@@ -99,8 +100,8 @@ func TestCancelExpiredOrderExpiresPendingPayments(t *testing.T) {
 	svc := NewOrderService(OrderServiceOptions{
 		OrderRepo:       repository.NewOrderRepository(db),
 		PaymentRepo:     repository.NewPaymentRepository(db),
-		ProductRepo:     repository.NewProductRepository(db),
-		ProductSKURepo:  repository.NewProductSKURepository(db),
+		ProductRepo:     productgormstore.NewProductStore(db),
+		ProductSKURepo:  productgormstore.NewSKUStore(db),
 		CouponRepo:      coupongormstore.New(db),
 		CouponUsageRepo: coupongormstore.NewUsageStore(db),
 	})
@@ -204,8 +205,8 @@ func TestCancelOrderExpiresPendingPayments(t *testing.T) {
 	svc := NewOrderService(OrderServiceOptions{
 		OrderRepo:       repository.NewOrderRepository(db),
 		PaymentRepo:     repository.NewPaymentRepository(db),
-		ProductRepo:     repository.NewProductRepository(db),
-		ProductSKURepo:  repository.NewProductSKURepository(db),
+		ProductRepo:     productgormstore.NewProductStore(db),
+		ProductSKURepo:  productgormstore.NewSKUStore(db),
 		CouponRepo:      coupongormstore.New(db),
 		CouponUsageRepo: coupongormstore.NewUsageStore(db),
 	})
@@ -248,8 +249,8 @@ func TestUpdateOrderStatusAdminCancelExpiresPendingPaymentsSingleOrder(t *testin
 	svc := NewOrderService(OrderServiceOptions{
 		OrderRepo:       repository.NewOrderRepository(db),
 		PaymentRepo:     repository.NewPaymentRepository(db),
-		ProductRepo:     repository.NewProductRepository(db),
-		ProductSKURepo:  repository.NewProductSKURepository(db),
+		ProductRepo:     productgormstore.NewProductStore(db),
+		ProductSKURepo:  productgormstore.NewSKUStore(db),
 		CouponRepo:      coupongormstore.New(db),
 		CouponUsageRepo: coupongormstore.NewUsageStore(db),
 	})
@@ -302,8 +303,8 @@ func TestCancelExpiredOrderExpiresPaymentsForParentAndChildren(t *testing.T) {
 	svc := NewOrderService(OrderServiceOptions{
 		OrderRepo:       repository.NewOrderRepository(db),
 		PaymentRepo:     repository.NewPaymentRepository(db),
-		ProductRepo:     repository.NewProductRepository(db),
-		ProductSKURepo:  repository.NewProductSKURepository(db),
+		ProductRepo:     productgormstore.NewProductStore(db),
+		ProductSKURepo:  productgormstore.NewSKUStore(db),
 		CouponRepo:      coupongormstore.New(db),
 		CouponUsageRepo: coupongormstore.NewUsageStore(db),
 	})

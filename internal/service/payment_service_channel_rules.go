@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/models"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/repository"
 
 	"gorm.io/gorm"
@@ -102,9 +103,9 @@ func (s *PaymentService) validateProductPaymentChannel(items []models.OrderItem,
 	for id := range productIDSet {
 		productIDs = append(productIDs, id)
 	}
-	repo := s.productRepo
+	var repo catalogproduct.Repository = s.productRepo
 	if len(tx) > 0 && tx[0] != nil {
-		repo = s.productRepo.WithTx(tx[0])
+		repo = s.productRepo.BindTx(tx[0])
 	}
 	products, err := repo.ListByIDs(productIDs)
 	if err != nil {

@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 	"fmt"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
 
@@ -16,7 +17,6 @@ import (
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -90,8 +90,8 @@ func assertBuildOrderResultRejectsPurchaseQuantity(t *testing.T, fixture orderPu
 	}
 
 	svc := NewOrderService(OrderServiceOptions{
-		ProductRepo:    repository.NewProductRepository(db),
-		ProductSKURepo: repository.NewProductSKURepository(db),
+		ProductRepo:    productgormstore.NewProductStore(db),
+		ProductSKURepo: productgormstore.NewSKUStore(db),
 		PromotionRepo:  promotiongormstore.New(db),
 		ExpireMinutes:  15,
 	})
@@ -178,8 +178,8 @@ func TestBuildOrderResultRejectsZeroPromotionPrice(t *testing.T) {
 	}
 
 	svc := NewOrderService(OrderServiceOptions{
-		ProductRepo:    repository.NewProductRepository(db),
-		ProductSKURepo: repository.NewProductSKURepository(db),
+		ProductRepo:    productgormstore.NewProductStore(db),
+		ProductSKURepo: productgormstore.NewSKUStore(db),
 		PromotionRepo:  promotiongormstore.New(db),
 		ExpireMinutes:  15,
 	})
@@ -295,8 +295,8 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 	userRepo := userstore.New(db)
 	svc := NewOrderService(OrderServiceOptions{
 		UserStore:          userRepo,
-		ProductRepo:        repository.NewProductRepository(db),
-		ProductSKURepo:     repository.NewProductSKURepository(db),
+		ProductRepo:        productgormstore.NewProductStore(db),
+		ProductSKURepo:     productgormstore.NewSKUStore(db),
 		PromotionRepo:      promotiongormstore.New(db),
 		MemberLevelService: memberlevel.NewService(levelRepo, priceRepo, userRepo),
 		ExpireMinutes:      15,
@@ -426,8 +426,8 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 	userRepo := userstore.New(db)
 	svc := NewOrderService(OrderServiceOptions{
 		UserStore:          userRepo,
-		ProductRepo:        repository.NewProductRepository(db),
-		ProductSKURepo:     repository.NewProductSKURepository(db),
+		ProductRepo:        productgormstore.NewProductStore(db),
+		ProductSKURepo:     productgormstore.NewSKUStore(db),
 		PromotionRepo:      promotiongormstore.New(db),
 		MemberLevelService: memberlevel.NewService(levelRepo, priceRepo, userRepo),
 		ExpireMinutes:      15,
@@ -570,8 +570,8 @@ func TestBuildOrderResultOriginalAmountBeforePromotion(t *testing.T) {
 	}
 
 	svc := NewOrderService(OrderServiceOptions{
-		ProductRepo:    repository.NewProductRepository(db),
-		ProductSKURepo: repository.NewProductSKURepository(db),
+		ProductRepo:    productgormstore.NewProductStore(db),
+		ProductSKURepo: productgormstore.NewSKUStore(db),
 		PromotionRepo:  promotiongormstore.New(db),
 		ExpireMinutes:  15,
 	})
@@ -676,8 +676,8 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 	}
 
 	svc := NewOrderService(OrderServiceOptions{
-		ProductRepo:     repository.NewProductRepository(db),
-		ProductSKURepo:  repository.NewProductSKURepository(db),
+		ProductRepo:     productgormstore.NewProductStore(db),
+		ProductSKURepo:  productgormstore.NewSKUStore(db),
 		CouponRepo:      coupongormstore.New(db),
 		CouponUsageRepo: coupongormstore.NewUsageStore(db),
 		PromotionRepo:   promotiongormstore.New(db),
