@@ -11,7 +11,7 @@ import (
 	"github.com/dujiao-next/internal/modules/catalog"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	"github.com/dujiao-next/internal/modules/settings"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 	"github.com/dujiao-next/internal/upstream"
 )
 
@@ -110,7 +110,7 @@ type CategoryCreator interface {
 
 // SettingsProvider 读取上游同步动态配置。
 type SettingsProvider interface {
-	GetUpstreamSyncConfig(fallbackInterval string) (settings.UpstreamSyncConfig, error)
+	GetUpstreamSyncConfig(fallbackInterval string) (settingsintegration.UpstreamSyncConfig, error)
 	GetUpstreamSyncInterval(fallbackInterval string) (time.Duration, error)
 }
 

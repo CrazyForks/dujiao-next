@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dujiao-next/internal/http/response"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/modules/channelclient"

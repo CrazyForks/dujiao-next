@@ -7,9 +7,10 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -83,23 +84,23 @@ func (h *UserLoginHandler) recordLogin(c *gin.Context, email string, userID uint
 func (h *UserLoginHandler) UserRegister(c *gin.Context) {
 	var req UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	registrationEnabled, err := h.settings.GetRegistrationEnabled(true)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.register_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.register_failed", err)
 		return
 	}
 	if !registrationEnabled {
-		shared.RespondError(c, response.CodeForbidden, "error.registration_disabled", nil)
+		ginutil.RespondError(c, response.CodeForbidden, "error.registration_disabled", nil)
 		return
 	}
 
 	emailVerificationEnabled, err := h.settings.GetEmailVerificationEnabled(true)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.register_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.register_failed", err)
 		return
 	}
 
@@ -107,23 +108,23 @@ func (h *UserLoginHandler) UserRegister(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidEmail):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
 		case errors.Is(err, ErrEmailExists):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_exists", nil)
 		case errors.Is(err, ErrEmailDomainNotAllowed):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_domain_not_allowed", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_domain_not_allowed", nil)
 		case errors.Is(err, ErrVerifyCodeInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.verify_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.verify_code_invalid", nil)
 		case errors.Is(err, ErrVerifyCodeExpired):
-			shared.RespondError(c, response.CodeBadRequest, "error.verify_code_expired", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.verify_code_expired", nil)
 		case errors.Is(err, ErrVerifyCodeAttemptsExceeded):
-			shared.RespondError(c, response.CodeBadRequest, "error.verify_code_attempts_exceeded", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.verify_code_attempts_exceeded", nil)
 		case errors.Is(err, ErrAgreementRequired):
-			shared.RespondError(c, response.CodeBadRequest, "error.agreement_required", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.agreement_required", nil)
 		case errors.Is(err, ErrWeakPassword):
 			respondWeakPassword(c, err)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.register_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.register_failed", err)
 		}
 		return
 	}
@@ -140,7 +141,7 @@ func (h *UserLoginHandler) UserLogin(c *gin.Context) {
 	var req UserLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.recordLogin(c, req.Email, 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonBadRequest, constants.LoginLogSourceWeb)
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -149,19 +150,19 @@ func (h *UserLoginHandler) UserLogin(c *gin.Context) {
 			switch {
 			case errors.Is(captchaErr, captcha.ErrRequired):
 				h.recordLogin(c, req.Email, 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonCaptchaRequired, constants.LoginLogSourceWeb)
-				shared.RespondError(c, response.CodeBadRequest, "error.captcha_required", nil)
+				ginutil.RespondError(c, response.CodeBadRequest, "error.captcha_required", nil)
 				return
 			case errors.Is(captchaErr, captcha.ErrInvalid):
 				h.recordLogin(c, req.Email, 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonCaptchaInvalid, constants.LoginLogSourceWeb)
-				shared.RespondError(c, response.CodeBadRequest, "error.captcha_invalid", nil)
+				ginutil.RespondError(c, response.CodeBadRequest, "error.captcha_invalid", nil)
 				return
 			case errors.Is(captchaErr, captcha.ErrConfigInvalid):
 				h.recordLogin(c, req.Email, 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonCaptchaConfigInvalid, constants.LoginLogSourceWeb)
-				shared.RespondError(c, response.CodeInternal, "error.captcha_config_invalid", captchaErr)
+				ginutil.RespondError(c, response.CodeInternal, "error.captcha_config_invalid", captchaErr)
 				return
 			default:
 				h.recordLogin(c, req.Email, 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonCaptchaVerifyFailed, constants.LoginLogSourceWeb)
-				shared.RespondError(c, response.CodeInternal, "error.captcha_verify_failed", captchaErr)
+				ginutil.RespondError(c, response.CodeInternal, "error.captcha_verify_failed", captchaErr)
 				return
 			}
 		}
@@ -172,19 +173,19 @@ func (h *UserLoginHandler) UserLogin(c *gin.Context) {
 		switch {
 		case errors.Is(err, ErrInvalidEmail):
 			h.recordLogin(c, req.Email, 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonInvalidEmail, constants.LoginLogSourceWeb)
-			shared.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
 		case errors.Is(err, ErrInvalidCredentials):
 			h.recordLogin(c, req.Email, 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonInvalidCredentials, constants.LoginLogSourceWeb)
-			shared.RespondError(c, response.CodeUnauthorized, "error.login_invalid", nil)
+			ginutil.RespondError(c, response.CodeUnauthorized, "error.login_invalid", nil)
 		case errors.Is(err, ErrEmailNotVerified):
 			h.recordLogin(c, req.Email, 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonEmailNotVerified, constants.LoginLogSourceWeb)
-			shared.RespondError(c, response.CodeUnauthorized, "error.email_not_verified", nil)
+			ginutil.RespondError(c, response.CodeUnauthorized, "error.email_not_verified", nil)
 		case errors.Is(err, ErrUserDisabled):
 			h.recordLogin(c, req.Email, 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonUserDisabled, constants.LoginLogSourceWeb)
-			shared.RespondError(c, response.CodeUnauthorized, "error.user_disabled", nil)
+			ginutil.RespondError(c, response.CodeUnauthorized, "error.user_disabled", nil)
 		default:
 			h.recordLogin(c, req.Email, 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonInternalError, constants.LoginLogSourceWeb)
-			shared.RespondError(c, response.CodeInternal, "error.login_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.login_failed", err)
 		}
 		return
 	}

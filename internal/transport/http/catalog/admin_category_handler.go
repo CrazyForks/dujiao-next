@@ -3,10 +3,10 @@ package cataloghttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/catalog"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -36,7 +36,7 @@ func NewAdminCategoryHandler(service CategoryService) *AdminCategoryHandler {
 func (h *AdminCategoryHandler) GetAdminCategories(c *gin.Context) {
 	categories, err := h.service.List()
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.category_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.category_fetch_failed", err)
 		return
 	}
 
@@ -58,7 +58,7 @@ type CreateCategoryRequest struct {
 func (h *AdminCategoryHandler) CreateCategory(c *gin.Context) {
 	var req CreateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -71,14 +71,14 @@ func (h *AdminCategoryHandler) CreateCategory(c *gin.Context) {
 	})
 	if err != nil {
 		if errors.Is(err, catalog.ErrCategorySlugExists) {
-			shared.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
 			return
 		}
 		if errors.Is(err, catalog.ErrCategoryParentInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.category_parent_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.category_parent_invalid", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.category_create_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.category_create_failed", err)
 		return
 	}
 
@@ -91,7 +91,7 @@ func (h *AdminCategoryHandler) UpdateCategory(c *gin.Context) {
 
 	var req CreateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -104,18 +104,18 @@ func (h *AdminCategoryHandler) UpdateCategory(c *gin.Context) {
 	})
 	if err != nil {
 		if errors.Is(err, catalog.ErrCategoryNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
 			return
 		}
 		if errors.Is(err, catalog.ErrCategorySlugExists) {
-			shared.RespondError(c, response.CodeBadRequest, "error.slug_used", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_used", nil)
 			return
 		}
 		if errors.Is(err, catalog.ErrCategoryParentInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.category_parent_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.category_parent_invalid", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.category_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.category_update_failed", err)
 		return
 	}
 
@@ -133,17 +133,17 @@ func (h *AdminCategoryHandler) PatchCategoryActive(c *gin.Context) {
 
 	var req PatchCategoryActiveRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	category, err := h.service.SetActive(id, req.IsActive)
 	if err != nil {
 		if errors.Is(err, catalog.ErrCategoryNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.category_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.category_update_failed", err)
 		return
 	}
 
@@ -156,14 +156,14 @@ func (h *AdminCategoryHandler) DeleteCategory(c *gin.Context) {
 
 	if err := h.service.Delete(id); err != nil {
 		if errors.Is(err, catalog.ErrCategoryInUse) {
-			shared.RespondError(c, response.CodeBadRequest, "error.category_in_use", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.category_in_use", nil)
 			return
 		}
 		if errors.Is(err, catalog.ErrCategoryNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.category_delete_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.category_delete_failed", err)
 		return
 	}
 

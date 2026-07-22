@@ -5,12 +5,12 @@ import (
 	"errors"
 	"mime/multipart"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
 	uploadmodule "github.com/dujiao-next/internal/modules/upload"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -42,7 +42,7 @@ func NewAdminHandler(uploader FileUploader, media MediaRecorder) *AdminHandler {
 func (h *AdminHandler) UploadFile(c *gin.Context) {
 	file, err := c.FormFile("file")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.file_missing", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.file_missing", nil)
 		return
 	}
 	scene := c.DefaultPostForm("scene", "common")
@@ -50,10 +50,10 @@ func (h *AdminHandler) UploadFile(c *gin.Context) {
 	result, err := h.uploader.SaveFileWithMeta(file, scene)
 	if err != nil {
 		if isUploadValidationError(err) {
-			shared.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
+			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.upload_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.upload_failed", err)
 		return
 	}
 

@@ -5,12 +5,12 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	settingsschema "github.com/dujiao-next/internal/modules/settings"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 )
 
 var callbackRoutesCache struct {
 	mu      sync.RWMutex
-	routes  *settingsschema.CallbackRoutesSetting
+	routes  *settingsintegration.CallbackRoutesSetting
 	loaded  bool
 	expires time.Time
 }
@@ -29,7 +29,7 @@ func (s *Service) InvalidateCallbackRoutesCache() {
 
 // GetCallbackRoutesCached returns custom callback routes from the bounded
 // settings cache, loading them from the store on a miss.
-func (s *Service) GetCallbackRoutesCached() *settingsschema.CallbackRoutesSetting {
+func (s *Service) GetCallbackRoutesCached() *settingsintegration.CallbackRoutesSetting {
 	callbackRoutesCache.mu.RLock()
 	if callbackRoutesCache.loaded && time.Now().Before(callbackRoutesCache.expires) {
 		routes := callbackRoutesCache.routes
@@ -53,7 +53,7 @@ func (s *Service) GetCallbackRoutesCached() *settingsschema.CallbackRoutesSettin
 
 // GetCallbackRoutes returns configured custom callback routes, or nil when no
 // custom route is active.
-func (s *Service) GetCallbackRoutes() *settingsschema.CallbackRoutesSetting {
+func (s *Service) GetCallbackRoutes() *settingsintegration.CallbackRoutesSetting {
 	if s == nil {
 		return nil
 	}
@@ -61,7 +61,7 @@ func (s *Service) GetCallbackRoutes() *settingsschema.CallbackRoutesSetting {
 	if err != nil || value == nil {
 		return nil
 	}
-	setting := settingsschema.DecodeCallbackRoutesSetting(value)
+	setting := settingsintegration.DecodeCallbackRoutesSetting(value)
 	if !setting.HasCustomRoutes() {
 		return nil
 	}

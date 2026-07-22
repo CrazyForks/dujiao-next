@@ -1,8 +1,8 @@
 package contenthttp
 
 import (
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -85,11 +85,11 @@ type BannerUpsertRequest struct {
 
 // buildBannerInputFromRequest 将 Banner HTTP 请求转换为 Content 输入。
 func buildBannerInputFromRequest(request BannerUpsertRequest) (domaincontent.BannerInput, error) {
-	startAt, err := shared.ParseTimeNullable(request.StartAt)
+	startAt, err := ginutil.ParseTimeNullable(request.StartAt)
 	if err != nil {
 		return domaincontent.BannerInput{}, err
 	}
-	endAt, err := shared.ParseTimeNullable(request.EndAt)
+	endAt, err := ginutil.ParseTimeNullable(request.EndAt)
 	if err != nil {
 		return domaincontent.BannerInput{}, err
 	}

@@ -3,9 +3,9 @@ package captchahttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/modules/captcha"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +27,7 @@ func NewPublicHandler(generator ImageChallengeGenerator) *PublicHandler {
 // GetImageCaptcha 获取图片验证码挑战。
 func (h *PublicHandler) GetImageCaptcha(c *gin.Context) {
 	if h == nil || h.generator == nil {
-		shared.RespondError(c, response.CodeInternal, "error.captcha_unavailable", captcha.ErrConfigInvalid)
+		ginutil.RespondError(c, response.CodeInternal, "error.captcha_unavailable", captcha.ErrConfigInvalid)
 		return
 	}
 
@@ -35,9 +35,9 @@ func (h *PublicHandler) GetImageCaptcha(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, captcha.ErrConfigInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.captcha_unavailable", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.captcha_unavailable", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.captcha_generate_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.captcha_generate_failed", err)
 		}
 		return
 	}

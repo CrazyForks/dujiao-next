@@ -7,10 +7,10 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/gin-gonic/gin"
 )
 
@@ -45,7 +45,7 @@ func NewPublicHandler(posts PublicPostQueries, categories PublicPostCategoryQuer
 
 // GetPosts 获取公开文章或公告列表。
 func (h *PublicHandler) GetPosts(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	posts, total, err := h.posts.ListPublic(c.Request.Context(), domaincontent.PublicPostQuery{
 		Type:     c.Query("type"),
 		Search:   c.Query("search"),
@@ -53,7 +53,7 @@ func (h *PublicHandler) GetPosts(c *gin.Context) {
 		PageSize: pageSize,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.post_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.post_fetch_failed", err)
 		return
 	}
 
@@ -67,10 +67,10 @@ func (h *PublicHandler) GetPostBySlug(c *gin.Context) {
 	post, err := h.posts.GetPublicBySlug(requestContext, c.Param("slug"))
 	if err != nil {
 		if errors.Is(err, domaincontent.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.post_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.post_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.post_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.post_fetch_failed", err)
 		return
 	}
 
@@ -99,7 +99,7 @@ func (h *PublicHandler) GetPublicBanners(c *gin.Context) {
 		Limit:    limit,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.banner_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.banner_fetch_failed", err)
 		return
 	}
 	response.Success(c, dto.NewBannerRespList(banners))
@@ -109,7 +109,7 @@ func (h *PublicHandler) GetPublicBanners(c *gin.Context) {
 func (h *PublicHandler) GetPostCategories(c *gin.Context) {
 	categories, err := h.categories.ListActive(c.Request.Context())
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.post_category_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.post_category_fetch_failed", err)
 		return
 	}
 	response.Success(c, newPostCategoryDTOs(categories))

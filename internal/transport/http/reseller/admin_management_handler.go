@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -69,8 +69,8 @@ type systemDomainRequest struct {
 
 // ListProfiles 管理端分销商资料列表。
 func (h *AdminManagementHandler) ListProfiles(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
-	userID, _ := shared.ParseQueryUint(c.Query("user_id"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	userID, _ := ginutil.ParseQueryUint(c.Query("user_id"), false)
 	rows, total, err := h.directory.ListProfiles(ProfileListFilter{
 		Page:             page,
 		PageSize:         pageSize,
@@ -82,7 +82,7 @@ func (h *AdminManagementHandler) ListProfiles(c *gin.Context) {
 		CreatedTo:        parseTimePointer(c.Query("created_to")),
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, rows, response.BuildPagination(page, pageSize, total))
@@ -90,9 +90,9 @@ func (h *AdminManagementHandler) ListProfiles(c *gin.Context) {
 
 // ListDomains 管理端分销域名列表。
 func (h *AdminManagementHandler) ListDomains(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
-	resellerID, _ := shared.ParseQueryUint(c.Query("reseller_id"), false)
-	userID, _ := shared.ParseQueryUint(c.Query("user_id"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	resellerID, _ := ginutil.ParseQueryUint(c.Query("reseller_id"), false)
+	userID, _ := ginutil.ParseQueryUint(c.Query("user_id"), false)
 	rows, total, err := h.directory.ListDomains(DomainListFilter{
 		Page:               page,
 		PageSize:           pageSize,
@@ -107,7 +107,7 @@ func (h *AdminManagementHandler) ListDomains(c *gin.Context) {
 		CreatedTo:          parseTimePointer(c.Query("created_to")),
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, rows, response.BuildPagination(page, pageSize, total))
@@ -115,28 +115,28 @@ func (h *AdminManagementHandler) ListDomains(c *gin.Context) {
 
 // ApproveProfile 审核通过分销商资料。
 func (h *AdminManagementHandler) ApproveProfile(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	var req profileApproveRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	defaultMarkup, err := parseOptionalDecimal(req.DefaultMarkupPercent)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	maxMarkup, err := parseOptionalDecimal(req.MaxMarkupPercent)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	result, err := h.management.ApproveProfile(c.Request.Context(), adminID, id, resellermodule.ResellerApproveInput{
@@ -161,28 +161,28 @@ func (h *AdminManagementHandler) ApproveProfile(c *gin.Context) {
 
 // UpdateProfile 更新分销商运营配置。
 func (h *AdminManagementHandler) UpdateProfile(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	var req profileUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	defaultMarkup, err := parseOptionalDecimal(req.DefaultMarkupPercent)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	maxMarkup, err := parseOptionalDecimal(req.MaxMarkupPercent)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	row, err := h.management.UpdateProfileOperationalConfig(adminID, id, resellermodule.ResellerProfileUpdateInput{
@@ -208,18 +208,18 @@ func (h *AdminManagementHandler) UpdateProfile(c *gin.Context) {
 
 // AssignSystemDomain 为分销商分配或编辑系统二级域名。
 func (h *AdminManagementHandler) AssignSystemDomain(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	var req systemDomainRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	rawSubdomain := strings.TrimSpace(req.Subdomain)
@@ -254,13 +254,13 @@ func (h *AdminManagementHandler) DisableProfile(c *gin.Context) {
 
 // RestoreProfile 恢复分销商资料。
 func (h *AdminManagementHandler) RestoreProfile(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	row, err := h.management.RestoreProfile(adminID, id)
@@ -297,22 +297,22 @@ func (h *AdminManagementHandler) handleProfileReasonAction(
 	object string,
 	fn func(adminID, profileID uint, reason string) (*models.ResellerProfile, error),
 ) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
 	if fn == nil {
-		shared.RespondError(c, response.CodeInternal, "error.save_failed", nil)
+		ginutil.RespondError(c, response.CodeInternal, "error.save_failed", nil)
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	var req profileReasonRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	row, err := fn(adminID, id, req.Reason)
@@ -334,17 +334,17 @@ func (h *AdminManagementHandler) handleDomainAction(
 	object string,
 	fn func(ctx context.Context, adminID, domainID uint) (*models.ResellerDomain, error),
 ) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
 	if fn == nil {
-		shared.RespondError(c, response.CodeInternal, "error.save_failed", nil)
+		ginutil.RespondError(c, response.CodeInternal, "error.save_failed", nil)
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	row, err := fn(c.Request.Context(), adminID, id)

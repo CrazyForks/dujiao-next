@@ -4,10 +4,10 @@ import (
 	"errors"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/apicredential"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,14 +30,14 @@ func NewUserHandler(service UserService) *UserHandler {
 
 // GetMyApiCredential 查看自己的 API 凭证状态
 func (h *UserHandler) GetMyApiCredential(c *gin.Context) {
-	userID, ok := shared.GetUserID(c)
+	userID, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	cred, err := h.service.GetByUserID(userID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.api_credential_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.api_credential_fetch_failed", err)
 		return
 	}
 
@@ -72,7 +72,7 @@ func (h *UserHandler) GetMyApiCredential(c *gin.Context) {
 
 // ApplyApiCredential 申请 API 对接权限
 func (h *UserHandler) ApplyApiCredential(c *gin.Context) {
-	userID, ok := shared.GetUserID(c)
+	userID, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -81,11 +81,11 @@ func (h *UserHandler) ApplyApiCredential(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, apicredential.ErrApiCredentialExists):
-			shared.RespondErrorWithMsg(c, response.CodeBadRequest, "API credential already exists", nil)
+			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, "API credential already exists", nil)
 		case errors.Is(err, apicredential.ErrApiCredentialPendingExist):
-			shared.RespondErrorWithMsg(c, response.CodeBadRequest, "Application is pending review", nil)
+			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, "Application is pending review", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.api_credential_apply_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.api_credential_apply_failed", err)
 		}
 		return
 	}
@@ -98,7 +98,7 @@ func (h *UserHandler) ApplyApiCredential(c *gin.Context) {
 
 // RegenerateMyApiCredential 重新生成 Secret
 func (h *UserHandler) RegenerateMyApiCredential(c *gin.Context) {
-	userID, ok := shared.GetUserID(c)
+	userID, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -107,11 +107,11 @@ func (h *UserHandler) RegenerateMyApiCredential(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, apicredential.ErrApiCredentialNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
 		case errors.Is(err, apicredential.ErrApiCredentialNotApproved):
-			shared.RespondErrorWithMsg(c, response.CodeBadRequest, "API credential is not approved", nil)
+			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, "API credential is not approved", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.api_credential_regenerate_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.api_credential_regenerate_failed", err)
 		}
 		return
 	}
@@ -128,25 +128,25 @@ type UpdateMyApiCredentialStatusRequest struct {
 
 // UpdateMyApiCredentialStatus 启用/禁用自己的凭证
 func (h *UserHandler) UpdateMyApiCredentialStatus(c *gin.Context) {
-	userID, ok := shared.GetUserID(c)
+	userID, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	var req UpdateMyApiCredentialStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	if err := h.service.SetActiveByUserID(userID, req.IsActive); err != nil {
 		switch {
 		case errors.Is(err, apicredential.ErrApiCredentialNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
 		case errors.Is(err, apicredential.ErrApiCredentialNotApproved):
-			shared.RespondErrorWithMsg(c, response.CodeBadRequest, "API credential is not approved", nil)
+			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, "API credential is not approved", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.api_credential_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.api_credential_update_failed", err)
 		}
 		return
 	}

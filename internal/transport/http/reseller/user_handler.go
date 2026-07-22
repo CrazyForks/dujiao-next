@@ -6,11 +6,11 @@ import (
 	"mime/multipart"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	uploadmodule "github.com/dujiao-next/internal/modules/upload"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -77,7 +77,7 @@ func (req siteConfigRequest) toInput() resellermodule.ResellerSiteConfigInput {
 
 // GetManagementSnapshot 获取当前用户的分销商准入与域名状态。
 func (h *UserHandler) GetManagementSnapshot(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -91,13 +91,13 @@ func (h *UserHandler) GetManagementSnapshot(c *gin.Context) {
 
 // ApplyProfile 提交当前用户的分销商申请。
 func (h *UserHandler) ApplyProfile(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req applyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	profile, err := h.management.ApplyUserReseller(uid, resellermodule.ResellerApplyInput{Reason: req.Reason})
@@ -110,7 +110,7 @@ func (h *UserHandler) ApplyProfile(c *gin.Context) {
 
 // ListDomains 查询当前用户的分销域名。
 func (h *UserHandler) ListDomains(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -128,13 +128,13 @@ func (h *UserHandler) ListDomains(c *gin.Context) {
 
 // SubmitCustomDomain 提交当前用户的自定义分销域名。
 func (h *UserHandler) SubmitCustomDomain(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req customDomainRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	row, err := h.management.SubmitUserCustomDomain(uid, req.Domain)
@@ -147,7 +147,7 @@ func (h *UserHandler) SubmitCustomDomain(c *gin.Context) {
 
 // GetSiteConfig 获取当前用户的分销站点配置。
 func (h *UserHandler) GetSiteConfig(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -161,20 +161,20 @@ func (h *UserHandler) GetSiteConfig(c *gin.Context) {
 
 // UpdateSiteConfig 更新当前用户的分销站点配置。
 func (h *UserHandler) UpdateSiteConfig(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req siteConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	row, err := h.siteConfig.UpdateUserSiteConfig(c.Request.Context(), uid, req.toInput())
 	if err != nil {
 		var fieldErr *resellermodule.ResellerSiteConfigFieldError
 		if errors.As(err, &fieldErr) {
-			shared.RespondError(c, response.CodeBadRequest, siteConfigFieldErrorKey(fieldErr.Field), nil)
+			ginutil.RespondError(c, response.CodeBadRequest, siteConfigFieldErrorKey(fieldErr.Field), nil)
 			return
 		}
 		respondUserManagementError(c, err, "error.save_failed")
@@ -185,7 +185,7 @@ func (h *UserHandler) UpdateSiteConfig(c *gin.Context) {
 
 // UploadImage 分销商上传站点图片。
 func (h *UserHandler) UploadImage(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -195,21 +195,21 @@ func (h *UserHandler) UploadImage(c *gin.Context) {
 		return
 	}
 	if !canEdit {
-		shared.RespondError(c, response.CodeForbidden, "error.forbidden", nil)
+		ginutil.RespondError(c, response.CodeForbidden, "error.forbidden", nil)
 		return
 	}
 	file, err := c.FormFile("file")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.file_missing", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.file_missing", nil)
 		return
 	}
 	result, err := h.uploads.SaveFileWithMeta(file, "reseller")
 	if err != nil {
 		if isUploadValidationError(err) {
-			shared.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
+			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.upload_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.upload_failed", err)
 		return
 	}
 	response.Success(c, gin.H{

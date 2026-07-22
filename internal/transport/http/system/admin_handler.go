@@ -5,8 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/version"
 
 	"github.com/gin-gonic/gin"
@@ -44,10 +45,10 @@ func (h *AdminHandler) CheckSystemUpdate(c *gin.Context) {
 	result, err := h.releases.CheckLatestRelease(ctx)
 	if err != nil {
 		if errors.Is(err, version.ErrRateLimited) {
-			shared.RespondError(c, response.CodeTooManyRequests, "error.update_check_rate_limited", err)
+			ginutil.RespondError(c, response.CodeTooManyRequests, "error.update_check_rate_limited", err)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.update_check_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.update_check_failed", err)
 		return
 	}
 

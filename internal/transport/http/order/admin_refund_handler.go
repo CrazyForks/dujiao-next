@@ -4,10 +4,10 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -128,7 +128,7 @@ type AdminManualRefundOrderRequest struct {
 
 // GetAdminOrderRefunds 获取管理端退款记录列表
 func (h *AdminRefundHandler) GetAdminOrderRefunds(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	items, total, err := h.refunds.ListAdminRefundItems(AdminRefundListQuery{
 		Page:           page,
@@ -145,9 +145,9 @@ func (h *AdminRefundHandler) GetAdminOrderRefunds(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrOrderFetchFailed):
-			shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		default:
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		}
 		return
 	}
@@ -158,9 +158,9 @@ func (h *AdminRefundHandler) GetAdminOrderRefunds(c *gin.Context) {
 
 // GetAdminOrderRefund 获取管理端退款记录详情
 func (h *AdminRefundHandler) GetAdminOrderRefund(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
@@ -168,9 +168,9 @@ func (h *AdminRefundHandler) GetAdminOrderRefund(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrOrderNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		}
 		return
 	}
@@ -180,22 +180,22 @@ func (h *AdminRefundHandler) GetAdminOrderRefund(c *gin.Context) {
 // AdminRefundOrderToWallet 管理端订单退款到余额
 func (h *AdminRefundHandler) AdminRefundOrderToWallet(c *gin.Context) {
 	if h.writes == nil || h.wallet == nil {
-		shared.RespondError(c, response.CodeInternal, "error.order_update_failed", nil)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_update_failed", nil)
 		return
 	}
-	orderID, err := shared.ParseParamUint(c, "id")
+	orderID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
 		return
 	}
 	var req AdminRefundOrderToWalletRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	amount, err := h.writes.ParseRefundAmount(req.Amount)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	order, txn, refundRecord, err := h.wallet.AdminRefundToWallet(AdminRefundToWalletInput{
@@ -206,15 +206,15 @@ func (h *AdminRefundHandler) AdminRefundOrderToWallet(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrOrderNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 		case errors.Is(err, ErrOrderStatusInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.order_status_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.order_status_invalid", nil)
 		case errors.Is(err, ErrOrderRefundExpired):
-			shared.RespondError(c, response.CodeBadRequest, "error.order_refund_expired", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.order_refund_expired", nil)
 		case errors.Is(err, ErrWalletInvalidAmount), errors.Is(err, ErrWalletRefundExceeded), errors.Is(err, ErrWalletNotSupportedForGuest):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.order_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.order_update_failed", err)
 		}
 		return
 	}
@@ -229,22 +229,22 @@ func (h *AdminRefundHandler) AdminRefundOrderToWallet(c *gin.Context) {
 // AdminManualRefundOrder 管理端手动退款（不处理钱包/支付渠道）
 func (h *AdminRefundHandler) AdminManualRefundOrder(c *gin.Context) {
 	if h.writes == nil {
-		shared.RespondError(c, response.CodeInternal, "error.order_update_failed", nil)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_update_failed", nil)
 		return
 	}
-	orderID, err := shared.ParseParamUint(c, "id")
+	orderID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
 		return
 	}
 	var req AdminManualRefundOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	amount, err := h.writes.ParseRefundAmount(req.Amount)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	order, refundRecord, err := h.writes.AdminManualRefund(AdminManualRefundInput{
@@ -255,15 +255,15 @@ func (h *AdminRefundHandler) AdminManualRefundOrder(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrOrderNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 		case errors.Is(err, ErrOrderStatusInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.order_status_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.order_status_invalid", nil)
 		case errors.Is(err, ErrOrderRefundExpired):
-			shared.RespondError(c, response.CodeBadRequest, "error.order_refund_expired", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.order_refund_expired", nil)
 		case errors.Is(err, ErrWalletInvalidAmount), errors.Is(err, ErrWalletRefundExceeded):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.order_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.order_update_failed", err)
 		}
 		return
 	}

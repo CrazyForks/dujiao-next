@@ -8,9 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -88,34 +89,34 @@ func NewAdminHandler(payments AdminPaymentQuery, channels AdminChannelLookup, or
 
 // GetAdminPayments 获取支付记录列表
 func (h *AdminHandler) GetAdminPayments(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	filter, err := buildAdminPaymentFilter(c, page, pageSize)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	payments, total, err := h.payments.ListPayments(filter)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 
 	pagination := response.BuildPagination(page, pageSize, total)
 	channelNameMap, err := h.resolvePaymentChannelNames(payments)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 	rechargeMetaMap, err := h.resolvePaymentRechargeMeta(payments)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 	orderNoMap, err := h.resolvePaymentOrderNos(payments)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 
@@ -140,7 +141,7 @@ func (h *AdminHandler) GetAdminPayments(c *gin.Context) {
 func (h *AdminHandler) ExportAdminPayments(c *gin.Context) {
 	filter, err := buildAdminPaymentFilter(c, 1, adminPaymentExportBatchSize)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	filter.SkipCount = true
@@ -148,7 +149,7 @@ func (h *AdminHandler) ExportAdminPayments(c *gin.Context) {
 
 	payments, _, err := h.payments.ListPayments(filter)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 
@@ -175,7 +176,7 @@ func (h *AdminHandler) ExportAdminPayments(c *gin.Context) {
 		"expired_at",
 		"provider_ref",
 	}); err != nil {
-		shared.RequestLog(c).Errorw("admin_payment_export_header_write_failed", "error", err)
+		ginutil.RequestLog(c).Errorw("admin_payment_export_header_write_failed", "error", err)
 		return
 	}
 
@@ -183,12 +184,12 @@ func (h *AdminHandler) ExportAdminPayments(c *gin.Context) {
 	for {
 		if len(payments) > 0 {
 			if err := h.writeAdminPaymentCSVRows(writer, payments); err != nil {
-				shared.RequestLog(c).Errorw("admin_payment_export_rows_write_failed", "page", page, "error", err)
+				ginutil.RequestLog(c).Errorw("admin_payment_export_rows_write_failed", "page", page, "error", err)
 				return
 			}
 			writer.Flush()
 			if err := writer.Error(); err != nil {
-				shared.RequestLog(c).Errorw("admin_payment_export_flush_failed", "page", page, "error", err)
+				ginutil.RequestLog(c).Errorw("admin_payment_export_flush_failed", "page", page, "error", err)
 				return
 			}
 		}
@@ -199,7 +200,7 @@ func (h *AdminHandler) ExportAdminPayments(c *gin.Context) {
 		filter.Page = page
 		payments, _, err = h.payments.ListPayments(filter)
 		if err != nil {
-			shared.RequestLog(c).Errorw("admin_payment_export_batch_fetch_failed", "page", page, "error", err)
+			ginutil.RequestLog(c).Errorw("admin_payment_export_batch_fetch_failed", "page", page, "error", err)
 			return
 		}
 	}
@@ -207,9 +208,9 @@ func (h *AdminHandler) ExportAdminPayments(c *gin.Context) {
 
 // GetAdminPayment 获取支付记录详情
 func (h *AdminHandler) GetAdminPayment(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
 		return
 	}
 
@@ -217,26 +218,26 @@ func (h *AdminHandler) GetAdminPayment(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrPaymentNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		}
 		return
 	}
 
 	channelNameMap, err := h.resolvePaymentChannelNames([]models.Payment{*payment})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 	rechargeMetaMap, err := h.resolvePaymentRechargeMeta([]models.Payment{*payment})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 	orderNoMap, err := h.resolvePaymentOrderNos([]models.Payment{*payment})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 	rechargeMeta := rechargeMetaMap[payment.ID]
@@ -273,20 +274,20 @@ func formatTimeNullable(raw *time.Time) string {
 }
 
 func buildAdminPaymentFilter(c *gin.Context, page, pageSize int) (AdminPaymentListFilter, error) {
-	orderID, err := shared.ParseQueryUint(c.Query("order_id"), true)
+	orderID, err := ginutil.ParseQueryUint(c.Query("order_id"), true)
 	if err != nil {
 		return AdminPaymentListFilter{}, err
 	}
-	userID, err := shared.ParseQueryUint(c.Query("user_id"), true)
+	userID, err := ginutil.ParseQueryUint(c.Query("user_id"), true)
 	if err != nil {
 		return AdminPaymentListFilter{}, err
 	}
-	channelID, err := shared.ParseQueryUint(c.Query("channel_id"), true)
+	channelID, err := ginutil.ParseQueryUint(c.Query("channel_id"), true)
 	if err != nil {
 		return AdminPaymentListFilter{}, err
 	}
 
-	createdFrom, createdTo, err := shared.ParseQueryTimeRange(c, "created_from", "created_to")
+	createdFrom, createdTo, err := ginutil.ParseQueryTimeRange(c, "created_from", "created_to")
 	if err != nil {
 		return AdminPaymentListFilter{}, err
 	}

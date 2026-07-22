@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/http/response"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"

@@ -5,10 +5,11 @@ import (
 	"io"
 	"strings"
 
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -66,17 +67,17 @@ func NewWebhookHandler(webhooks PaymentWebhookService, alerts ExceptionAlerter) 
 
 // PaypalWebhook PayPal webhook 回调。
 func (h *WebhookHandler) PaypalWebhook(c *gin.Context) {
-	log := shared.RequestLog(c)
+	log := ginutil.RequestLog(c)
 	var query PaypalWebhookQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
 		log.Warnw("paypal_webhook_query_invalid", "error", err)
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		log.Warnw("paypal_webhook_body_read_failed", "channel_id", query.ChannelID, "error", err)
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	log.Infow("paypal_webhook_received",
@@ -116,14 +117,14 @@ func (h *WebhookHandler) PaypalWebhook(c *gin.Context) {
 
 // StripeWebhook Stripe webhook 回调。
 func (h *WebhookHandler) StripeWebhook(c *gin.Context) {
-	log := shared.RequestLog(c)
+	log := ginutil.RequestLog(c)
 	var query StripeWebhookQuery
 	_ = c.ShouldBindQuery(&query)
 
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		log.Warnw("stripe_webhook_body_read_failed", "channel_id", query.ChannelID, "error", err)
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	log.Infow("stripe_webhook_received",
@@ -160,14 +161,14 @@ func (h *WebhookHandler) StripeWebhook(c *gin.Context) {
 
 // DujiaoPayWebhook DujiaoPay webhook 回调。
 func (h *WebhookHandler) DujiaoPayWebhook(c *gin.Context) {
-	log := shared.RequestLog(c)
+	log := ginutil.RequestLog(c)
 	var query DujiaoPayWebhookQuery
 	_ = c.ShouldBindQuery(&query)
 
 	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		log.Warnw("dujiaopay_webhook_body_read_failed", "channel_id", query.ChannelID, "error", err)
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	log.Infow("dujiaopay_webhook_received",
@@ -261,7 +262,7 @@ func (h *WebhookHandler) enqueuePaymentExceptionAlert(c *gin.Context, data jsonm
 		strings.TrimSpace(c.ClientIP()),
 		data,
 	); err != nil {
-		shared.RequestLog(c).Warnw("enqueue_payment_exception_alert_failed", "error", err)
+		ginutil.RequestLog(c).Warnw("enqueue_payment_exception_alert_failed", "error", err)
 	}
 }
 

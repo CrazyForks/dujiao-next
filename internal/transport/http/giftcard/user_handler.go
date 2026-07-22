@@ -7,10 +7,11 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/giftcard"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -45,13 +46,13 @@ type redeemRequest struct {
 
 // Redeem 用户兑换礼品卡。
 func (h *UserHandler) Redeem(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req redeemRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	if h.captcha != nil {
@@ -74,29 +75,29 @@ func (h *UserHandler) Redeem(c *gin.Context) {
 func respondCaptchaError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, captcha.ErrRequired):
-		shared.RespondError(c, response.CodeBadRequest, "error.captcha_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.captcha_required", nil)
 	case errors.Is(err, captcha.ErrInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.captcha_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.captcha_invalid", nil)
 	case errors.Is(err, captcha.ErrConfigInvalid):
-		shared.RespondError(c, response.CodeInternal, "error.captcha_config_invalid", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.captcha_config_invalid", err)
 	default:
-		shared.RespondError(c, response.CodeInternal, "error.captcha_verify_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.captcha_verify_failed", err)
 	}
 }
 
 func respondUserGiftCardError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, giftcard.ErrInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
 	case errors.Is(err, giftcard.ErrNotFound):
-		shared.RespondError(c, response.CodeNotFound, "error.gift_card_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.gift_card_not_found", nil)
 	case errors.Is(err, giftcard.ErrExpired):
-		shared.RespondError(c, response.CodeBadRequest, "error.gift_card_expired", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_expired", nil)
 	case errors.Is(err, giftcard.ErrDisabled):
-		shared.RespondError(c, response.CodeBadRequest, "error.gift_card_disabled", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_disabled", nil)
 	case errors.Is(err, giftcard.ErrRedeemed):
-		shared.RespondError(c, response.CodeBadRequest, "error.gift_card_redeemed", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_redeemed", nil)
 	default:
-		shared.RespondError(c, response.CodeInternal, "error.gift_card_redeem_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.gift_card_redeem_failed", err)
 	}
 }

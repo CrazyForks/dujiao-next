@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/http/handlers/shared"
@@ -54,14 +56,14 @@ func (h *ChannelHandler) GetWallet(c *gin.Context) {
 
 	userID, err := h.users.ProvisionUserID(channelUserID)
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_wallet_resolve_user", "channel_user_id", channelUserID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_wallet_resolve_user", "channel_user_id", channelUserID, "error", err)
 		shared.ChannelIdentityError(c, err)
 		return
 	}
 
 	account, err := h.wallets.GetAccount(userID)
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_wallet_get_account", "user_id", userID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_wallet_get_account", "user_id", userID, "error", err)
 		shared.ChannelError(c, http.StatusInternalServerError, 500, "internal_error", "error.internal_error", err)
 		return
 	}
@@ -80,18 +82,18 @@ func (h *ChannelHandler) GetWalletTransactions(c *gin.Context) {
 		return
 	}
 
-	page, pageSize := shared.ParsePaginationWithBounds(c, "page", "page_size", 5, 20)
+	page, pageSize := ginutil.ParsePaginationWithBounds(c, "page", "page_size", 5, 20)
 
 	userID, err := h.users.ProvisionUserID(channelUserID)
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_wallet_txns_resolve_user", "channel_user_id", channelUserID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_wallet_txns_resolve_user", "channel_user_id", channelUserID, "error", err)
 		shared.ChannelIdentityError(c, err)
 		return
 	}
 
 	txns, total, err := h.wallets.ListTransactions(userID, page, pageSize)
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_wallet_list_txns", "user_id", userID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_wallet_list_txns", "user_id", userID, "error", err)
 		shared.ChannelError(c, http.StatusInternalServerError, 500, "internal_error", "error.internal_error", err)
 		return
 	}
@@ -148,7 +150,7 @@ func (h *ChannelHandler) CreateWalletRecharge(c *gin.Context) {
 
 	userID, err := h.users.ProvisionUserID(channelUserID)
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_wallet_recharge_resolve_user", "channel_user_id", channelUserID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_wallet_recharge_resolve_user", "channel_user_id", channelUserID, "error", err)
 		shared.ChannelIdentityError(c, err)
 		return
 	}
@@ -173,7 +175,7 @@ func (h *ChannelHandler) CreateWalletRecharge(c *gin.Context) {
 		Context:   c.Request.Context(),
 	})
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_wallet_recharge_create", "user_id", userID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_wallet_recharge_create", "user_id", userID, "error", err)
 		shared.ChannelError(c, http.StatusBadRequest, 400, "payment_create_failed", "error.payment_create_failed", err)
 		return
 	}

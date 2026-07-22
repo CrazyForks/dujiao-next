@@ -4,12 +4,13 @@ import (
 	"errors"
 	"strings"
 
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -54,7 +55,7 @@ func NewHandler(svc Service) *Handler {
 func (h *Handler) TrackAffiliateClick(c *gin.Context) {
 	var req trackClickRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -66,7 +67,7 @@ func (h *Handler) TrackAffiliateClick(c *gin.Context) {
 		ClientIP:      c.ClientIP(),
 		UserAgent:     c.GetHeader("User-Agent"),
 	}); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.save_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 		return
 	}
 	response.Success(c, gin.H{"ok": true})
@@ -74,7 +75,7 @@ func (h *Handler) TrackAffiliateClick(c *gin.Context) {
 
 // OpenAffiliate 开通推广返利
 func (h *Handler) OpenAffiliate(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -83,11 +84,11 @@ func (h *Handler) OpenAffiliate(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, affiliate.ErrDisabled):
-			shared.RespondError(c, response.CodeBadRequest, "error.forbidden", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.forbidden", nil)
 		case errors.Is(err, catalogproduct.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.save_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 		}
 		return
 	}
@@ -96,13 +97,13 @@ func (h *Handler) OpenAffiliate(c *gin.Context) {
 
 // GetAffiliateDashboard 获取推广返利看板
 func (h *Handler) GetAffiliateDashboard(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	data, err := h.svc.GetUserDashboard(uid)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.Success(c, data)
@@ -110,16 +111,16 @@ func (h *Handler) GetAffiliateDashboard(c *gin.Context) {
 
 // ListAffiliateCommissions 查询我的推广佣金记录
 func (h *Handler) ListAffiliateCommissions(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	status := strings.TrimSpace(c.Query("status"))
 
 	rows, total, err := h.svc.ListUserCommissions(uid, page, pageSize, status)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, dto.NewAffiliateCommissionRespList(rows), response.BuildPagination(page, pageSize, total))
@@ -127,16 +128,16 @@ func (h *Handler) ListAffiliateCommissions(c *gin.Context) {
 
 // ListAffiliateWithdraws 查询我的提现申请记录
 func (h *Handler) ListAffiliateWithdraws(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	status := strings.TrimSpace(c.Query("status"))
 
 	rows, total, err := h.svc.ListUserWithdraws(uid, page, pageSize, status)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, dto.NewAffiliateWithdrawRespList(rows), response.BuildPagination(page, pageSize, total))
@@ -144,19 +145,19 @@ func (h *Handler) ListAffiliateWithdraws(c *gin.Context) {
 
 // ApplyAffiliateWithdraw 提交提现申请
 func (h *Handler) ApplyAffiliateWithdraw(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	var req withdrawApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	amount, err := decimal.NewFromString(strings.TrimSpace(req.Amount))
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
@@ -168,17 +169,17 @@ func (h *Handler) ApplyAffiliateWithdraw(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, affiliate.ErrDisabled):
-			shared.RespondError(c, response.CodeBadRequest, "error.forbidden", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.forbidden", nil)
 		case errors.Is(err, affiliate.ErrNotOpened):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		case errors.Is(err, affiliate.ErrWithdrawAmountInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		case errors.Is(err, affiliate.ErrWithdrawChannelInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		case errors.Is(err, affiliate.ErrWithdrawInsufficient):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.save_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 		}
 		return
 	}

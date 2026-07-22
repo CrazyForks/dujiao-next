@@ -5,10 +5,11 @@ import (
 	"errors"
 	"time"
 
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -133,13 +134,13 @@ func adminUsername(c *gin.Context) string {
 
 // Get2FAStatus 当前管理员 2FA 状态。
 func (h *Admin2FAHandler) Get2FAStatus(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
 	st, err := h.totp.GetStatus(adminID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.internal_error", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.internal_error", err)
 		return
 	}
 	response.Success(c, st)
@@ -147,7 +148,7 @@ func (h *Admin2FAHandler) Get2FAStatus(c *gin.Context) {
 
 // Setup2FA 开始绑定，返回 secret + otpauth url。
 func (h *Admin2FAHandler) Setup2FA(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
@@ -155,11 +156,11 @@ func (h *Admin2FAHandler) Setup2FA(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrTOTPAlreadyEnabled):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_already_enabled", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_already_enabled", nil)
 		case errors.Is(err, ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.internal_error", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.internal_error", err)
 		}
 		return
 	}
@@ -174,13 +175,13 @@ type Enable2FARequest struct {
 
 // Enable2FA 完成绑定。
 func (h *Admin2FAHandler) Enable2FA(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
 	var req Enable2FARequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	res, err := h.totp.Enable(adminID, req.Code)
@@ -188,18 +189,18 @@ func (h *Admin2FAHandler) Enable2FA(c *gin.Context) {
 		switch {
 		case errors.Is(err, ErrTOTPAlreadyEnabled):
 			h.writeLoginLog(c, adminID, adminUsername(c), constants.AdminLoginEvent2FAEnabled, constants.AdminLoginStatusFailed, constants.AdminLoginFailAlreadyEnabled, nil)
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_already_enabled", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_already_enabled", nil)
 		case errors.Is(err, ErrTOTPPendingExpired):
 			h.writeLoginLog(c, adminID, adminUsername(c), constants.AdminLoginEvent2FAEnabled, constants.AdminLoginStatusFailed, constants.AdminLoginFailPendingExpired, nil)
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_pending_expired", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_pending_expired", nil)
 		case errors.Is(err, ErrTOTPCodeInvalid):
 			h.writeLoginLog(c, adminID, adminUsername(c), constants.AdminLoginEvent2FAEnabled, constants.AdminLoginStatusFailed, constants.AdminLoginFailInvalidTOTPCode, nil)
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_code_invalid", nil)
 		case errors.Is(err, ErrTOTPTooManyAttempts):
 			h.writeLoginLog(c, adminID, adminUsername(c), constants.AdminLoginEvent2FAEnabled, constants.AdminLoginStatusFailed, constants.AdminLoginFailTooManyAttempts, nil)
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_too_many_attempts", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_too_many_attempts", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.internal_error", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.internal_error", err)
 		}
 		return
 	}
@@ -215,17 +216,17 @@ type Disable2FARequest struct {
 
 // Disable2FA 关闭 2FA。
 func (h *Admin2FAHandler) Disable2FA(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
 	var req Disable2FARequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	if req.Code == "" && req.RecoveryCode == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.totp_code_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.totp_code_required", nil)
 		return
 	}
 	isRecovery := req.RecoveryCode != ""
@@ -236,15 +237,15 @@ func (h *Admin2FAHandler) Disable2FA(c *gin.Context) {
 	if err := h.totp.Disable(adminID, codeArg, isRecovery); err != nil {
 		switch {
 		case errors.Is(err, ErrTOTPNotEnabled):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_not_enabled", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_not_enabled", nil)
 		case errors.Is(err, ErrTOTPCodeInvalid):
 			h.writeLoginLog(c, adminID, adminUsername(c), constants.AdminLoginEvent2FADisabled, constants.AdminLoginStatusFailed, constants.AdminLoginFailInvalidTOTPCode, nil)
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_code_invalid", nil)
 		case errors.Is(err, ErrTOTPRecoveryInvalid):
 			h.writeLoginLog(c, adminID, adminUsername(c), constants.AdminLoginEvent2FADisabled, constants.AdminLoginStatusFailed, constants.AdminLoginFailInvalidRecoveryCode, nil)
-			shared.RespondError(c, response.CodeBadRequest, "error.recovery_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.recovery_code_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.internal_error", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.internal_error", err)
 		}
 		return
 	}
@@ -259,25 +260,25 @@ type RegenerateRecoveryCodesRequest struct {
 
 // RegenerateRecoveryCodes 重新生成恢复码。
 func (h *Admin2FAHandler) RegenerateRecoveryCodes(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
 	var req RegenerateRecoveryCodesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	codes, err := h.totp.RegenerateRecoveryCodes(adminID, req.Code)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrTOTPNotEnabled):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_not_enabled", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_not_enabled", nil)
 		case errors.Is(err, ErrTOTPCodeInvalid):
 			h.writeLoginLog(c, adminID, adminUsername(c), constants.AdminLoginEventRecoveryRegenerated, constants.AdminLoginStatusFailed, constants.AdminLoginFailInvalidTOTPCode, nil)
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_code_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.internal_error", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.internal_error", err)
 		}
 		return
 	}
@@ -296,21 +297,21 @@ type Verify2FARequest struct {
 func (h *Admin2FAHandler) Verify2FA(c *gin.Context) {
 	var req Verify2FARequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	if req.Code == "" && req.RecoveryCode == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.totp_code_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.totp_code_required", nil)
 		return
 	}
 	claims, err := h.auth.ParseChallengeToken(req.ChallengeToken)
 	if err != nil {
-		shared.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
+		ginutil.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
 		return
 	}
 	ctx := context.Background()
 	if h.challenges != nil && h.challenges.IsRevoked(ctx, claims.JTI) {
-		shared.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
+		ginutil.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
 		return
 	}
 	verifyErr := h.verifyChallengeAttempt(claims.AdminID, req.Code, req.RecoveryCode)
@@ -331,16 +332,16 @@ func (h *Admin2FAHandler) Verify2FA(c *gin.Context) {
 			if h.challenges != nil {
 				h.challenges.Revoke(ctx, claims.JTI)
 			}
-			shared.RespondError(c, response.CodeUnauthorized, "error.totp_too_many_attempts", nil)
+			ginutil.RespondError(c, response.CodeUnauthorized, "error.totp_too_many_attempts", nil)
 			return
 		}
 		switch {
 		case errors.Is(verifyErr, ErrTOTPCodeInvalid):
-			shared.RespondError(c, response.CodeUnauthorized, "error.totp_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeUnauthorized, "error.totp_code_invalid", nil)
 		case errors.Is(verifyErr, ErrTOTPRecoveryInvalid):
-			shared.RespondError(c, response.CodeUnauthorized, "error.recovery_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeUnauthorized, "error.recovery_code_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
+			ginutil.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
 		}
 		return
 	}
@@ -349,7 +350,7 @@ func (h *Admin2FAHandler) Verify2FA(c *gin.Context) {
 	}
 	loginRes, err := h.auth.CompleteLoginAfter2FA(claims.AdminID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.login_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.login_failed", err)
 		return
 	}
 	successEvent := constants.AdminLoginEventLogin2FAVerify
@@ -374,27 +375,27 @@ func (h *Admin2FAHandler) verifyChallengeAttempt(adminID uint, code, recoveryCod
 
 // ResetTargetAdmin2FA 超管重置某管理员 2FA。
 func (h *Admin2FAHandler) ResetTargetAdmin2FA(c *gin.Context) {
-	operatorID, ok := shared.GetAdminID(c)
+	operatorID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
-	if !shared.IsSuperAdmin(c) {
-		shared.RespondError(c, response.CodeForbidden, "error.forbidden", nil)
+	if !ginutil.IsSuperAdmin(c) {
+		ginutil.RespondError(c, response.CodeForbidden, "error.forbidden", nil)
 		return
 	}
-	targetID, err := shared.ParseParamUint(c, "id")
+	targetID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	if err := h.totp.AdminReset(operatorID, targetID); err != nil {
 		switch {
 		case errors.Is(err, ErrTOTPCannotResetSelf):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_cannot_reset_self", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_cannot_reset_self", nil)
 		case errors.Is(err, ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.internal_error", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.internal_error", err)
 		}
 		return
 	}

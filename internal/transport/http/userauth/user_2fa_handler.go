@@ -7,8 +7,8 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -114,13 +114,13 @@ func (h *User2FAHandler) recordLogin(c *gin.Context, email string, userID uint, 
 
 // GetUser2FAStatus 当前用户 2FA 状态。
 func (h *User2FAHandler) GetUser2FAStatus(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	st, err := h.totp.GetStatus(uid)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.internal_error", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.internal_error", err)
 		return
 	}
 	response.Success(c, st)
@@ -128,7 +128,7 @@ func (h *User2FAHandler) GetUser2FAStatus(c *gin.Context) {
 
 // SetupUser2FA 开始绑定，返回 secret + otpauth url。
 func (h *User2FAHandler) SetupUser2FA(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -136,11 +136,11 @@ func (h *User2FAHandler) SetupUser2FA(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrTOTPAlreadyEnabled):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_already_enabled", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_already_enabled", nil)
 		case errors.Is(err, ErrUserNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.internal_error", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.internal_error", err)
 		}
 		return
 	}
@@ -154,28 +154,28 @@ type EnableUser2FARequest struct {
 
 // EnableUser2FA 完成绑定。
 func (h *User2FAHandler) EnableUser2FA(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req EnableUser2FARequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	res, err := h.totp.Enable(uid, req.Code)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrTOTPAlreadyEnabled):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_already_enabled", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_already_enabled", nil)
 		case errors.Is(err, ErrTOTPPendingExpired):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_pending_expired", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_pending_expired", nil)
 		case errors.Is(err, ErrTOTPCodeInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_code_invalid", nil)
 		case errors.Is(err, ErrTOTPTooManyAttempts):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_too_many_attempts", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_too_many_attempts", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.internal_error", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.internal_error", err)
 		}
 		return
 	}
@@ -195,17 +195,17 @@ type DisableUser2FARequest struct {
 
 // DisableUser2FA 关闭 2FA。
 func (h *User2FAHandler) DisableUser2FA(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req DisableUser2FARequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	if req.Code == "" && req.RecoveryCode == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.totp_code_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.totp_code_required", nil)
 		return
 	}
 	isRecovery := req.RecoveryCode != ""
@@ -216,13 +216,13 @@ func (h *User2FAHandler) DisableUser2FA(c *gin.Context) {
 	if err := h.totp.Disable(uid, codeArg, isRecovery); err != nil {
 		switch {
 		case errors.Is(err, ErrTOTPNotEnabled):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_not_enabled", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_not_enabled", nil)
 		case errors.Is(err, ErrTOTPCodeInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_code_invalid", nil)
 		case errors.Is(err, ErrTOTPRecoveryInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.recovery_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.recovery_code_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.internal_error", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.internal_error", err)
 		}
 		return
 	}
@@ -236,24 +236,24 @@ type RegenerateUser2FARecoveryCodesRequest struct {
 
 // RegenerateUser2FARecoveryCodes 重新生成恢复码。
 func (h *User2FAHandler) RegenerateUser2FARecoveryCodes(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req RegenerateUser2FARecoveryCodesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	codes, err := h.totp.RegenerateRecoveryCodes(uid, req.Code)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrTOTPNotEnabled):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_not_enabled", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_not_enabled", nil)
 		case errors.Is(err, ErrTOTPCodeInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_code_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.internal_error", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.internal_error", err)
 		}
 		return
 	}
@@ -271,23 +271,23 @@ type VerifyUser2FARequest struct {
 func (h *User2FAHandler) VerifyUser2FA(c *gin.Context) {
 	var req VerifyUser2FARequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	if req.Code == "" && req.RecoveryCode == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.totp_code_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.totp_code_required", nil)
 		return
 	}
 	claims, err := h.auth.ParseUserChallengeToken(req.ChallengeToken)
 	if err != nil {
 		h.recordLogin(c, "", 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonChallengeInvalid, constants.LoginLogSourceWeb)
-		shared.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
+		ginutil.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
 		return
 	}
 	ctx := context.Background()
 	if h.challenges != nil && h.challenges.IsRevoked(ctx, claims.JTI) {
 		h.recordLogin(c, "", claims.UserID, constants.LoginLogStatusFailed, constants.LoginLogFailReasonChallengeInvalid, constants.LoginLogSourceWeb)
-		shared.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
+		ginutil.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
 		return
 	}
 
@@ -312,16 +312,16 @@ func (h *User2FAHandler) VerifyUser2FA(c *gin.Context) {
 			if h.challenges != nil {
 				h.challenges.Revoke(ctx, claims.JTI)
 			}
-			shared.RespondError(c, response.CodeUnauthorized, "error.totp_too_many_attempts", nil)
+			ginutil.RespondError(c, response.CodeUnauthorized, "error.totp_too_many_attempts", nil)
 			return
 		}
 		switch {
 		case errors.Is(verifyErr, ErrTOTPCodeInvalid):
-			shared.RespondError(c, response.CodeUnauthorized, "error.totp_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeUnauthorized, "error.totp_code_invalid", nil)
 		case errors.Is(verifyErr, ErrTOTPRecoveryInvalid):
-			shared.RespondError(c, response.CodeUnauthorized, "error.recovery_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeUnauthorized, "error.recovery_code_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
+			ginutil.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
 		}
 		return
 	}
@@ -330,7 +330,7 @@ func (h *User2FAHandler) VerifyUser2FA(c *gin.Context) {
 	}
 	loginRes, err := h.auth.CompleteLoginAfter2FA(claims.UserID, claims.RememberMe)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.login_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.login_failed", err)
 		return
 	}
 	h.recordLogin(c, loginRes.User.Email, loginRes.User.ID, constants.LoginLogStatusSuccess, "", constants.LoginLogSourceWeb)

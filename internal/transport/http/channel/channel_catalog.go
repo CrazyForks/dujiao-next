@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -122,7 +122,7 @@ func (h *Handler) GetProducts(c *gin.Context) {
 	locale := c.DefaultQuery("locale", "zh-CN")
 	defaultLocale := "zh-CN"
 	categoryID := c.DefaultQuery("category_id", "")
-	page, pageSize := shared.ParsePaginationWithBounds(c, "page", "page_size", 5, 20)
+	page, pageSize := ginutil.ParsePaginationWithBounds(c, "page", "page_size", 5, 20)
 	exact := c.DefaultQuery("exact", "") == "1"
 
 	var products []models.Product

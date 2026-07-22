@@ -3,11 +3,13 @@ package adminauthhttp
 import (
 	"errors"
 
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/modules/captcha"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -88,7 +90,7 @@ type LoginRequest struct {
 func (h *AdminLoginHandler) AdminLogin(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -96,16 +98,16 @@ func (h *AdminLoginHandler) AdminLogin(c *gin.Context) {
 		if captchaErr := h.captcha.Verify(constants.CaptchaSceneLogin, req.CaptchaPayload, c.ClientIP()); captchaErr != nil {
 			switch {
 			case errors.Is(captchaErr, captcha.ErrRequired):
-				shared.RespondError(c, response.CodeBadRequest, "error.captcha_required", nil)
+				ginutil.RespondError(c, response.CodeBadRequest, "error.captcha_required", nil)
 				return
 			case errors.Is(captchaErr, captcha.ErrInvalid):
-				shared.RespondError(c, response.CodeBadRequest, "error.captcha_invalid", nil)
+				ginutil.RespondError(c, response.CodeBadRequest, "error.captcha_invalid", nil)
 				return
 			case errors.Is(captchaErr, captcha.ErrConfigInvalid):
-				shared.RespondError(c, response.CodeInternal, "error.captcha_config_invalid", captchaErr)
+				ginutil.RespondError(c, response.CodeInternal, "error.captcha_config_invalid", captchaErr)
 				return
 			default:
-				shared.RespondError(c, response.CodeInternal, "error.captcha_verify_failed", captchaErr)
+				ginutil.RespondError(c, response.CodeInternal, "error.captcha_verify_failed", captchaErr)
 				return
 			}
 		}
@@ -119,10 +121,10 @@ func (h *AdminLoginHandler) AdminLogin(c *gin.Context) {
 		}
 		h.writeLoginLog(c, 0, req.Username, constants.AdminLoginEventLoginPassword, constants.AdminLoginStatusFailed, failReason, nil)
 		if errors.Is(err, ErrInvalidCredentials) {
-			shared.RespondError(c, response.CodeUnauthorized, "error.admin_login_invalid", nil)
+			ginutil.RespondError(c, response.CodeUnauthorized, "error.admin_login_invalid", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.login_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.login_failed", err)
 		return
 	}
 
@@ -156,27 +158,27 @@ type UpdatePasswordRequest struct {
 
 // UpdateAdminPassword 修改管理员密码。
 func (h *AdminLoginHandler) UpdateAdminPassword(c *gin.Context) {
-	id, ok := shared.GetAdminID(c)
+	id, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
 
 	var req UpdatePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	if err := h.auth.ChangePassword(id, req.OldPassword, req.NewPassword); err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidPassword):
-			shared.RespondError(c, response.CodeBadRequest, "error.password_old_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.password_old_invalid", nil)
 		case errors.Is(err, ErrWeakPassword):
 			respondWeakPassword(c, err)
 		case errors.Is(err, ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.save_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 		}
 		return
 	}
@@ -191,8 +193,8 @@ func respondWeakPassword(c *gin.Context, err error) {
 		Args() []interface{}
 	}); ok {
 		msg := i18n.Sprintf(locale, perr.Key(), perr.Args()...)
-		shared.RespondErrorWithMsg(c, response.CodeBadRequest, msg, nil)
+		ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, msg, nil)
 		return
 	}
-	shared.RespondError(c, response.CodeBadRequest, "error.password_weak", nil)
+	ginutil.RespondError(c, response.CodeBadRequest, "error.password_weak", nil)
 }

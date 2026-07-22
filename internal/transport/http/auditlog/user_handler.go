@@ -2,9 +2,9 @@ package auditloghttp
 
 import (
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,16 +23,16 @@ func NewUserHandler(userLoginLogs UserLoginHistoryReader) *UserHandler {
 
 // GetMyLoginLogs 获取当前用户登录日志
 func (h *UserHandler) GetMyLoginLogs(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	logs, total, err := h.userLoginLogs.ListByUser(uid, page, pageSize)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_login_log_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_login_log_fetch_failed", err)
 		return
 	}
 

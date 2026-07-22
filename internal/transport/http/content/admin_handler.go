@@ -5,10 +5,10 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/gin-gonic/gin"
 )
 
@@ -63,7 +63,7 @@ func NewAdminHandler(posts AdminPostUseCases, categories AdminPostCategoryUseCas
 
 // GetAdminPosts 获取后台文章列表。
 func (h *AdminHandler) GetAdminPosts(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	posts, total, err := h.posts.ListAdmin(c.Request.Context(), domaincontent.AdminPostQuery{
 		Type:     c.Query("type"),
 		Search:   c.Query("search"),
@@ -71,7 +71,7 @@ func (h *AdminHandler) GetAdminPosts(c *gin.Context) {
 		PageSize: pageSize,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.post_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.post_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, posts, response.BuildPagination(page, pageSize, total))
@@ -81,7 +81,7 @@ func (h *AdminHandler) GetAdminPosts(c *gin.Context) {
 func (h *AdminHandler) CreatePost(c *gin.Context) {
 	var request CreatePostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -89,15 +89,15 @@ func (h *AdminHandler) CreatePost(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domaincontent.ErrInvalidPostType):
-			shared.RespondError(c, response.CodeBadRequest, "error.post_type_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.post_type_invalid", nil)
 		case errors.Is(err, domaincontent.ErrPostCategoryInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.post_category_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.post_category_invalid", nil)
 		case errors.Is(err, domaincontent.ErrPostNoticeCategoryUnsupported):
-			shared.RespondError(c, response.CodeBadRequest, "error.post_notice_category_unsupported", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.post_notice_category_unsupported", nil)
 		case errors.Is(err, domaincontent.ErrSlugExists):
-			shared.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.post_create_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.post_create_failed", err)
 		}
 		return
 	}
@@ -108,7 +108,7 @@ func (h *AdminHandler) CreatePost(c *gin.Context) {
 func (h *AdminHandler) UpdatePost(c *gin.Context) {
 	var request CreatePostRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -116,17 +116,17 @@ func (h *AdminHandler) UpdatePost(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, domaincontent.ErrInvalidPostType):
-			shared.RespondError(c, response.CodeBadRequest, "error.post_type_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.post_type_invalid", nil)
 		case errors.Is(err, domaincontent.ErrPostCategoryInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.post_category_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.post_category_invalid", nil)
 		case errors.Is(err, domaincontent.ErrPostNoticeCategoryUnsupported):
-			shared.RespondError(c, response.CodeBadRequest, "error.post_notice_category_unsupported", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.post_notice_category_unsupported", nil)
 		case errors.Is(err, domaincontent.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.post_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.post_not_found", nil)
 		case errors.Is(err, domaincontent.ErrSlugExists):
-			shared.RespondError(c, response.CodeBadRequest, "error.slug_used", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_used", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.post_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.post_update_failed", err)
 		}
 		return
 	}
@@ -135,14 +135,14 @@ func (h *AdminHandler) UpdatePost(c *gin.Context) {
 
 // GetAdminPostProductIDs 获取文章关联商品列表。
 func (h *AdminHandler) GetAdminPostProductIDs(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.invalid_id", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.invalid_id", nil)
 		return
 	}
 	products, err := h.posts.ListRelatedProducts(c.Request.Context(), id)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.post_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.post_fetch_failed", err)
 		return
 	}
 	response.Success(c, newAdminPostProductRefs(products))
@@ -152,10 +152,10 @@ func (h *AdminHandler) GetAdminPostProductIDs(c *gin.Context) {
 func (h *AdminHandler) DeletePost(c *gin.Context) {
 	if err := h.posts.Delete(c.Request.Context(), c.Param("id")); err != nil {
 		if errors.Is(err, domaincontent.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.post_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.post_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.post_delete_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.post_delete_failed", err)
 		return
 	}
 	response.Success(c, nil)
@@ -167,7 +167,7 @@ func (h *AdminHandler) GetPostCategories(c *gin.Context) {
 	if c.Query("tree") == "1" {
 		categories, err := h.categories.ListTree(requestContext)
 		if err != nil {
-			shared.RespondError(c, response.CodeInternal, "error.post_category_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.post_category_fetch_failed", err)
 			return
 		}
 		response.Success(c, categories)
@@ -184,7 +184,7 @@ func (h *AdminHandler) GetPostCategories(c *gin.Context) {
 	}
 	categories, err := h.categories.ListAll(requestContext, parentID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.post_category_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.post_category_fetch_failed", err)
 		return
 	}
 	response.Success(c, categories)
@@ -194,18 +194,18 @@ func (h *AdminHandler) GetPostCategories(c *gin.Context) {
 func (h *AdminHandler) CreatePostCategory(c *gin.Context) {
 	var request CreatePostCategoryRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	category, err := h.categories.Create(c.Request.Context(), postCategoryInput(request.NameJSON, request.Slug, request.ParentID, request.SortOrder, request.Icon))
 	if err != nil {
 		switch {
 		case errors.Is(err, domaincontent.ErrSlugExists):
-			shared.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
 		case errors.Is(err, domaincontent.ErrCategoryParentInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.category_parent_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.category_parent_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.post_category_create_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.post_category_create_failed", err)
 		}
 		return
 	}
@@ -216,25 +216,25 @@ func (h *AdminHandler) CreatePostCategory(c *gin.Context) {
 func (h *AdminHandler) UpdatePostCategory(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	var request UpdatePostCategoryRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	category, err := h.categories.Update(c.Request.Context(), uint(id), postCategoryInput(request.NameJSON, request.Slug, request.ParentID, request.SortOrder, request.Icon))
 	if err != nil {
 		switch {
 		case errors.Is(err, domaincontent.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.post_category_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.post_category_not_found", nil)
 		case errors.Is(err, domaincontent.ErrSlugExists):
-			shared.RespondError(c, response.CodeBadRequest, "error.slug_used", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_used", nil)
 		case errors.Is(err, domaincontent.ErrCategoryParentInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.category_parent_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.category_parent_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.post_category_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.post_category_update_failed", err)
 		}
 		return
 	}
@@ -245,17 +245,17 @@ func (h *AdminHandler) UpdatePostCategory(c *gin.Context) {
 func (h *AdminHandler) DeletePostCategory(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	if err := h.categories.Delete(c.Request.Context(), uint(id)); err != nil {
 		switch {
 		case errors.Is(err, domaincontent.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.post_category_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.post_category_not_found", nil)
 		case errors.Is(err, domaincontent.ErrCategoryInUse):
-			shared.RespondError(c, response.CodeBadRequest, "error.post_category_in_use", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.post_category_in_use", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.post_category_delete_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.post_category_delete_failed", err)
 		}
 		return
 	}
@@ -266,21 +266,21 @@ func (h *AdminHandler) DeletePostCategory(c *gin.Context) {
 func (h *AdminHandler) PatchPostCategoryStatus(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	var request PatchPostCategoryStatusRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	category, err := h.categories.SetActive(c.Request.Context(), uint(id), *request.IsActive)
 	if err != nil {
 		if errors.Is(err, domaincontent.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.post_category_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.post_category_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.post_category_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.post_category_update_failed", err)
 		return
 	}
 	response.Success(c, category)
@@ -288,10 +288,10 @@ func (h *AdminHandler) PatchPostCategoryStatus(c *gin.Context) {
 
 // GetAdminBanners 获取后台 Banner 列表。
 func (h *AdminHandler) GetAdminBanners(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
-	isActive, err := shared.ParseQueryBoolPtr(c, "is_active")
+	page, pageSize := ginutil.ParsePagination(c)
+	isActive, err := ginutil.ParseQueryBoolPtr(c, "is_active")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	banners, total, err := h.banners.ListAdmin(c.Request.Context(), domaincontent.AdminBannerQuery{
@@ -302,7 +302,7 @@ func (h *AdminHandler) GetAdminBanners(c *gin.Context) {
 		PageSize: pageSize,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.banner_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.banner_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, banners, response.BuildPagination(page, pageSize, total))
@@ -313,10 +313,10 @@ func (h *AdminHandler) GetAdminBanner(c *gin.Context) {
 	banner, err := h.banners.GetByID(c.Request.Context(), c.Param("id"))
 	if err != nil {
 		if errors.Is(err, domaincontent.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.banner_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.banner_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.banner_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.banner_fetch_failed", err)
 		return
 	}
 	response.Success(c, banner)
@@ -326,20 +326,20 @@ func (h *AdminHandler) GetAdminBanner(c *gin.Context) {
 func (h *AdminHandler) CreateBanner(c *gin.Context) {
 	var request BannerUpsertRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	input, err := buildBannerInputFromRequest(request)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	banner, err := h.banners.Create(c.Request.Context(), input)
 	if err != nil {
 		if errors.Is(err, domaincontent.ErrInvalidBanner) {
-			shared.RespondError(c, response.CodeBadRequest, "error.banner_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.banner_invalid", nil)
 		} else {
-			shared.RespondError(c, response.CodeInternal, "error.banner_create_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.banner_create_failed", err)
 		}
 		return
 	}
@@ -350,28 +350,28 @@ func (h *AdminHandler) CreateBanner(c *gin.Context) {
 func (h *AdminHandler) UpdateBanner(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	var request BannerUpsertRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	input, err := buildBannerInputFromRequest(request)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	banner, err := h.banners.Update(c.Request.Context(), id, input)
 	if err != nil {
 		switch {
 		case errors.Is(err, domaincontent.ErrInvalidBanner):
-			shared.RespondError(c, response.CodeBadRequest, "error.banner_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.banner_invalid", nil)
 		case errors.Is(err, domaincontent.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.banner_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.banner_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.banner_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.banner_update_failed", err)
 		}
 		return
 	}
@@ -382,14 +382,14 @@ func (h *AdminHandler) UpdateBanner(c *gin.Context) {
 func (h *AdminHandler) DeleteBanner(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	if err := h.banners.Delete(c.Request.Context(), id); err != nil {
 		if errors.Is(err, domaincontent.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.banner_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.banner_not_found", nil)
 		} else {
-			shared.RespondError(c, response.CodeInternal, "error.banner_delete_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.banner_delete_failed", err)
 		}
 		return
 	}
@@ -407,7 +407,7 @@ func (h *AdminHandler) GetAdminMedia(c *gin.Context) {
 		PageSize: pageSize,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.internal", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.internal", err)
 		return
 	}
 	response.Success(c, gin.H{"items": items, "total": total})
@@ -415,18 +415,18 @@ func (h *AdminHandler) GetAdminMedia(c *gin.Context) {
 
 // UpdateMedia 更新素材名称。
 func (h *AdminHandler) UpdateMedia(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.invalid_id", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.invalid_id", nil)
 		return
 	}
 	var request UpdateMediaRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.invalid_params", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.invalid_params", nil)
 		return
 	}
 	if err := h.media.Rename(c.Request.Context(), id, request.Name); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.internal", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.internal", err)
 		return
 	}
 	response.Success(c, nil)
@@ -436,7 +436,7 @@ func (h *AdminHandler) UpdateMedia(c *gin.Context) {
 func (h *AdminHandler) BatchDeleteMedia(c *gin.Context) {
 	var request BatchDeleteMediaRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	successCount, failedIDs := h.media.BatchDelete(c.Request.Context(), request.IDs)
@@ -449,13 +449,13 @@ func (h *AdminHandler) BatchDeleteMedia(c *gin.Context) {
 
 // DeleteMedia 删除素材。
 func (h *AdminHandler) DeleteMedia(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.invalid_id", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.invalid_id", nil)
 		return
 	}
 	if err := h.media.Delete(c.Request.Context(), id); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.internal", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.internal", err)
 		return
 	}
 	response.Success(c, nil)

@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"strings"
 
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +25,7 @@ type wechatCallbackQuery struct {
 }
 
 func (h *Handler) handleWechatCallback(c *gin.Context) bool {
-	log := shared.RequestLog(c)
+	log := ginutil.RequestLog(c)
 	body, ok := readCallbackBody(c)
 	if !ok || !isWechatCallbackRequest(c, body) {
 		log.Debugw("wechat_callback_not_matched")

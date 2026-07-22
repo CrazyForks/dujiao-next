@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,11 +40,11 @@ func (h *GuestHandler) ListGuestOrders(c *gin.Context) {
 	password := strings.TrimSpace(c.Query("order_password"))
 	orderNo := strings.TrimSpace(c.Query("order_no"))
 	if email == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
 		return
 	}
 	if password == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.guest_password_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_password_required", nil)
 		return
 	}
 
@@ -61,7 +61,7 @@ func (h *GuestHandler) ListGuestOrders(c *gin.Context) {
 				response.SuccessWithPage(c, []models.Order{}, pagination)
 				return
 			}
-			shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 			return
 		}
 		pagination := response.Pagination{
@@ -74,11 +74,11 @@ func (h *GuestHandler) ListGuestOrders(c *gin.Context) {
 		return
 	}
 
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	orders, total, err := h.orders.ListOrdersByGuestForTenant(tenantFromRequest(c), email, password, page, pageSize)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		return
 	}
 	pagination := response.BuildPagination(page, pageSize, total)
@@ -90,25 +90,25 @@ func (h *GuestHandler) GetGuestOrderByOrderNo(c *gin.Context) {
 	email := strings.TrimSpace(c.Query("email"))
 	password := strings.TrimSpace(c.Query("order_password"))
 	if email == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
 		return
 	}
 	if password == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.guest_password_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_password_required", nil)
 		return
 	}
 	orderNo := strings.TrimSpace(c.Param("order_no"))
 	if orderNo == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
 		return
 	}
 	order, err := h.orders.GetOrderByGuestOrderNoForTenant(tenantFromRequest(c), orderNo, email, password)
 	if err != nil {
 		if errors.Is(err, ErrGuestOrderNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.guest_order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.guest_order_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		return
 	}
 	orderDetail := dto.NewOrderDetailTruncated(order)
@@ -123,25 +123,25 @@ func (h *GuestHandler) DownloadGuestFulfillment(c *gin.Context) {
 	email := strings.TrimSpace(c.Query("email"))
 	password := strings.TrimSpace(c.Query("order_password"))
 	if email == "" || password == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
 		return
 	}
 	orderNo := strings.TrimSpace(c.Param("order_no"))
 	if orderNo == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
 		return
 	}
 	order, err := h.orders.GetAnyOrderByGuestOrderNoForTenant(tenantFromRequest(c), orderNo, email, password)
 	if err != nil {
 		if errors.Is(err, ErrGuestOrderNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.guest_order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.guest_order_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		return
 	}
 	if order == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.guest_order_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.guest_order_not_found", nil)
 		return
 	}
 	respondFulfillmentDownload(c, order)

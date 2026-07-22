@@ -5,10 +5,11 @@ import (
 	"strings"
 	"time"
 
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -118,23 +119,23 @@ func NewAdminHandler(
 
 // GetUserWallet 管理端获取用户钱包信息
 func (h *AdminHandler) GetUserWallet(c *gin.Context) {
-	userID, err := shared.ParseParamUint(c, "id")
+	userID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
 		return
 	}
 	user, err := h.users.GetByID(userID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	if user == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		return
 	}
 	account, err := h.wallets.GetAccount(userID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.Success(c, gin.H{
@@ -145,12 +146,12 @@ func (h *AdminHandler) GetUserWallet(c *gin.Context) {
 
 // GetUserTransactions 管理端获取用户钱包流水
 func (h *AdminHandler) GetUserTransactions(c *gin.Context) {
-	userID, err := shared.ParseParamUint(c, "id")
+	userID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
 		return
 	}
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	transactions, total, err := h.wallets.ListAdminTransactions(
 		userID,
@@ -160,7 +161,7 @@ func (h *AdminHandler) GetUserTransactions(c *gin.Context) {
 		strings.TrimSpace(c.Query("direction")),
 	)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	pagination := response.BuildPagination(page, pageSize, total)
@@ -169,31 +170,31 @@ func (h *AdminHandler) GetUserTransactions(c *gin.Context) {
 
 // GetRecharges 管理端分页获取钱包充值记录
 func (h *AdminHandler) GetRecharges(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
-	userID, err := shared.ParseQueryUint(c.Query("user_id"), false)
+	userID, err := ginutil.ParseQueryUint(c.Query("user_id"), false)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	paymentID, err := shared.ParseQueryUint(c.Query("payment_id"), false)
+	paymentID, err := ginutil.ParseQueryUint(c.Query("payment_id"), false)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	channelID, err := shared.ParseQueryUint(c.Query("channel_id"), false)
+	channelID, err := ginutil.ParseQueryUint(c.Query("channel_id"), false)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	createdFrom, createdTo, err := shared.ParseQueryTimeRange(c, "created_from", "created_to")
+	createdFrom, createdTo, err := ginutil.ParseQueryTimeRange(c, "created_from", "created_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	paidFrom, paidTo, err := shared.ParseQueryTimeRange(c, "paid_from", "paid_to")
+	paidFrom, paidTo, err := ginutil.ParseQueryTimeRange(c, "paid_from", "paid_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -214,7 +215,7 @@ func (h *AdminHandler) GetRecharges(c *gin.Context) {
 		PaidTo:       paidTo,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 
@@ -249,7 +250,7 @@ func (h *AdminHandler) GetRecharges(c *gin.Context) {
 	if len(userIDs) > 0 {
 		users, userErr := h.users.ListByIDs(userIDs)
 		if userErr != nil {
-			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", userErr)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", userErr)
 			return
 		}
 		for _, user := range users {
@@ -261,7 +262,7 @@ func (h *AdminHandler) GetRecharges(c *gin.Context) {
 	if len(channelIDs) > 0 {
 		channels, channelErr := h.channels.ListByIDs(channelIDs)
 		if channelErr != nil {
-			shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", channelErr)
+			ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", channelErr)
 			return
 		}
 		for _, channel := range channels {
@@ -273,7 +274,7 @@ func (h *AdminHandler) GetRecharges(c *gin.Context) {
 	if len(paymentIDs) > 0 {
 		payments, paymentErr := h.payments.GetByIDs(paymentIDs)
 		if paymentErr != nil {
-			shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", paymentErr)
+			ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", paymentErr)
 			return
 		}
 		for _, payment := range payments {
@@ -304,23 +305,23 @@ func (h *AdminHandler) GetRecharges(c *gin.Context) {
 
 // AdjustUserWallet 管理端增减用户余额
 func (h *AdminHandler) AdjustUserWallet(c *gin.Context) {
-	userID, err := shared.ParseParamUint(c, "id")
+	userID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
 		return
 	}
 	var req AdminAdjustUserWalletRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	amount, err := decimal.NewFromString(strings.TrimSpace(req.Amount))
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	if amount.LessThanOrEqual(decimal.Zero) {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	op := strings.ToLower(strings.TrimSpace(req.Operation))
@@ -332,7 +333,7 @@ func (h *AdminHandler) AdjustUserWallet(c *gin.Context) {
 		delta = amount.Neg()
 	}
 	if op != "add" && op != "subtract" {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	currency := strings.TrimSpace(req.Currency)
@@ -352,11 +353,11 @@ func (h *AdminHandler) AdjustUserWallet(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidAmount):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		case errors.Is(err, ErrInsufficientBalance):
-			shared.RespondError(c, response.CodeBadRequest, "error.payment_amount_mismatch", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.payment_amount_mismatch", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
 		}
 		return
 	}

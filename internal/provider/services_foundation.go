@@ -8,8 +8,9 @@ import (
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/compliance"
 	"github.com/dujiao-next/internal/modules/reseller"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 	"github.com/dujiao-next/internal/modules/upload"
 	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
 	"github.com/dujiao-next/internal/service"
@@ -51,21 +52,21 @@ func (c *Container) loadRuntimeSettings() {
 	if err != nil {
 		logger.Warnw("provider_load_smtp_setting_failed", "error", err)
 	} else {
-		c.Config.Email = settingsmodule.SMTPSettingToConfig(smtpSetting)
+		c.Config.Email = settingsmessaging.SMTPSettingToConfig(smtpSetting)
 	}
 
 	captchaSetting, err := c.SettingService.GetCaptchaSetting(c.Config.Captcha)
 	if err != nil {
 		logger.Warnw("provider_load_captcha_setting_failed", "error", err)
 	} else {
-		c.Config.Captcha = settingsmodule.CaptchaSettingToConfig(captchaSetting)
+		c.Config.Captcha = settingssecurity.CaptchaSettingToConfig(captchaSetting)
 	}
 
 	telegramAuthSetting, err := c.SettingService.GetTelegramAuthSetting(c.Config.TelegramAuth)
 	if err != nil {
 		logger.Warnw("provider_load_telegram_auth_setting_failed", "error", err)
 	} else {
-		c.Config.TelegramAuth = settingsmodule.TelegramAuthSettingToConfig(telegramAuthSetting)
+		c.Config.TelegramAuth = settingssecurity.TelegramAuthSettingToConfig(telegramAuthSetting)
 	}
 }
 

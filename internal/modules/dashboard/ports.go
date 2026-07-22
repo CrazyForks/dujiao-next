@@ -3,7 +3,7 @@ package dashboard
 import (
 	"time"
 
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -24,7 +24,7 @@ type Repository interface {
 
 // SettingReader keeps the dashboard core independent from the legacy setting service.
 type SettingReader interface {
-	GetDashboardSetting() (settingsmodule.DashboardSetting, error)
+	GetDashboardSetting() (settingsstorefront.DashboardSetting, error)
 }
 
 type OverviewRow struct {

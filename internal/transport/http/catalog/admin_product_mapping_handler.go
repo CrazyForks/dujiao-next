@@ -3,11 +3,11 @@ package cataloghttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/gin-gonic/gin"
@@ -44,9 +44,9 @@ func NewAdminProductMappingHandler(service ProductMappingService) *AdminProductM
 
 // GetProductMappings 获取商品映射列表
 func (h *AdminProductMappingHandler) GetProductMappings(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
-	connectionID, _ := shared.ParseQueryUint(c.Query("connection_id"), false)
+	connectionID, _ := ginutil.ParseQueryUint(c.Query("connection_id"), false)
 	upstreamStatus := c.Query("upstream_status")
 	if upstreamStatus != "" {
 		validStatuses := map[string]bool{
@@ -55,13 +55,13 @@ func (h *AdminProductMappingHandler) GetProductMappings(c *gin.Context) {
 			models.UpstreamStatusDeleted:  true,
 		}
 		if !validStatuses[upstreamStatus] {
-			shared.RespondError(c, response.CodeBadRequest, "error.invalid_upstream_status", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.invalid_upstream_status", nil)
 			return
 		}
 	}
 	productStatus := c.Query("product_status")
 	if productStatus != "" && productStatus != "active" && productStatus != "inactive" {
-		shared.RespondError(c, response.CodeBadRequest, "error.invalid_product_status", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.invalid_product_status", nil)
 		return
 	}
 	search := c.Query("search")
@@ -75,7 +75,7 @@ func (h *AdminProductMappingHandler) GetProductMappings(c *gin.Context) {
 		PageSize:       pageSize,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.mapping_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.mapping_fetch_failed", err)
 		return
 	}
 
@@ -85,26 +85,26 @@ func (h *AdminProductMappingHandler) GetProductMappings(c *gin.Context) {
 
 // GetProductMapping 获取商品映射详情
 func (h *AdminProductMappingHandler) GetProductMapping(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	mapping, err := h.service.GetByID(id)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.mapping_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.mapping_fetch_failed", err)
 		return
 	}
 	if mapping == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.mapping_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.mapping_not_found", nil)
 		return
 	}
 
 	// 同时返回 SKU 映射
 	skuMappings, err := h.service.GetSKUMappings(mapping.ID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.mapping_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.mapping_fetch_failed", err)
 		return
 	}
 
@@ -127,7 +127,7 @@ type ImportUpstreamProductRequest struct {
 func (h *AdminProductMappingHandler) ImportUpstreamProduct(c *gin.Context) {
 	var req ImportUpstreamProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -140,26 +140,26 @@ func (h *AdminProductMappingHandler) ImportUpstreamProduct(c *gin.Context) {
 	)
 	if err != nil {
 		if errors.Is(err, catalogmapping.ErrMappingAlreadyExists) {
-			shared.RespondError(c, response.CodeBadRequest, "error.mapping_already_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.mapping_already_exists", nil)
 			return
 		}
 		if errors.Is(err, catalogmapping.ErrConnectionNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
 		if errors.Is(err, catalogmapping.ErrUpstreamProductNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.upstream_product_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.upstream_product_not_found", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrSlugExists) {
-			shared.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductCategoryInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_category_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_category_invalid", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.mapping_import_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.mapping_import_failed", err)
 		return
 	}
 
@@ -185,7 +185,7 @@ type BatchImportUpstreamProductResult struct {
 func (h *AdminProductMappingHandler) BatchImportUpstreamProducts(c *gin.Context) {
 	var req BatchImportUpstreamProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -197,10 +197,10 @@ func (h *AdminProductMappingHandler) BatchImportUpstreamProducts(c *gin.Context)
 	)
 	if err != nil {
 		if errors.Is(err, catalogmapping.ErrConnectionNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.mapping_import_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.mapping_import_failed", err)
 		return
 	}
 
@@ -233,7 +233,7 @@ type BatchMappingActionRequest struct {
 func (h *AdminProductMappingHandler) BatchSyncProductMappings(c *gin.Context) {
 	var req BatchMappingActionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -257,7 +257,7 @@ type BatchUpdateMappingStatusRequest struct {
 func (h *AdminProductMappingHandler) BatchUpdateProductMappingStatus(c *gin.Context) {
 	var req BatchUpdateMappingStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -275,7 +275,7 @@ func (h *AdminProductMappingHandler) BatchUpdateProductMappingStatus(c *gin.Cont
 func (h *AdminProductMappingHandler) BatchDeleteProductMappings(c *gin.Context) {
 	var req BatchMappingActionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -291,18 +291,18 @@ func (h *AdminProductMappingHandler) BatchDeleteProductMappings(c *gin.Context) 
 
 // SyncProductMapping 同步商品映射
 func (h *AdminProductMappingHandler) SyncProductMapping(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	if err := h.service.SyncProduct(id); err != nil {
 		if errors.Is(err, catalogmapping.ErrMappingNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.mapping_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.mapping_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.mapping_sync_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.mapping_sync_failed", err)
 		return
 	}
 
@@ -316,24 +316,24 @@ type UpdateProductMappingStatusRequest struct {
 
 // UpdateProductMappingStatus 启用/禁用映射
 func (h *AdminProductMappingHandler) UpdateProductMappingStatus(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	var req UpdateProductMappingStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	if err := h.service.SetActive(id, req.IsActive); err != nil {
 		if errors.Is(err, catalogmapping.ErrMappingNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.mapping_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.mapping_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.mapping_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.mapping_update_failed", err)
 		return
 	}
 
@@ -342,18 +342,18 @@ func (h *AdminProductMappingHandler) UpdateProductMappingStatus(c *gin.Context) 
 
 // DeleteProductMapping 删除映射
 func (h *AdminProductMappingHandler) DeleteProductMapping(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	if err := h.service.Delete(id); err != nil {
 		if errors.Is(err, catalogmapping.ErrMappingNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.mapping_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.mapping_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.mapping_delete_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.mapping_delete_failed", err)
 		return
 	}
 
@@ -362,21 +362,21 @@ func (h *AdminProductMappingHandler) DeleteProductMapping(c *gin.Context) {
 
 // ListUpstreamProducts 代理拉取上游商品列表
 func (h *AdminProductMappingHandler) ListUpstreamProducts(c *gin.Context) {
-	connectionID, err := shared.ParseQueryUint(c.Query("connection_id"), true)
+	connectionID, err := ginutil.ParseQueryUint(c.Query("connection_id"), true)
 	if err != nil || connectionID == 0 {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
-	page, pageSize := shared.ParsePaginationWithKeys(c, "page", "page_size", 50)
+	page, pageSize := ginutil.ParsePaginationWithKeys(c, "page", "page_size", 50)
 
 	result, err := h.service.ListUpstreamProducts(connectionID, page, pageSize)
 	if err != nil {
 		if errors.Is(err, catalogmapping.ErrConnectionNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.upstream_products_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.upstream_products_fetch_failed", err)
 		return
 	}
 
@@ -395,19 +395,19 @@ func (h *AdminProductMappingHandler) ListUpstreamProducts(c *gin.Context) {
 
 // ListUpstreamCategories 获取上游分类列表
 func (h *AdminProductMappingHandler) ListUpstreamCategories(c *gin.Context) {
-	connectionID, err := shared.ParseQueryUint(c.Query("connection_id"), true)
+	connectionID, err := ginutil.ParseQueryUint(c.Query("connection_id"), true)
 	if err != nil || connectionID == 0 {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	categories, supported, err := h.service.ListUpstreamCategories(connectionID)
 	if err != nil {
 		if errors.Is(err, catalogmapping.ErrConnectionNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.upstream_categories_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.upstream_categories_fetch_failed", err)
 		return
 	}
 
@@ -429,7 +429,7 @@ type BatchImportByCategoryRequest struct {
 func (h *AdminProductMappingHandler) BatchImportByCategory(c *gin.Context) {
 	var req BatchImportByCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -441,10 +441,10 @@ func (h *AdminProductMappingHandler) BatchImportByCategory(c *gin.Context) {
 	)
 	if err != nil {
 		if errors.Is(err, catalogmapping.ErrConnectionNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.category_import_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.category_import_failed", err)
 		return
 	}
 

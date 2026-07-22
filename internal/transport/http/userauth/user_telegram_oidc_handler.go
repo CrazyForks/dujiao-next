@@ -7,9 +7,9 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -72,31 +72,31 @@ type telegramOIDCCallbackRequest struct {
 func respondTelegramOIDCError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, ErrTelegramAuthDisabled):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_auth_disabled", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_auth_disabled", nil)
 	case errors.Is(err, ErrTelegramAuthConfigInvalid):
-		shared.RespondError(c, response.CodeInternal, "error.telegram_auth_config_invalid", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.telegram_auth_config_invalid", err)
 	case errors.Is(err, ErrTelegramOIDCStateInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_oidc_state_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_oidc_state_invalid", nil)
 	case errors.Is(err, ErrTelegramOIDCTokenExchange):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_oidc_token_exchange_failed", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_oidc_token_exchange_failed", err)
 	case errors.Is(err, ErrTelegramOIDCIDTokenInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_oidc_id_token_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_oidc_id_token_invalid", nil)
 	case errors.Is(err, ErrTelegramAuthPayloadInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_auth_payload_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_auth_payload_invalid", nil)
 	case errors.Is(err, ErrTelegramAuthExpired):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_auth_expired", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_auth_expired", nil)
 	case errors.Is(err, ErrTelegramAuthReplay):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_auth_replayed", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_auth_replayed", nil)
 	case errors.Is(err, ErrUserOAuthIdentityExists):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_bind_conflict", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_bind_conflict", nil)
 	case errors.Is(err, ErrUserOAuthAlreadyBound):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_already_bound", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_already_bound", nil)
 	case errors.Is(err, ErrUserDisabled):
-		shared.RespondError(c, response.CodeUnauthorized, "error.user_disabled", nil)
+		ginutil.RespondError(c, response.CodeUnauthorized, "error.user_disabled", nil)
 	case errors.Is(err, ErrRegistrationDisabled):
-		shared.RespondError(c, response.CodeForbidden, "error.registration_disabled", nil)
+		ginutil.RespondError(c, response.CodeForbidden, "error.registration_disabled", nil)
 	default:
-		shared.RespondError(c, response.CodeInternal, "error.login_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.login_failed", err)
 	}
 }
 
@@ -128,7 +128,7 @@ func (h *UserTelegramOIDCHandler) TelegramOIDCLoginCallback(c *gin.Context) {
 	var req telegramOIDCCallbackRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.recordLogin(c, "", 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonBadRequest, constants.LoginLogSourceTelegram)
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	res, err := h.service.LoginWithTelegramOIDC(c.Request.Context(), req.Code, req.State)
@@ -157,7 +157,7 @@ func (h *UserTelegramOIDCHandler) TelegramOIDCLoginCallback(c *gin.Context) {
 
 // StartTelegramOIDCBind 返回 Telegram OIDC 授权 URL（绑定流程，需登录）。
 func (h *UserTelegramOIDCHandler) StartTelegramOIDCBind(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -171,13 +171,13 @@ func (h *UserTelegramOIDCHandler) StartTelegramOIDCBind(c *gin.Context) {
 
 // TelegramOIDCBindCallback 处理 Telegram OIDC 回调（绑定，需登录）。
 func (h *UserTelegramOIDCHandler) TelegramOIDCBindCallback(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req telegramOIDCCallbackRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	identity, err := h.service.BindTelegramOIDC(c.Request.Context(), uid, req.Code, req.State)

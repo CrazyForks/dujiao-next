@@ -2,7 +2,10 @@ package settingsapp
 
 import (
 	"github.com/dujiao-next/internal/constants"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
+	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -12,7 +15,7 @@ import (
 var defaultSettingRegistry = MustNewRegistry(
 	Definition{
 		Key:       constants.SettingKeyDashboardConfig,
-		Normalize: settingsmodule.NormalizeDashboardSettingJSON,
+		Normalize: settingsstorefront.NormalizeDashboardSettingJSON,
 	},
 	Definition{
 		Key: constants.SettingKeyOrderConfig,
@@ -27,22 +30,22 @@ var defaultSettingRegistry = MustNewRegistry(
 	},
 	Definition{
 		Key:       constants.SettingKeyTelegramAuthConfig,
-		Normalize: settingsmodule.NormalizeTelegramAuthSettingJSON,
+		Normalize: settingssecurity.NormalizeTelegramAuthSettingJSON,
 	},
 	Definition{
 		Key: constants.SettingKeyNotificationCenterConfig,
 		Normalize: func(value jsonmap.JSON) jsonmap.JSON {
-			setting := settingsmodule.DecodeNotificationCenterSetting(value, settingsmodule.NotificationCenterDefaultSetting())
-			return jsonmap.JSON(settingsmodule.NotificationCenterSettingToMap(setting))
+			setting := settingsmessaging.DecodeNotificationCenterSetting(value, settingsmessaging.NotificationCenterDefaultSetting())
+			return jsonmap.JSON(settingsmessaging.NotificationCenterSettingToMap(setting))
 		},
 	},
 	Definition{
 		Key:       constants.SettingKeyAffiliateConfig,
-		Normalize: settingsmodule.NormalizeAffiliateSettingJSON,
+		Normalize: settingsintegration.NormalizeAffiliateSettingJSON,
 	},
 	Definition{
 		Key:       constants.SettingKeyTelegramBotConfig,
-		Normalize: settingsmodule.NormalizeTelegramBotConfigJSON,
+		Normalize: settingsmessaging.NormalizeTelegramBotConfigJSON,
 	},
 	Definition{
 		Key:       constants.SettingKeyNavConfig,
@@ -56,20 +59,20 @@ var defaultSettingRegistry = MustNewRegistry(
 	},
 	Definition{
 		Key:       constants.SettingKeyOrderRiskControlConfig,
-		Normalize: settingsmodule.NormalizeOrderRiskControlConfigJSON,
+		Normalize: settingssecurity.NormalizeOrderRiskControlConfigJSON,
 	},
 	Definition{
 		Key:       constants.SettingKeyUpstreamSyncConfig,
-		Normalize: settingsmodule.NormalizeUpstreamSyncConfigJSON,
+		Normalize: settingsintegration.NormalizeUpstreamSyncConfigJSON,
 	},
 	Definition{
 		Key:       constants.SettingKeyCallbackRoutesConfig,
-		Normalize: settingsmodule.NormalizeCallbackRoutesSettingJSON,
+		Normalize: settingsintegration.NormalizeCallbackRoutesSettingJSON,
 		Effects:   []Effect{EffectInvalidateCallbackRoutesCache},
 	},
 	Definition{
 		Key:       constants.SettingKeyHomeAnnouncement,
-		Normalize: settingsmodule.NormalizeHomeAnnouncementJSON,
+		Normalize: settingsstorefront.NormalizeHomeAnnouncementJSON,
 		Effects:   []Effect{EffectInvalidatePublicConfigCache},
 	},
 	Definition{

@@ -3,10 +3,10 @@ package apicredentialhttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/apicredential"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,10 +31,10 @@ func NewAdminHandler(service AdminService) *AdminHandler {
 
 // GetApiCredentials 获取 API 凭证列表
 func (h *AdminHandler) GetApiCredentials(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	status := c.Query("status")
 	search := c.Query("search")
-	userID, _ := shared.ParseQueryUint(c.Query("user_id"), false)
+	userID, _ := ginutil.ParseQueryUint(c.Query("user_id"), false)
 
 	creds, total, err := h.service.List(apicredential.ListFilter{
 		Status:   status,
@@ -44,7 +44,7 @@ func (h *AdminHandler) GetApiCredentials(c *gin.Context) {
 		PageSize: pageSize,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.api_credential_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.api_credential_fetch_failed", err)
 		return
 	}
 
@@ -54,19 +54,19 @@ func (h *AdminHandler) GetApiCredentials(c *gin.Context) {
 
 // GetApiCredential 获取 API 凭证详情
 func (h *AdminHandler) GetApiCredential(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	cred, err := h.service.GetByID(id)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.api_credential_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.api_credential_fetch_failed", err)
 		return
 	}
 	if cred == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
 		return
 	}
 
@@ -75,19 +75,19 @@ func (h *AdminHandler) GetApiCredential(c *gin.Context) {
 
 // ApproveApiCredential 审核通过 API 凭证
 func (h *AdminHandler) ApproveApiCredential(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	cred, _, err := h.service.Approve(id)
 	if err != nil {
 		if errors.Is(err, apicredential.ErrApiCredentialNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.api_credential_approve_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.api_credential_approve_failed", err)
 		return
 	}
 
@@ -104,24 +104,24 @@ type RejectApiCredentialRequest struct {
 
 // RejectApiCredential 审核拒绝 API 凭证
 func (h *AdminHandler) RejectApiCredential(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	var req RejectApiCredentialRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	if err := h.service.Reject(id, req.Reason); err != nil {
 		if errors.Is(err, apicredential.ErrApiCredentialNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.api_credential_reject_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.api_credential_reject_failed", err)
 		return
 	}
 
@@ -135,28 +135,28 @@ type UpdateApiCredentialStatusRequest struct {
 
 // UpdateApiCredentialStatus 启用/禁用 API 凭证
 func (h *AdminHandler) UpdateApiCredentialStatus(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	var req UpdateApiCredentialStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	if err := h.service.SetActive(id, req.IsActive); err != nil {
 		if errors.Is(err, apicredential.ErrApiCredentialNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
 			return
 		}
 		if errors.Is(err, apicredential.ErrApiCredentialNotApproved) {
-			shared.RespondError(c, response.CodeBadRequest, "error.api_credential_not_approved", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.api_credential_not_approved", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.api_credential_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.api_credential_update_failed", err)
 		return
 	}
 
@@ -165,14 +165,14 @@ func (h *AdminHandler) UpdateApiCredentialStatus(c *gin.Context) {
 
 // DeleteApiCredential 删除 API 凭证
 func (h *AdminHandler) DeleteApiCredential(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	if err := h.service.Delete(id); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.api_credential_delete_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.api_credential_delete_failed", err)
 		return
 	}
 

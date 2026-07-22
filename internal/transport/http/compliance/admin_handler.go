@@ -3,9 +3,9 @@ package compliancehttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/modules/compliance"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,7 +38,7 @@ func NewAdminHandler(svc AdminService) *AdminHandler {
 func (h *AdminHandler) GetComplianceStatus(c *gin.Context) {
 	status, err := h.svc.Status()
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.internal", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.internal", err)
 		return
 	}
 	response.Success(c, status)
@@ -46,11 +46,11 @@ func (h *AdminHandler) GetComplianceStatus(c *gin.Context) {
 
 // AcknowledgeCompliance POST /admin/compliance/acknowledge —— 仅超管
 func (h *AdminHandler) AcknowledgeCompliance(c *gin.Context) {
-	if !shared.IsSuperAdmin(c) {
-		shared.RespondError(c, response.CodeForbidden, "compliance.error.super_admin_required", nil)
+	if !ginutil.IsSuperAdmin(c) {
+		ginutil.RespondError(c, response.CodeForbidden, "compliance.error.super_admin_required", nil)
 		return
 	}
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
@@ -61,7 +61,7 @@ func (h *AdminHandler) AcknowledgeCompliance(c *gin.Context) {
 
 	var req acknowledgeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -77,13 +77,13 @@ func (h *AdminHandler) AcknowledgeCompliance(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, compliance.ErrTextMismatch):
-			shared.RespondError(c, response.CodeBadRequest, "compliance.error.text_mismatch", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "compliance.error.text_mismatch", nil)
 			return
 		case errors.Is(err, compliance.ErrAlreadyAcknowledged):
 			response.Success(c, gin.H{"already_acknowledged": true})
 			return
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.internal", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.internal", err)
 			return
 		}
 	}

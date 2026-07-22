@@ -52,12 +52,45 @@ var transitionalPackageFileBudgets = map[string]packageFileBudget{
 	"internal/dto":                     {production: 15, total: 24},
 	"internal/models":                  {production: 54, total: 59},
 	"internal/modules/reseller":        {production: 19, total: 26},
-	"internal/modules/settings":        {production: 18, total: 23},
 	"internal/payment/provider":        {production: 14, total: 25},
 	"internal/repository":              {production: 36, total: 54},
 	"internal/router":                  {production: 13, total: 23},
 	"internal/service":                 {production: 81, total: 141},
 	"internal/transport/http/reseller": {production: 13, total: 20},
+}
+
+// completedMigrationPaths are deleted compatibility-free entry points. Once a
+// bounded context reaches this list, recreating its former horizontal package
+// is an architecture regression rather than an allowed transitional change.
+var completedMigrationPaths = []string{
+	"internal/models/setting.go",
+	"internal/repository/setting_repository.go",
+	"internal/service/setting_service.go",
+	"internal/transport/http/settings",
+	"internal/wiring/settings",
+}
+
+func TestCompletedMigrationPathsStayDeleted(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	for _, relativePath := range completedMigrationPaths {
+		t.Run(strings.ReplaceAll(relativePath, "/", "_"), func(t *testing.T) {
+			absolutePath := filepath.Join(repositoryRoot, filepath.FromSlash(relativePath))
+			if _, err := os.Stat(absolutePath); err == nil {
+				t.Fatalf("completed migration path was recreated: %s", relativePath)
+			} else if !os.IsNotExist(err) {
+				t.Fatalf("stat completed migration path %s: %v", relativePath, err)
+			}
+		})
+	}
+}
+
+func TestSettingsModuleRootContainsNoGoFiles(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	settingsRoot := filepath.Join(repositoryRoot, "internal", "modules", "settings")
+	production, total := countDirectGoFiles(t, settingsRoot)
+	if production != 0 || total != 0 {
+		t.Fatalf("settings module root must remain structural only, got production=%d total=%d", production, total)
+	}
 }
 
 func TestLegacyHorizontalRootsCanOnlyShrink(t *testing.T) {

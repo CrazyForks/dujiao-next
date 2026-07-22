@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -36,7 +36,7 @@ type cancelOrderRequest struct {
 
 // GetOrderStatus GET /api/v1/channel/orders/:id
 func (h *Handler) GetOrderStatus(c *gin.Context) {
-	orderID, err := shared.ParseParamUint(c, "id")
+	orderID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
 		respondChannelError(c, 400, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
 		return
@@ -116,7 +116,7 @@ func (h *Handler) GetOrderByOrderNo(c *gin.Context) {
 
 // CancelOrder POST /api/v1/channel/orders/:id/cancel
 func (h *Handler) CancelOrder(c *gin.Context) {
-	orderID, err := shared.ParseParamUint(c, "id")
+	orderID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
 		respondChannelError(c, 400, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
 		return
@@ -175,7 +175,7 @@ func (h *Handler) ListOrders(c *gin.Context) {
 		return
 	}
 
-	page, pageSize := shared.ParsePaginationWithBounds(c, "page", "page_size", 5, 20)
+	page, pageSize := ginutil.ParsePaginationWithBounds(c, "page", "page_size", 5, 20)
 	status := c.Query("status")
 	locale := channelLocaleValue(c, c.Query("locale"))
 

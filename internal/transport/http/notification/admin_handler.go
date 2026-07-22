@@ -5,18 +5,18 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/notification"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
 
 type SettingsService interface {
-	GetNotificationCenterSetting() (settingsmodule.NotificationCenterSetting, error)
-	PatchNotificationCenterSetting(settingsmodule.NotificationCenterSettingPatch) (settingsmodule.NotificationCenterSetting, error)
+	GetNotificationCenterSetting() (settingsmessaging.NotificationCenterSetting, error)
+	PatchNotificationCenterSetting(settingsmessaging.NotificationCenterSettingPatch) (settingsmessaging.NotificationCenterSetting, error)
 }
 
 type LogService interface {
@@ -44,17 +44,17 @@ func NewAdminHandler(settings SettingsService, logs LogService, sender Sender) *
 func (h *AdminHandler) GetNotificationCenterSettings(c *gin.Context) {
 	setting, err := h.settings.GetNotificationCenterSetting()
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.settings_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.settings_fetch_failed", err)
 		return
 	}
-	response.Success(c, settingsmodule.MaskNotificationCenterSettingForAdmin(setting))
+	response.Success(c, settingsmessaging.MaskNotificationCenterSettingForAdmin(setting))
 }
 
 // UpdateNotificationCenterSettings 更新通知中心配置
 func (h *AdminHandler) UpdateNotificationCenterSettings(c *gin.Context) {
-	var req settingsmodule.NotificationCenterSettingPatch
+	var req settingsmessaging.NotificationCenterSettingPatch
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -62,13 +62,13 @@ func (h *AdminHandler) UpdateNotificationCenterSettings(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, notification.ErrConfigInvalid):
-			shared.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
+			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.settings_save_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.settings_save_failed", err)
 		}
 		return
 	}
-	response.Success(c, settingsmodule.MaskNotificationCenterSettingForAdmin(setting))
+	response.Success(c, settingsmessaging.MaskNotificationCenterSettingForAdmin(setting))
 }
 
 // NotificationCenterTestSendRequest 通知中心测试发送请求
@@ -82,21 +82,21 @@ type NotificationCenterTestSendRequest struct {
 
 // ListNotificationLogs 获取通知发送日志列表
 func (h *AdminHandler) ListNotificationLogs(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	channel := strings.ToLower(strings.TrimSpace(c.Query("channel")))
 	status := strings.ToLower(strings.TrimSpace(c.Query("status")))
 	eventType := strings.ToLower(strings.TrimSpace(c.Query("event_type")))
 
-	isTest, err := shared.ParseQueryBoolPtr(c, "is_test")
+	isTest, err := ginutil.ParseQueryBoolPtr(c, "is_test")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
-	createdFrom, createdTo, err := shared.ParseQueryTimeRange(c, "created_from", "created_to")
+	createdFrom, createdTo, err := ginutil.ParseQueryTimeRange(c, "created_from", "created_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -111,7 +111,7 @@ func (h *AdminHandler) ListNotificationLogs(c *gin.Context) {
 		CreatedTo:   createdTo,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.config_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.config_fetch_failed", err)
 		return
 	}
 
@@ -122,12 +122,12 @@ func (h *AdminHandler) ListNotificationLogs(c *gin.Context) {
 func (h *AdminHandler) TestNotificationCenterSettings(c *gin.Context) {
 	var req NotificationCenterTestSendRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	channel := strings.ToLower(strings.TrimSpace(req.Channel))
 	if channel != "email" && channel != "telegram" {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
@@ -141,9 +141,9 @@ func (h *AdminHandler) TestNotificationCenterSettings(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, notification.ErrConfigInvalid):
-			shared.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
+			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.notification_send_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.notification_send_failed", err)
 		}
 		return
 	}

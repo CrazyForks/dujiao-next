@@ -7,8 +7,9 @@ import (
 
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/modules/giftcard"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -56,7 +57,7 @@ func (h *ChannelHandler) Redeem(c *gin.Context) {
 
 	userID, err := h.users.ProvisionUserID(channelUserID)
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_wallet_gift_card_resolve_user", "channel_user_id", channelUserID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_wallet_gift_card_resolve_user", "channel_user_id", channelUserID, "error", err)
 		shared.ChannelIdentityError(c, err)
 		return
 	}
@@ -66,7 +67,7 @@ func (h *ChannelHandler) Redeem(c *gin.Context) {
 		Code:   strings.TrimSpace(req.Code),
 	})
 	if err != nil {
-		shared.RequestLog(c).Warnw("channel_wallet_gift_card_redeem_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
+		ginutil.RequestLog(c).Warnw("channel_wallet_gift_card_redeem_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
 		respondChannelGiftCardError(c, err)
 		return
 	}

@@ -4,7 +4,8 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	settingsschema "github.com/dujiao-next/internal/modules/settings"
+	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
+	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -17,12 +18,12 @@ func (s *Service) GetActiveHomeAnnouncement() (jsonmap.JSON, bool) {
 	if err != nil || value == nil {
 		return nil, false
 	}
-	return settingsschema.ActiveHomeAnnouncement(value, time.Now())
+	return settingsstorefront.ActiveHomeAnnouncement(value, time.Now())
 }
 
 // GetOrderRiskControlConfig returns the normalized order risk policy.
-func (s *Service) GetOrderRiskControlConfig() (settingsschema.OrderRiskControlConfig, error) {
-	fallback := settingsschema.DefaultOrderRiskControlConfig()
+func (s *Service) GetOrderRiskControlConfig() (settingssecurity.OrderRiskControlConfig, error) {
+	fallback := settingssecurity.DefaultOrderRiskControlConfig()
 	if s == nil {
 		return fallback, nil
 	}
@@ -30,5 +31,5 @@ func (s *Service) GetOrderRiskControlConfig() (settingsschema.OrderRiskControlCo
 	if err != nil {
 		return fallback, err
 	}
-	return settingsschema.DecodeOrderRiskControlConfig(value, fallback), nil
+	return settingssecurity.DecodeOrderRiskControlConfig(value, fallback), nil
 }

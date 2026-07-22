@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/coupon"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -216,24 +216,24 @@ type AdminUserDetail struct {
 
 // GetAdminUsers 获取用户列表。
 func (h *AdminHandler) GetAdminUsers(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
-	userID, err := shared.ParseQueryUint(c.Query("user_id"), true)
+	userID, err := ginutil.ParseQueryUint(c.Query("user_id"), true)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", err)
 		return
 	}
 	keyword := strings.TrimSpace(c.Query("keyword"))
 	status := strings.TrimSpace(c.Query("status"))
 
-	createdFrom, createdTo, err := shared.ParseQueryTimeRange(c, "created_from", "created_to")
+	createdFrom, createdTo, err := ginutil.ParseQueryTimeRange(c, "created_from", "created_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	lastLoginFrom, lastLoginTo, err := shared.ParseQueryTimeRange(c, "last_login_from", "last_login_to")
+	lastLoginFrom, lastLoginTo, err := ginutil.ParseQueryTimeRange(c, "last_login_from", "last_login_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -251,7 +251,7 @@ func (h *AdminHandler) GetAdminUsers(c *gin.Context) {
 		SortOrder:     strings.TrimSpace(c.Query("sort_order")),
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 
@@ -261,7 +261,7 @@ func (h *AdminHandler) GetAdminUsers(c *gin.Context) {
 	}
 	balanceMap, err := h.wallets.GetBalancesByUserIDs(userIDs)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	items := make([]AdminUserListItem, 0, len(users))
@@ -282,29 +282,29 @@ func (h *AdminHandler) GetAdminUsers(c *gin.Context) {
 
 // GetAdminUser 获取用户详情。
 func (h *AdminHandler) GetAdminUser(c *gin.Context) {
-	userID, err := shared.ParseParamUint(c, "id")
+	userID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
 		return
 	}
 
 	user, err := h.users.GetByID(userID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	if user == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		return
 	}
 	account, err := h.wallets.GetAccount(user.ID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	identities, err := h.oauth.ListByUserID(user.ID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	oauthItems := make([]AdminUserOAuthIdentityItem, 0, len(identities))
@@ -328,25 +328,25 @@ func (h *AdminHandler) GetAdminUser(c *gin.Context) {
 
 // UpdateAdminUser 更新用户信息。
 func (h *AdminHandler) UpdateAdminUser(c *gin.Context) {
-	userID, err := shared.ParseParamUint(c, "id")
+	userID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
 		return
 	}
 
 	var req UpdateAdminUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	user, err := h.users.GetByID(userID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	if user == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		return
 	}
 
@@ -355,16 +355,16 @@ func (h *AdminHandler) UpdateAdminUser(c *gin.Context) {
 	if req.Email != nil {
 		normalized, err := h.emails.NormalizeEmail(*req.Email)
 		if err != nil {
-			shared.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
 			return
 		}
 		existing, err := h.users.GetByEmail(normalized)
 		if err != nil {
-			shared.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
 			return
 		}
 		if existing != nil && existing.ID != user.ID {
-			shared.RespondError(c, response.CodeBadRequest, "error.email_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_exists", nil)
 			return
 		}
 		if normalized != user.Email {
@@ -384,7 +384,7 @@ func (h *AdminHandler) UpdateAdminUser(c *gin.Context) {
 		if trimmed != "" {
 			hashed, err := bcrypt.GenerateFromPassword([]byte(trimmed), bcrypt.DefaultCost)
 			if err != nil {
-				shared.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
+				ginutil.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
 				return
 			}
 			user.PasswordHash = string(hashed)
@@ -431,7 +431,7 @@ func (h *AdminHandler) UpdateAdminUser(c *gin.Context) {
 	}
 
 	if !updated {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
@@ -442,7 +442,7 @@ func (h *AdminHandler) UpdateAdminUser(c *gin.Context) {
 		user.TokenInvalidBefore = &now
 	}
 	if err := h.users.Update(user); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
 		return
 	}
 	if h.authState != nil {
@@ -455,24 +455,24 @@ func (h *AdminHandler) UpdateAdminUser(c *gin.Context) {
 // UnbindAdminUserTelegram 管理员解除目标用户的 Telegram 绑定。
 // DELETE /admin/users/:id/oauth/telegram
 func (h *AdminHandler) UnbindAdminUserTelegram(c *gin.Context) {
-	userID, err := shared.ParseParamUint(c, "id")
+	userID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
 		return
 	}
 
 	if err := h.telegram.UnbindTelegram(userID); err != nil {
 		switch {
 		case errors.Is(err, ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		case errors.Is(err, ErrUserDisabled):
-			shared.RespondError(c, response.CodeBadRequest, "error.user_disabled", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.user_disabled", nil)
 		case errors.Is(err, ErrUserOAuthNotBound):
-			shared.RespondError(c, response.CodeBadRequest, "error.telegram_not_bound", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_not_bound", nil)
 		case errors.Is(err, ErrTelegramUnbindRequiresEmail):
-			shared.RespondError(c, response.CodeBadRequest, "error.telegram_unbind_requires_email", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_unbind_requires_email", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
 		}
 		return
 	}
@@ -482,13 +482,13 @@ func (h *AdminHandler) UnbindAdminUserTelegram(c *gin.Context) {
 
 // GetAdminUserCouponUsages 获取用户优惠券使用记录。
 func (h *AdminHandler) GetAdminUserCouponUsages(c *gin.Context) {
-	userID, err := shared.ParseParamUint(c, "id")
+	userID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
 		return
 	}
 
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	usages, total, err := h.couponUsages.ListByUser(coupon.UsageListFilter{
 		Page:     page,
@@ -496,7 +496,7 @@ func (h *AdminHandler) GetAdminUserCouponUsages(c *gin.Context) {
 		UserID:   userID,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 
@@ -516,7 +516,7 @@ func (h *AdminHandler) GetAdminUserCouponUsages(c *gin.Context) {
 	if len(couponIDs) > 0 {
 		items, err := h.coupons.ListByIDs(couponIDs)
 		if err != nil {
-			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 			return
 		}
 		for i := range items {
@@ -543,7 +543,7 @@ func (h *AdminHandler) GetAdminUserCouponUsages(c *gin.Context) {
 		}
 		products, err := h.products.ListByIDs(ids)
 		if err != nil {
-			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 			return
 		}
 		for i := range products {
@@ -601,21 +601,21 @@ func decodeScopeRefIDs(raw string) []uint {
 func (h *AdminHandler) BatchUpdateUserStatus(c *gin.Context) {
 	var req BatchUpdateUserStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	if len(req.UserIDs) == 0 {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	normalizedStatus := strings.ToLower(strings.TrimSpace(req.Status))
 	if normalizedStatus != constants.UserStatusActive && normalizedStatus != constants.UserStatusDisabled {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
 	if err := h.users.BatchUpdateStatus(req.UserIDs, normalizedStatus); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
 		return
 	}
 	if h.authState != nil {

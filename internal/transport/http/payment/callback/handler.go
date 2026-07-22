@@ -5,7 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
@@ -61,7 +62,7 @@ func NewHandler(service Service, payments PaymentLookup, channels ChannelLookup,
 
 // PaymentCallback preserves the historical provider detection order on the shared endpoint.
 func (h *Handler) PaymentCallback(c *gin.Context) {
-	shared.RequestLog(c).Infow("payment_callback_received",
+	ginutil.RequestLog(c).Infow("payment_callback_received",
 		"method", c.Request.Method,
 		"client_ip", c.ClientIP(),
 		"content_type", strings.TrimSpace(c.GetHeader("Content-Type")),
@@ -80,7 +81,7 @@ func (h *Handler) PaymentCallback(c *gin.Context) {
 		}
 	}
 
-	shared.RequestLog(c).Warnw("payment_callback_unrecognized",
+	ginutil.RequestLog(c).Warnw("payment_callback_unrecognized",
 		"method", c.Request.Method,
 		"client_ip", c.ClientIP(),
 		"content_type", strings.TrimSpace(c.GetHeader("Content-Type")),
@@ -107,7 +108,7 @@ func (h *Handler) enqueuePaymentExceptionAlert(c *gin.Context, data jsonmap.JSON
 		strings.TrimSpace(c.ClientIP()),
 		data,
 	); err != nil {
-		shared.RequestLog(c).Warnw("enqueue_payment_exception_alert_failed", "error", err)
+		ginutil.RequestLog(c).Warnw("enqueue_payment_exception_alert_failed", "error", err)
 	}
 }
 

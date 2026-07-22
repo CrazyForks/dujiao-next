@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/telegram"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -83,14 +83,14 @@ func NewAdminBroadcastHandler(broadcasts BroadcastAdminService) *AdminBroadcastH
 
 // ListTelegramBroadcasts 获取 Telegram 群发列表。
 func (h *AdminBroadcastHandler) ListTelegramBroadcasts(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	items, total, err := h.broadcasts.ListBroadcasts(BroadcastListInput{
 		Page:     page,
 		PageSize: pageSize,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.bad_request", err)
 		return
 	}
 	response.SuccessWithPage(c, items, response.BuildPagination(page, pageSize, total))
@@ -100,7 +100,7 @@ func (h *AdminBroadcastHandler) ListTelegramBroadcasts(c *gin.Context) {
 func (h *AdminBroadcastHandler) CreateTelegramBroadcast(c *gin.Context) {
 	var req createBroadcastRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -109,10 +109,10 @@ func (h *AdminBroadcastHandler) CreateTelegramBroadcast(c *gin.Context) {
 		if errors.Is(err, telegram.ErrBroadcastInvalid) ||
 			errors.Is(err, telegram.ErrBroadcastNoRecipients) ||
 			errors.Is(err, telegram.ErrBotTokenUnavailable) {
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.bad_request", err)
 		return
 	}
 	response.Success(c, result)
@@ -120,18 +120,18 @@ func (h *AdminBroadcastHandler) CreateTelegramBroadcast(c *gin.Context) {
 
 // GetTelegramBroadcast 获取单条 Telegram 群发详情。
 func (h *AdminBroadcastHandler) GetTelegramBroadcast(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", errors.New("invalid broadcast id"))
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", errors.New("invalid broadcast id"))
 		return
 	}
 	broadcast, err := h.broadcasts.GetBroadcast(id)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.bad_request", err)
 		return
 	}
 	if broadcast == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.not_found", telegram.ErrBroadcastNotFound)
+		ginutil.RespondError(c, response.CodeNotFound, "error.not_found", telegram.ErrBroadcastNotFound)
 		return
 	}
 	response.Success(c, broadcast)
@@ -139,11 +139,11 @@ func (h *AdminBroadcastHandler) GetTelegramBroadcast(c *gin.Context) {
 
 // ListTelegramBroadcastUsers 获取 Telegram 广播可选用户。
 func (h *AdminBroadcastHandler) ListTelegramBroadcastUsers(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
-	createdFrom, createdTo, err := shared.ParseQueryTimeRange(c, "created_from", "created_to")
+	createdFrom, createdTo, err := ginutil.ParseQueryTimeRange(c, "created_from", "created_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -158,7 +158,7 @@ func (h *AdminBroadcastHandler) ListTelegramBroadcastUsers(c *gin.Context) {
 		CreatedTo:        createdTo,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.bad_request", err)
 		return
 	}
 	response.SuccessWithPage(c, items, response.BuildPagination(page, pageSize, total))

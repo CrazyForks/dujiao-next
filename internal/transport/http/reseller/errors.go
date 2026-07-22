@@ -3,10 +3,10 @@ package resellerhttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,11 +30,11 @@ var userManagementErrorRules = []mappedError{
 func respondUserManagementError(c *gin.Context, err error, fallbackKey string) {
 	for _, rule := range userManagementErrorRules {
 		if errors.Is(err, rule.target) {
-			shared.RespondError(c, rule.code, rule.key, nil)
+			ginutil.RespondError(c, rule.code, rule.key, nil)
 			return
 		}
 	}
-	shared.RespondError(c, response.CodeInternal, fallbackKey, err)
+	ginutil.RespondError(c, response.CodeInternal, fallbackKey, err)
 }
 
 func siteConfigFieldErrorKey(field string) string {
@@ -68,18 +68,18 @@ func isUploadValidationError(err error) bool {
 func respondAdminManagementError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, catalogproduct.ErrNotFound):
-		shared.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
 	case errors.Is(err, resellermodule.ErrProfileStatusInvalid),
 		errors.Is(err, resellermodule.ErrDomainStatusInvalid),
 		errors.Is(err, resellermodule.ErrDomainInvalid),
 		errors.Is(err, resellermodule.ErrSiteConfigInvalid),
 		errors.Is(err, resellermodule.ErrDomainMainHostNotAllowed),
 		errors.Is(err, resellermodule.ErrDomainConflict):
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 	case errors.Is(err, resellermodule.ErrSubdomainBaseMissing):
-		shared.RespondError(c, response.CodeBadRequest, "error.reseller_subdomain_base_missing", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.reseller_subdomain_base_missing", nil)
 	default:
-		shared.RespondError(c, response.CodeInternal, "error.save_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 	}
 }
 
@@ -95,32 +95,32 @@ var userProductSettingErrorRules = []mappedError{
 func respondUserProductSettingError(c *gin.Context, err error, fallbackKey string) {
 	for _, rule := range userProductSettingErrorRules {
 		if errors.Is(err, rule.target) {
-			shared.RespondError(c, rule.code, rule.key, nil)
+			ginutil.RespondError(c, rule.code, rule.key, nil)
 			return
 		}
 	}
 	if errors.Is(err, catalogproduct.ErrNotFound) {
-		shared.RespondError(c, response.CodeNotFound, "error.not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 		return
 	}
-	shared.RespondError(c, response.CodeInternal, fallbackKey, err)
+	ginutil.RespondError(c, response.CodeInternal, fallbackKey, err)
 }
 
 func respondAdminProductSettingError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, catalogproduct.ErrNotFound):
-		shared.RespondError(c, response.CodeNotFound, "error.not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 	case errors.Is(err, resellermodule.ErrProfileInactive):
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 	case errors.Is(err, catalogproduct.ErrProductSKUInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
 	case errors.Is(err, resellermodule.ErrPriceBelowBase),
 		errors.Is(err, resellermodule.ErrPricingModeInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.reseller_price_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.reseller_price_invalid", nil)
 	case errors.Is(err, resellermodule.ErrMarkupExceeded):
-		shared.RespondError(c, response.CodeBadRequest, "error.reseller_markup_exceeded", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.reseller_markup_exceeded", nil)
 	default:
-		shared.RespondError(c, response.CodeInternal, "error.save_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 	}
 }
 
@@ -137,11 +137,11 @@ var userFinanceErrorRules = []mappedError{
 func respondUserFinanceError(c *gin.Context, err error, fallbackKey string) {
 	for _, rule := range userFinanceErrorRules {
 		if errors.Is(err, rule.target) {
-			shared.RespondError(c, rule.code, rule.key, nil)
+			ginutil.RespondError(c, rule.code, rule.key, nil)
 			return
 		}
 	}
-	shared.RespondError(c, response.CodeInternal, fallbackKey, err)
+	ginutil.RespondError(c, response.CodeInternal, fallbackKey, err)
 }
 
 var userOrderErrorRules = []mappedError{
@@ -153,9 +153,9 @@ var userOrderErrorRules = []mappedError{
 func respondUserOrderError(c *gin.Context, err error, fallbackKey string) {
 	for _, rule := range userOrderErrorRules {
 		if errors.Is(err, rule.target) {
-			shared.RespondError(c, rule.code, rule.key, nil)
+			ginutil.RespondError(c, rule.code, rule.key, nil)
 			return
 		}
 	}
-	shared.RespondError(c, response.CodeInternal, fallbackKey, err)
+	ginutil.RespondError(c, response.CodeInternal, fallbackKey, err)
 }

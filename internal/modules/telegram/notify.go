@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/config"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 )
 
 type telegramSendMessageResponse struct {
@@ -36,7 +36,7 @@ type SendOptions struct {
 
 // SettingReader 是通知发送器读取 Telegram 动态配置所需的最小端口。
 type SettingReader interface {
-	GetTelegramAuthSetting(defaultCfg config.TelegramAuthConfig) (settingsmodule.TelegramAuthSetting, error)
+	GetTelegramAuthSetting(defaultCfg config.TelegramAuthConfig) (settingssecurity.TelegramAuthSetting, error)
 }
 
 // NotifyService Telegram 通知发送服务。

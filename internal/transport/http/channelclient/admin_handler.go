@@ -3,9 +3,9 @@ package channelclienthttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/modules/channelclient"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -56,7 +56,7 @@ func NewAdminHandler(clients AdminService) *AdminHandler {
 func (h *AdminHandler) ListChannelClients(c *gin.Context) {
 	clients, err := h.clients.ListChannelClientDetails()
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.channel_clients_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.channel_clients_fetch_failed", err)
 		return
 	}
 	response.Success(c, clients)
@@ -66,13 +66,13 @@ func (h *AdminHandler) ListChannelClients(c *gin.Context) {
 func (h *AdminHandler) CreateChannelClient(c *gin.Context) {
 	var req createRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	result, err := h.clients.CreateChannelClient(req.Name, req.ChannelType, req.Description, req.BotToken, req.CallbackURL)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.channel_client_create_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.channel_client_create_failed", err)
 		return
 	}
 
@@ -81,19 +81,19 @@ func (h *AdminHandler) CreateChannelClient(c *gin.Context) {
 
 // GetChannelClient 获取渠道客户端详情（含解密 secret）
 func (h *AdminHandler) GetChannelClient(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
 	detail, err := h.clients.GetChannelClientDetail(id)
 	if err != nil {
 		if errors.Is(err, channelclient.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.channel_client_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.channel_client_fetch_failed", err)
 		return
 	}
 	response.Success(c, detail)
@@ -101,24 +101,24 @@ func (h *AdminHandler) GetChannelClient(c *gin.Context) {
 
 // UpdateChannelClientStatus 更新渠道客户端状态
 func (h *AdminHandler) UpdateChannelClientStatus(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
 	var req updateStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	if err := h.clients.UpdateChannelClientStatus(id, req.Status); err != nil {
 		if errors.Is(err, channelclient.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.channel_client_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.channel_client_update_failed", err)
 		return
 	}
 
@@ -127,25 +127,25 @@ func (h *AdminHandler) UpdateChannelClientStatus(c *gin.Context) {
 
 // UpdateChannelClient 更新渠道客户端信息
 func (h *AdminHandler) UpdateChannelClient(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
 	var req updateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	result, err := h.clients.UpdateChannelClient(id, req.Name, req.Description, req.BotToken, req.CallbackURL)
 	if err != nil {
 		if errors.Is(err, channelclient.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.channel_client_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.channel_client_update_failed", err)
 		return
 	}
 
@@ -154,19 +154,19 @@ func (h *AdminHandler) UpdateChannelClient(c *gin.Context) {
 
 // ResetChannelClientSecret 重置渠道客户端 Secret
 func (h *AdminHandler) ResetChannelClientSecret(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
 	result, err := h.clients.ResetChannelClientSecret(id)
 	if err != nil {
 		if errors.Is(err, channelclient.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.channel_client_reset_secret_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.channel_client_reset_secret_failed", err)
 		return
 	}
 
@@ -175,18 +175,18 @@ func (h *AdminHandler) ResetChannelClientSecret(c *gin.Context) {
 
 // DeleteChannelClient 删除渠道客户端
 func (h *AdminHandler) DeleteChannelClient(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
 	if err := h.clients.DeleteChannelClient(id); err != nil {
 		if errors.Is(err, channelclient.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.channel_client_delete_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.channel_client_delete_failed", err)
 		return
 	}
 

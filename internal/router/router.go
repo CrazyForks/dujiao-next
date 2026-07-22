@@ -24,7 +24,7 @@ import (
 	notificationtransport "github.com/dujiao-next/internal/transport/http/notification"
 	procurementtransport "github.com/dujiao-next/internal/transport/http/procurement"
 	promotiontransport "github.com/dujiao-next/internal/transport/http/promotion"
-	settingstransport "github.com/dujiao-next/internal/transport/http/settings"
+	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	sitemaptransport "github.com/dujiao-next/internal/transport/http/sitemap"
 	"github.com/dujiao-next/internal/web"
 	adminauthwiring "github.com/dujiao-next/internal/wiring/adminauth"

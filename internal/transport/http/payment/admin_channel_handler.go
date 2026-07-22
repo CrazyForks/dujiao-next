@@ -3,10 +3,11 @@ package paymenthttp
 import (
 	"errors"
 
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -87,7 +88,7 @@ func NewAdminChannelHandler(channels AdminChannelCatalog) *AdminChannelHandler {
 func (h *AdminChannelHandler) CreatePaymentChannel(c *gin.Context) {
 	var req CreatePaymentChannelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -128,17 +129,17 @@ func (h *AdminChannelHandler) CreatePaymentChannel(c *gin.Context) {
 	if err := h.channels.ValidateChannel(channel); err != nil {
 		switch {
 		case errors.Is(err, ErrPaymentProviderNotSupported):
-			shared.RespondError(c, response.CodeBadRequest, "error.payment_provider_not_supported", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.payment_provider_not_supported", nil)
 		case errors.Is(err, ErrPaymentChannelConfigInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.payment_channel_config_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.payment_channel_config_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeBadRequest, "error.payment_channel_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.payment_channel_invalid", nil)
 		}
 		return
 	}
 
 	if err := h.channels.Create(channel); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_channel_create_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_channel_create_failed", err)
 		return
 	}
 	_ = cache.DelAllPublicConfig(c.Request.Context())
@@ -148,15 +149,15 @@ func (h *AdminChannelHandler) CreatePaymentChannel(c *gin.Context) {
 
 // UpdatePaymentChannel 更新支付渠道
 func (h *AdminChannelHandler) UpdatePaymentChannel(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_channel_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_channel_invalid", nil)
 		return
 	}
 
 	var req UpdatePaymentChannelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -164,9 +165,9 @@ func (h *AdminChannelHandler) UpdatePaymentChannel(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrPaymentChannelNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.payment_channel_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.payment_channel_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.payment_channel_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.payment_channel_update_failed", err)
 		}
 		return
 	}
@@ -223,17 +224,17 @@ func (h *AdminChannelHandler) UpdatePaymentChannel(c *gin.Context) {
 	if err := h.channels.ValidateChannel(channel); err != nil {
 		switch {
 		case errors.Is(err, ErrPaymentProviderNotSupported):
-			shared.RespondError(c, response.CodeBadRequest, "error.payment_provider_not_supported", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.payment_provider_not_supported", nil)
 		case errors.Is(err, ErrPaymentChannelConfigInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.payment_channel_config_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.payment_channel_config_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeBadRequest, "error.payment_channel_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.payment_channel_invalid", nil)
 		}
 		return
 	}
 
 	if err := h.channels.Update(channel); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_channel_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_channel_update_failed", err)
 		return
 	}
 	_ = cache.DelAllPublicConfig(c.Request.Context())
@@ -243,14 +244,14 @@ func (h *AdminChannelHandler) UpdatePaymentChannel(c *gin.Context) {
 
 // DeletePaymentChannel 删除支付渠道
 func (h *AdminChannelHandler) DeletePaymentChannel(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_channel_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_channel_invalid", nil)
 		return
 	}
 
 	if err := h.channels.Delete(id); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_channel_delete_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_channel_delete_failed", err)
 		return
 	}
 	_ = cache.DelAllPublicConfig(c.Request.Context())
@@ -260,9 +261,9 @@ func (h *AdminChannelHandler) DeletePaymentChannel(c *gin.Context) {
 
 // GetPaymentChannel 获取支付渠道详情
 func (h *AdminChannelHandler) GetPaymentChannel(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_channel_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_channel_invalid", nil)
 		return
 	}
 
@@ -270,9 +271,9 @@ func (h *AdminChannelHandler) GetPaymentChannel(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrPaymentChannelNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.payment_channel_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.payment_channel_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.payment_channel_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.payment_channel_fetch_failed", err)
 		}
 		return
 	}
@@ -282,13 +283,13 @@ func (h *AdminChannelHandler) GetPaymentChannel(c *gin.Context) {
 
 // GetPaymentChannels 获取支付渠道列表
 func (h *AdminChannelHandler) GetPaymentChannels(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	providerType := c.Query("provider_type")
 	channelType := c.Query("channel_type")
-	activeOnly, err := shared.ParseQueryBool(c, "active_only")
+	activeOnly, err := ginutil.ParseQueryBool(c, "active_only")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -300,7 +301,7 @@ func (h *AdminChannelHandler) GetPaymentChannels(c *gin.Context) {
 		ActiveOnly:   activeOnly,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_channel_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_channel_fetch_failed", err)
 		return
 	}
 

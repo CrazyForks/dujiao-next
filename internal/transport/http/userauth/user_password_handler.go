@@ -3,9 +3,9 @@ package userauthhttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/i18n"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -66,36 +66,36 @@ type UserResetPasswordRequest struct {
 func (h *UserPasswordHandler) UserForgotPassword(c *gin.Context) {
 	emailVerificationEnabled, err := h.service.GetEmailVerificationEnabled(true)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.reset_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.reset_failed", err)
 		return
 	}
 	if !emailVerificationEnabled {
-		shared.RespondError(c, response.CodeForbidden, "error.password_reset_disabled", nil)
+		ginutil.RespondError(c, response.CodeForbidden, "error.password_reset_disabled", nil)
 		return
 	}
 
 	var req UserResetPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	if err := h.service.ResetPassword(req.Email, req.Code, req.NewPassword); err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidEmail):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
 		case errors.Is(err, ErrUserNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		case errors.Is(err, ErrVerifyCodeInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.verify_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.verify_code_invalid", nil)
 		case errors.Is(err, ErrVerifyCodeExpired):
-			shared.RespondError(c, response.CodeBadRequest, "error.verify_code_expired", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.verify_code_expired", nil)
 		case errors.Is(err, ErrVerifyCodeAttemptsExceeded):
-			shared.RespondError(c, response.CodeBadRequest, "error.verify_code_attempts_exceeded", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.verify_code_attempts_exceeded", nil)
 		case errors.Is(err, ErrWeakPassword):
 			respondWeakPassword(c, err)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.reset_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.reset_failed", err)
 		}
 		return
 	}
@@ -111,27 +111,27 @@ type ChangeUserPasswordRequest struct {
 
 // ChangeUserPassword 用户登录态修改密码。
 func (h *UserPasswordHandler) ChangeUserPassword(c *gin.Context) {
-	id, ok := shared.GetUserID(c)
+	id, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	var req ChangeUserPasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	if err := h.service.ChangePassword(id, req.OldPassword, req.NewPassword); err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidPassword):
-			shared.RespondError(c, response.CodeBadRequest, "error.password_old_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.password_old_invalid", nil)
 		case errors.Is(err, ErrWeakPassword):
 			respondWeakPassword(c, err)
 		case errors.Is(err, ErrUserNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.save_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 		}
 		return
 	}
@@ -146,8 +146,8 @@ func respondWeakPassword(c *gin.Context, err error) {
 		Args() []interface{}
 	}); ok {
 		msg := i18n.Sprintf(locale, perr.Key(), perr.Args()...)
-		shared.RespondErrorWithMsg(c, response.CodeBadRequest, msg, nil)
+		ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, msg, nil)
 		return
 	}
-	shared.RespondError(c, response.CodeBadRequest, "error.password_weak", nil)
+	ginutil.RespondError(c, response.CodeBadRequest, "error.password_weak", nil)
 }

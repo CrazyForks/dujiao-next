@@ -6,14 +6,14 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -81,7 +81,7 @@ func NewAdminProductHandler(
 
 // GetAdminProducts 获取商品列表 (Admin)
 func (h *AdminProductHandler) GetAdminProducts(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	categoryID := c.Query("category_id")
 	search := c.Query("search")
 	fulfillmentType := strings.TrimSpace(c.Query("fulfillment_type"))
@@ -91,13 +91,13 @@ func (h *AdminProductHandler) GetAdminProducts(c *gin.Context) {
 	}
 	hasWholesalePrices, err := parseWholesaleFilter(c.Query("wholesale"))
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	if hasWholesalePrices == nil {
 		hasWholesalePrices, err = parseWholesaleFilter(c.Query("has_wholesale_prices"))
 		if err != nil {
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 			return
 		}
 	}
@@ -108,12 +108,12 @@ func (h *AdminProductHandler) GetAdminProducts(c *gin.Context) {
 	}
 	products, total, err := h.products.ListAdmin(categoryID, search, fulfillmentType, stockStatus, hasWholesalePrices, lowStockThreshold, page, pageSize)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		return
 	}
 
 	if err := h.products.ApplyAutoStockCounts(products); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		return
 	}
 
@@ -147,23 +147,23 @@ func parseWholesaleFilter(raw string) (*bool, error) {
 func (h *AdminProductHandler) GetAdminProduct(c *gin.Context) {
 	id := c.Param("id")
 	if strings.TrimSpace(id) == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
 	product, err := h.products.GetAdminByID(id)
 	if err != nil {
 		if errors.Is(err, catalogproduct.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		return
 	}
 
 	temp := []models.Product{*product}
 	if err := h.products.ApplyAutoStockCounts(temp); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		return
 	}
 	*product = temp[0]
@@ -264,7 +264,7 @@ func toProductSKUInputs(items []ProductSKURequest) []productwrite.ProductSKUInpu
 func (h *AdminProductHandler) CreateProduct(c *gin.Context) {
 	var req CreateProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -296,54 +296,54 @@ func (h *AdminProductHandler) CreateProduct(c *gin.Context) {
 	})
 	if err != nil {
 		if errors.Is(err, catalogproduct.ErrSlugExists) {
-			shared.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductPriceInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_price_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_price_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductPurchaseInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_purchase_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_purchase_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductCategoryInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_category_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_category_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrFulfillmentInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.fulfillment_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.fulfillment_invalid", nil)
 			return
 		}
 		if errors.Is(err, manualform.ErrSchemaInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.manual_form_schema_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.manual_form_schema_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrManualStockInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.manual_stock_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.manual_stock_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductPurchaseLimitInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_purchase_limit_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_purchase_limit_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductStockDisplayInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 			return
 		}
 		if errors.Is(err, productdomain.ErrWholesalePriceInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.wholesale_price_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.wholesale_price_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductSKUInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductSKUHasCardSecretStock) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_sku_has_card_secret_stock", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_sku_has_card_secret_stock", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.product_create_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_create_failed", err)
 		return
 	}
 
@@ -356,7 +356,7 @@ func (h *AdminProductHandler) UpdateProduct(c *gin.Context) {
 
 	var req CreateProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -388,58 +388,58 @@ func (h *AdminProductHandler) UpdateProduct(c *gin.Context) {
 	})
 	if err != nil {
 		if errors.Is(err, catalogproduct.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrSlugExists) {
-			shared.RespondError(c, response.CodeBadRequest, "error.slug_used", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_used", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductPriceInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_price_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_price_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductPurchaseInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_purchase_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_purchase_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductCategoryInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_category_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_category_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrFulfillmentInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.fulfillment_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.fulfillment_invalid", nil)
 			return
 		}
 		if errors.Is(err, manualform.ErrSchemaInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.manual_form_schema_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.manual_form_schema_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrManualStockInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.manual_stock_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.manual_stock_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductPurchaseLimitInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_purchase_limit_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_purchase_limit_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductStockDisplayInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 			return
 		}
 		if errors.Is(err, productdomain.ErrWholesalePriceInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.wholesale_price_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.wholesale_price_invalid", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductSKUInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductSKUHasCardSecretStock) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_sku_has_card_secret_stock", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_sku_has_card_secret_stock", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.product_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_update_failed", err)
 		return
 	}
 
@@ -463,26 +463,26 @@ func (h *AdminProductHandler) UpdateProductWholesalePrices(c *gin.Context) {
 
 	var req UpdateWholesalePricesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	inputs := toWholesalePriceInputs(req.WholesalePrices)
 	if inputs == nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
 	product, err := h.commands.UpdateWholesalePrices(id, *inputs)
 	if err != nil {
 		if errors.Is(err, catalogproduct.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
 		if errors.Is(err, productdomain.ErrWholesalePriceInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.wholesale_price_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.wholesale_price_invalid", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.product_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_update_failed", err)
 		return
 	}
 
@@ -495,7 +495,7 @@ func (h *AdminProductHandler) QuickUpdateProduct(c *gin.Context) {
 
 	var req QuickUpdateProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -510,21 +510,21 @@ func (h *AdminProductHandler) QuickUpdateProduct(c *gin.Context) {
 		fields["category_id"] = *req.CategoryID
 	}
 	if len(fields) == 0 {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
 	product, err := h.commands.QuickUpdate(id, fields)
 	if err != nil {
 		if errors.Is(err, catalogproduct.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductCategoryInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_category_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_category_invalid", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.product_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_update_failed", err)
 		return
 	}
 
@@ -660,7 +660,7 @@ func productBatchFailureFromError(locale string, id uint, err error) batchProduc
 func (h *AdminProductHandler) BatchUpdateProductStatus(c *gin.Context) {
 	var req BatchProductStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	locale := i18n.ResolveLocale(c)
@@ -681,7 +681,7 @@ func (h *AdminProductHandler) BatchUpdateProductStatus(c *gin.Context) {
 func (h *AdminProductHandler) BatchUpdateProductCategory(c *gin.Context) {
 	var req BatchProductCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	successCount := 0
@@ -698,7 +698,7 @@ func (h *AdminProductHandler) BatchUpdateProductCategory(c *gin.Context) {
 func (h *AdminProductHandler) BatchDeleteProducts(c *gin.Context) {
 	var req BatchProductActionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	successCount := 0
@@ -719,18 +719,18 @@ func (h *AdminProductHandler) DeleteProduct(c *gin.Context) {
 
 	if err := h.commands.Delete(id); err != nil {
 		if errors.Is(err, catalogproduct.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductHasStock) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_has_stock", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_has_stock", nil)
 			return
 		}
 		if errors.Is(err, catalogproduct.ErrProductHasOrderRecord) {
-			shared.RespondError(c, response.CodeBadRequest, "error.product_has_order_record", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.product_has_order_record", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.product_delete_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_delete_failed", err)
 		return
 	}
 

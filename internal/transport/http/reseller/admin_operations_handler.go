@@ -5,9 +5,10 @@ import (
 	"errors"
 
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/modules/reporting"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -34,16 +35,16 @@ func NewAdminOperationsHandler(service AdminOperationsService) *AdminOperationsH
 func (h *AdminOperationsHandler) GetOverview(c *gin.Context) {
 	input, err := shared.ParseReportingQuery(c)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	data, err := h.service.GetOverview(c.Request.Context(), input)
 	if err != nil {
 		if errors.Is(err, reporting.ErrRangeInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.dashboard_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.dashboard_fetch_failed", err)
 		return
 	}
 	response.Success(c, data)
@@ -53,16 +54,16 @@ func (h *AdminOperationsHandler) GetOverview(c *gin.Context) {
 func (h *AdminOperationsHandler) GetFinance(c *gin.Context) {
 	input, err := shared.ParseReportingQuery(c)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	data, err := h.service.GetFinance(c.Request.Context(), input)
 	if err != nil {
 		if errors.Is(err, reporting.ErrRangeInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.dashboard_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.dashboard_fetch_failed", err)
 		return
 	}
 	response.Success(c, data)

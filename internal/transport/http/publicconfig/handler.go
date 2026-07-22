@@ -5,10 +5,11 @@ import (
 	"strings"
 	"time"
 
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/version"
 
@@ -131,13 +132,13 @@ func (h *Handler) GetConfig(c *gin.Context) {
 
 	data, err := h.settings.GetConfig(defaults)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.config_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.config_fetch_failed", err)
 		return
 	}
 
 	publicChannels, err := h.payments.GetOrderPaymentChannels()
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.config_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.config_fetch_failed", err)
 		return
 	}
 	data["payment_channels"] = publicChannels
@@ -153,7 +154,7 @@ func (h *Handler) GetConfig(c *gin.Context) {
 	if h.captcha != nil {
 		publicCaptcha, captchaErr := h.captcha.GetPublicSetting()
 		if captchaErr != nil {
-			shared.RespondError(c, response.CodeInternal, "error.config_fetch_failed", captchaErr)
+			ginutil.RespondError(c, response.CodeInternal, "error.config_fetch_failed", captchaErr)
 			return
 		}
 		data["captcha"] = publicCaptcha
@@ -174,7 +175,7 @@ func (h *Handler) GetConfig(c *gin.Context) {
 
 	affiliateSetting, err := h.settings.GetAffiliateSettingMap()
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.config_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.config_fetch_failed", err)
 		return
 	}
 	data["affiliate"] = affiliateSetting
@@ -186,7 +187,7 @@ func (h *Handler) GetConfig(c *gin.Context) {
 	data["email_verification_enabled"] = emailVerificationEnabled
 	enabled, allowedDomains, policyErr := h.settings.GetRegistrationEmailDomainPolicy()
 	if policyErr != nil {
-		shared.RespondError(c, response.CodeInternal, "error.config_fetch_failed", policyErr)
+		ginutil.RespondError(c, response.CodeInternal, "error.config_fetch_failed", policyErr)
 		return
 	}
 	data["email_domain_allowlist_enabled"] = enabled
@@ -209,7 +210,7 @@ func (h *Handler) GetConfig(c *gin.Context) {
 	if h.overlay != nil {
 		overlaid, overlayErr := h.overlay.ApplyPublicConfigOverlay(c.Request.Context(), tenant, data)
 		if overlayErr != nil {
-			shared.RespondError(c, response.CodeInternal, "error.config_fetch_failed", overlayErr)
+			ginutil.RespondError(c, response.CodeInternal, "error.config_fetch_failed", overlayErr)
 			return
 		}
 		data = overlaid

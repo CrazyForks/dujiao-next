@@ -12,7 +12,7 @@ import (
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/logger"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -64,7 +64,7 @@ type parsedIPBlacklist struct {
 
 // SettingReader 是订单风控读取动态配置所需的最小端口。
 type SettingReader interface {
-	GetOrderRiskControlConfig() (settingsmodule.OrderRiskControlConfig, error)
+	GetOrderRiskControlConfig() (settingssecurity.OrderRiskControlConfig, error)
 }
 
 // PendingOrderCounter 是订单风控所需的待支付订单计数端口。
@@ -140,7 +140,7 @@ func (s *Service) CheckOrderAllowed(input CheckInput) error {
 }
 
 // checkPendingOrderLimits 检查并发待支付订单上限
-func (s *Service) checkPendingOrderLimits(input CheckInput, cfg settingsmodule.OrderRiskControlConfig) error {
+func (s *Service) checkPendingOrderLimits(input CheckInput, cfg settingssecurity.OrderRiskControlConfig) error {
 	// 用户维度
 	if input.UserID > 0 && cfg.MaxPendingOrdersPerUser > 0 {
 		count, err := s.orderRepo.CountPendingByUserID(input.UserID)
@@ -188,7 +188,7 @@ return {current, ttl}
 `)
 
 // checkOrderRateLimit 检查下单频率
-func (s *Service) checkOrderRateLimit(input CheckInput, rl settingsmodule.OrderRateLimitConfig) error {
+func (s *Service) checkOrderRateLimit(input CheckInput, rl settingssecurity.OrderRateLimitConfig) error {
 	client := cache.Client()
 	if client == nil {
 		return nil // Redis 不可用时放行
@@ -217,7 +217,7 @@ func (s *Service) checkOrderRateLimit(input CheckInput, rl settingsmodule.OrderR
 }
 
 // checkSingleRateLimit 执行单个维度的频率限制检查
-func (s *Service) checkSingleRateLimit(ctx context.Context, client *redis.Client, key string, rl settingsmodule.OrderRateLimitConfig) error {
+func (s *Service) checkSingleRateLimit(ctx context.Context, client *redis.Client, key string, rl settingssecurity.OrderRateLimitConfig) error {
 	result, err := orderRateLimitScript.Run(ctx, client, []string{key},
 		rl.WindowSeconds, rl.MaxRequests, rl.BlockSeconds,
 	).Result()

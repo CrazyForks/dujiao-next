@@ -8,10 +8,10 @@ import (
 	"github.com/dujiao-next/internal/testkit/memorysettings"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -142,7 +142,7 @@ func setupAffiliateServiceTest(t *testing.T) (*AffiliateService, *gorm.DB) {
 
 	settingRepo := memorysettings.New()
 	settingSvc := settingsapp.NewService(settingRepo)
-	if _, err := settingSvc.UpdateAffiliateSetting(settingsmodule.AffiliateSetting{
+	if _, err := settingSvc.UpdateAffiliateSetting(settingsintegration.AffiliateSetting{
 		Enabled:        true,
 		CommissionRate: 20,
 	}); err != nil {

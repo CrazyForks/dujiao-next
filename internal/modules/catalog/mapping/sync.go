@@ -12,7 +12,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/settings"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/shopspring/decimal"
@@ -292,7 +292,7 @@ func (s *Service) markUpstreamUnavailable(mapping *models.ProductMapping, status
 
 // SyncAllStock 同步所有活跃映射的库存（供定时任务调用）
 // 使用 Redis 锁防止任务重叠执行，并发调用上游 API 提升吞吐量
-func (s *Service) SyncAllStock(cfg settings.UpstreamSyncConfig) error {
+func (s *Service) SyncAllStock(cfg settingsintegration.UpstreamSyncConfig) error {
 	ctx := context.Background()
 	const lockKey = "upstream:sync_stock_running"
 

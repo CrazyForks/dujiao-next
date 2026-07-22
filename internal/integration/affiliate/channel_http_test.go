@@ -11,12 +11,12 @@ import (
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	affiliatetransport "github.com/dujiao-next/internal/transport/http/affiliate"
@@ -116,7 +116,7 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 	affiliateRepo := repository.NewAffiliateRepository(db)
 
 	settingSvc := settingsapp.NewService(settingRepo)
-	if _, err := settingSvc.UpdateAffiliateSetting(settingsmodule.AffiliateSetting{
+	if _, err := settingSvc.UpdateAffiliateSetting(settingsintegration.AffiliateSetting{
 		Enabled:           true,
 		CommissionRate:    10,
 		ConfirmDays:       7,

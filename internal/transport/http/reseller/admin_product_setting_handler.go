@@ -4,11 +4,11 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -38,10 +38,10 @@ func NewAdminProductSettingHandler(service AdminProductSettingService, audit Aud
 
 // ListProductSettings 管理端分销商品配置列表。
 func (h *AdminProductSettingHandler) ListProductSettings(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
-	resellerID, _ := shared.ParseQueryUint(c.Query("reseller_id"), false)
-	userID, _ := shared.ParseQueryUint(c.Query("user_id"), false)
-	productID, _ := shared.ParseQueryUint(c.Query("product_id"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	resellerID, _ := ginutil.ParseQueryUint(c.Query("reseller_id"), false)
+	userID, _ := ginutil.ParseQueryUint(c.Query("user_id"), false)
+	productID, _ := ginutil.ParseQueryUint(c.Query("product_id"), false)
 	rows, total, err := h.service.ListAdminSettings(resellermodule.ProductSettingAdminListInput{
 		Page:        page,
 		PageSize:    pageSize,
@@ -54,7 +54,7 @@ func (h *AdminProductSettingHandler) ListProductSettings(c *gin.Context) {
 		Listed:      strings.TrimSpace(c.Query("listed")),
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, dto.NewAdminResellerProductSettingRespList(rows), response.BuildPagination(page, pageSize, total))
@@ -82,12 +82,12 @@ func (h *AdminProductSettingHandler) UpdateProductSettings(c *gin.Context) {
 	}
 	var req productSettingsUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	input, err := req.toInput()
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	detail, err := h.service.SaveAdminProductSettings(resellerID, productID, input)
@@ -112,12 +112,12 @@ func (h *AdminProductSettingHandler) PreviewProductSettings(c *gin.Context) {
 	}
 	var req productSettingsUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	input, err := req.toInput()
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	items, err := h.service.PreviewAdminProductSettings(resellerID, productID, input)
@@ -145,9 +145,9 @@ func (h *AdminProductSettingHandler) ResetProductSetting(c *gin.Context) {
 	if !ok {
 		return
 	}
-	skuID, err := shared.ParseQueryUint(c.Query("sku_id"), false)
+	skuID, err := ginutil.ParseQueryUint(c.Query("sku_id"), false)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	if err := h.service.ResetAdminProductSetting(resellerID, productID, skuID); err != nil {
@@ -163,14 +163,14 @@ func (h *AdminProductSettingHandler) ResetProductSetting(c *gin.Context) {
 }
 
 func parseAdminProductSettingParams(c *gin.Context) (uint, uint, bool) {
-	resellerID, err := shared.ParseParamUint(c, "reseller_id")
+	resellerID, err := ginutil.ParseParamUint(c, "reseller_id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return 0, 0, false
 	}
-	productID, err := shared.ParseParamUint(c, "product_id")
+	productID, err := ginutil.ParseParamUint(c, "product_id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return 0, 0, false
 	}
 	return resellerID, productID, true

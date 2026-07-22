@@ -4,9 +4,9 @@ import (
 	"errors"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -44,24 +44,24 @@ type UserProfileUpdateRequest struct {
 
 // GetCurrentUser 获取当前用户信息。
 func (h *UserProfileHandler) GetCurrentUser(c *gin.Context) {
-	id, ok := shared.GetUserID(c)
+	id, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	user, err := h.service.GetUserByID(id)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	if user == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		return
 	}
 
 	profile, err := h.userProfileResponse(user)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.Success(c, profile)
@@ -81,14 +81,14 @@ func (h *UserProfileHandler) userProfileResponse(user *models.User) (dto.UserPro
 
 // UpdateUserProfile 更新用户资料。
 func (h *UserProfileHandler) UpdateUserProfile(c *gin.Context) {
-	id, ok := shared.GetUserID(c)
+	id, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	var req UserProfileUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -96,18 +96,18 @@ func (h *UserProfileHandler) UpdateUserProfile(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrProfileEmpty):
-			shared.RespondError(c, response.CodeBadRequest, "error.profile_empty", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.profile_empty", nil)
 		case errors.Is(err, ErrUserNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
 		}
 		return
 	}
 
 	profile, err := h.userProfileResponse(user)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
 		return
 	}
 	response.Success(c, profile)

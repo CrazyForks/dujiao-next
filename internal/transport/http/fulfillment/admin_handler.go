@@ -4,9 +4,9 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -62,14 +62,14 @@ type AdminCreateFulfillmentRequest struct {
 
 // AdminCreateFulfillment 管理端录入交付内容。
 func (h *AdminHandler) AdminCreateFulfillment(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
 
 	var req AdminCreateFulfillmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -82,15 +82,15 @@ func (h *AdminHandler) AdminCreateFulfillment(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrFulfillmentExists):
-			shared.RespondError(c, response.CodeBadRequest, "error.fulfillment_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.fulfillment_exists", nil)
 		case errors.Is(err, ErrFulfillmentInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.fulfillment_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.fulfillment_invalid", nil)
 		case errors.Is(err, ErrOrderStatusInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.order_status_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.order_status_invalid", nil)
 		case errors.Is(err, ErrOrderNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.fulfillment_create_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.fulfillment_create_failed", err)
 		}
 		return
 	}
@@ -100,19 +100,19 @@ func (h *AdminHandler) AdminCreateFulfillment(c *gin.Context) {
 
 // AdminDownloadFulfillment 管理端下载订单交付内容。
 func (h *AdminHandler) AdminDownloadFulfillment(c *gin.Context) {
-	orderID, err := shared.ParseParamUint(c, "id")
+	orderID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
 		return
 	}
 	order, err := h.orders.GetOrderForAdmin(orderID)
 	if err != nil || order == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 		return
 	}
 	payload := collectAdminFulfillmentPayload(order)
 	if payload == "" {
-		shared.RespondError(c, response.CodeNotFound, "error.fulfillment_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.fulfillment_not_found", nil)
 		return
 	}
 	filename := "fulfillment-" + order.OrderNo + ".txt"

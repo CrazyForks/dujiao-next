@@ -7,10 +7,11 @@ import (
 
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -91,14 +92,14 @@ func NewCreateHandler(orders OrderCreateService, payments PaymentChannelPolicy, 
 
 // CreateOrder 创建订单
 func (h *CreateHandler) CreateOrder(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	var req CreateOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -126,7 +127,7 @@ func (h *CreateHandler) CreateOrder(c *gin.Context) {
 func (h *CreateHandler) CreateGuestOrder(c *gin.Context) {
 	var req CreateGuestOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	if !h.verifyGuestCreateCaptcha(c, req.CaptchaPayload) {
@@ -156,14 +157,14 @@ func (h *CreateHandler) CreateGuestOrder(c *gin.Context) {
 
 // CreateOrderAndPay 创建订单并发起支付（合并接口）
 func (h *CreateHandler) CreateOrderAndPay(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	var req CreateOrderAndPayRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -200,7 +201,7 @@ func (h *CreateHandler) CreateOrderAndPay(c *gin.Context) {
 func (h *CreateHandler) CreateGuestOrderAndPay(c *gin.Context) {
 	var req CreateGuestOrderAndPayRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	if !h.verifyGuestCreateCaptcha(c, req.CaptchaPayload) {
@@ -244,13 +245,13 @@ func (h *CreateHandler) verifyGuestCreateCaptcha(c *gin.Context, payload shared.
 	if captchaErr := h.captcha.VerifyGuestCreateOrder(payload, c.ClientIP()); captchaErr != nil {
 		switch {
 		case errors.Is(captchaErr, captcha.ErrRequired):
-			shared.RespondError(c, response.CodeBadRequest, "error.captcha_required", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.captcha_required", nil)
 		case errors.Is(captchaErr, captcha.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.captcha_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.captcha_invalid", nil)
 		case errors.Is(captchaErr, captcha.ErrConfigInvalid):
-			shared.RespondError(c, response.CodeInternal, "error.captcha_config_invalid", captchaErr)
+			ginutil.RespondError(c, response.CodeInternal, "error.captcha_config_invalid", captchaErr)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.captcha_verify_failed", captchaErr)
+			ginutil.RespondError(c, response.CodeInternal, "error.captcha_verify_failed", captchaErr)
 		}
 		return false
 	}

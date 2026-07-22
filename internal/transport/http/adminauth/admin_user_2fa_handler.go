@@ -3,10 +3,11 @@ package adminauthhttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -31,24 +32,24 @@ func NewAdminUser2FAHandler(userTOTP UserTOTPService) *AdminUser2FAHandler {
 // ResetUser2FA 管理员重置目标用户 2FA。
 // DELETE /admin/users/:id/2fa
 func (h *AdminUser2FAHandler) ResetUser2FA(c *gin.Context) {
-	operatorID, ok := shared.GetAdminID(c)
+	operatorID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
-	userID, err := shared.ParseParamUint(c, "id")
+	userID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
 		return
 	}
 	target, err := h.userTOTP.AdminResetUser2FA(operatorID, userID)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		case errors.Is(err, ErrTOTPNotEnabled):
-			shared.RespondError(c, response.CodeBadRequest, "error.totp_not_enabled", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.totp_not_enabled", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.internal_error", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.internal_error", err)
 		}
 		return
 	}

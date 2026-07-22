@@ -1,8 +1,10 @@
 package router
 
 import (
+	settingsbootstrap "github.com/dujiao-next/internal/bootstrap/settingshttp"
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/http/response"
+	"github.com/dujiao-next/internal/platform/http/response"
+	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	adminauthtransport "github.com/dujiao-next/internal/transport/http/adminauth"
 	adminauthztransport "github.com/dujiao-next/internal/transport/http/adminauthz"
@@ -28,7 +30,6 @@ import (
 	promotiontransport "github.com/dujiao-next/internal/transport/http/promotion"
 	reconciliationtransport "github.com/dujiao-next/internal/transport/http/reconciliation"
 	resellertransport "github.com/dujiao-next/internal/transport/http/reseller"
-	settingstransport "github.com/dujiao-next/internal/transport/http/settings"
 	siteconnectiontransport "github.com/dujiao-next/internal/transport/http/siteconnection"
 	systemtransport "github.com/dujiao-next/internal/transport/http/system"
 	telegramtransport "github.com/dujiao-next/internal/transport/http/telegram"
@@ -38,7 +39,6 @@ import (
 	affiliatewiring "github.com/dujiao-next/internal/wiring/affiliate"
 	channelclientwiring "github.com/dujiao-next/internal/wiring/channelclient"
 	compliancewiring "github.com/dujiao-next/internal/wiring/compliance"
-	settingswiring "github.com/dujiao-next/internal/wiring/settings"
 	siteconnectionwiring "github.com/dujiao-next/internal/wiring/siteconnection"
 	telegramwiring "github.com/dujiao-next/internal/wiring/telegram"
 	uploadwiring "github.com/dujiao-next/internal/wiring/upload"
@@ -115,9 +115,9 @@ func registerAdminRoutes(
 
 	// 设置管理
 	settingstransport.RegisterAdminRoutes(authorized, adminSettingsHandler)
-	settingstransport.RegisterAdminSMTPRoutes(authorized, settingswiring.NewSMTPHandler(c, cfg))
-	settingstransport.RegisterAdminCaptchaRoutes(authorized, settingswiring.NewCaptchaHandler(c, cfg))
-	settingstransport.RegisterAdminTelegramAuthRoutes(authorized, settingswiring.NewTelegramAuthHandler(c, cfg))
+	settingstransport.RegisterAdminSMTPRoutes(authorized, settingsbootstrap.NewSMTPHandler(c, cfg))
+	settingstransport.RegisterAdminCaptchaRoutes(authorized, settingsbootstrap.NewCaptchaHandler(c, cfg))
+	settingstransport.RegisterAdminTelegramAuthRoutes(authorized, settingsbootstrap.NewTelegramAuthHandler(c, cfg))
 	notificationtransport.RegisterAdminRoutes(authorized, adminNotificationHandler)
 	settingstransport.RegisterAdminOrderEmailTemplateRoutes(authorized, settingstransport.NewOrderEmailTemplateHandler(c.SettingService))
 	settingstransport.RegisterAdminAffiliateRoutes(authorized, settingstransport.NewAffiliateHandler(c.SettingService))

@@ -3,10 +3,10 @@ package auditloghttp
 import (
 	"strings"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -30,7 +30,7 @@ func NewAdminHandler(authzLogs AuthzLogReader, userLoginLogs UserLoginLogReader)
 
 // ListAuthzAuditLogs 获取权限审计日志列表
 func (h *AdminHandler) ListAuthzAuditLogs(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	operatorAdminIDRaw := c.Query("operator_admin_id")
 	targetAdminIDRaw := c.Query("target_admin_id")
@@ -41,9 +41,9 @@ func (h *AdminHandler) ListAuthzAuditLogs(c *gin.Context) {
 
 	var operatorAdminID uint
 	if operatorAdminIDRaw != "" {
-		parsedOperatorAdminID, err := shared.ParseQueryUint(operatorAdminIDRaw, false)
+		parsedOperatorAdminID, err := ginutil.ParseQueryUint(operatorAdminIDRaw, false)
 		if err != nil {
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 			return
 		}
 		operatorAdminID = parsedOperatorAdminID
@@ -51,17 +51,17 @@ func (h *AdminHandler) ListAuthzAuditLogs(c *gin.Context) {
 
 	var targetAdminID uint
 	if targetAdminIDRaw != "" {
-		parsedTargetAdminID, err := shared.ParseQueryUint(targetAdminIDRaw, false)
+		parsedTargetAdminID, err := ginutil.ParseQueryUint(targetAdminIDRaw, false)
 		if err != nil {
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 			return
 		}
 		targetAdminID = parsedTargetAdminID
 	}
 
-	createdFrom, createdTo, err := shared.ParseQueryTimeRange(c, "created_from", "created_to")
+	createdFrom, createdTo, err := ginutil.ParseQueryTimeRange(c, "created_from", "created_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -78,7 +78,7 @@ func (h *AdminHandler) ListAuthzAuditLogs(c *gin.Context) {
 		CreatedTo:       createdTo,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.config_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.config_fetch_failed", err)
 		return
 	}
 

@@ -12,7 +12,7 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/mojocn/base64Captcha"
@@ -38,7 +38,7 @@ type turnstileVerifyResponse struct {
 
 // SettingReader 是验证码运行时读取动态配置所需的最小端口。
 type SettingReader interface {
-	GetCaptchaSetting(defaultCfg config.CaptchaConfig) (settingsmodule.CaptchaSetting, error)
+	GetCaptchaSetting(defaultCfg config.CaptchaConfig) (settingssecurity.CaptchaSetting, error)
 }
 
 // Service 验证码服务
@@ -57,7 +57,7 @@ type Service struct {
 	cacheTTL   time.Duration
 
 	mu            sync.RWMutex
-	cachedSetting settingsmodule.CaptchaSetting
+	cachedSetting settingssecurity.CaptchaSetting
 	cachedAt      time.Time
 
 	imageStore          base64Captcha.Store
@@ -104,7 +104,7 @@ func (s *Service) GetPublicSetting() (jsonmap.JSON, error) {
 	if err != nil {
 		return nil, err
 	}
-	return settingsmodule.PublicCaptchaSetting(setting), nil
+	return settingssecurity.PublicCaptchaSetting(setting), nil
 }
 
 // GenerateImageChallenge 生成图片验证码
@@ -177,7 +177,7 @@ func (s *Service) Verify(scene string, payload VerifyPayload, clientIP string) e
 	}
 }
 
-func (s *Service) verifyTurnstile(cfg settingsmodule.CaptchaTurnstileSetting, token, clientIP string) error {
+func (s *Service) verifyTurnstile(cfg settingssecurity.CaptchaTurnstileSetting, token, clientIP string) error {
 	secret := strings.TrimSpace(cfg.SecretKey)
 	verifyURL := strings.TrimSpace(cfg.VerifyURL)
 	if secret == "" || verifyURL == "" {
@@ -223,7 +223,7 @@ func (s *Service) verifyTurnstile(cfg settingsmodule.CaptchaTurnstileSetting, to
 	return nil
 }
 
-func (s *Service) ensureImageStore(setting settingsmodule.CaptchaSetting) base64Captcha.Store {
+func (s *Service) ensureImageStore(setting settingssecurity.CaptchaSetting) base64Captcha.Store {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.imageStore != nil && s.imageStoreMaxStore == setting.Image.MaxStore && s.imageStoreExpireSec == setting.Image.ExpireSeconds {
@@ -235,9 +235,9 @@ func (s *Service) ensureImageStore(setting settingsmodule.CaptchaSetting) base64
 	return s.imageStore
 }
 
-func (s *Service) getSetting() (settingsmodule.CaptchaSetting, error) {
+func (s *Service) getSetting() (settingssecurity.CaptchaSetting, error) {
 	if s == nil {
-		return settingsmodule.DefaultCaptchaSetting(config.CaptchaConfig{}), nil
+		return settingssecurity.DefaultCaptchaSetting(config.CaptchaConfig{}), nil
 	}
 
 	now := time.Now()
@@ -251,7 +251,7 @@ func (s *Service) getSetting() (settingsmodule.CaptchaSetting, error) {
 
 	fallback := s.defaultConfig
 	if s.settingService == nil {
-		setting := settingsmodule.DefaultCaptchaSetting(fallback)
+		setting := settingssecurity.DefaultCaptchaSetting(fallback)
 		s.mu.Lock()
 		s.cachedSetting = setting
 		s.cachedAt = now
@@ -261,9 +261,9 @@ func (s *Service) getSetting() (settingsmodule.CaptchaSetting, error) {
 
 	setting, err := s.settingService.GetCaptchaSetting(fallback)
 	if err != nil {
-		return settingsmodule.CaptchaSetting{}, err
+		return settingssecurity.CaptchaSetting{}, err
 	}
-	setting = settingsmodule.NormalizeCaptchaSetting(setting)
+	setting = settingssecurity.NormalizeCaptchaSetting(setting)
 
 	s.mu.Lock()
 	s.cachedSetting = setting

@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/modules/settings"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 )
 
 // fakeSettingsProvider 以固定同步间隔实现 SettingsProvider。
@@ -12,8 +12,8 @@ type fakeSettingsProvider struct {
 	interval time.Duration
 }
 
-func (f fakeSettingsProvider) GetUpstreamSyncConfig(fallbackInterval string) (settings.UpstreamSyncConfig, error) {
-	cfg := settings.DefaultUpstreamSyncConfig()
+func (f fakeSettingsProvider) GetUpstreamSyncConfig(fallbackInterval string) (settingsintegration.UpstreamSyncConfig, error) {
+	cfg := settingsintegration.DefaultUpstreamSyncConfig()
 	cfg.IntervalMinutes = int(f.interval / time.Minute)
 	return cfg, nil
 }

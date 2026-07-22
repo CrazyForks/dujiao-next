@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/cardsecret"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -114,13 +114,13 @@ func buildCardSecretListInput(filter *CardSecretQueryRequest) cardsecret.ListCar
 
 // CreateCardSecretBatch 批量录入卡密
 func (h *AdminHandler) CreateCardSecretBatch(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
 	var req CreateCardSecretBatchRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -137,19 +137,19 @@ func (h *AdminHandler) CreateCardSecretBatch(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, cardsecret.ErrProductSKURequired):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrProductSKUInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrProductNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 		case errors.Is(err, cardsecret.ErrProductFetchFailed):
-			shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		case errors.Is(err, cardsecret.ErrBatchCreateFailed):
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_batch_create_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_batch_create_failed", err)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_create_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_create_failed", err)
 		}
 		return
 	}
@@ -163,30 +163,30 @@ func (h *AdminHandler) CreateCardSecretBatch(c *gin.Context) {
 
 // ImportCardSecretCSV 导入 CSV 卡密
 func (h *AdminHandler) ImportCardSecretCSV(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
-	productID, err := shared.ParseQueryUint(c.PostForm("product_id"), true)
+	productID, err := ginutil.ParseQueryUint(c.PostForm("product_id"), true)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		return
 	}
-	skuID, err := shared.ParseQueryUint(c.DefaultPostForm("sku_id", "0"), false)
+	skuID, err := ginutil.ParseQueryUint(c.DefaultPostForm("sku_id", "0"), false)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		return
 	}
 	file, err := c.FormFile("file")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		return
 	}
 	batchNo := strings.TrimSpace(c.PostForm("batch_no"))
 	note := strings.TrimSpace(c.PostForm("note"))
-	deduplicate, err := shared.ParseOptionalBoolValue(c.PostForm("deduplicate"))
+	deduplicate, err := ginutil.ParseOptionalBoolValue(c.PostForm("deduplicate"))
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		return
 	}
 
@@ -202,19 +202,19 @@ func (h *AdminHandler) ImportCardSecretCSV(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, cardsecret.ErrProductSKURequired):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrProductSKUInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrProductNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 		case errors.Is(err, cardsecret.ErrProductFetchFailed):
-			shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		case errors.Is(err, cardsecret.ErrBatchCreateFailed):
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_batch_create_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_batch_create_failed", err)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_import_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_import_failed", err)
 		}
 		return
 	}
@@ -231,9 +231,9 @@ func (h *AdminHandler) GetCardSecrets(c *gin.Context) {
 	var productID uint
 	rawProductID := strings.TrimSpace(c.Query("product_id"))
 	if rawProductID != "" {
-		parsed, err := shared.ParseQueryUint(rawProductID, false)
+		parsed, err := ginutil.ParseQueryUint(rawProductID, false)
 		if err != nil {
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 			return
 		}
 		productID = parsed
@@ -241,9 +241,9 @@ func (h *AdminHandler) GetCardSecrets(c *gin.Context) {
 	var skuID uint
 	rawSKUID := strings.TrimSpace(c.Query("sku_id"))
 	if rawSKUID != "" {
-		parsed, err := shared.ParseQueryUint(rawSKUID, false)
+		parsed, err := ginutil.ParseQueryUint(rawSKUID, false)
 		if err != nil {
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 			return
 		}
 		skuID = parsed
@@ -251,14 +251,14 @@ func (h *AdminHandler) GetCardSecrets(c *gin.Context) {
 	var batchID uint
 	rawBatchID := strings.TrimSpace(c.Query("batch_id"))
 	if rawBatchID != "" {
-		parsed, err := shared.ParseQueryUint(rawBatchID, false)
+		parsed, err := ginutil.ParseQueryUint(rawBatchID, false)
 		if err != nil {
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 			return
 		}
 		batchID = parsed
 	}
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	status := strings.TrimSpace(c.Query("status"))
 	secret := strings.TrimSpace(c.Query("secret"))
 	batchNo := strings.TrimSpace(c.Query("batch_no"))
@@ -276,13 +276,13 @@ func (h *AdminHandler) GetCardSecrets(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, cardsecret.ErrProductSKURequired):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrProductSKUInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_fetch_failed", err)
 		}
 		return
 	}
@@ -293,15 +293,15 @@ func (h *AdminHandler) GetCardSecrets(c *gin.Context) {
 
 // UpdateCardSecret 更新卡密
 func (h *AdminHandler) UpdateCardSecret(c *gin.Context) {
-	rawID, err := shared.ParseParamUint(c, "id")
+	rawID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		return
 	}
 
 	var req UpdateCardSecretRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -314,7 +314,7 @@ func (h *AdminHandler) UpdateCardSecret(c *gin.Context) {
 		status = *req.Status
 	}
 	if strings.TrimSpace(secret) == "" && strings.TrimSpace(status) == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
@@ -322,13 +322,13 @@ func (h *AdminHandler) UpdateCardSecret(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, cardsecret.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
 		case errors.Is(err, cardsecret.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrUpdateFailed):
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
 		}
 		return
 	}
@@ -340,7 +340,7 @@ func (h *AdminHandler) UpdateCardSecret(c *gin.Context) {
 func (h *AdminHandler) BatchUpdateCardSecretStatus(c *gin.Context) {
 	var req BatchUpdateCardSecretStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -348,13 +348,13 @@ func (h *AdminHandler) BatchUpdateCardSecretStatus(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, cardsecret.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
 		case errors.Is(err, cardsecret.ErrUpdateFailed):
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
 		}
 		return
 	}
@@ -368,7 +368,7 @@ func (h *AdminHandler) BatchUpdateCardSecretStatus(c *gin.Context) {
 func (h *AdminHandler) BatchDeleteCardSecrets(c *gin.Context) {
 	var req BatchDeleteCardSecretRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -376,13 +376,13 @@ func (h *AdminHandler) BatchDeleteCardSecrets(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, cardsecret.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
 		case errors.Is(err, cardsecret.ErrDeleteFailed):
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_delete_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_delete_failed", err)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_delete_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_delete_failed", err)
 		}
 		return
 	}
@@ -396,7 +396,7 @@ func (h *AdminHandler) BatchDeleteCardSecrets(c *gin.Context) {
 func (h *AdminHandler) ExportCardSecrets(c *gin.Context) {
 	var req ExportCardSecretRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -404,11 +404,11 @@ func (h *AdminHandler) ExportCardSecrets(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, cardsecret.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_fetch_failed", err)
 		}
 		return
 	}
@@ -424,7 +424,7 @@ func (h *AdminHandler) ExportCardSecrets(c *gin.Context) {
 func (h *AdminHandler) ExportAvailableCardSecrets(c *gin.Context) {
 	var req ExportAvailableCardSecretRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -440,18 +440,18 @@ func (h *AdminHandler) ExportAvailableCardSecrets(c *gin.Context) {
 		switch {
 		case errors.Is(err, cardsecret.ErrInvalid),
 			errors.Is(err, cardsecret.ErrProductSKUInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrProductNotFound),
 			errors.Is(err, cardsecret.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
 		case errors.Is(err, cardsecret.ErrInsufficient):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_insufficient", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_insufficient", nil)
 		case errors.Is(err, cardsecret.ErrUpdateFailed):
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
 		case errors.Is(err, cardsecret.ErrDeleteFailed):
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_delete_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_delete_failed", err)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_fetch_failed", err)
 		}
 		return
 	}
@@ -466,27 +466,27 @@ func (h *AdminHandler) ExportAvailableCardSecrets(c *gin.Context) {
 
 // GetCardSecretStats 获取库存统计
 func (h *AdminHandler) GetCardSecretStats(c *gin.Context) {
-	productID, err := shared.ParseQueryUint(c.Query("product_id"), true)
+	productID, err := ginutil.ParseQueryUint(c.Query("product_id"), true)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		return
 	}
-	skuID, err := shared.ParseQueryUint(c.DefaultQuery("sku_id", "0"), false)
+	skuID, err := ginutil.ParseQueryUint(c.DefaultQuery("sku_id", "0"), false)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		return
 	}
 	stats, err := h.service.GetStats(productID, skuID)
 	if err != nil {
 		switch {
 		case errors.Is(err, cardsecret.ErrProductSKURequired):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrProductSKUInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_stats_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_stats_failed", err)
 		}
 		return
 	}
@@ -495,15 +495,15 @@ func (h *AdminHandler) GetCardSecretStats(c *gin.Context) {
 
 // GetCardSecretBatches 获取卡密批次列表
 func (h *AdminHandler) GetCardSecretBatches(c *gin.Context) {
-	productID, err := shared.ParseQueryUint(c.Query("product_id"), true)
+	productID, err := ginutil.ParseQueryUint(c.Query("product_id"), true)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		return
 	}
-	page, pageSize := shared.ParsePagination(c)
-	skuID, err := shared.ParseQueryUint(c.DefaultQuery("sku_id", "0"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	skuID, err := ginutil.ParseQueryUint(c.DefaultQuery("sku_id", "0"), false)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		return
 	}
 
@@ -511,13 +511,13 @@ func (h *AdminHandler) GetCardSecretBatches(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, cardsecret.ErrProductSKURequired):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrProductSKUInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		case errors.Is(err, cardsecret.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.card_secret_batch_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_batch_fetch_failed", err)
 		}
 		return
 	}

@@ -3,10 +3,10 @@ package memberlevelhttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/memberlevel"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -49,11 +49,11 @@ type CreateMemberLevelRequest struct {
 
 // GetAdminMemberLevels 获取会员等级列表
 func (h *AdminHandler) GetAdminMemberLevels(c *gin.Context) {
-	page, pageSize := shared.ParsePaginationWithKeys(c, "page", "page_size", 50)
+	page, pageSize := ginutil.ParsePaginationWithKeys(c, "page", "page_size", 50)
 
-	isActive, err := shared.ParseQueryBoolPtr(c, "is_active")
+	isActive, err := ginutil.ParseQueryBoolPtr(c, "is_active")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -63,7 +63,7 @@ func (h *AdminHandler) GetAdminMemberLevels(c *gin.Context) {
 		PageSize: pageSize,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.member_level_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.member_level_fetch_failed", err)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *AdminHandler) GetAdminMemberLevels(c *gin.Context) {
 func (h *AdminHandler) CreateMemberLevel(c *gin.Context) {
 	var req CreateMemberLevelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -99,11 +99,11 @@ func (h *AdminHandler) CreateMemberLevel(c *gin.Context) {
 	if err := h.service.CreateLevel(level); err != nil {
 		switch {
 		case errors.Is(err, memberlevel.ErrMemberLevelSlugExists):
-			shared.RespondError(c, response.CodeBadRequest, "error.member_level_slug_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.member_level_slug_exists", nil)
 		case errors.Is(err, memberlevel.ErrMemberLevelSortOrderUsed):
-			shared.RespondError(c, response.CodeBadRequest, "error.member_level_sort_order_used", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.member_level_sort_order_used", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.member_level_create_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.member_level_create_failed", err)
 		}
 		return
 	}
@@ -113,25 +113,25 @@ func (h *AdminHandler) CreateMemberLevel(c *gin.Context) {
 
 // UpdateMemberLevel 更新会员等级
 func (h *AdminHandler) UpdateMemberLevel(c *gin.Context) {
-	levelID, err := shared.ParseParamUint(c, "id")
+	levelID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	existing, err := h.service.GetByID(levelID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.member_level_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.member_level_fetch_failed", err)
 		return
 	}
 	if existing == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.member_level_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.member_level_not_found", nil)
 		return
 	}
 
 	var req CreateMemberLevelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -150,13 +150,13 @@ func (h *AdminHandler) UpdateMemberLevel(c *gin.Context) {
 	if err := h.service.UpdateLevel(existing); err != nil {
 		switch {
 		case errors.Is(err, memberlevel.ErrMemberLevelSlugExists):
-			shared.RespondError(c, response.CodeBadRequest, "error.member_level_slug_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.member_level_slug_exists", nil)
 		case errors.Is(err, memberlevel.ErrMemberLevelSortOrderUsed):
-			shared.RespondError(c, response.CodeBadRequest, "error.member_level_sort_order_used", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.member_level_sort_order_used", nil)
 		case errors.Is(err, memberlevel.ErrMemberLevelNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.member_level_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.member_level_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.member_level_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.member_level_update_failed", err)
 		}
 		return
 	}
@@ -166,20 +166,20 @@ func (h *AdminHandler) UpdateMemberLevel(c *gin.Context) {
 
 // DeleteMemberLevel 删除会员等级
 func (h *AdminHandler) DeleteMemberLevel(c *gin.Context) {
-	levelID, err := shared.ParseParamUint(c, "id")
+	levelID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	if err := h.service.DeleteLevel(levelID); err != nil {
 		switch {
 		case errors.Is(err, memberlevel.ErrMemberLevelNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.member_level_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.member_level_not_found", nil)
 		case errors.Is(err, memberlevel.ErrMemberLevelDeleteDefault):
-			shared.RespondError(c, response.CodeBadRequest, "error.member_level_cannot_delete_default", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.member_level_cannot_delete_default", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.member_level_delete_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.member_level_delete_failed", err)
 		}
 		return
 	}
@@ -189,15 +189,15 @@ func (h *AdminHandler) DeleteMemberLevel(c *gin.Context) {
 
 // GetMemberLevelPrices 获取商品的等级价列表
 func (h *AdminHandler) GetMemberLevelPrices(c *gin.Context) {
-	productID, err := shared.ParseQueryUint(c.Query("product_id"), false)
+	productID, err := ginutil.ParseQueryUint(c.Query("product_id"), false)
 	if err != nil || productID == 0 {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	prices, err := h.service.GetLevelPricesByProduct(productID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.member_level_price_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.member_level_price_fetch_failed", err)
 		return
 	}
 
@@ -221,7 +221,7 @@ type MemberLevelPriceInput struct {
 func (h *AdminHandler) BatchUpsertMemberLevelPrices(c *gin.Context) {
 	var req BatchUpsertMemberLevelPricesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -236,7 +236,7 @@ func (h *AdminHandler) BatchUpsertMemberLevelPrices(c *gin.Context) {
 	}
 
 	if err := h.service.BatchUpsertLevelPrices(prices); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.member_level_price_save_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.member_level_price_save_failed", err)
 		return
 	}
 
@@ -245,14 +245,14 @@ func (h *AdminHandler) BatchUpsertMemberLevelPrices(c *gin.Context) {
 
 // DeleteMemberLevelPrice 删除等级价
 func (h *AdminHandler) DeleteMemberLevelPrice(c *gin.Context) {
-	priceID, err := shared.ParseParamUint(c, "id")
+	priceID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	if err := h.service.DeleteLevelPrice(priceID); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.member_level_price_delete_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.member_level_price_delete_failed", err)
 		return
 	}
 
@@ -266,24 +266,24 @@ type SetUserMemberLevelRequest struct {
 
 // SetUserMemberLevel 手动设置用户等级
 func (h *AdminHandler) SetUserMemberLevel(c *gin.Context) {
-	userID, err := shared.ParseParamUint(c, "id")
+	userID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	var req SetUserMemberLevelRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	if err := h.service.SetUserLevel(userID, req.MemberLevelID); err != nil {
 		switch {
 		case errors.Is(err, memberlevel.ErrMemberLevelNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.member_level_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.member_level_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.user_member_level_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_member_level_update_failed", err)
 		}
 		return
 	}
@@ -297,9 +297,9 @@ func (h *AdminHandler) BackfillMemberLevels(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, memberlevel.ErrMemberLevelNotFound):
-			shared.RespondError(c, response.CodeBadRequest, "error.member_level_no_default", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.member_level_no_default", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.member_level_backfill_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.member_level_backfill_failed", err)
 		}
 		return
 	}

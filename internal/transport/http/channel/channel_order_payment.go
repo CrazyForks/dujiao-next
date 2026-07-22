@@ -7,10 +7,10 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -258,7 +258,7 @@ func (h *Handler) CreatePayment(c *gin.Context) {
 
 // GetPaymentDetail GET /api/v1/channel/payments/:id
 func (h *Handler) GetPaymentDetail(c *gin.Context) {
-	paymentID, err := shared.ParseParamUint(c, "id")
+	paymentID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
 		respondChannelError(c, 400, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
 		return

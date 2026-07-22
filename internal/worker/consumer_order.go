@@ -11,8 +11,8 @@ import (
 	"github.com/dujiao-next/internal/htmltext"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -105,7 +105,7 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 		logger.Warnw("worker_order_status_email_skip_email_service_nil", "order_id", order.ID, "order_no", order.OrderNo)
 		return nil
 	}
-	var tmplSetting *settingsmodule.OrderEmailTemplateSetting
+	var tmplSetting *settingsmessaging.OrderEmailTemplateSetting
 	if c.SettingService != nil {
 		setting, tmplErr := c.SettingService.GetOrderEmailTemplateSetting()
 		if tmplErr != nil {

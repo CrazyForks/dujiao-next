@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/dujiao-next/internal/http/response"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/service"
 	"github.com/gin-gonic/gin"

@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/i18n"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -23,7 +24,7 @@ func ChannelError(c *gin.Context, httpCode, code int, errorCode, key string, err
 	locale := i18n.ResolveLocale(c)
 	msg := i18n.T(locale, key)
 	if err != nil {
-		RequestLog(c).Errorw("channel_handler_error",
+		ginutil.RequestLog(c).Errorw("channel_handler_error",
 			"http_code", httpCode,
 			"code", code,
 			"error_code", errorCode,
@@ -45,13 +46,13 @@ func ChannelBindError(c *gin.Context, err error) {
 			details = append(details, formatChannelFieldError(locale, fe))
 		}
 		msg := strings.Join(details, "; ")
-		RequestLog(c).Warnw("channel_bind_validation_error", "details", msg, "error", err)
+		ginutil.RequestLog(c).Warnw("channel_bind_validation_error", "details", msg, "error", err)
 		response.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, msg, "validation_error")
 		return
 	}
 
 	msg := i18n.T(locale, "error.bad_request")
-	RequestLog(c).Warnw("channel_bind_error", "message", msg, "error", err)
+	ginutil.RequestLog(c).Warnw("channel_bind_error", "message", msg, "error", err)
 	response.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, msg, "validation_error")
 }
 

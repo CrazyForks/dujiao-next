@@ -3,7 +3,7 @@ package orderrisk
 import (
 	"testing"
 
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -100,15 +100,15 @@ func (m *mockOrderRepoForRisk) CountPendingByGuestEmail(_ string) (int64, error)
 }
 
 type settingReaderStub struct {
-	config settingsmodule.OrderRiskControlConfig
+	config settingssecurity.OrderRiskControlConfig
 }
 
-func (s settingReaderStub) GetOrderRiskControlConfig() (settingsmodule.OrderRiskControlConfig, error) {
+func (s settingReaderStub) GetOrderRiskControlConfig() (settingssecurity.OrderRiskControlConfig, error) {
 	return s.config, nil
 }
 
 func newTestRiskControlService(pendingByUser, pendingByIP, pendingByEmail int64, cfgJSON jsonmap.JSON) *Service {
-	config := settingsmodule.DecodeOrderRiskControlConfig(cfgJSON, settingsmodule.DefaultOrderRiskControlConfig())
+	config := settingssecurity.DecodeOrderRiskControlConfig(cfgJSON, settingssecurity.DefaultOrderRiskControlConfig())
 	return NewService(settingReaderStub{config: config}, &mockOrderRepoForRisk{
 		pendingByUser:  pendingByUser,
 		pendingByIP:    pendingByIP,

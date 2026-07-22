@@ -7,9 +7,9 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -137,34 +137,34 @@ func (h *UserTelegramHandler) respondTelegramLoginError(c *gin.Context, err erro
 			if rule.logErr {
 				cause = err
 			}
-			shared.RespondError(c, rule.code, rule.key, cause)
+			ginutil.RespondError(c, rule.code, rule.key, cause)
 			return
 		}
 	}
 	h.recordLogin(c, "", 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonInternalError, constants.LoginLogSourceTelegram)
-	shared.RespondError(c, response.CodeInternal, "error.login_failed", err)
+	ginutil.RespondError(c, response.CodeInternal, "error.login_failed", err)
 }
 
 func respondTelegramBindError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, ErrTelegramAuthDisabled):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_auth_disabled", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_auth_disabled", nil)
 	case errors.Is(err, ErrTelegramAuthConfigInvalid):
-		shared.RespondError(c, response.CodeInternal, "error.telegram_auth_config_invalid", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.telegram_auth_config_invalid", err)
 	case errors.Is(err, ErrTelegramAuthPayloadInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_auth_payload_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_auth_payload_invalid", nil)
 	case errors.Is(err, ErrTelegramAuthSignatureInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_auth_signature_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_auth_signature_invalid", nil)
 	case errors.Is(err, ErrTelegramAuthExpired):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_auth_expired", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_auth_expired", nil)
 	case errors.Is(err, ErrTelegramAuthReplay):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_auth_replayed", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_auth_replayed", nil)
 	case errors.Is(err, ErrUserOAuthIdentityExists):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_bind_conflict", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_bind_conflict", nil)
 	case errors.Is(err, ErrUserOAuthAlreadyBound):
-		shared.RespondError(c, response.CodeBadRequest, "error.telegram_already_bound", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_already_bound", nil)
 	default:
-		shared.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
 	}
 }
 
@@ -192,7 +192,7 @@ func (h *UserTelegramHandler) UserTelegramLogin(c *gin.Context) {
 	var req UserTelegramLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.recordLogin(c, "", 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonBadRequest, constants.LoginLogSourceTelegram)
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	res, err := h.service.LoginWithTelegram(c.Request.Context(), req.payload())
@@ -208,7 +208,7 @@ func (h *UserTelegramHandler) UserTelegramMiniAppLogin(c *gin.Context) {
 	var req UserTelegramMiniAppAuthRequest
 	if err := c.ShouldBindJSON(&req); err != nil || req.initData() == "" {
 		h.recordLogin(c, "", 0, constants.LoginLogStatusFailed, constants.LoginLogFailReasonBadRequest, constants.LoginLogSourceTelegram)
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	res, err := h.service.LoginWithTelegramMiniApp(c.Request.Context(), req.initData())
@@ -221,7 +221,7 @@ func (h *UserTelegramHandler) UserTelegramMiniAppLogin(c *gin.Context) {
 
 // GetMyTelegramBinding 获取当前用户 Telegram 绑定。
 func (h *UserTelegramHandler) GetMyTelegramBinding(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -229,9 +229,9 @@ func (h *UserTelegramHandler) GetMyTelegramBinding(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrUserNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		}
 		return
 	}
@@ -244,13 +244,13 @@ func (h *UserTelegramHandler) GetMyTelegramBinding(c *gin.Context) {
 
 // BindMyTelegram 绑定当前用户 Telegram。
 func (h *UserTelegramHandler) BindMyTelegram(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req UserBindTelegramRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	identity, err := h.service.BindTelegram(c.Request.Context(), uid, req.payload())
@@ -263,13 +263,13 @@ func (h *UserTelegramHandler) BindMyTelegram(c *gin.Context) {
 
 // BindMyTelegramMiniApp 绑定当前用户的 Telegram Mini App 身份。
 func (h *UserTelegramHandler) BindMyTelegramMiniApp(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req UserTelegramMiniAppAuthRequest
 	if err := c.ShouldBindJSON(&req); err != nil || req.initData() == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	identity, err := h.service.BindTelegramMiniApp(c.Request.Context(), uid, req.initData())
@@ -282,18 +282,18 @@ func (h *UserTelegramHandler) BindMyTelegramMiniApp(c *gin.Context) {
 
 // UnbindMyTelegram 解绑当前用户 Telegram。
 func (h *UserTelegramHandler) UnbindMyTelegram(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	if err := h.service.UnbindTelegram(uid); err != nil {
 		switch {
 		case errors.Is(err, ErrUserOAuthNotBound):
-			shared.RespondError(c, response.CodeBadRequest, "error.telegram_not_bound", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_not_bound", nil)
 		case errors.Is(err, ErrTelegramUnbindRequiresEmail):
-			shared.RespondError(c, response.CodeBadRequest, "error.telegram_unbind_requires_email", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_unbind_requires_email", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
 		}
 		return
 	}

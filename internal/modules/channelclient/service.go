@@ -7,7 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/crypto"
 	"github.com/dujiao-next/internal/models"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	"github.com/dujiao-next/internal/upstream"
 )
 
@@ -38,7 +38,7 @@ func NewService(repo Repository, appSecretKey string) *Service {
 }
 
 func maskBotToken(token string) string {
-	return settingsmodule.MaskBotToken(token)
+	return settingsmessaging.MaskBotToken(token)
 }
 
 // CreateChannelClient 创建渠道客户端

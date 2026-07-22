@@ -4,9 +4,9 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/shopspring/decimal"
 
 	"github.com/gin-gonic/gin"
@@ -85,12 +85,12 @@ func parseProductSettingDecimalField(raw string) (decimal.Decimal, error) {
 
 // ListProductSettings 查询当前用户可配置的分销商品。
 func (h *UserProductSettingHandler) ListProductSettings(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	page, pageSize := shared.ParsePagination(c)
-	categoryID, _ := shared.ParseQueryUint(c.Query("category_id"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	categoryID, _ := ginutil.ParseQueryUint(c.Query("category_id"), false)
 	rows, total, err := h.service.ListUserProductSettings(uid, resellermodule.ProductSettingUserListInput{
 		Page:       page,
 		PageSize:   pageSize,
@@ -108,13 +108,13 @@ func (h *UserProductSettingHandler) ListProductSettings(c *gin.Context) {
 
 // GetProductSetting 获取当前用户的单个商品分销配置详情。
 func (h *UserProductSettingHandler) GetProductSetting(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	productID, err := shared.ParseParamUint(c, "product_id")
+	productID, err := ginutil.ParseParamUint(c, "product_id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	detail, err := h.service.GetUserProductSetting(uid, productID)
@@ -127,23 +127,23 @@ func (h *UserProductSettingHandler) GetProductSetting(c *gin.Context) {
 
 // UpdateProductSettings 保存当前用户的商品级或 SKU 级分销配置。
 func (h *UserProductSettingHandler) UpdateProductSettings(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	productID, err := shared.ParseParamUint(c, "product_id")
+	productID, err := ginutil.ParseParamUint(c, "product_id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	var req productSettingsUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	input, err := req.toInput()
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	detail, err := h.service.SaveUserProductSettings(uid, productID, input)
@@ -156,23 +156,23 @@ func (h *UserProductSettingHandler) UpdateProductSettings(c *gin.Context) {
 
 // PreviewProductSettings 计算当前用户拟用定价规则的预计生效价与校验结果（不落库）。
 func (h *UserProductSettingHandler) PreviewProductSettings(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	productID, err := shared.ParseParamUint(c, "product_id")
+	productID, err := ginutil.ParseParamUint(c, "product_id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	var req productSettingsUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	input, err := req.toInput()
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	items, err := h.service.PreviewUserProductSettings(uid, productID, input)
@@ -196,18 +196,18 @@ func (h *UserProductSettingHandler) PreviewProductSettings(c *gin.Context) {
 
 // ResetProductSetting 删除当前用户的商品级或 SKU 级分销配置。
 func (h *UserProductSettingHandler) ResetProductSetting(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	productID, err := shared.ParseParamUint(c, "product_id")
+	productID, err := ginutil.ParseParamUint(c, "product_id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	skuID, err := shared.ParseQueryUint(c.Query("sku_id"), false)
+	skuID, err := ginutil.ParseQueryUint(c.Query("sku_id"), false)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	if err := h.service.ResetUserProductSetting(uid, productID, skuID); err != nil {

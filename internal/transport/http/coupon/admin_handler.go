@@ -3,10 +3,10 @@ package couponhttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/coupon"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -47,11 +47,11 @@ type CreateCouponRequest struct {
 }
 
 func buildCreateCouponInputFromRequest(req CreateCouponRequest) (coupon.CreateCouponInput, error) {
-	startsAt, err := shared.ParseTimeNullable(req.StartsAt)
+	startsAt, err := ginutil.ParseTimeNullable(req.StartsAt)
 	if err != nil {
 		return coupon.CreateCouponInput{}, err
 	}
-	endsAt, err := shared.ParseTimeNullable(req.EndsAt)
+	endsAt, err := ginutil.ParseTimeNullable(req.EndsAt)
 	if err != nil {
 		return coupon.CreateCouponInput{}, err
 	}
@@ -86,13 +86,13 @@ func buildUpdateCouponInputFromRequest(req CreateCouponRequest) (coupon.UpdateCo
 func (h *AdminHandler) CreateCoupon(c *gin.Context) {
 	var req CreateCouponRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	input, err := buildCreateCouponInputFromRequest(req)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -100,11 +100,11 @@ func (h *AdminHandler) CreateCoupon(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, coupon.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.coupon_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.coupon_invalid", nil)
 		case errors.Is(err, coupon.ErrScopeInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.coupon_scope_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.coupon_scope_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.coupon_create_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.coupon_create_failed", err)
 		}
 		return
 	}
@@ -114,20 +114,20 @@ func (h *AdminHandler) CreateCoupon(c *gin.Context) {
 
 // UpdateCoupon 更新优惠券
 func (h *AdminHandler) UpdateCoupon(c *gin.Context) {
-	couponID, err := shared.ParseParamUint(c, "id")
+	couponID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	var req CreateCouponRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	input, err := buildUpdateCouponInputFromRequest(req)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -135,13 +135,13 @@ func (h *AdminHandler) UpdateCoupon(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, coupon.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.coupon_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.coupon_not_found", nil)
 		case errors.Is(err, coupon.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.coupon_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.coupon_invalid", nil)
 		case errors.Is(err, coupon.ErrScopeInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.coupon_scope_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.coupon_scope_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.coupon_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.coupon_update_failed", err)
 		}
 		return
 	}
@@ -151,19 +151,19 @@ func (h *AdminHandler) UpdateCoupon(c *gin.Context) {
 
 // DeleteCoupon 删除优惠券
 func (h *AdminHandler) DeleteCoupon(c *gin.Context) {
-	couponID, err := shared.ParseParamUint(c, "id")
+	couponID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	if err := h.service.Delete(couponID); err != nil {
 		switch {
 		case errors.Is(err, coupon.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.coupon_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.coupon_not_found", nil)
 		case errors.Is(err, coupon.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.coupon_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.coupon_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.coupon_delete_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.coupon_delete_failed", err)
 		}
 		return
 	}
@@ -174,22 +174,22 @@ func (h *AdminHandler) DeleteCoupon(c *gin.Context) {
 
 // GetAdminCoupons 获取优惠券列表
 func (h *AdminHandler) GetAdminCoupons(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	code := c.Query("code")
-	id, err := shared.ParseQueryUint(c.Query("id"), true)
+	id, err := ginutil.ParseQueryUint(c.Query("id"), true)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	scopeRefID, err := shared.ParseQueryUint(c.Query("scope_ref_id"), true)
+	scopeRefID, err := ginutil.ParseQueryUint(c.Query("scope_ref_id"), true)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	isActive, err := shared.ParseQueryBoolPtr(c, "is_active")
+	isActive, err := ginutil.ParseQueryBoolPtr(c, "is_active")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -202,7 +202,7 @@ func (h *AdminHandler) GetAdminCoupons(c *gin.Context) {
 		PageSize:   pageSize,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.coupon_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.coupon_fetch_failed", err)
 		return
 	}
 

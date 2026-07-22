@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -196,7 +196,7 @@ func (h *Handler) GetOrder(c *gin.Context) {
 		return
 	}
 
-	orderID, err := shared.ParseParamUint(c, "id")
+	orderID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
 		errorResponse(c, http.StatusBadRequest, "bad_request", "invalid order id")
 		return
@@ -295,7 +295,7 @@ func (h *Handler) CancelOrder(c *gin.Context) {
 		return
 	}
 
-	orderID, err := shared.ParseParamUint(c, "id")
+	orderID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
 		errorResponse(c, http.StatusBadRequest, "bad_request", "invalid order id")
 		return

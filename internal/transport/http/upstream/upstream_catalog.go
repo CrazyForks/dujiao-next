@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -89,7 +89,7 @@ func (h *Handler) ListCategories(c *gin.Context) {
 
 // ListProducts GET /api/v1/upstream/products
 func (h *Handler) ListProducts(c *gin.Context) {
-	page, pageSize := shared.ParsePaginationWithBounds(c, "page", "page_size", 50, 50)
+	page, pageSize := ginutil.ParsePaginationWithBounds(c, "page", "page_size", 50, 50)
 
 	// 是否包含下架商品：下游同步任务用此参数识别上游下架/删除状态
 	includeInactive := c.Query("include_inactive") == "true"

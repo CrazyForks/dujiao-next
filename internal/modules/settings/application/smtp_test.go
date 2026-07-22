@@ -5,7 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -31,7 +31,7 @@ func (m *mockSettingRepo) Upsert(key string, value jsonmap.JSON) (jsonmap.JSON, 
 }
 
 func TestNormalizeSMTPSetting(t *testing.T) {
-	setting := settingsmodule.NormalizeSMTPSetting(settingsmodule.SMTPSetting{})
+	setting := settingsmessaging.NormalizeSMTPSetting(settingsmessaging.SMTPSetting{})
 	if setting.Port != 587 {
 		t.Fatalf("expected default port 587, got %d", setting.Port)
 	}
@@ -44,18 +44,18 @@ func TestNormalizeSMTPSetting(t *testing.T) {
 }
 
 func TestValidateSMTPSetting(t *testing.T) {
-	invalid := settingsmodule.NormalizeSMTPSetting(settingsmodule.SMTPSetting{
+	invalid := settingsmessaging.NormalizeSMTPSetting(settingsmessaging.SMTPSetting{
 		Enabled: true,
 		Host:    "smtp.example.com",
 		From:    "notify@example.com",
 		UseTLS:  true,
 		UseSSL:  true,
 	})
-	if err := settingsmodule.ValidateSMTPSetting(invalid); err == nil {
+	if err := settingsmessaging.ValidateSMTPSetting(invalid); err == nil {
 		t.Fatal("expected tls/ssl conflict validation error")
 	}
 
-	valid := settingsmodule.NormalizeSMTPSetting(settingsmodule.SMTPSetting{
+	valid := settingsmessaging.NormalizeSMTPSetting(settingsmessaging.SMTPSetting{
 		Enabled:  true,
 		Host:     "smtp.example.com",
 		Port:     587,
@@ -63,14 +63,14 @@ func TestValidateSMTPSetting(t *testing.T) {
 		UseTLS:   true,
 		UseSSL:   false,
 		Password: "secret",
-		VerifyCode: settingsmodule.SMTPVerifyCodeSetting{
+		VerifyCode: settingsmessaging.SMTPVerifyCodeSetting{
 			ExpireMinutes:       10,
 			SendIntervalSeconds: 60,
 			MaxAttempts:         5,
 			Length:              6,
 		},
 	})
-	if err := settingsmodule.ValidateSMTPSetting(valid); err != nil {
+	if err := settingsmessaging.ValidateSMTPSetting(valid); err != nil {
 		t.Fatalf("expected valid smtp config, got error: %v", err)
 	}
 }
@@ -97,7 +97,7 @@ func TestPatchSMTPSettingKeepsPasswordWhenEmpty(t *testing.T) {
 		},
 	}
 
-	updated, err := svc.PatchSMTPSetting(defaultCfg, settingsmodule.SMTPSettingPatch{
+	updated, err := svc.PatchSMTPSetting(defaultCfg, settingsmessaging.SMTPSettingPatch{
 		Host:     ptrString("smtp.custom.com"),
 		Password: ptrString(""),
 	})

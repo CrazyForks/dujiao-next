@@ -13,7 +13,9 @@ import (
 	"github.com/dujiao-next/internal/modules/giftcard"
 	"github.com/dujiao-next/internal/modules/notification"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 	"github.com/dujiao-next/internal/modules/telegram"
 	walletmodule "github.com/dujiao-next/internal/modules/wallet"
 )
@@ -39,7 +41,7 @@ var (
 	ErrEmailServiceNotConfigured           = errors.New("email service not configured")
 	ErrEmailRecipientRejected              = errors.New("email recipient rejected")
 	ErrTelegramAuthDisabled                = errors.New("telegram auth disabled")
-	ErrTelegramAuthConfigInvalid           = settingsmodule.ErrTelegramAuthConfigInvalid
+	ErrTelegramAuthConfigInvalid           = settingssecurity.ErrTelegramAuthConfigInvalid
 	ErrTelegramAuthPayloadInvalid          = errors.New("telegram auth payload invalid")
 	ErrTelegramAuthSignatureInvalid        = errors.New("telegram auth signature invalid")
 	ErrTelegramAuthExpired                 = errors.New("telegram auth expired")
@@ -51,7 +53,7 @@ var (
 	ErrUserOAuthAlreadyBound               = errors.New("user oauth already bound")
 	ErrUserOAuthNotBound                   = errors.New("user oauth not bound")
 	ErrTelegramUnbindRequiresEmail         = errors.New("telegram unbind requires real email")
-	ErrSMTPConfigInvalid                   = settingsmodule.ErrSMTPConfigInvalid
+	ErrSMTPConfigInvalid                   = settingsmessaging.ErrSMTPConfigInvalid
 	ErrCaptchaConfigInvalid                = captcha.ErrConfigInvalid
 	ErrCaptchaRequired                     = captcha.ErrRequired
 	ErrCaptchaInvalid                      = captcha.ErrInvalid
@@ -146,7 +148,7 @@ var (
 	ErrGiftCardDeleteFailed                = giftcard.ErrDeleteFailed
 	ErrGiftCardBatchCreateFailed           = giftcard.ErrBatchCreateFailed
 	ErrQueueUnavailable                    = errors.New("queue unavailable")
-	ErrAffiliateConfigInvalid              = settingsmodule.ErrAffiliateConfigInvalid
+	ErrAffiliateConfigInvalid              = settingsintegration.ErrAffiliateConfigInvalid
 	ErrAffiliateDisabled                   = affiliatemodule.ErrDisabled
 	ErrAffiliateNotOpened                  = affiliatemodule.ErrNotOpened
 	ErrAffiliateCodeInvalid                = affiliatemodule.ErrCodeInvalid
@@ -183,7 +185,7 @@ var (
 	ErrTelegramBroadcastNoRecipients       = telegram.ErrBroadcastNoRecipients
 	ErrTelegramBotTokenUnavailable         = telegram.ErrBotTokenUnavailable
 	ErrRegistrationDisabled                = errors.New("registration disabled")
-	ErrOrderEmailTemplateConfigInvalid     = settingsmodule.ErrOrderEmailTemplateConfigInvalid
+	ErrOrderEmailTemplateConfigInvalid     = settingsmessaging.ErrOrderEmailTemplateConfigInvalid
 	ErrPaymentChannelNotAllowedForProduct  = errors.New("payment channel not allowed for product")
 	ErrPaymentChannelNotAllowedForRecharge = errors.New("payment channel not allowed for wallet recharge")
 	ErrWalletOnlyPaymentRequired           = walletmodule.ErrOnlyPaymentRequired

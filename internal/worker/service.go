@@ -6,7 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/logger"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 	"github.com/dujiao-next/internal/queue"
 
 	"github.com/hibiken/asynq"
@@ -81,7 +81,7 @@ func registerPeriodicTasks(scheduler *asynq.Scheduler, consumer *Consumer, cfg *
 			if err != nil {
 				logger.Warnw("scheduler_load_upstream_sync_interval_failed", "error", err, "fallback", fallbackInterval)
 			} else if d > 0 {
-				syncInterval = settingsmodule.FormatUpstreamSyncIntervalForScheduler(d)
+				syncInterval = settingsintegration.FormatUpstreamSyncIntervalForScheduler(d)
 			}
 		}
 		task := queue.NewUpstreamSyncStockTask()

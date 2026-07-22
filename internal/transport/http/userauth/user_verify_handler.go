@@ -6,9 +6,10 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/modules/captcha"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -63,7 +64,7 @@ type UserSendVerifyCodeRequest struct {
 func (h *UserVerifyHandler) SendUserVerifyCode(c *gin.Context) {
 	var req UserSendVerifyCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -71,22 +72,22 @@ func (h *UserVerifyHandler) SendUserVerifyCode(c *gin.Context) {
 
 	emailVerificationEnabled, err := h.settings.GetEmailVerificationEnabled(true)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.send_verify_code_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.send_verify_code_failed", err)
 		return
 	}
 	if !emailVerificationEnabled {
-		shared.RespondError(c, response.CodeForbidden, "error.email_verification_disabled", nil)
+		ginutil.RespondError(c, response.CodeForbidden, "error.email_verification_disabled", nil)
 		return
 	}
 
 	if purpose == constants.VerifyPurposeRegister {
 		registrationEnabled, err := h.settings.GetRegistrationEnabled(true)
 		if err != nil {
-			shared.RespondError(c, response.CodeInternal, "error.send_verify_code_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.send_verify_code_failed", err)
 			return
 		}
 		if !registrationEnabled {
-			shared.RespondError(c, response.CodeForbidden, "error.registration_disabled", nil)
+			ginutil.RespondError(c, response.CodeForbidden, "error.registration_disabled", nil)
 			return
 		}
 	}
@@ -109,24 +110,24 @@ func (h *UserVerifyHandler) SendUserVerifyCode(c *gin.Context) {
 	if err := h.auth.SendVerifyCode(req.Email, req.Purpose, locale); err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidEmail):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
 		case errors.Is(err, ErrInvalidVerifyPurpose):
-			shared.RespondError(c, response.CodeBadRequest, "error.verify_purpose_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.verify_purpose_invalid", nil)
 		case errors.Is(err, ErrEmailExists):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_exists", nil)
 		case errors.Is(err, ErrEmailDomainNotAllowed):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_domain_not_allowed", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_domain_not_allowed", nil)
 		case errors.Is(err, ErrUserNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		case errors.Is(err, ErrVerifyCodeTooFrequent):
-			shared.RespondError(c, response.CodeTooManyRequests, "error.verify_code_too_frequent", nil)
+			ginutil.RespondError(c, response.CodeTooManyRequests, "error.verify_code_too_frequent", nil)
 		case errors.Is(err, ErrEmailRecipientRejected):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_recipient_not_found", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_recipient_not_found", nil)
 		case errors.Is(err, ErrEmailServiceDisabled),
 			errors.Is(err, ErrEmailServiceNotConfigured):
-			shared.RespondError(c, response.CodeInternal, "error.email_service_not_configured", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.email_service_not_configured", err)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.send_verify_code_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.send_verify_code_failed", err)
 		}
 		return
 	}
@@ -137,12 +138,12 @@ func (h *UserVerifyHandler) SendUserVerifyCode(c *gin.Context) {
 func respondCaptchaError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, captcha.ErrRequired):
-		shared.RespondError(c, response.CodeBadRequest, "error.captcha_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.captcha_required", nil)
 	case errors.Is(err, captcha.ErrInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.captcha_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.captcha_invalid", nil)
 	case errors.Is(err, captcha.ErrConfigInvalid):
-		shared.RespondError(c, response.CodeInternal, "error.captcha_config_invalid", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.captcha_config_invalid", err)
 	default:
-		shared.RespondError(c, response.CodeInternal, "error.captcha_verify_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.captcha_verify_failed", err)
 	}
 }

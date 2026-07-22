@@ -5,9 +5,10 @@ import (
 	"errors"
 
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/modules/dashboard"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,7 +18,7 @@ type Reader interface {
 	GetOverview(ctx context.Context, input dashboard.QueryInput) (*dashboard.OverviewResponse, error)
 	GetTrends(ctx context.Context, input dashboard.QueryInput) (*dashboard.TrendResponse, error)
 	GetRankings(ctx context.Context, input dashboard.QueryInput) (*dashboard.RankingsResponse, error)
-	LoadDashboardAlertSetting() settingsmodule.DashboardAlertSetting
+	LoadDashboardAlertSetting() settingsstorefront.DashboardAlertSetting
 	GetInventoryAlertItems(ctx context.Context, lowStockThreshold int64) ([]dashboard.InventoryAlertRow, error)
 }
 
@@ -97,7 +98,7 @@ func (h *AdminHandler) GetInventoryAlerts(c *gin.Context) {
 func parseQuery(c *gin.Context) (dashboard.QueryInput, bool) {
 	input, err := shared.ParseReportingQuery(c)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return dashboard.QueryInput{}, false
 	}
 	return input, true
@@ -105,8 +106,8 @@ func parseQuery(c *gin.Context) (dashboard.QueryInput, bool) {
 
 func respondFetchError(c *gin.Context, err error) {
 	if errors.Is(err, dashboard.ErrRangeInvalid) {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
-	shared.RespondError(c, response.CodeInternal, "error.dashboard_fetch_failed", err)
+	ginutil.RespondError(c, response.CodeInternal, "error.dashboard_fetch_failed", err)
 }

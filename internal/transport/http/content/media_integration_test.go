@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/http/response"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/gin-gonic/gin"
 )

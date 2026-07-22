@@ -9,12 +9,13 @@ import (
 	"github.com/dujiao-next/internal/testkit/memorysettings"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/dashboard"
 	"github.com/dujiao-next/internal/modules/notification"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -351,7 +352,7 @@ func TestBuildManualFulfillmentNotificationPayloadUsesGuestEmailAndPendingItems(
 }
 
 func TestNotificationCenterDefaultSettingIncludesRichOrderVariables(t *testing.T) {
-	setting := settingsmodule.NotificationCenterDefaultSetting()
+	setting := settingsmessaging.NotificationCenterDefaultSetting()
 
 	orderBody := setting.Templates.OrderPaidSuccess.ZHCN.Body
 	if !strings.Contains(orderBody, "{{customer_email}}") || !strings.Contains(orderBody, "{{items_summary}}") {
@@ -375,7 +376,7 @@ func TestPatchNotificationCenterSettingPersistsInventoryAlertConfig(t *testing.T
 	interval := 600
 	ignored := []uint{9, 2, 9, 0}
 
-	setting, err := svc.PatchNotificationCenterSetting(settingsmodule.NotificationCenterSettingPatch{
+	setting, err := svc.PatchNotificationCenterSetting(settingsmessaging.NotificationCenterSettingPatch{
 		InventoryAlertIntervalSeconds: &interval,
 		IgnoredProductIDs:             &ignored,
 	})
@@ -408,7 +409,7 @@ func TestPatchNotificationCenterSettingPersistsPaymentOrderAlertConfig(t *testin
 	interval := 900
 	checkInterval := 7200
 
-	setting, err := svc.PatchNotificationCenterSetting(settingsmodule.NotificationCenterSettingPatch{
+	setting, err := svc.PatchNotificationCenterSetting(settingsmessaging.NotificationCenterSettingPatch{
 		PaymentOrderAlertIntervalSeconds: &interval,
 		PaymentOrderAlertCheckSeconds:    &checkInterval,
 	})
@@ -436,14 +437,14 @@ func TestPatchNotificationCenterSettingPersistsPaymentOrderAlertConfig(t *testin
 }
 
 func TestBuildPaymentOrderAlertDispatchPayloadsUseDashboardThresholds(t *testing.T) {
-	setting := settingsmodule.NotificationCenterDefaultSetting()
+	setting := settingsmessaging.NotificationCenterDefaultSetting()
 	setting.DefaultLocale = constants.LocaleZhCN
 	setting.PaymentOrderAlertIntervalSeconds = 600
 
 	payloads := notification.BuildPaymentOrderAlertDispatchPayloads(
 		setting,
-		settingsmodule.DashboardSetting{
-			Alert: settingsmodule.DashboardAlertSetting{
+		settingsstorefront.DashboardSetting{
+			Alert: settingsstorefront.DashboardAlertSetting{
 				PendingPaymentOrdersThreshold: 5,
 				PaymentsFailedThreshold:       3,
 			},
@@ -498,8 +499,8 @@ func TestBuildPaymentOrderAlertDispatchPayloadsUseDashboardThresholds(t *testing
 
 	payloads = notification.BuildPaymentOrderAlertDispatchPayloads(
 		setting,
-		settingsmodule.DashboardSetting{
-			Alert: settingsmodule.DashboardAlertSetting{
+		settingsstorefront.DashboardSetting{
+			Alert: settingsstorefront.DashboardAlertSetting{
 				PendingPaymentOrdersThreshold: 5,
 				PaymentsFailedThreshold:       3,
 			},
@@ -513,13 +514,13 @@ func TestBuildPaymentOrderAlertDispatchPayloadsUseDashboardThresholds(t *testing
 }
 
 func TestBuildInventoryAlertDispatchPayloadsIncludesSummaryAndIgnoreRules(t *testing.T) {
-	setting := settingsmodule.NotificationCenterDefaultSetting()
+	setting := settingsmessaging.NotificationCenterDefaultSetting()
 	setting.DefaultLocale = constants.LocaleEnUS
 	setting.InventoryAlertIntervalSeconds = 900
 	setting.IgnoredProductIDs = []uint{2}
 
-	dashboardSetting := settingsmodule.DashboardSetting{
-		Alert: settingsmodule.DashboardAlertSetting{
+	dashboardSetting := settingsstorefront.DashboardSetting{
+		Alert: settingsstorefront.DashboardAlertSetting{
 			LowStockThreshold:           5,
 			OutOfStockProductsThreshold: 1,
 		},

@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -59,8 +59,8 @@ func (req adminSiteConfigRequest) toInput() resellermodule.ResellerSiteConfigInp
 
 // ListSiteConfigs 管理端分销站点配置列表。
 func (h *AdminSiteConfigHandler) ListSiteConfigs(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
-	resellerID, _ := shared.ParseQueryUint(c.Query("reseller_id"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	resellerID, _ := ginutil.ParseQueryUint(c.Query("reseller_id"), false)
 	rows, total, err := h.directory.ListSiteConfigs(SiteConfigListFilter{
 		Page:        page,
 		PageSize:    pageSize,
@@ -70,7 +70,7 @@ func (h *AdminSiteConfigHandler) ListSiteConfigs(c *gin.Context) {
 		CreatedTo:   parseTimePointer(c.Query("created_to")),
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, dto.NewAdminResellerSiteConfigRespList(rows), response.BuildPagination(page, pageSize, total))
@@ -78,24 +78,24 @@ func (h *AdminSiteConfigHandler) ListSiteConfigs(c *gin.Context) {
 
 // GetSiteConfig 管理端获取单个分销站点配置。
 func (h *AdminSiteConfigHandler) GetSiteConfig(c *gin.Context) {
-	resellerID, err := shared.ParseParamUint(c, "reseller_id")
+	resellerID, err := ginutil.ParseParamUint(c, "reseller_id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	row, err := h.directory.GetSiteConfigByResellerID(resellerID)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	if row == nil {
 		profile, profileErr := h.directory.GetProfileByID(resellerID)
 		if profileErr != nil {
-			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", profileErr)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", profileErr)
 			return
 		}
 		if profile == nil {
-			shared.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
 			return
 		}
 		row = &models.ResellerSiteConfig{ResellerID: resellerID, Profile: profile}
@@ -105,14 +105,14 @@ func (h *AdminSiteConfigHandler) GetSiteConfig(c *gin.Context) {
 
 // UpdateSiteConfig 管理端更新分销站点配置。
 func (h *AdminSiteConfigHandler) UpdateSiteConfig(c *gin.Context) {
-	resellerID, err := shared.ParseParamUint(c, "reseller_id")
+	resellerID, err := ginutil.ParseParamUint(c, "reseller_id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	var req adminSiteConfigRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	row, err := h.siteConfig.UpdateAdminSiteConfig(c.Request.Context(), resellerID, req.toInput())
@@ -135,9 +135,9 @@ func (h *AdminSiteConfigHandler) UpdateSiteConfig(c *gin.Context) {
 
 // ResetSiteConfig 管理端重置分销站点配置。
 func (h *AdminSiteConfigHandler) ResetSiteConfig(c *gin.Context) {
-	resellerID, err := shared.ParseParamUint(c, "reseller_id")
+	resellerID, err := ginutil.ParseParamUint(c, "reseller_id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	if err := h.siteConfig.ResetAdminSiteConfig(c.Request.Context(), resellerID); err != nil {

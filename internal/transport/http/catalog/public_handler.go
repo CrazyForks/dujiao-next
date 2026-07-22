@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -111,31 +111,31 @@ func isResellerTenant(tenant reseller.TenantContext) bool {
 
 // GetProducts 获取商品列表
 func (h *PublicHandler) GetProducts(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	categoryID := c.Query("category_id")
 	search := strings.TrimSpace(c.Query("search"))
 	tenant := tenantFromRequest(c)
 
 	products, total, err := h.products.ListPublicForTenant(tenant, categoryID, search, page, pageSize)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		return
 	}
 
 	if err := h.products.ApplyAutoStockCounts(products); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		return
 	}
 
 	var resellerBatch *reseller.DisplayPricingBatch
 	if isResellerTenant(tenant) {
 		if h.pricer == nil {
-			shared.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
 		resellerBatch, err = h.pricer.LoadDisplayPricingBatch(tenant, products)
 		if err != nil {
-			shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 			return
 		}
 	}
@@ -147,7 +147,7 @@ func (h *PublicHandler) GetProducts(c *gin.Context) {
 			if errors.Is(derr, catalogproduct.ErrResellerProductNotListed) {
 				continue
 			}
-			shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", derr)
+			ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", derr)
 			return
 		}
 		decorated = append(decorated, item)
@@ -165,16 +165,16 @@ func (h *PublicHandler) GetProductBySlug(c *gin.Context) {
 	product, err := h.products.GetPublicBySlugForTenant(tenant, slug)
 	if err != nil {
 		if errors.Is(err, catalogproduct.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		return
 	}
 
 	temp := []models.Product{*product}
 	if err := h.products.ApplyAutoStockCounts(temp); err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 		return
 	}
 	*product = temp[0]
@@ -182,12 +182,12 @@ func (h *PublicHandler) GetProductBySlug(c *gin.Context) {
 	var resellerBatch *reseller.DisplayPricingBatch
 	if isResellerTenant(tenant) {
 		if h.pricer == nil {
-			shared.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
 		resellerBatch, err = h.pricer.LoadDisplayPricingBatch(tenant, []models.Product{*product})
 		if err != nil {
-			shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
 			return
 		}
 	}
@@ -195,10 +195,10 @@ func (h *PublicHandler) GetProductBySlug(c *gin.Context) {
 	decorated, derr := h.decoratePublicProductForTenant(product, h.promotions, tenant, resellerBatch)
 	if derr != nil {
 		if errors.Is(derr, catalogproduct.ErrResellerProductNotListed) {
-			shared.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.product_fetch_failed", derr)
+		ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", derr)
 		return
 	}
 
@@ -221,7 +221,7 @@ func (h *PublicHandler) loadRelatedPostCards(ctx context.Context, productID uint
 func (h *PublicHandler) GetCategories(c *gin.Context) {
 	categories, err := h.categories.ListActive()
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.category_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.category_fetch_failed", err)
 		return
 	}
 

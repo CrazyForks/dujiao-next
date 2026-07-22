@@ -4,10 +4,10 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/shopspring/decimal"
 
 	"github.com/gin-gonic/gin"
@@ -43,13 +43,13 @@ type withdrawApplyRequest struct {
 
 // GetDashboard 获取当前用户的分销商财务看板。
 func (h *UserFinanceHandler) GetDashboard(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	data, err := h.finance.GetUserFinanceDashboard(uid)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.Success(c, dto.NewResellerDashboardResp(data.Opened, data.Profile, data.Balances, data.WithdrawEnabled, data.WithdrawDisabledReason))
@@ -57,11 +57,11 @@ func (h *UserFinanceHandler) GetDashboard(c *gin.Context) {
 
 // ListBalanceAccounts 查询当前用户的分销余额账户。
 func (h *UserFinanceHandler) ListBalanceAccounts(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	rows, total, err := h.finance.ListUserBalanceAccounts(uid, resellermodule.UserBalanceAccountListFilter{
 		Page:     page,
 		PageSize: pageSize,
@@ -76,14 +76,14 @@ func (h *UserFinanceHandler) ListBalanceAccounts(c *gin.Context) {
 
 // ListLedgerEntries 查询当前用户的分销账务流水。
 func (h *UserFinanceHandler) ListLedgerEntries(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	page, pageSize := shared.ParsePagination(c)
-	orderID, err := shared.ParseQueryUint(c.Query("order_id"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	orderID, err := ginutil.ParseQueryUint(c.Query("order_id"), false)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	rows, total, err := h.finance.ListUserLedgerEntries(uid, resellermodule.UserLedgerListFilter{
@@ -102,11 +102,11 @@ func (h *UserFinanceHandler) ListLedgerEntries(c *gin.Context) {
 
 // ListWithdraws 查询当前用户的分销提现申请。
 func (h *UserFinanceHandler) ListWithdraws(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	rows, total, err := h.finance.ListUserWithdrawRequests(uid, resellermodule.UserWithdrawListFilter{
 		Page:     page,
 		PageSize: pageSize,
@@ -121,18 +121,18 @@ func (h *UserFinanceHandler) ListWithdraws(c *gin.Context) {
 
 // ApplyWithdraw 提交当前用户的分销提现申请。
 func (h *UserFinanceHandler) ApplyWithdraw(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req withdrawApplyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	amount, err := decimal.NewFromString(strings.TrimSpace(req.Amount))
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	row, err := h.finance.ApplyUserWithdraw(uid, resellermodule.WithdrawApplyInput{

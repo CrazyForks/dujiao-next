@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/giftcard"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -76,23 +76,23 @@ type adminGiftCardItem struct {
 
 // Generate 管理端生成礼品卡。
 func (h *AdminHandler) Generate(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
 	var req generateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	amount, err := decimal.NewFromString(strings.TrimSpace(req.Amount))
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	expiresAt, err := shared.ParseTimeNullable(strings.TrimSpace(req.ExpiresAt))
+	expiresAt, err := ginutil.ParseTimeNullable(strings.TrimSpace(req.ExpiresAt))
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	batch, created, err := h.cards.GenerateGiftCards(giftcard.GenerateInput{
@@ -105,9 +105,9 @@ func (h *AdminHandler) Generate(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, giftcard.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.gift_card_create_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.gift_card_create_failed", err)
 		}
 		return
 	}
@@ -119,7 +119,7 @@ func (h *AdminHandler) Generate(c *gin.Context) {
 
 // List 获取礼品卡列表。
 func (h *AdminHandler) List(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	status := strings.TrimSpace(strings.ToLower(c.Query("status")))
 	code := strings.TrimSpace(c.Query("code"))
@@ -127,27 +127,27 @@ func (h *AdminHandler) List(c *gin.Context) {
 
 	var redeemedUserID uint
 	if rawUserID := strings.TrimSpace(c.Query("redeemed_user_id")); rawUserID != "" {
-		parsed, err := shared.ParseQueryUint(rawUserID, true)
+		parsed, err := ginutil.ParseQueryUint(rawUserID, true)
 		if err != nil {
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 			return
 		}
 		redeemedUserID = parsed
 	}
 
-	createdFrom, createdTo, err := shared.ParseQueryTimeRange(c, "created_from", "created_to")
+	createdFrom, createdTo, err := ginutil.ParseQueryTimeRange(c, "created_from", "created_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	redeemedFrom, redeemedTo, err := shared.ParseQueryTimeRange(c, "redeemed_from", "redeemed_to")
+	redeemedFrom, redeemedTo, err := ginutil.ParseQueryTimeRange(c, "redeemed_from", "redeemed_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	expiresFrom, expiresTo, err := shared.ParseQueryTimeRange(c, "expires_from", "expires_to")
+	expiresFrom, expiresTo, err := ginutil.ParseQueryTimeRange(c, "expires_from", "expires_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -166,13 +166,13 @@ func (h *AdminHandler) List(c *gin.Context) {
 		PageSize:       pageSize,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.gift_card_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.gift_card_fetch_failed", err)
 		return
 	}
 
 	userMap, err := h.cards.ResolveRedeemedUsers(cards)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.gift_card_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.gift_card_fetch_failed", err)
 		return
 	}
 
@@ -201,14 +201,14 @@ func (h *AdminHandler) List(c *gin.Context) {
 
 // Update 更新礼品卡。
 func (h *AdminHandler) Update(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	var req updateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	var (
@@ -219,9 +219,9 @@ func (h *AdminHandler) Update(c *gin.Context) {
 		if strings.TrimSpace(*req.ExpiresAt) == "" {
 			clearExpiresAt = true
 		} else {
-			parsed, err := shared.ParseTimeNullable(strings.TrimSpace(*req.ExpiresAt))
+			parsed, err := ginutil.ParseTimeNullable(strings.TrimSpace(*req.ExpiresAt))
 			if err != nil {
-				shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+				ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 				return
 			}
 			expiresAt = parsed
@@ -236,11 +236,11 @@ func (h *AdminHandler) Update(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, giftcard.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.gift_card_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.gift_card_not_found", nil)
 		case errors.Is(err, giftcard.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.gift_card_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.gift_card_update_failed", err)
 		}
 		return
 	}
@@ -249,19 +249,19 @@ func (h *AdminHandler) Update(c *gin.Context) {
 
 // Delete 删除礼品卡。
 func (h *AdminHandler) Delete(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	if err := h.cards.DeleteGiftCard(id); err != nil {
 		switch {
 		case errors.Is(err, giftcard.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.gift_card_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.gift_card_not_found", nil)
 		case errors.Is(err, giftcard.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.gift_card_delete_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.gift_card_delete_failed", err)
 		}
 		return
 	}
@@ -272,16 +272,16 @@ func (h *AdminHandler) Delete(c *gin.Context) {
 func (h *AdminHandler) BatchUpdateStatus(c *gin.Context) {
 	var req batchUpdateStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	affected, err := h.cards.BatchUpdateStatus(req.IDs, req.Status)
 	if err != nil {
 		switch {
 		case errors.Is(err, giftcard.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.gift_card_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.gift_card_update_failed", err)
 		}
 		return
 	}
@@ -292,18 +292,18 @@ func (h *AdminHandler) BatchUpdateStatus(c *gin.Context) {
 func (h *AdminHandler) Export(c *gin.Context) {
 	var req exportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	content, contentType, err := h.cards.ExportGiftCards(req.IDs, req.Format)
 	if err != nil {
 		switch {
 		case errors.Is(err, giftcard.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.gift_card_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.gift_card_not_found", nil)
 		case errors.Is(err, giftcard.ErrInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.gift_card_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.gift_card_fetch_failed", err)
 		}
 		return
 	}

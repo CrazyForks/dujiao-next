@@ -4,10 +4,10 @@ import (
 	"errors"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -53,14 +53,14 @@ type ChangeEmailSendCodeRequest struct {
 
 // SendChangeEmailCode 发送更换邮箱验证码。
 func (h *UserEmailHandler) SendChangeEmailCode(c *gin.Context) {
-	id, ok := shared.GetUserID(c)
+	id, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	var req ChangeEmailSendCodeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -68,22 +68,22 @@ func (h *UserEmailHandler) SendChangeEmailCode(c *gin.Context) {
 	if err := h.service.SendChangeEmailCode(id, req.Kind, req.NewEmail, locale); err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidEmail):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
 		case errors.Is(err, ErrEmailChangeInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_change_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_change_invalid", nil)
 		case errors.Is(err, ErrEmailChangeExists):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_change_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_change_exists", nil)
 		case errors.Is(err, ErrUserNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		case errors.Is(err, ErrVerifyCodeTooFrequent):
-			shared.RespondError(c, response.CodeTooManyRequests, "error.verify_code_too_frequent", nil)
+			ginutil.RespondError(c, response.CodeTooManyRequests, "error.verify_code_too_frequent", nil)
 		case errors.Is(err, ErrEmailRecipientRejected):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_recipient_not_found", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_recipient_not_found", nil)
 		case errors.Is(err, ErrEmailServiceDisabled),
 			errors.Is(err, ErrEmailServiceNotConfigured):
-			shared.RespondError(c, response.CodeInternal, "error.email_service_not_configured", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.email_service_not_configured", err)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.send_verify_code_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.send_verify_code_failed", err)
 		}
 		return
 	}
@@ -100,14 +100,14 @@ type ChangeEmailRequest struct {
 
 // ChangeEmail 更换邮箱。
 func (h *UserEmailHandler) ChangeEmail(c *gin.Context) {
-	id, ok := shared.GetUserID(c)
+	id, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	var req ChangeEmailRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -115,28 +115,28 @@ func (h *UserEmailHandler) ChangeEmail(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidEmail):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)
 		case errors.Is(err, ErrEmailChangeInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_change_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_change_invalid", nil)
 		case errors.Is(err, ErrEmailChangeExists):
-			shared.RespondError(c, response.CodeBadRequest, "error.email_change_exists", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.email_change_exists", nil)
 		case errors.Is(err, ErrVerifyCodeInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.verify_code_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.verify_code_invalid", nil)
 		case errors.Is(err, ErrVerifyCodeExpired):
-			shared.RespondError(c, response.CodeBadRequest, "error.verify_code_expired", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.verify_code_expired", nil)
 		case errors.Is(err, ErrVerifyCodeAttemptsExceeded):
-			shared.RespondError(c, response.CodeBadRequest, "error.verify_code_attempts_exceeded", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.verify_code_attempts_exceeded", nil)
 		case errors.Is(err, ErrUserNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.email_change_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.email_change_failed", err)
 		}
 		return
 	}
 
 	profile, respErr := h.changeEmailProfileResponse(user)
 	if respErr != nil {
-		shared.RespondError(c, response.CodeInternal, "error.email_change_failed", respErr)
+		ginutil.RespondError(c, response.CodeInternal, "error.email_change_failed", respErr)
 		return
 	}
 	response.Success(c, profile)

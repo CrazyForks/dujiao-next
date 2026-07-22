@@ -8,20 +8,21 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 	"github.com/dujiao-next/internal/queue"
 )
 
 type notificationSettingsStub struct {
-	notification settingsmodule.NotificationCenterSetting
-	dashboard    settingsmodule.DashboardSetting
+	notification settingsmessaging.NotificationCenterSetting
+	dashboard    settingsstorefront.DashboardSetting
 }
 
-func (s notificationSettingsStub) GetNotificationCenterSetting() (settingsmodule.NotificationCenterSetting, error) {
+func (s notificationSettingsStub) GetNotificationCenterSetting() (settingsmessaging.NotificationCenterSetting, error) {
 	return s.notification, nil
 }
 
-func (s notificationSettingsStub) GetDashboardSetting() (settingsmodule.DashboardSetting, error) {
+func (s notificationSettingsStub) GetDashboardSetting() (settingsstorefront.DashboardSetting, error) {
 	return s.dashboard, nil
 }
 
@@ -64,27 +65,27 @@ func (r *notificationLogRepositoryStub) ListAdmin(filter LogListFilter) ([]model
 func setupLogService(t *testing.T) (*Service, *LogService) {
 	t.Helper()
 	logService := NewLogService(&notificationLogRepositoryStub{})
-	setting := settingsmodule.NotificationCenterSetting{
+	setting := settingsmessaging.NotificationCenterSetting{
 		DefaultLocale: constants.LocaleEnUS,
-		Scenes: settingsmodule.NotificationSceneSetting{
+		Scenes: settingsmessaging.NotificationSceneSetting{
 			OrderPaidSuccess: true,
 			ExceptionAlert:   true,
 		},
-		Channels: settingsmodule.NotificationChannelsSetting{
-			Email: settingsmodule.NotificationChannelSetting{
+		Channels: settingsmessaging.NotificationChannelsSetting{
+			Email: settingsmessaging.NotificationChannelSetting{
 				Enabled:    true,
 				Recipients: []string{"success@example.com", "failure@example.com"},
 			},
 		},
-		Templates: settingsmodule.NotificationTemplatesSetting{
-			OrderPaidSuccess: settingsmodule.NotificationSceneTemplate{
-				ENUS: settingsmodule.NotificationLocalizedTemplate{
+		Templates: settingsmessaging.NotificationTemplatesSetting{
+			OrderPaidSuccess: settingsmessaging.NotificationSceneTemplate{
+				ENUS: settingsmessaging.NotificationLocalizedTemplate{
 					Title: "Order {{order_no}}",
 					Body:  "Customer {{customer_email}}",
 				},
 			},
-			ExceptionAlert: settingsmodule.NotificationSceneTemplate{
-				ENUS: settingsmodule.NotificationLocalizedTemplate{
+			ExceptionAlert: settingsmessaging.NotificationSceneTemplate{
+				ENUS: settingsmessaging.NotificationLocalizedTemplate{
 					Title: "Alert {{message}}",
 					Body:  "{{message}}",
 				},

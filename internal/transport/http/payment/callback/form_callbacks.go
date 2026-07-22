@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
@@ -17,7 +18,7 @@ import (
 var errAlipayCallbackPaymentNotFound = errors.New("alipay callback payment not found")
 
 func (h *Handler) handleAlipayCallback(c *gin.Context) bool {
-	log := shared.RequestLog(c)
+	log := ginutil.RequestLog(c)
 	form, err := parseCallbackForm(c)
 	if err != nil {
 		log.Warnw("alipay_callback_form_parse_failed", "error", err)
@@ -66,7 +67,7 @@ func (h *Handler) handleAlipayCallback(c *gin.Context) bool {
 }
 
 func (h *Handler) handleEpayCallback(c *gin.Context) bool {
-	log := shared.RequestLog(c)
+	log := ginutil.RequestLog(c)
 	form, err := parseCallbackForm(c)
 	if err != nil {
 		log.Warnw("epay_callback_form_parse_failed", "error", err)

@@ -7,7 +7,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/notification"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
@@ -99,7 +99,7 @@ func (s *PaymentService) notificationTemplateLocale() string {
 	if err != nil {
 		return constants.LocaleZhCN
 	}
-	return settingsmodule.NormalizeNotificationLocale(setting.DefaultLocale)
+	return settingsmessaging.NormalizeNotificationLocale(setting.DefaultLocale)
 }
 
 func (s *PaymentService) resolveNotificationCustomer(order *models.Order) (string, string, string) {

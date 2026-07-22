@@ -94,7 +94,7 @@ func TestLegacySettingKeyDispatcherIsAbsent(t *testing.T) {
 
 func TestAdminSettingHandlerDispatchesRegistryEffectsWithoutKeyComparisons(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	handlerPath := filepath.Join(repositoryRoot, "internal", "transport", "http", "settings", "admin_handler.go")
+	handlerPath := filepath.Join(repositoryRoot, "internal", "modules", "settings", "transport", "http", "admin_handler.go")
 	parsed, err := parser.ParseFile(token.NewFileSet(), handlerPath, nil, 0)
 	if err != nil {
 		t.Fatalf("parse admin setting handler: %v", err)

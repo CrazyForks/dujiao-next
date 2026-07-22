@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/authz"
-	"github.com/dujiao-next/internal/http/response"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"

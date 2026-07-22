@@ -8,7 +8,7 @@ import (
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/modules/reporting"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 )
 
 const dashboardCacheTTL = 45 * time.Second
@@ -141,7 +141,7 @@ func (s *Service) GetOverview(ctx context.Context, input QueryInput) (*OverviewR
 }
 
 // LoadDashboardAlertSetting 获取仪表盘告警配置
-func (s *Service) LoadDashboardAlertSetting() settingsmodule.DashboardAlertSetting {
+func (s *Service) LoadDashboardAlertSetting() settingsstorefront.DashboardAlertSetting {
 	return s.loadSetting().Alert
 }
 
@@ -327,8 +327,8 @@ func (s *Service) GetRankings(ctx context.Context, input QueryInput) (*RankingsR
 	return response, nil
 }
 
-func (s *Service) loadSetting() settingsmodule.DashboardSetting {
-	fallback := settingsmodule.DefaultDashboardSetting()
+func (s *Service) loadSetting() settingsstorefront.DashboardSetting {
+	fallback := settingsstorefront.DefaultDashboardSetting()
 	if s == nil || s.settingService == nil {
 		return fallback
 	}
@@ -336,7 +336,7 @@ func (s *Service) loadSetting() settingsmodule.DashboardSetting {
 	if err != nil {
 		return fallback
 	}
-	return settingsmodule.NormalizeDashboardSetting(setting)
+	return settingsstorefront.NormalizeDashboardSetting(setting)
 }
 
 func formatMoneyValue(value float64) string {
@@ -347,7 +347,7 @@ func formatPercentValue(value float64) string {
 	return fmt.Sprintf("%.2f", value)
 }
 
-func buildDashboardAlerts(overview OverviewRow, stockStats StockStatsRow, alertSetting settingsmodule.DashboardAlertSetting) []AlertItem {
+func buildDashboardAlerts(overview OverviewRow, stockStats StockStatsRow, alertSetting settingsstorefront.DashboardAlertSetting) []AlertItem {
 	alerts := make([]AlertItem, 0, 4)
 	if stockStats.OutOfStockProducts >= alertSetting.OutOfStockProductsThreshold {
 		alerts = append(alerts, AlertItem{Type: "out_of_stock_products", Level: "error", Value: stockStats.OutOfStockProducts})

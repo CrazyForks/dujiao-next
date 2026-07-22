@@ -7,9 +7,9 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -113,73 +113,73 @@ type walletPaymentChannelsRequest struct {
 }
 
 func (h *UserHandler) GetPaymentChannels(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req walletPaymentChannelsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	amount, err := decimal.NewFromString(strings.TrimSpace(req.Amount))
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	if amount.LessThanOrEqual(decimal.Zero) {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	user, _ := h.users.GetByID(uid)
 	channels, err := h.payments.GetAvailableWalletRechargeChannels(models.NewMoneyFromDecimal(amount), user)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 	response.Success(c, channels)
 }
 
 func (h *UserHandler) GetWallet(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	account, err := h.wallets.GetAccount(uid)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.Success(c, dto.NewWalletAccountResp(account))
 }
 
 func (h *UserHandler) GetTransactions(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	transactions, total, err := h.wallets.ListTransactions(uid, page, pageSize)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, dto.NewWalletTransactionRespList(transactions), response.BuildPagination(page, pageSize, total))
 }
 
 func (h *UserHandler) Recharge(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	var req walletRechargeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	amount, err := decimal.NewFromString(strings.TrimSpace(req.Amount))
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	currency := strings.TrimSpace(req.Currency)
@@ -195,9 +195,9 @@ func (h *UserHandler) Recharge(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidAmount):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		case errors.Is(err, ErrNotSupportedForGuest):
-			shared.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
 		default:
 			respondPaymentCreateError(c, err)
 		}
@@ -205,28 +205,28 @@ func (h *UserHandler) Recharge(c *gin.Context) {
 	}
 	account, err := h.wallets.GetAccount(uid)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.Success(c, dto.NewWalletRechargePaymentPayload(result.Recharge, result.Payment, account))
 }
 
 func (h *UserHandler) GetRecharge(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	rechargeNo := strings.TrimSpace(c.Param("recharge_no"))
 	if rechargeNo == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	recharge, err := h.wallets.GetRechargeOrderByRechargeNo(uid, rechargeNo)
 	if err != nil {
 		if errors.Is(err, ErrRechargeNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
 		} else {
-			shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		}
 		return
 	}
@@ -237,34 +237,34 @@ func (h *UserHandler) GetRecharge(c *gin.Context) {
 	}
 	account, err := h.wallets.GetAccount(uid)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.Success(c, dto.NewWalletRechargePaymentPayload(recharge, payment, account))
 }
 
 func (h *UserHandler) ListRecharges(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	orders, total, err := h.wallets.ListUserRechargeOrders(uid, page, pageSize, strings.TrimSpace(c.Query("status")), strings.TrimSpace(c.Query("recharge_no")))
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, dto.NewWalletRechargeRespList(orders), response.BuildPagination(page, pageSize, total))
 }
 
 func (h *UserHandler) RechargeStats(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	stats, err := h.wallets.StatsUserRechargeOrders(uid, strings.TrimSpace(c.Query("recharge_no")))
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	var total int64
@@ -275,21 +275,21 @@ func (h *UserHandler) RechargeStats(c *gin.Context) {
 }
 
 func (h *UserHandler) CaptureRechargePayment(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	paymentID, err := shared.ParseParamUint(c, "id")
+	paymentID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
 		return
 	}
 	recharge, err := h.wallets.GetRechargeOrderByPaymentIDAndUser(paymentID, uid)
 	if err != nil {
 		if errors.Is(err, ErrRechargeNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
 		} else {
-			shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		}
 		return
 	}
@@ -307,12 +307,12 @@ func (h *UserHandler) CaptureRechargePayment(c *gin.Context) {
 	}
 	recharge, err = h.wallets.GetRechargeOrderByRechargeNo(uid, recharge.RechargeNo)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 	account, err := h.wallets.GetAccount(uid)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.Success(c, dto.NewWalletRechargePaymentPayload(recharge, payment, account))
@@ -345,38 +345,38 @@ func respondPaymentCaptureError(c *gin.Context, err error) {
 func respondPaymentError(c *gin.Context, err error, fallbackCode int, fallbackKey string, capture bool) {
 	switch {
 	case errors.Is(err, ErrPaymentInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
 	case errors.Is(err, ErrPaymentNotFound):
-		shared.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
 	case errors.Is(err, ErrOrderNotFound):
-		shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 	case !capture && errors.Is(err, ErrOrderStatusInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.order_status_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.order_status_invalid", nil)
 	case errors.Is(err, ErrPaymentChannelNotFound):
-		shared.RespondError(c, response.CodeNotFound, "error.payment_channel_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.payment_channel_not_found", nil)
 	case errors.Is(err, ErrPaymentChannelInactive):
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_channel_inactive", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_channel_inactive", nil)
 	case errors.Is(err, ErrPaymentProviderNotSupported):
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_provider_not_supported", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_provider_not_supported", nil)
 	case errors.Is(err, ErrPaymentChannelConfigInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_channel_config_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_channel_config_invalid", nil)
 	case errors.Is(err, ErrPaymentGatewayRequestFailed):
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_gateway_request_failed", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_gateway_request_failed", nil)
 	case errors.Is(err, ErrPaymentGatewayResponseInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_gateway_response_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_gateway_response_invalid", nil)
 	case errors.Is(err, ErrPaymentCurrencyMismatch):
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_currency_mismatch", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_currency_mismatch", nil)
 	case errors.Is(err, ErrPaymentChannelNotAllowedRecharge):
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_channel_not_allowed_for_recharge", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_channel_not_allowed_for_recharge", nil)
 	case !capture && errors.Is(err, ErrPaymentChannelNotAllowedProduct):
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_channel_not_allowed_for_product", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_channel_not_allowed_for_product", nil)
 	case !capture && errors.Is(err, ErrWalletOnlyPaymentRequired):
-		shared.RespondError(c, response.CodeBadRequest, "error.wallet_only_payment_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.wallet_only_payment_required", nil)
 	case capture && errors.Is(err, ErrPaymentStatusInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_status_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_status_invalid", nil)
 	case capture && errors.Is(err, ErrPaymentAmountMismatch):
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_amount_mismatch", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_amount_mismatch", nil)
 	default:
-		shared.RespondError(c, fallbackCode, fallbackKey, err)
+		ginutil.RespondError(c, fallbackCode, fallbackKey, err)
 	}
 }

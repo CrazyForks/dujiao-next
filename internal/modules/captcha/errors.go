@@ -3,11 +3,11 @@ package captcha
 import (
 	"errors"
 
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 )
 
 var (
-	ErrConfigInvalid = settingsmodule.ErrCaptchaConfigInvalid
+	ErrConfigInvalid = settingssecurity.ErrCaptchaConfigInvalid
 	ErrRequired      = errors.New("captcha required")
 	ErrInvalid       = errors.New("captcha invalid")
 	ErrVerifyFailed  = errors.New("captcha verify failed")

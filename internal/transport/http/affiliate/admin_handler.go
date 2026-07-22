@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -51,8 +51,8 @@ func NewAdminHandler(svc AdminService) *AdminHandler {
 
 // ListAffiliateUsers 管理端推广用户列表
 func (h *AdminHandler) ListAffiliateUsers(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
-	userID, _ := shared.ParseQueryUint(c.Query("user_id"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	userID, _ := ginutil.ParseQueryUint(c.Query("user_id"), false)
 
 	rows, total, err := h.svc.ListAdminUsers(affiliate.AdminProfileListFilter{
 		Page:     page,
@@ -63,7 +63,7 @@ func (h *AdminHandler) ListAffiliateUsers(c *gin.Context) {
 		Keyword:  strings.TrimSpace(c.Query("keyword")),
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, rows, response.BuildPagination(page, pageSize, total))
@@ -71,8 +71,8 @@ func (h *AdminHandler) ListAffiliateUsers(c *gin.Context) {
 
 // ListAffiliateCommissions 管理端佣金列表
 func (h *AdminHandler) ListAffiliateCommissions(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
-	profileID, _ := shared.ParseQueryUint(c.Query("affiliate_profile_id"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	profileID, _ := ginutil.ParseQueryUint(c.Query("affiliate_profile_id"), false)
 
 	rows, total, err := h.svc.ListAdminCommissions(affiliate.AdminCommissionListFilter{
 		Page:               page,
@@ -83,7 +83,7 @@ func (h *AdminHandler) ListAffiliateCommissions(c *gin.Context) {
 		Keyword:            strings.TrimSpace(c.Query("keyword")),
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, rows, response.BuildPagination(page, pageSize, total))
@@ -91,8 +91,8 @@ func (h *AdminHandler) ListAffiliateCommissions(c *gin.Context) {
 
 // ListAffiliateWithdraws 管理端提现审核列表
 func (h *AdminHandler) ListAffiliateWithdraws(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
-	profileID, _ := shared.ParseQueryUint(c.Query("affiliate_profile_id"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	profileID, _ := ginutil.ParseQueryUint(c.Query("affiliate_profile_id"), false)
 
 	rows, total, err := h.svc.ListAdminWithdraws(affiliate.AdminWithdrawListFilter{
 		Page:               page,
@@ -102,7 +102,7 @@ func (h *AdminHandler) ListAffiliateWithdraws(c *gin.Context) {
 		Keyword:            strings.TrimSpace(c.Query("keyword")),
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, rows, response.BuildPagination(page, pageSize, total))
@@ -110,15 +110,15 @@ func (h *AdminHandler) ListAffiliateWithdraws(c *gin.Context) {
 
 // UpdateAffiliateUserStatus 管理端更新返利用户状态
 func (h *AdminHandler) UpdateAffiliateUserStatus(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
 	var req profileStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -126,11 +126,11 @@ func (h *AdminHandler) UpdateAffiliateUserStatus(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, catalogproduct.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
 		case errors.Is(err, affiliate.ErrProfileStatusInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.save_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 		}
 		return
 	}
@@ -141,20 +141,20 @@ func (h *AdminHandler) UpdateAffiliateUserStatus(c *gin.Context) {
 func (h *AdminHandler) BatchUpdateAffiliateUserStatus(c *gin.Context) {
 	var req batchProfileStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	if len(req.ProfileIDs) == 0 {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	updated, err := h.svc.BatchUpdateAffiliateProfileStatus(req.ProfileIDs, strings.TrimSpace(req.Status))
 	if err != nil {
 		switch {
 		case errors.Is(err, affiliate.ErrProfileStatusInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.save_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 		}
 		return
 	}
@@ -163,30 +163,30 @@ func (h *AdminHandler) BatchUpdateAffiliateUserStatus(c *gin.Context) {
 
 // RejectAffiliateWithdraw 拒绝提现申请
 func (h *AdminHandler) RejectAffiliateWithdraw(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 
 	var req reviewWithdrawRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	row, err := h.svc.ReviewWithdraw(adminID, id, constants.AffiliateWithdrawActionReject, req.Reason)
 	if err != nil {
 		switch {
 		case errors.Is(err, catalogproduct.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
 		case errors.Is(err, affiliate.ErrWithdrawStatusInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.save_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 		}
 		return
 	}
@@ -195,24 +195,24 @@ func (h *AdminHandler) RejectAffiliateWithdraw(c *gin.Context) {
 
 // PayAffiliateWithdraw 标记提现已支付
 func (h *AdminHandler) PayAffiliateWithdraw(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	row, err := h.svc.ReviewWithdraw(adminID, id, constants.AffiliateWithdrawActionPay, "")
 	if err != nil {
 		switch {
 		case errors.Is(err, catalogproduct.ErrNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
 		case errors.Is(err, affiliate.ErrWithdrawStatusInvalid):
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.save_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 		}
 		return
 	}

@@ -1,9 +1,9 @@
 package router
 
 import (
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/modules/compliance"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,7 +18,7 @@ func PaymentComplianceRequired(cs *compliance.Service) gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		if shared.IsSuperAdmin(c) {
+		if ginutil.IsSuperAdmin(c) {
 			response.Error(c, response.CodeForbidden, "compliance_required")
 		} else {
 			response.Error(c, response.CodeForbidden, "compliance_required_by_super_admin")

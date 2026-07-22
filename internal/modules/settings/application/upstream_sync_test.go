@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 )
 
 func TestGetUpstreamSyncConfigFallbackToYaml(t *testing.T) {
@@ -57,7 +57,7 @@ func TestUpdateUpstreamSyncConfigNormalizesBelowMinimum(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update failed: %v", err)
 	}
-	assertSettingIntValue(t, result, "interval_minutes", settingsmodule.DefaultUpstreamSyncConfig().IntervalMinutes)
+	assertSettingIntValue(t, result, "interval_minutes", settingsintegration.DefaultUpstreamSyncConfig().IntervalMinutes)
 }
 
 func TestUpdateUpstreamSyncConfigClampsAboveMaximum(t *testing.T) {
@@ -70,6 +70,6 @@ func TestUpdateUpstreamSyncConfigClampsAboveMaximum(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update failed: %v", err)
 	}
-	maximum := settingsmodule.NormalizeUpstreamSyncConfig(settingsmodule.UpstreamSyncConfig{IntervalMinutes: 99999}).IntervalMinutes
+	maximum := settingsintegration.NormalizeUpstreamSyncConfig(settingsintegration.UpstreamSyncConfig{IntervalMinutes: 99999}).IntervalMinutes
 	assertSettingIntValue(t, result, "interval_minutes", maximum)
 }

@@ -3,16 +3,16 @@ package auditloghttp
 import (
 	"strings"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/modules/auditlog"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
 
 // GetUserLoginLogs 获取用户登录日志列表
 func (h *AdminHandler) GetUserLoginLogs(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	userIDRaw := c.Query("user_id")
 	email := strings.TrimSpace(c.Query("email"))
@@ -22,17 +22,17 @@ func (h *AdminHandler) GetUserLoginLogs(c *gin.Context) {
 
 	var userID uint
 	if userIDRaw != "" {
-		parsedUserID, err := shared.ParseQueryUint(userIDRaw, false)
+		parsedUserID, err := ginutil.ParseQueryUint(userIDRaw, false)
 		if err != nil {
-			shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 			return
 		}
 		userID = parsedUserID
 	}
 
-	createdFrom, createdTo, err := shared.ParseQueryTimeRange(c, "created_from", "created_to")
+	createdFrom, createdTo, err := ginutil.ParseQueryTimeRange(c, "created_from", "created_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
@@ -48,7 +48,7 @@ func (h *AdminHandler) GetUserLoginLogs(c *gin.Context) {
 		CreatedTo:   createdTo,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_login_log_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_login_log_fetch_failed", err)
 		return
 	}
 

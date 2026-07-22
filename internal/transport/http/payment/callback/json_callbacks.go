@@ -8,8 +8,9 @@ import (
 	"net/http"
 	"strings"
 
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/payment/okpay"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
@@ -35,15 +36,15 @@ func (h *Handler) handleOkpayCallback(c *gin.Context) bool {
 	}
 	probe, err := okpay.ParseCallback(body)
 	if err != nil {
-		shared.RequestLog(c).Debugw("okpay_callback_parse_failed", "error", err)
+		ginutil.RequestLog(c).Debugw("okpay_callback_parse_failed", "error", err)
 		return false
 	}
 	uniqueID, orderID := strings.TrimSpace(probe.UniqueID), strings.TrimSpace(probe.OrderID)
 	if strings.TrimSpace(probe.Sign) == "" || (uniqueID == "" && orderID == "") {
-		shared.RequestLog(c).Debugw("okpay_callback_not_matched", "reason", "missing_sign_or_ids")
+		ginutil.RequestLog(c).Debugw("okpay_callback_not_matched", "reason", "missing_sign_or_ids")
 		return false
 	}
-	shared.RequestLog(c).Infow("okpay_callback_received", "unique_id", uniqueID, "order_id", orderID, "raw_body", callbackRawBodyForLog(body))
+	ginutil.RequestLog(c).Infow("okpay_callback_received", "unique_id", uniqueID, "order_id", orderID, "raw_body", callbackRawBodyForLog(body))
 	return h.processBodyCallback(c, body, bodyCallback{
 		providerType: constants.PaymentProviderOkpay, logPrefix: "okpay",
 		orderNo: uniqueID, providerRef: orderID,
@@ -64,14 +65,14 @@ func (h *Handler) handleTokenPayCallback(c *gin.Context) bool {
 		TokenID   string `json:"Id"`
 	}
 	if err := json.Unmarshal(body, &probe); err != nil {
-		shared.RequestLog(c).Debugw("tokenpay_callback_parse_failed", "error", err)
+		ginutil.RequestLog(c).Debugw("tokenpay_callback_parse_failed", "error", err)
 		return false
 	}
 	if strings.TrimSpace(probe.Signature) == "" || strings.TrimSpace(probe.OrderID) == "" || strings.TrimSpace(probe.TokenID) == "" {
-		shared.RequestLog(c).Debugw("tokenpay_callback_not_matched")
+		ginutil.RequestLog(c).Debugw("tokenpay_callback_not_matched")
 		return false
 	}
-	shared.RequestLog(c).Infow("tokenpay_callback_received", "out_order_id", probe.OrderID, "token_order_id", probe.TokenID, "raw_body", callbackRawBodyForLog(body))
+	ginutil.RequestLog(c).Infow("tokenpay_callback_received", "out_order_id", probe.OrderID, "token_order_id", probe.TokenID, "raw_body", callbackRawBodyForLog(body))
 	return h.processBodyCallback(c, body, bodyCallback{
 		providerType: constants.PaymentProviderTokenpay, logPrefix: "tokenpay",
 		orderNo: probe.OrderID, providerRef: probe.TokenID,
@@ -90,14 +91,14 @@ func (h *Handler) handleEpusdtCallback(c *gin.Context) bool {
 		OrderID string `json:"order_id"`
 	}
 	if err := json.Unmarshal(body, &probe); err != nil {
-		shared.RequestLog(c).Debugw("epusdt_callback_parse_failed", "error", err)
+		ginutil.RequestLog(c).Debugw("epusdt_callback_parse_failed", "error", err)
 		return false
 	}
 	if strings.TrimSpace(probe.PID) == "" || probe.TradeID == "" || probe.OrderID == "" {
-		shared.RequestLog(c).Debugw("epusdt_callback_feature_missing", "has_pid", strings.TrimSpace(probe.PID) != "", "has_trade_id", probe.TradeID != "", "has_order_id", probe.OrderID != "")
+		ginutil.RequestLog(c).Debugw("epusdt_callback_feature_missing", "has_pid", strings.TrimSpace(probe.PID) != "", "has_trade_id", probe.TradeID != "", "has_order_id", probe.OrderID != "")
 		return false
 	}
-	shared.RequestLog(c).Infow("epusdt_callback_received", "pid", probe.PID, "trade_id", probe.TradeID, "order_id", probe.OrderID, "raw_body", callbackRawBodyForLog(body))
+	ginutil.RequestLog(c).Infow("epusdt_callback_received", "pid", probe.PID, "trade_id", probe.TradeID, "order_id", probe.OrderID, "raw_body", callbackRawBodyForLog(body))
 	return h.processBodyCallback(c, body, bodyCallback{
 		providerType: constants.PaymentProviderEpusdt, logPrefix: "epusdt",
 		orderNo: probe.OrderID, providerRef: probe.TradeID,
@@ -115,14 +116,14 @@ func (h *Handler) handleBepusdtCallback(c *gin.Context) bool {
 		OrderID string `json:"order_id"`
 	}
 	if err := json.Unmarshal(body, &probe); err != nil {
-		shared.RequestLog(c).Debugw("bepusdt_callback_parse_failed", "error", err)
+		ginutil.RequestLog(c).Debugw("bepusdt_callback_parse_failed", "error", err)
 		return false
 	}
 	if probe.TradeID == "" || probe.OrderID == "" {
-		shared.RequestLog(c).Debugw("bepusdt_callback_missing_fields", "trade_id", probe.TradeID, "order_id", probe.OrderID)
+		ginutil.RequestLog(c).Debugw("bepusdt_callback_missing_fields", "trade_id", probe.TradeID, "order_id", probe.OrderID)
 		return false
 	}
-	shared.RequestLog(c).Infow("bepusdt_callback_received", "trade_id", probe.TradeID, "order_id", probe.OrderID, "raw_body", callbackRawBodyForLog(body))
+	ginutil.RequestLog(c).Infow("bepusdt_callback_received", "trade_id", probe.TradeID, "order_id", probe.OrderID, "raw_body", callbackRawBodyForLog(body))
 	return h.processBodyCallback(c, body, bodyCallback{
 		providerType: constants.PaymentProviderBepusdt, logPrefix: "bepusdt",
 		orderNo: probe.OrderID, providerRef: probe.TradeID,
@@ -140,7 +141,7 @@ func readCallbackBody(c *gin.Context) ([]byte, bool) {
 }
 
 func (h *Handler) processBodyCallback(c *gin.Context, body []byte, callback bodyCallback) bool {
-	log := shared.RequestLog(c)
+	log := ginutil.RequestLog(c)
 	payment, err := h.payments.GetByGatewayOrderNo(strings.TrimSpace(callback.orderNo))
 	if err != nil || payment == nil {
 		payment, err = h.payments.GetLatestByProviderRef(strings.TrimSpace(callback.providerRef))

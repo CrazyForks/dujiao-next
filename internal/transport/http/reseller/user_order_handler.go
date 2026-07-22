@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,14 +33,14 @@ func NewUserOrderHandler(orders UserOrderService) *UserOrderHandler {
 
 // ListOrders 查询当前分销商视角的销售订单。
 func (h *UserOrderHandler) ListOrders(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	input, err := orderListInputFromQuery(c, page, pageSize)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	rows, total, err := h.orders.ListUserOrders(uid, input)
@@ -53,13 +53,13 @@ func (h *UserOrderHandler) ListOrders(c *gin.Context) {
 
 // GetOrderDetail 获取当前分销商视角的销售订单详情。
 func (h *UserOrderHandler) GetOrderDetail(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	orderNo := strings.TrimSpace(c.Param("order_no"))
 	if orderNo == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	detail, err := h.orders.GetUserOrderDetail(uid, orderNo)
@@ -72,13 +72,13 @@ func (h *UserOrderHandler) GetOrderDetail(c *gin.Context) {
 
 // GetOrderStats 获取当前分销商视角的销售订单统计。
 func (h *UserOrderHandler) GetOrderStats(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	input, err := orderListInputFromQuery(c, 1, 0)
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	stats, err := h.orders.StatsUserOrders(uid, input)

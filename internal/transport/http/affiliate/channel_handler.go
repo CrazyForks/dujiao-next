@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
-	"github.com/dujiao-next/internal/modules/settings"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -33,7 +34,7 @@ type ChannelUserProvisioner interface {
 
 // AffiliateSettings 推广设置读取端口。
 type AffiliateSettings interface {
-	GetAffiliateSetting() (settings.AffiliateSetting, error)
+	GetAffiliateSetting() (settingsintegration.AffiliateSetting, error)
 }
 
 // ChannelHandler 处理渠道推广返利请求。
@@ -99,7 +100,7 @@ func (h *ChannelHandler) OpenAffiliate(c *gin.Context) {
 
 	userID, err := h.users.ProvisionUserID(identity)
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_affiliate_open_resolve_user", "channel_user_id", identity.ChannelUserID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_affiliate_open_resolve_user", "channel_user_id", identity.ChannelUserID, "error", err)
 		shared.ChannelIdentityError(c, err)
 		return
 	}
@@ -114,7 +115,7 @@ func (h *ChannelHandler) OpenAffiliate(c *gin.Context) {
 		case errors.Is(err, affiliate.ErrUserDisabled):
 			shared.ChannelError(c, http.StatusUnauthorized, response.CodeUnauthorized, "user_disabled", "error.user_disabled", nil)
 		default:
-			shared.RequestLog(c).Errorw("channel_affiliate_open_failed", "user_id", userID, "error", err)
+			ginutil.RequestLog(c).Errorw("channel_affiliate_open_failed", "user_id", userID, "error", err)
 			shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_open_failed", "error.save_failed", err)
 		}
 		return
@@ -150,7 +151,7 @@ func (h *ChannelHandler) TrackAffiliateClick(c *gin.Context) {
 		ClientIP:      c.ClientIP(),
 		UserAgent:     c.GetHeader("User-Agent"),
 	}); err != nil {
-		shared.RequestLog(c).Errorw("channel_affiliate_track_click_failed", "channel_user_id", channelUserID, "affiliate_code", req.AffiliateCode, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_affiliate_track_click_failed", "channel_user_id", channelUserID, "affiliate_code", req.AffiliateCode, "error", err)
 		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_track_click_failed", "error.save_failed", err)
 		return
 	}
@@ -167,13 +168,13 @@ func (h *ChannelHandler) GetAffiliateDashboard(c *gin.Context) {
 
 	dashboard, err := h.affiliate.GetUserDashboard(userID)
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_affiliate_dashboard_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_affiliate_dashboard_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
 		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_dashboard_failed", "error.user_fetch_failed", err)
 		return
 	}
 	setting, settingErr := h.settings.GetAffiliateSetting()
 	if settingErr != nil {
-		shared.RequestLog(c).Errorw("channel_affiliate_dashboard_setting_failed", "user_id", userID, "channel_user_id", channelUserID, "error", settingErr)
+		ginutil.RequestLog(c).Errorw("channel_affiliate_dashboard_setting_failed", "user_id", userID, "channel_user_id", channelUserID, "error", settingErr)
 		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_dashboard_failed", "error.user_fetch_failed", settingErr)
 		return
 	}
@@ -200,12 +201,12 @@ func (h *ChannelHandler) ListAffiliateCommissions(c *gin.Context) {
 		return
 	}
 
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	status := strings.TrimSpace(c.Query("status"))
 
 	rows, total, err := h.affiliate.ListUserCommissions(userID, page, pageSize, status)
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_affiliate_commissions_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_affiliate_commissions_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
 		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_commissions_failed", "error.user_fetch_failed", err)
 		return
 	}
@@ -248,12 +249,12 @@ func (h *ChannelHandler) ListAffiliateWithdraws(c *gin.Context) {
 		return
 	}
 
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	status := strings.TrimSpace(c.Query("status"))
 
 	rows, total, err := h.affiliate.ListUserWithdraws(userID, page, pageSize, status)
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_affiliate_withdraws_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_affiliate_withdraws_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
 		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_withdraws_failed", "error.user_fetch_failed", err)
 		return
 	}
@@ -306,7 +307,7 @@ func (h *ChannelHandler) ApplyAffiliateWithdraw(c *gin.Context) {
 
 	userID, err := h.users.ProvisionUserID(ChannelIdentity{ChannelUserID: channelUserID})
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_affiliate_apply_withdraw_resolve_user", "channel_user_id", channelUserID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_affiliate_apply_withdraw_resolve_user", "channel_user_id", channelUserID, "error", err)
 		shared.ChannelIdentityError(c, err)
 		return
 	}
@@ -329,7 +330,7 @@ func (h *ChannelHandler) ApplyAffiliateWithdraw(c *gin.Context) {
 		case errors.Is(err, affiliate.ErrWithdrawInsufficient):
 			shared.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_withdraw_insufficient", "error.bad_request", nil)
 		default:
-			shared.RequestLog(c).Errorw("channel_affiliate_apply_withdraw_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
+			ginutil.RequestLog(c).Errorw("channel_affiliate_apply_withdraw_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
 			shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_withdraw_apply_failed", "error.save_failed", err)
 		}
 		return
@@ -359,7 +360,7 @@ func (h *ChannelHandler) resolveChannelAffiliateUserID(c *gin.Context) (uint, st
 
 	userID, err := h.users.ProvisionUserID(ChannelIdentity{ChannelUserID: channelUserID})
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_affiliate_resolve_user", "channel_user_id", channelUserID, "error", err)
+		ginutil.RequestLog(c).Errorw("channel_affiliate_resolve_user", "channel_user_id", channelUserID, "error", err)
 		shared.ChannelIdentityError(c, err)
 		return 0, channelUserID, false
 	}

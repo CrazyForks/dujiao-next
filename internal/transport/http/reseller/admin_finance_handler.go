@@ -5,11 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,10 +40,10 @@ type reviewWithdrawRequest struct {
 
 // ListLedgerEntries 管理端分销账务流水列表。
 func (h *AdminFinanceHandler) ListLedgerEntries(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
-	resellerID, _ := shared.ParseQueryUint(c.Query("reseller_id"), false)
-	userID, _ := shared.ParseQueryUint(c.Query("user_id"), false)
-	orderID, _ := shared.ParseQueryUint(c.Query("order_id"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	resellerID, _ := ginutil.ParseQueryUint(c.Query("reseller_id"), false)
+	userID, _ := ginutil.ParseQueryUint(c.Query("user_id"), false)
+	orderID, _ := ginutil.ParseQueryUint(c.Query("order_id"), false)
 	rows, total, err := h.finance.ListAdminLedgerEntries(resellermodule.AdminLedgerListFilter{
 		Page:        page,
 		PageSize:    pageSize,
@@ -58,7 +58,7 @@ func (h *AdminFinanceHandler) ListLedgerEntries(c *gin.Context) {
 		CreatedTo:   parseFinanceTimePointer(c.Query("created_to")),
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, rows, response.BuildPagination(page, pageSize, total))
@@ -66,9 +66,9 @@ func (h *AdminFinanceHandler) ListLedgerEntries(c *gin.Context) {
 
 // ListBalanceAccounts 管理端分销余额账户列表。
 func (h *AdminFinanceHandler) ListBalanceAccounts(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
-	resellerID, _ := shared.ParseQueryUint(c.Query("reseller_id"), false)
-	userID, _ := shared.ParseQueryUint(c.Query("user_id"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	resellerID, _ := ginutil.ParseQueryUint(c.Query("reseller_id"), false)
+	userID, _ := ginutil.ParseQueryUint(c.Query("user_id"), false)
 	rows, total, err := h.finance.ListAdminBalanceAccounts(resellermodule.AdminBalanceAccountListFilter{
 		Page:       page,
 		PageSize:   pageSize,
@@ -78,7 +78,7 @@ func (h *AdminFinanceHandler) ListBalanceAccounts(c *gin.Context) {
 		Status:     strings.TrimSpace(c.Query("status")),
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, rows, response.BuildPagination(page, pageSize, total))
@@ -86,9 +86,9 @@ func (h *AdminFinanceHandler) ListBalanceAccounts(c *gin.Context) {
 
 // ListWithdraws 管理端分销提现申请列表。
 func (h *AdminFinanceHandler) ListWithdraws(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
-	resellerID, _ := shared.ParseQueryUint(c.Query("reseller_id"), false)
-	userID, _ := shared.ParseQueryUint(c.Query("user_id"), false)
+	page, pageSize := ginutil.ParsePagination(c)
+	resellerID, _ := ginutil.ParseQueryUint(c.Query("reseller_id"), false)
+	userID, _ := ginutil.ParseQueryUint(c.Query("user_id"), false)
 	rows, total, err := h.finance.ListAdminWithdrawRequests(resellermodule.AdminWithdrawListFilter{
 		Page:        page,
 		PageSize:    pageSize,
@@ -100,7 +100,7 @@ func (h *AdminFinanceHandler) ListWithdraws(c *gin.Context) {
 		CreatedTo:   parseFinanceTimePointer(c.Query("created_to")),
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	response.SuccessWithPage(c, rows, response.BuildPagination(page, pageSize, total))
@@ -108,18 +108,18 @@ func (h *AdminFinanceHandler) ListWithdraws(c *gin.Context) {
 
 // RejectWithdraw 拒绝分销提现申请。
 func (h *AdminFinanceHandler) RejectWithdraw(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	var req reviewWithdrawRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	row, err := h.finance.ReviewWithdraw(adminID, id, "reject", req.Reason)
@@ -132,13 +132,13 @@ func (h *AdminFinanceHandler) RejectWithdraw(c *gin.Context) {
 
 // PayWithdraw 标记分销提现已打款。
 func (h *AdminFinanceHandler) PayWithdraw(c *gin.Context) {
-	adminID, ok := shared.GetAdminID(c)
+	adminID, ok := ginutil.GetAdminID(c)
 	if !ok {
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	row, err := h.finance.ReviewWithdraw(adminID, id, "pay", "")
@@ -152,11 +152,11 @@ func (h *AdminFinanceHandler) PayWithdraw(c *gin.Context) {
 func respondAdminWithdrawReviewError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, catalogproduct.ErrNotFound):
-		shared.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
 	case errors.Is(err, resellermodule.ErrWithdrawStatusInvalid):
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 	default:
-		shared.RespondError(c, response.CodeInternal, "error.save_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 	}
 }
 

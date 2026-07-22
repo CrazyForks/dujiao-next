@@ -5,10 +5,10 @@ import (
 	"net/http"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -35,7 +35,7 @@ func NewPublicHandler(levels ActiveLevelReader) *PublicHandler {
 func (h *PublicHandler) List(c *gin.Context) {
 	levels, err := h.levels.ListActiveLevels()
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.member_level_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.member_level_fetch_failed", err)
 		return
 	}
 
@@ -87,7 +87,7 @@ func (h *ChannelHandler) List(c *gin.Context) {
 
 	levels, err := h.levels.ListActiveLevels()
 	if err != nil {
-		shared.RequestLog(c).Errorw("channel_member_levels_list", "error", err)
+		ginutil.RequestLog(c).Errorw("channel_member_levels_list", "error", err)
 		localeKey := i18n.ResolveLocale(c)
 		msg := i18n.T(localeKey, "error.internal_error")
 		response.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, msg, "internal_error")

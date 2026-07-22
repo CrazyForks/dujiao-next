@@ -3,11 +3,11 @@ package notification
 import (
 	"errors"
 
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 )
 
 var (
-	ErrConfigInvalid = settingsmodule.ErrNotificationConfigInvalid
+	ErrConfigInvalid = settingsmessaging.ErrNotificationConfigInvalid
 	ErrSendFailed    = errors.New("notification send failed")
 	ErrEventInvalid  = errors.New("notification event invalid")
 )

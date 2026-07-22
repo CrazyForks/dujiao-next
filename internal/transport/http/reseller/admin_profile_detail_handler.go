@@ -4,11 +4,11 @@ import (
 	"errors"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -57,35 +57,35 @@ func NewAdminProfileDetailHandler(
 
 // GetProfileDetail 管理端分销商运营详情。
 func (h *AdminProfileDetailHandler) GetProfileDetail(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
 	profile, err := h.directory.GetProfileByID(id)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	if profile == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
 		return
 	}
 	domains, err := h.directory.ListDomainsByResellerID(id)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	siteConfig, err := h.directory.GetSiteConfigByResellerID(id)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
 	productSummary := resellermodule.ProductSettingSummary{}
 	if h.products != nil {
 		productSummary, err = h.products.SummarizeAdminSettings(id)
 		if err != nil {
-			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 			return
 		}
 	}
@@ -99,7 +99,7 @@ func (h *AdminProfileDetailHandler) GetProfileDetail(c *gin.Context) {
 			ResellerID: id,
 		})
 		if err != nil {
-			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 			return
 		}
 		recentLedgerEntries, _, err = h.finance.ListAdminLedgerEntries(resellermodule.AdminLedgerListFilter{
@@ -108,7 +108,7 @@ func (h *AdminProfileDetailHandler) GetProfileDetail(c *gin.Context) {
 			ResellerID: id,
 		})
 		if err != nil {
-			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 			return
 		}
 		recentWithdraws, _, err = h.finance.ListAdminWithdrawRequests(resellermodule.AdminWithdrawListFilter{
@@ -117,7 +117,7 @@ func (h *AdminProfileDetailHandler) GetProfileDetail(c *gin.Context) {
 			ResellerID: id,
 		})
 		if err != nil {
-			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 			return
 		}
 	}
@@ -138,8 +138,8 @@ func (h *AdminProfileDetailHandler) GetProfileDetail(c *gin.Context) {
 func respondAdminProfileDetailError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, catalogproduct.ErrNotFound):
-		shared.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
 	default:
-		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 	}
 }

@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"strings"
 
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -104,24 +105,24 @@ func NewWriteHandler(guestOrders GuestOrderLookup, userOrders UserOrderLookup, p
 
 // CreatePayment 创建支付单
 func (h *WriteHandler) CreatePayment(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	var req CreatePaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	order, err := h.userOrders.GetOrderByUserOrderNoForTenant(tenantFromRequest(c), req.OrderNo, uid)
 	if err != nil {
 		if errors.Is(err, ErrOrderNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		return
 	}
 
@@ -149,30 +150,30 @@ func (h *WriteHandler) CreatePayment(c *gin.Context) {
 
 // CapturePayment 用户捕获支付。
 func (h *WriteHandler) CapturePayment(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
-	paymentID, err := shared.ParseParamUint(c, "id")
+	paymentID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
 		return
 	}
 	payment, err := h.payments.GetPayment(paymentID)
 	if err != nil {
 		if errors.Is(err, ErrPaymentNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 	if _, err := h.userOrders.GetOrderByUserForTenant(tenantFromRequest(c), payment.OrderID, uid); err != nil {
 		if errors.Is(err, ErrOrderNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		return
 	}
 	updated, err := h.payments.CapturePayment(CapturePaymentInput{
@@ -193,26 +194,26 @@ func (h *WriteHandler) CapturePayment(c *gin.Context) {
 func (h *WriteHandler) CreateGuestPayment(c *gin.Context) {
 	var req CreateGuestPaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	email := strings.TrimSpace(req.Email)
 	password := strings.TrimSpace(req.OrderPassword)
 	if email == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
 		return
 	}
 	if password == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.guest_password_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_password_required", nil)
 		return
 	}
 	guestOrder, err := h.guestOrders.GetOrderByGuestOrderNoForTenant(tenantFromRequest(c), req.OrderNo, email, password)
 	if err != nil {
 		if errors.Is(err, ErrGuestOrderNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.guest_order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.guest_order_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		return
 	}
 	result, err := h.payments.CreatePayment(CreatePaymentInput{
@@ -238,42 +239,42 @@ func (h *WriteHandler) CreateGuestPayment(c *gin.Context) {
 
 // CaptureGuestPayment 游客捕获支付。
 func (h *WriteHandler) CaptureGuestPayment(c *gin.Context) {
-	paymentID, err := shared.ParseParamUint(c, "id")
+	paymentID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
 		return
 	}
 	var req CaptureGuestPaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 	email := strings.TrimSpace(req.Email)
 	password := strings.TrimSpace(req.OrderPassword)
 	if email == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
 		return
 	}
 	if password == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.guest_password_required", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_password_required", nil)
 		return
 	}
 
 	payment, err := h.payments.GetPayment(paymentID)
 	if err != nil {
 		if errors.Is(err, ErrPaymentNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.payment_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 	if _, err := h.guestOrders.GetOrderByGuestForTenant(tenantFromRequest(c), payment.OrderID, email, password); err != nil {
 		if errors.Is(err, ErrGuestOrderNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.guest_order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.guest_order_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		return
 	}
 
@@ -328,11 +329,11 @@ func respondWithMappedError(c *gin.Context, err error, rules []mappedError, fall
 			if rule.logErr {
 				cause = err
 			}
-			shared.RespondError(c, rule.code, rule.key, cause)
+			ginutil.RespondError(c, rule.code, rule.key, cause)
 			return
 		}
 	}
-	shared.RespondError(c, fallbackCode, fallbackKey, err)
+	ginutil.RespondError(c, fallbackCode, fallbackKey, err)
 }
 
 type retryAfterCarrier interface {

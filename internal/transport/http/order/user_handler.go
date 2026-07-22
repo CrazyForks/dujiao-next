@@ -6,11 +6,11 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -90,12 +90,12 @@ func tenantFromRequest(c *gin.Context) reseller.TenantContext {
 
 // ListOrders 获取订单列表
 func (h *UserHandler) ListOrders(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 	status := strings.TrimSpace(c.Query("status"))
 	orderNo := strings.TrimSpace(c.Query("order_no"))
 
@@ -107,7 +107,7 @@ func (h *UserHandler) ListOrders(c *gin.Context) {
 		OrderNo:  orderNo,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		return
 	}
 
@@ -117,7 +117,7 @@ func (h *UserHandler) ListOrders(c *gin.Context) {
 
 // OrderStats 按状态聚合当前用户订单数量（基于全量数据，仅复用关键词筛选）
 func (h *UserHandler) OrderStats(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
@@ -128,7 +128,7 @@ func (h *UserHandler) OrderStats(c *gin.Context) {
 		OrderNo: orderNo,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		return
 	}
 
@@ -144,24 +144,24 @@ func (h *UserHandler) OrderStats(c *gin.Context) {
 
 // GetOrderByOrderNo 按订单号获取订单详情
 func (h *UserHandler) GetOrderByOrderNo(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	orderNo := strings.TrimSpace(c.Param("order_no"))
 	if orderNo == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
 		return
 	}
 
 	order, err := h.orders.GetOrderByUserOrderNoForTenant(tenantFromRequest(c), orderNo, uid)
 	if err != nil {
 		if errors.Is(err, ErrOrderNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		return
 	}
 
@@ -173,26 +173,26 @@ func (h *UserHandler) GetOrderByOrderNo(c *gin.Context) {
 
 // DownloadFulfillment 下载订单交付内容（登录用户）
 func (h *UserHandler) DownloadFulfillment(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 	orderNo := strings.TrimSpace(c.Param("order_no"))
 	if orderNo == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
 		return
 	}
 	order, err := h.orders.GetAnyOrderByUserOrderNoForTenant(tenantFromRequest(c), orderNo, uid)
 	if err != nil {
 		if errors.Is(err, ErrOrderNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		return
 	}
 	if order == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 		return
 	}
 	respondFulfillmentDownload(c, order)
@@ -200,20 +200,20 @@ func (h *UserHandler) DownloadFulfillment(c *gin.Context) {
 
 // GetOrderPaymentChannels 获取当前用户订单可用支付渠道（按金额与商品范围过滤）
 func (h *UserHandler) GetOrderPaymentChannels(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	var req OrderPaymentChannelsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	amount, err := decimal.NewFromString(strings.TrimSpace(req.Amount))
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	if amount.LessThanOrEqual(decimal.Zero) {
@@ -226,7 +226,7 @@ func (h *UserHandler) GetOrderPaymentChannels(c *gin.Context) {
 		user, _ = h.users.GetByID(uid)
 	}
 	if h.payments == nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", nil)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", nil)
 		return
 	}
 	channels, err := h.payments.GetAvailableChannels(AvailablePaymentChannelFilter{
@@ -235,7 +235,7 @@ func (h *UserHandler) GetOrderPaymentChannels(c *gin.Context) {
 		PaymentType:  constants.PaymentTypeOrder,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
 	}
 
@@ -246,10 +246,10 @@ func (h *UserHandler) GetOrderPaymentChannels(c *gin.Context) {
 		order, orderErr := h.orders.GetOrderByUserOrderNoForTenant(tenantFromRequest(c), orderNo, uid)
 		if orderErr != nil {
 			if errors.Is(orderErr, ErrOrderNotFound) {
-				shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+				ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 				return
 			}
-			shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", orderErr)
+			ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", orderErr)
 			return
 		}
 		allItems := append([]models.OrderItem{}, order.Items...)
@@ -292,14 +292,14 @@ func (h *UserHandler) GetOrderPaymentChannels(c *gin.Context) {
 
 // CancelOrder 用户取消订单
 func (h *UserHandler) CancelOrder(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	orderNo := strings.TrimSpace(c.Param("order_no"))
 	if orderNo == "" {
-		shared.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
 		return
 	}
 
@@ -307,10 +307,10 @@ func (h *UserHandler) CancelOrder(c *gin.Context) {
 	found, err := h.orders.GetOrderByUserOrderNoForTenant(tenant, orderNo, uid)
 	if err != nil {
 		if errors.Is(err, ErrOrderNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)
 		return
 	}
 
@@ -318,11 +318,11 @@ func (h *UserHandler) CancelOrder(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrOrderNotFound):
-			shared.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.order_not_found", nil)
 		case errors.Is(err, ErrOrderCancelNotAllowed):
-			shared.RespondError(c, response.CodeBadRequest, "error.order_cancel_not_allowed", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.order_cancel_not_allowed", nil)
 		default:
-			shared.RespondError(c, response.CodeInternal, "error.order_update_failed", err)
+			ginutil.RespondError(c, response.CodeInternal, "error.order_update_failed", err)
 		}
 		return
 	}
@@ -408,7 +408,7 @@ func enrichOrderWithRefundRecords(refunds RefundRecordDirectory, order *models.O
 func respondFulfillmentDownload(c *gin.Context, order *models.Order) {
 	payload := collectFulfillmentPayload(order)
 	if payload == "" {
-		shared.RespondError(c, response.CodeNotFound, "error.fulfillment_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.fulfillment_not_found", nil)
 		return
 	}
 	filename := "fulfillment-" + order.OrderNo + ".txt"

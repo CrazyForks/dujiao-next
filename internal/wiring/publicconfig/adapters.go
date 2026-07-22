@@ -5,13 +5,13 @@ import (
 	"time"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/reseller"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
@@ -55,7 +55,7 @@ func (a publicConfigSettingsAdapter) GetAffiliateSettingMap() (map[string]interf
 	if err != nil {
 		return nil, err
 	}
-	return map[string]interface{}(settingsmodule.EncodeAffiliateSetting(setting)), nil
+	return map[string]interface{}(settingsintegration.EncodeAffiliateSetting(setting)), nil
 }
 
 func (a publicConfigSettingsAdapter) GetSMTPEnabled() bool {

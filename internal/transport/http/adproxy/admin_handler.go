@@ -6,7 +6,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/dujiao-next/internal/http/response"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/modules/adproxy"
 
 	"github.com/gin-gonic/gin"

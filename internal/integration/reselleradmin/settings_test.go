@@ -9,7 +9,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	"github.com/dujiao-next/internal/shared/jsonmap"
-	settingstransport "github.com/dujiao-next/internal/transport/http/settings"
+	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 
 	"github.com/gin-gonic/gin"
 )

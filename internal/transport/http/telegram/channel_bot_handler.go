@@ -5,17 +5,18 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
-	"github.com/dujiao-next/internal/modules/settings"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
 
 // BotSettings 是渠道 Telegram Bot 配置/心跳端口。
 type BotSettings interface {
-	GetTelegramBotConfig() (settings.TelegramBotConfigSetting, error)
-	GetTelegramBotRuntimeStatus() (settings.TelegramBotRuntimeStatusSetting, error)
-	UpdateTelegramBotRuntimeStatus(status settings.TelegramBotRuntimeStatusSetting) error
+	GetTelegramBotConfig() (settingsmessaging.TelegramBotConfigSetting, error)
+	GetTelegramBotRuntimeStatus() (settingsmessaging.TelegramBotRuntimeStatusSetting, error)
+	UpdateTelegramBotRuntimeStatus(status settingsmessaging.TelegramBotRuntimeStatusSetting) error
 }
 
 // ChannelBotTokenProvider 按渠道客户端 ID 解密 bot token。
@@ -67,12 +68,12 @@ func (h *ChannelBotHandler) GetBotConfig(c *gin.Context) {
 
 	runtimeStatus, err := h.settings.GetTelegramBotRuntimeStatus()
 	if err != nil {
-		shared.RequestLog(c).Warnw("channel_get_runtime_status_failed", "error", err)
-		runtimeStatus = settings.DefaultTelegramBotRuntimeStatus()
+		ginutil.RequestLog(c).Warnw("channel_get_runtime_status_failed", "error", err)
+		runtimeStatus = settingsmessaging.DefaultTelegramBotRuntimeStatus()
 	}
 
 	shared.ChannelSuccess(c, gin.H{
-		"config":         settings.SerializeTelegramBotConfigForChannel(config, botToken),
+		"config":         settingsmessaging.SerializeTelegramBotConfigForChannel(config, botToken),
 		"config_version": runtimeStatus.ConfigVersion,
 	})
 }
@@ -87,12 +88,12 @@ func (h *ChannelBotHandler) ReportHeartbeat(c *gin.Context) {
 
 	current, err := h.settings.GetTelegramBotRuntimeStatus()
 	if err != nil {
-		shared.RequestLog(c).Warnw("channel_heartbeat_get_status_failed", "error", err)
-		current = settings.DefaultTelegramBotRuntimeStatus()
+		ginutil.RequestLog(c).Warnw("channel_heartbeat_get_status_failed", "error", err)
+		current = settingsmessaging.DefaultTelegramBotRuntimeStatus()
 	}
 
 	now := time.Now().UTC().Format(time.RFC3339)
-	updated := settings.TelegramBotRuntimeStatusSetting{
+	updated := settingsmessaging.TelegramBotRuntimeStatusSetting{
 		Connected:        true,
 		LastSeenAt:       now,
 		BotVersion:       req.BotVersion,
@@ -106,7 +107,7 @@ func (h *ChannelBotHandler) ReportHeartbeat(c *gin.Context) {
 	}
 
 	if err := h.settings.UpdateTelegramBotRuntimeStatus(updated); err != nil {
-		shared.RequestLog(c).Errorw("channel_heartbeat_update_failed", "error", err)
+		ginutil.RequestLog(c).Errorw("channel_heartbeat_update_failed", "error", err)
 		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "internal_error", "error.internal_error", err)
 		return
 	}

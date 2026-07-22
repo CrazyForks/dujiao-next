@@ -5,10 +5,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/procurement"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -35,11 +35,11 @@ func NewAdminHandler(service Service) *AdminHandler {
 
 // GetProcurementOrders 采购单列表
 func (h *AdminHandler) GetProcurementOrders(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	filter := procurement.ListFilter{Page: page, PageSize: pageSize}
 	if connID := strings.TrimSpace(c.Query("connection_id")); connID != "" {
-		if id, err := shared.ParseQueryUint(connID, false); err == nil {
+		if id, err := ginutil.ParseQueryUint(connID, false); err == nil {
 			filter.ConnectionID = id
 		}
 	}
@@ -52,9 +52,9 @@ func (h *AdminHandler) GetProcurementOrders(c *gin.Context) {
 	if upstreamOrderNo := strings.TrimSpace(c.Query("upstream_order_no")); upstreamOrderNo != "" {
 		filter.UpstreamOrderNo = upstreamOrderNo
 	}
-	createdFrom, createdTo, err := shared.ParseQueryTimeRange(c, "created_from", "created_to")
+	createdFrom, createdTo, err := ginutil.ParseQueryTimeRange(c, "created_from", "created_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	filter.CreatedFrom = createdFrom
@@ -62,7 +62,7 @@ func (h *AdminHandler) GetProcurementOrders(c *gin.Context) {
 
 	orders, total, err := h.service.List(filter)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.procurement_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.procurement_fetch_failed", err)
 		return
 	}
 
@@ -73,13 +73,13 @@ func (h *AdminHandler) GetProcurementOrders(c *gin.Context) {
 // GetProcurementOrderStats 采购单按状态聚合（基于全量数据，仅复用筛选条件）
 func (h *AdminHandler) GetProcurementOrderStats(c *gin.Context) {
 	if h.service == nil {
-		shared.RespondErrorWithMsg(c, response.CodeInternal, "service not available", nil)
+		ginutil.RespondErrorWithMsg(c, response.CodeInternal, "service not available", nil)
 		return
 	}
 
 	filter := procurement.ListFilter{}
 	if connID := strings.TrimSpace(c.Query("connection_id")); connID != "" {
-		if id, err := shared.ParseQueryUint(connID, false); err == nil {
+		if id, err := ginutil.ParseQueryUint(connID, false); err == nil {
 			filter.ConnectionID = id
 		}
 	}
@@ -89,9 +89,9 @@ func (h *AdminHandler) GetProcurementOrderStats(c *gin.Context) {
 	if upstreamOrderNo := strings.TrimSpace(c.Query("upstream_order_no")); upstreamOrderNo != "" {
 		filter.UpstreamOrderNo = upstreamOrderNo
 	}
-	createdFrom, createdTo, err := shared.ParseQueryTimeRange(c, "created_from", "created_to")
+	createdFrom, createdTo, err := ginutil.ParseQueryTimeRange(c, "created_from", "created_to")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	filter.CreatedFrom = createdFrom
@@ -99,7 +99,7 @@ func (h *AdminHandler) GetProcurementOrderStats(c *gin.Context) {
 
 	stats, err := h.service.StatsByStatus(filter)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.procurement_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.procurement_fetch_failed", err)
 		return
 	}
 
@@ -116,21 +116,21 @@ func (h *AdminHandler) GetProcurementOrderStats(c *gin.Context) {
 // GetProcurementOrder 采购单详情
 func (h *AdminHandler) GetProcurementOrder(c *gin.Context) {
 	if h.service == nil {
-		shared.RespondErrorWithMsg(c, response.CodeInternal, "service not available", nil)
+		ginutil.RespondErrorWithMsg(c, response.CodeInternal, "service not available", nil)
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	order, err := h.service.GetByID(id)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.procurement_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.procurement_fetch_failed", err)
 		return
 	}
 	if order == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.procurement_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.procurement_not_found", nil)
 		return
 	}
 	order.TruncateUpstreamPayload(models.FulfillmentPayloadMaxPreviewLines)
@@ -141,21 +141,21 @@ func (h *AdminHandler) GetProcurementOrder(c *gin.Context) {
 // DownloadProcurementUpstreamPayload 下载采购单上游交付内容
 func (h *AdminHandler) DownloadProcurementUpstreamPayload(c *gin.Context) {
 	if h.service == nil {
-		shared.RespondErrorWithMsg(c, response.CodeInternal, "service not available", nil)
+		ginutil.RespondErrorWithMsg(c, response.CodeInternal, "service not available", nil)
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	order, err := h.service.GetByID(id)
 	if err != nil || order == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.procurement_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.procurement_not_found", nil)
 		return
 	}
 	if order.UpstreamPayload == "" {
-		shared.RespondError(c, response.CodeNotFound, "error.fulfillment_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.fulfillment_not_found", nil)
 		return
 	}
 	filename := "upstream-payload-" + strconv.FormatUint(uint64(order.ID), 10) + ".txt"
@@ -167,24 +167,24 @@ func (h *AdminHandler) DownloadProcurementUpstreamPayload(c *gin.Context) {
 // RetryProcurementOrder 手动重试采购单
 func (h *AdminHandler) RetryProcurementOrder(c *gin.Context) {
 	if h.service == nil {
-		shared.RespondErrorWithMsg(c, response.CodeInternal, "service not available", nil)
+		ginutil.RespondErrorWithMsg(c, response.CodeInternal, "service not available", nil)
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	if err := h.service.RetryManual(id); err != nil {
 		if errors.Is(err, procurement.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.procurement_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.procurement_not_found", nil)
 			return
 		}
 		if errors.Is(err, procurement.ErrStatusInvalid) {
-			shared.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
+			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.procurement_retry_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.procurement_retry_failed", err)
 		return
 	}
 	response.Success(c, gin.H{"ok": true})
@@ -193,24 +193,24 @@ func (h *AdminHandler) RetryProcurementOrder(c *gin.Context) {
 // CancelProcurementOrder 手动取消采购单
 func (h *AdminHandler) CancelProcurementOrder(c *gin.Context) {
 	if h.service == nil {
-		shared.RespondErrorWithMsg(c, response.CodeInternal, "service not available", nil)
+		ginutil.RespondErrorWithMsg(c, response.CodeInternal, "service not available", nil)
 		return
 	}
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 	if err := h.service.CancelManual(id); err != nil {
 		if errors.Is(err, procurement.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.procurement_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.procurement_not_found", nil)
 			return
 		}
 		if errors.Is(err, procurement.ErrStatusInvalid) {
-			shared.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
+			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.procurement_cancel_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.procurement_cancel_failed", err)
 		return
 	}
 	response.Success(c, gin.H{"ok": true})

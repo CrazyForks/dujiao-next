@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/cardsecret"
@@ -16,6 +15,8 @@ import (
 	"github.com/dujiao-next/internal/modules/coupon"
 	"github.com/dujiao-next/internal/modules/promotion"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -184,14 +185,14 @@ func NewPreviewHandler(orders OrderPreviewService) *PreviewHandler {
 
 // PreviewOrder 用户订单金额预览
 func (h *PreviewHandler) PreviewOrder(c *gin.Context) {
-	uid, ok := shared.GetUserID(c)
+	uid, ok := ginutil.GetUserID(c)
 	if !ok {
 		return
 	}
 
 	var req CreateOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -216,7 +217,7 @@ func (h *PreviewHandler) PreviewOrder(c *gin.Context) {
 func (h *PreviewHandler) PreviewGuestOrder(c *gin.Context) {
 	var req CreateGuestOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
@@ -268,11 +269,11 @@ func respondWithMappedError(c *gin.Context, err error, rules []mappedError, fall
 			if rule.logErr {
 				cause = err
 			}
-			shared.RespondError(c, rule.code, rule.key, cause)
+			ginutil.RespondError(c, rule.code, rule.key, cause)
 			return
 		}
 	}
-	shared.RespondError(c, fallbackCode, fallbackKey, err)
+	ginutil.RespondError(c, fallbackCode, fallbackKey, err)
 }
 
 type retryAfterCarrier interface {

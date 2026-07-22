@@ -3,10 +3,11 @@ package siteconnectionhttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/http/response"
+	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/siteconnection"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -49,14 +50,14 @@ func NewAdminHandler(connections AdminService, markup MarkupReapplier) *AdminHan
 
 // GetSiteConnections 获取对接连接列表
 func (h *AdminHandler) GetSiteConnections(c *gin.Context) {
-	page, pageSize := shared.ParsePagination(c)
+	page, pageSize := ginutil.ParsePagination(c)
 
 	conns, total, err := h.connections.List(siteconnection.ListFilter{
 		Page:     page,
 		PageSize: pageSize,
 	})
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.connection_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.connection_fetch_failed", err)
 		return
 	}
 
@@ -66,19 +67,19 @@ func (h *AdminHandler) GetSiteConnections(c *gin.Context) {
 
 // GetSiteConnection 获取对接连接详情
 func (h *AdminHandler) GetSiteConnection(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	conn, err := h.connections.GetByID(id)
 	if err != nil {
-		shared.RespondError(c, response.CodeInternal, "error.connection_fetch_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.connection_fetch_failed", err)
 		return
 	}
 	if conn == nil {
-		shared.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
+		ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 		return
 	}
 
@@ -89,17 +90,17 @@ func (h *AdminHandler) GetSiteConnection(c *gin.Context) {
 func (h *AdminHandler) CreateSiteConnection(c *gin.Context) {
 	var input siteconnection.CreateInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	conn, err := h.connections.Create(input)
 	if err != nil {
 		if errors.Is(err, siteconnection.ErrInvalid) {
-			shared.RespondError(c, response.CodeBadRequest, "error.connection_invalid", nil)
+			ginutil.RespondError(c, response.CodeBadRequest, "error.connection_invalid", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.connection_create_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.connection_create_failed", err)
 		return
 	}
 
@@ -108,25 +109,25 @@ func (h *AdminHandler) CreateSiteConnection(c *gin.Context) {
 
 // UpdateSiteConnection 更新对接连接
 func (h *AdminHandler) UpdateSiteConnection(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	var input siteconnection.UpdateInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	conn, err := h.connections.Update(id, input)
 	if err != nil {
 		if errors.Is(err, siteconnection.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.connection_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.connection_update_failed", err)
 		return
 	}
 
@@ -135,18 +136,18 @@ func (h *AdminHandler) UpdateSiteConnection(c *gin.Context) {
 
 // DeleteSiteConnection 删除对接连接
 func (h *AdminHandler) DeleteSiteConnection(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	if err := h.connections.Delete(id); err != nil {
 		if errors.Is(err, siteconnection.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.connection_delete_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.connection_delete_failed", err)
 		return
 	}
 
@@ -155,19 +156,19 @@ func (h *AdminHandler) DeleteSiteConnection(c *gin.Context) {
 
 // PingSiteConnection 测试对接连接
 func (h *AdminHandler) PingSiteConnection(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	result, err := h.connections.Ping(id)
 	if err != nil {
 		if errors.Is(err, siteconnection.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
-		shared.RespondErrorWithMsg(c, response.CodeInternal, err.Error(), err)
+		ginutil.RespondErrorWithMsg(c, response.CodeInternal, err.Error(), err)
 		return
 	}
 
@@ -176,19 +177,19 @@ func (h *AdminHandler) PingSiteConnection(c *gin.Context) {
 
 // ReapplyConnectionMarkup 对连接的所有映射商品重新应用加价规则
 func (h *AdminHandler) ReapplyConnectionMarkup(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	count, err := h.markup.ReapplyMarkup(id)
 	if err != nil {
 		if errors.Is(err, siteconnection.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.reapply_markup_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.reapply_markup_failed", err)
 		return
 	}
 
@@ -197,24 +198,24 @@ func (h *AdminHandler) ReapplyConnectionMarkup(c *gin.Context) {
 
 // UpdateSiteConnectionStatus 更新连接状态
 func (h *AdminHandler) UpdateSiteConnectionStatus(c *gin.Context) {
-	id, err := shared.ParseParamUint(c, "id")
+	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
-		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
 
 	var req updateStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.RespondBindError(c, err)
+		ginutil.RespondBindError(c, err)
 		return
 	}
 
 	if err := h.connections.SetStatus(id, req.Status); err != nil {
 		if errors.Is(err, siteconnection.ErrNotFound) {
-			shared.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
+			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
-		shared.RespondError(c, response.CodeInternal, "error.connection_update_failed", err)
+		ginutil.RespondError(c, response.CodeInternal, "error.connection_update_failed", err)
 		return
 	}
 
