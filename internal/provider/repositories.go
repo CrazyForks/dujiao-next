@@ -3,7 +3,7 @@ package provider
 import (
 	"github.com/dujiao-next/internal/models"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
-	apicredentialgormstore "github.com/dujiao-next/internal/modules/apicredential/store/gormstore"
+	apicredentialgormstore "github.com/dujiao-next/internal/modules/apicredential/infrastructure/gormstore"
 	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/store/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"

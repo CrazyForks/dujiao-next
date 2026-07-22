@@ -2,9 +2,10 @@ package gormstore
 
 import (
 	"errors"
+	"time"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/apicredential"
+	apicredentialcontract "github.com/dujiao-next/internal/modules/apicredential/contract"
+	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
 
 	"gorm.io/gorm"
 )
@@ -18,9 +19,9 @@ func New(db *gorm.DB) *Store {
 }
 
 // GetByID 根据 ID 获取
-func (r *Store) GetByID(id uint) (*models.ApiCredential, error) {
-	var cred models.ApiCredential
-	if err := r.db.First(&cred, id).Error; err != nil {
+func (r *Store) GetByID(id uint) (*apicredentialdomain.ApiCredential, error) {
+	var cred apicredentialdomain.ApiCredential
+	if err := r.db.Where("api_credentials.deleted_at IS NULL").First(&cred, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -30,9 +31,9 @@ func (r *Store) GetByID(id uint) (*models.ApiCredential, error) {
 }
 
 // GetByUserID 根据用户 ID 获取
-func (r *Store) GetByUserID(userID uint) (*models.ApiCredential, error) {
-	var cred models.ApiCredential
-	if err := r.db.Where("user_id = ?", userID).First(&cred).Error; err != nil {
+func (r *Store) GetByUserID(userID uint) (*apicredentialdomain.ApiCredential, error) {
+	var cred apicredentialdomain.ApiCredential
+	if err := r.db.Where("deleted_at IS NULL AND user_id = ?", userID).First(&cred).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -42,9 +43,9 @@ func (r *Store) GetByUserID(userID uint) (*models.ApiCredential, error) {
 }
 
 // GetAnyByUserID 根据用户 ID 获取，包含软删除记录。
-func (r *Store) GetAnyByUserID(userID uint) (*models.ApiCredential, error) {
-	var cred models.ApiCredential
-	if err := r.db.Unscoped().Where("user_id = ?", userID).First(&cred).Error; err != nil {
+func (r *Store) GetAnyByUserID(userID uint) (*apicredentialdomain.ApiCredential, error) {
+	var cred apicredentialdomain.ApiCredential
+	if err := r.db.Where("user_id = ?", userID).First(&cred).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -54,9 +55,9 @@ func (r *Store) GetAnyByUserID(userID uint) (*models.ApiCredential, error) {
 }
 
 // GetByApiKey 根据 API Key 获取（预加载 User 用于状态校验）
-func (r *Store) GetByApiKey(apiKey string) (*models.ApiCredential, error) {
-	var cred models.ApiCredential
-	if err := r.db.Preload("User", "deleted_at IS NULL").Where("api_key = ?", apiKey).First(&cred).Error; err != nil {
+func (r *Store) GetByApiKey(apiKey string) (*apicredentialdomain.ApiCredential, error) {
+	var cred apicredentialdomain.ApiCredential
+	if err := r.db.Preload("User", "deleted_at IS NULL").Where("api_credentials.deleted_at IS NULL AND api_key = ?", apiKey).First(&cred).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -66,31 +67,33 @@ func (r *Store) GetByApiKey(apiKey string) (*models.ApiCredential, error) {
 }
 
 // Create 创建凭证
-func (r *Store) Create(cred *models.ApiCredential) error {
+func (r *Store) Create(cred *apicredentialdomain.ApiCredential) error {
 	return r.db.Create(cred).Error
 }
 
 // Update 更新凭证
-func (r *Store) Update(cred *models.ApiCredential) error {
+func (r *Store) Update(cred *apicredentialdomain.ApiCredential) error {
 	return r.db.Save(cred).Error
 }
 
 // UpdateAny 更新凭证，包含软删除记录。
-func (r *Store) UpdateAny(cred *models.ApiCredential) error {
-	return r.db.Unscoped().Save(cred).Error
+func (r *Store) UpdateAny(cred *apicredentialdomain.ApiCredential) error {
+	return r.db.Save(cred).Error
 }
 
 // Delete 软删除凭证
 func (r *Store) Delete(id uint) error {
-	return r.db.Delete(&models.ApiCredential{}, id).Error
+	return r.db.Model(&apicredentialdomain.ApiCredential{}).
+		Where("id = ? AND deleted_at IS NULL", id).
+		Update("deleted_at", time.Now()).Error
 }
 
 // List 列表查询
-func (r *Store) List(filter apicredential.ListFilter) ([]models.ApiCredential, int64, error) {
-	var creds []models.ApiCredential
+func (r *Store) List(filter apicredentialcontract.ListFilter) ([]apicredentialdomain.ApiCredential, int64, error) {
+	var creds []apicredentialdomain.ApiCredential
 	var total int64
 
-	q := r.db.Model(&models.ApiCredential{})
+	q := r.db.Model(&apicredentialdomain.ApiCredential{}).Where("api_credentials.deleted_at IS NULL")
 	if filter.Status != "" {
 		q = q.Where("status = ?", filter.Status)
 	}
@@ -120,4 +123,4 @@ func (r *Store) List(filter apicredential.ListFilter) ([]models.ApiCredential, i
 	return creds, total, nil
 }
 
-var _ apicredential.Repository = (*Store)(nil)
+var _ apicredentialcontract.Repository = (*Store)(nil)

@@ -1,4 +1,4 @@
-package gormstore_test
+package integrationtest
 
 import (
 	"errors"
@@ -7,14 +7,15 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/apicredential"
-	apicredentialgormstore "github.com/dujiao-next/internal/modules/apicredential/store/gormstore"
+	apicredentialapp "github.com/dujiao-next/internal/modules/apicredential/application"
+	apicredentialcontract "github.com/dujiao-next/internal/modules/apicredential/contract"
+	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
+	apicredentialgormstore "github.com/dujiao-next/internal/modules/apicredential/infrastructure/gormstore"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
-func setupApiCredentialServiceTest(t *testing.T) (*apicredential.Service, apicredential.Repository, *gorm.DB) {
+func setupApiCredentialServiceTest(t *testing.T) (*apicredentialapp.Service, apicredentialcontract.Repository, *gorm.DB) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())
@@ -24,12 +25,12 @@ func setupApiCredentialServiceTest(t *testing.T) (*apicredential.Service, apicre
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.ApiCredential{}); err != nil {
+	if err := db.AutoMigrate(&apicredentialdomain.ApiCredential{}); err != nil {
 		t.Fatalf("auto migrate api credential failed: %v", err)
 	}
 
 	repo := apicredentialgormstore.New(db)
-	return apicredential.NewService(repo), repo, db
+	return apicredentialapp.NewService(repo), repo, db
 }
 
 func TestApiCredentialServiceApplyCreatesPendingRecordWhenMissing(t *testing.T) {
@@ -62,7 +63,7 @@ func TestApiCredentialServiceApplyRestoresDeletedCredential(t *testing.T) {
 	svc, repo, _ := setupApiCredentialServiceTest(t)
 	now := time.Now()
 
-	cred := &models.ApiCredential{
+	cred := &apicredentialdomain.ApiCredential{
 		UserID:       1002,
 		ApiKey:       "legacy-key",
 		ApiSecret:    "legacy-secret",
@@ -104,7 +105,7 @@ func TestApiCredentialServiceApplyRestoresDeletedCredential(t *testing.T) {
 	if reapplied.IsActive {
 		t.Fatal("expected inactive credential after reapply")
 	}
-	if reapplied.DeletedAt.Valid {
+	if reapplied.DeletedAt != nil {
 		t.Fatal("expected deleted_at to be cleared")
 	}
 
@@ -124,7 +125,7 @@ func TestApiCredentialServiceApplyResetsRejectedCredential(t *testing.T) {
 	svc, repo, _ := setupApiCredentialServiceTest(t)
 	now := time.Now()
 
-	cred := &models.ApiCredential{
+	cred := &apicredentialdomain.ApiCredential{
 		UserID:       1003,
 		ApiKey:       "old-key",
 		ApiSecret:    "old-secret",
@@ -168,7 +169,7 @@ func TestApiCredentialServiceApplyResetsRejectedCredential(t *testing.T) {
 func TestApiCredentialServiceApplyBlocksPendingReview(t *testing.T) {
 	svc, repo, _ := setupApiCredentialServiceTest(t)
 
-	cred := &models.ApiCredential{
+	cred := &apicredentialdomain.ApiCredential{
 		UserID: 1004,
 		Status: constants.ApiCredentialStatusPendingReview,
 	}
@@ -177,8 +178,8 @@ func TestApiCredentialServiceApplyBlocksPendingReview(t *testing.T) {
 	}
 
 	_, err := svc.Apply(1004)
-	if !errors.Is(err, apicredential.ErrApiCredentialPendingExist) {
-		t.Fatalf("expected ErrApiCredentialPendingExist, got %v", err)
+	if !errors.Is(err, apicredentialcontract.ErrPendingExist) {
+		t.Fatalf("expected ErrPendingExist, got %v", err)
 	}
 }
 
@@ -195,7 +196,7 @@ func TestApiCredentialServiceApplyBlocksApprovedAndDisabled(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			svc, repo, _ := setupApiCredentialServiceTest(t)
-			cred := &models.ApiCredential{
+			cred := &apicredentialdomain.ApiCredential{
 				UserID: tc.userID,
 				Status: tc.status,
 			}
@@ -204,8 +205,8 @@ func TestApiCredentialServiceApplyBlocksApprovedAndDisabled(t *testing.T) {
 			}
 
 			_, err := svc.Apply(tc.userID)
-			if !errors.Is(err, apicredential.ErrApiCredentialExists) {
-				t.Fatalf("expected ErrApiCredentialExists, got %v", err)
+			if !errors.Is(err, apicredentialcontract.ErrExists) {
+				t.Fatalf("expected ErrExists, got %v", err)
 			}
 		})
 	}

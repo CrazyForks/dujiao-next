@@ -7,7 +7,8 @@ import (
 	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/modules/apicredential"
+	apicredentialapp "github.com/dujiao-next/internal/modules/apicredential/application"
+	apicredentialcontract "github.com/dujiao-next/internal/modules/apicredential/contract"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/cardsecret"
@@ -100,7 +101,7 @@ type Container struct {
 	ResellerRepo               repository.ResellerRepository
 	ResellerProductSettingRepo repository.ResellerProductSettingRepository
 	ResellerOperationsRepo     repository.ResellerOperationsRepository
-	ApiCredentialRepo          apicredential.Repository
+	ApiCredentialRepo          apicredentialcontract.Repository
 	SiteConnectionRepo         siteconnectioncontract.Repository
 	ProductMappingRepo         *mappinggormstore.MappingStore
 	SKUMappingRepo             *mappinggormstore.SKUMappingStore
@@ -159,7 +160,7 @@ type Container struct {
 	ResellerAccountingService     *service.ResellerAccountingService
 	ResellerOrderService          *reseller.OrderQueryService
 	ResellerOperationsService     *reseller.OperationsService
-	ApiCredentialService          *apicredential.Service
+	ApiCredentialService          *apicredentialapp.Service
 	SiteConnectionService         *siteconnectionapp.Service
 	ProductMappingService         *mappingapp.Service
 	ProcurementOrderService       *procurement.Service

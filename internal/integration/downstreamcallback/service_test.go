@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
@@ -50,10 +52,10 @@ func (r orderReaderStub) GetByID(id uint) (*models.Order, error) {
 }
 
 type credentialReaderStub struct {
-	credentials map[uint]*models.ApiCredential
+	credentials map[uint]*apicredentialdomain.ApiCredential
 }
 
-func (r credentialReaderStub) GetByID(id uint) (*models.ApiCredential, error) {
+func (r credentialReaderStub) GetByID(id uint) (*apicredentialdomain.ApiCredential, error) {
 	return r.credentials[id], nil
 }
 
@@ -143,7 +145,7 @@ func TestSendCallbackSignsRequestAndPersistsSentStatus(t *testing.T) {
 		OrderNo: "DJ-8",
 		Status:  constants.OrderStatusCompleted,
 	}}}
-	credentials := credentialReaderStub{credentials: map[uint]*models.ApiCredential{5: {
+	credentials := credentialReaderStub{credentials: map[uint]*apicredentialdomain.ApiCredential{5: {
 		ID:        5,
 		ApiKey:    "downstream-key",
 		ApiSecret: apiSecret,

@@ -246,6 +246,11 @@ var completedMigrationPaths = []string{
 	"internal/dto/gift_card.go",
 	"internal/transport/http/giftcard",
 	"internal/integration/channel/giftcard_test.go",
+	"internal/models/api_credential.go",
+	"internal/modules/apicredential/ports.go",
+	"internal/modules/apicredential/service.go",
+	"internal/modules/apicredential/store",
+	"internal/transport/http/apicredential",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

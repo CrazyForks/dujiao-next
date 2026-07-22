@@ -3,9 +3,10 @@ package apicredentialhttp
 import (
 	"errors"
 
+	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/apicredential"
+	apicredentialcontract "github.com/dujiao-next/internal/modules/apicredential/contract"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -14,8 +15,8 @@ import (
 
 // UserService 是用户中心 API 凭证接口实际使用的应用能力。
 type UserService interface {
-	GetByUserID(userID uint) (*models.ApiCredential, error)
-	Apply(userID uint) (*models.ApiCredential, error)
+	GetByUserID(userID uint) (*apicredentialdomain.ApiCredential, error)
+	Apply(userID uint) (*apicredentialdomain.ApiCredential, error)
 	RegenerateByUserID(userID uint) (string, error)
 	SetActiveByUserID(userID uint, active bool) error
 }
@@ -80,9 +81,9 @@ func (h *UserHandler) ApplyApiCredential(c *gin.Context) {
 	cred, err := h.service.Apply(userID)
 	if err != nil {
 		switch {
-		case errors.Is(err, apicredential.ErrApiCredentialExists):
+		case errors.Is(err, apicredentialcontract.ErrExists):
 			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, "API credential already exists", nil)
-		case errors.Is(err, apicredential.ErrApiCredentialPendingExist):
+		case errors.Is(err, apicredentialcontract.ErrPendingExist):
 			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, "Application is pending review", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.api_credential_apply_failed", err)
@@ -106,9 +107,9 @@ func (h *UserHandler) RegenerateMyApiCredential(c *gin.Context) {
 	newSecret, err := h.service.RegenerateByUserID(userID)
 	if err != nil {
 		switch {
-		case errors.Is(err, apicredential.ErrApiCredentialNotFound):
+		case errors.Is(err, apicredentialcontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
-		case errors.Is(err, apicredential.ErrApiCredentialNotApproved):
+		case errors.Is(err, apicredentialcontract.ErrNotApproved):
 			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, "API credential is not approved", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.api_credential_regenerate_failed", err)
@@ -141,9 +142,9 @@ func (h *UserHandler) UpdateMyApiCredentialStatus(c *gin.Context) {
 
 	if err := h.service.SetActiveByUserID(userID, req.IsActive); err != nil {
 		switch {
-		case errors.Is(err, apicredential.ErrApiCredentialNotFound):
+		case errors.Is(err, apicredentialcontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
-		case errors.Is(err, apicredential.ErrApiCredentialNotApproved):
+		case errors.Is(err, apicredentialcontract.ErrNotApproved):
 			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, "API credential is not approved", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.api_credential_update_failed", err)

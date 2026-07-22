@@ -3,8 +3,9 @@ package apicredentialhttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/apicredential"
+	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
+
+	apicredentialcontract "github.com/dujiao-next/internal/modules/apicredential/contract"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -13,9 +14,9 @@ import (
 
 // AdminService 是管理端 API 凭证接口实际使用的应用能力。
 type AdminService interface {
-	List(apicredential.ListFilter) ([]models.ApiCredential, int64, error)
-	GetByID(id uint) (*models.ApiCredential, error)
-	Approve(id uint) (*models.ApiCredential, string, error)
+	List(apicredentialcontract.ListFilter) ([]apicredentialdomain.ApiCredential, int64, error)
+	GetByID(id uint) (*apicredentialdomain.ApiCredential, error)
+	Approve(id uint) (*apicredentialdomain.ApiCredential, string, error)
 	Reject(id uint, reason string) error
 	SetActive(id uint, active bool) error
 	Delete(id uint) error
@@ -36,7 +37,7 @@ func (h *AdminHandler) GetApiCredentials(c *gin.Context) {
 	search := c.Query("search")
 	userID, _ := ginutil.ParseQueryUint(c.Query("user_id"), false)
 
-	creds, total, err := h.service.List(apicredential.ListFilter{
+	creds, total, err := h.service.List(apicredentialcontract.ListFilter{
 		Status:   status,
 		UserID:   userID,
 		Search:   search,
@@ -83,7 +84,7 @@ func (h *AdminHandler) ApproveApiCredential(c *gin.Context) {
 
 	cred, _, err := h.service.Approve(id)
 	if err != nil {
-		if errors.Is(err, apicredential.ErrApiCredentialNotFound) {
+		if errors.Is(err, apicredentialcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
 			return
 		}
@@ -117,7 +118,7 @@ func (h *AdminHandler) RejectApiCredential(c *gin.Context) {
 	}
 
 	if err := h.service.Reject(id, req.Reason); err != nil {
-		if errors.Is(err, apicredential.ErrApiCredentialNotFound) {
+		if errors.Is(err, apicredentialcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
 			return
 		}
@@ -148,11 +149,11 @@ func (h *AdminHandler) UpdateApiCredentialStatus(c *gin.Context) {
 	}
 
 	if err := h.service.SetActive(id, req.IsActive); err != nil {
-		if errors.Is(err, apicredential.ErrApiCredentialNotFound) {
+		if errors.Is(err, apicredentialcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.api_credential_not_found", nil)
 			return
 		}
-		if errors.Is(err, apicredential.ErrApiCredentialNotApproved) {
+		if errors.Is(err, apicredentialcontract.ErrNotApproved) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.api_credential_not_approved", nil)
 			return
 		}

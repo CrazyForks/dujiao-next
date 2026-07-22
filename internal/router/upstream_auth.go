@@ -5,9 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/gin-gonic/gin"
@@ -18,8 +19,8 @@ const upstreamCredentialIDKey = "upstream_credential_id"
 
 // UpstreamCredentialStore 只暴露签名鉴权链路所需的凭证能力。
 type UpstreamCredentialStore interface {
-	GetByApiKey(apiKey string) (*models.ApiCredential, error)
-	Update(credential *models.ApiCredential) error
+	GetByApiKey(apiKey string) (*apicredentialdomain.ApiCredential, error)
+	Update(credential *apicredentialdomain.ApiCredential) error
 }
 
 // UpstreamAPIAuthMiddleware 上游 API 签名鉴权中间件

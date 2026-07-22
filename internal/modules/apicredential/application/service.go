@@ -1,41 +1,34 @@
-package apicredential
+package application
 
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-)
-
-var (
-	ErrApiCredentialExists       = errors.New("api credential already exists for this user")
-	ErrApiCredentialNotFound     = errors.New("api credential not found")
-	ErrApiCredentialNotApproved  = errors.New("api credential is not approved")
-	ErrApiCredentialPendingExist = errors.New("pending application already exists")
+	apicredentialcontract "github.com/dujiao-next/internal/modules/apicredential/contract"
+	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
 )
 
 // Service API 凭证服务
 type Service struct {
-	credRepo Repository
+	credRepo apicredentialcontract.Repository
 }
 
 // NewService 创建凭证服务
-func NewService(credRepo Repository) *Service {
+func NewService(credRepo apicredentialcontract.Repository) *Service {
 	return &Service{credRepo: credRepo}
 }
 
 // Apply 用户申请 API 对接权限
-func (s *Service) Apply(userID uint) (*models.ApiCredential, error) {
+func (s *Service) Apply(userID uint) (*apicredentialdomain.ApiCredential, error) {
 	existing, err := s.credRepo.GetAnyByUserID(userID)
 	if err != nil {
 		return nil, err
 	}
 
 	if existing != nil {
-		if existing.DeletedAt.Valid {
+		if existing.DeletedAt != nil {
 			if err := resetApiCredentialForReapply(existing); err != nil {
 				return nil, err
 			}
@@ -47,9 +40,9 @@ func (s *Service) Apply(userID uint) (*models.ApiCredential, error) {
 
 		switch existing.Status {
 		case constants.ApiCredentialStatusPendingReview:
-			return nil, ErrApiCredentialPendingExist
+			return nil, apicredentialcontract.ErrPendingExist
 		case constants.ApiCredentialStatusApproved:
-			return nil, ErrApiCredentialExists
+			return nil, apicredentialcontract.ErrExists
 		case constants.ApiCredentialStatusRejected:
 			// 允许重新申请，并重置旧审批与凭证痕迹。
 			if err := resetApiCredentialForReapply(existing); err != nil {
@@ -60,7 +53,7 @@ func (s *Service) Apply(userID uint) (*models.ApiCredential, error) {
 			}
 			return existing, nil
 		case constants.ApiCredentialStatusDisabled:
-			return nil, ErrApiCredentialExists
+			return nil, apicredentialcontract.ErrExists
 		}
 	}
 
@@ -68,7 +61,7 @@ func (s *Service) Apply(userID uint) (*models.ApiCredential, error) {
 	if err != nil {
 		return nil, err
 	}
-	cred := &models.ApiCredential{
+	cred := &apicredentialdomain.ApiCredential{
 		UserID: userID,
 		ApiKey: apiKey,
 		Status: constants.ApiCredentialStatusPendingReview,
@@ -79,7 +72,7 @@ func (s *Service) Apply(userID uint) (*models.ApiCredential, error) {
 	return cred, nil
 }
 
-func resetApiCredentialForReapply(cred *models.ApiCredential) error {
+func resetApiCredentialForReapply(cred *apicredentialdomain.ApiCredential) error {
 	apiKey, err := generateRandomHex(32)
 	if err != nil {
 		return err
@@ -91,18 +84,18 @@ func resetApiCredentialForReapply(cred *models.ApiCredential) error {
 	cred.ApprovedAt = nil
 	cred.LastUsedAt = nil
 	cred.IsActive = false
-	cred.DeletedAt = models.ApiCredential{}.DeletedAt
+	cred.DeletedAt = nil
 	return nil
 }
 
 // Approve admin 审核通过
-func (s *Service) Approve(id uint) (*models.ApiCredential, string, error) {
+func (s *Service) Approve(id uint) (*apicredentialdomain.ApiCredential, string, error) {
 	cred, err := s.credRepo.GetByID(id)
 	if err != nil {
 		return nil, "", err
 	}
 	if cred == nil {
-		return nil, "", ErrApiCredentialNotFound
+		return nil, "", apicredentialcontract.ErrNotFound
 	}
 
 	apiKey, err := generateRandomHex(32)
@@ -136,7 +129,7 @@ func (s *Service) Reject(id uint, reason string) error {
 		return err
 	}
 	if cred == nil {
-		return ErrApiCredentialNotFound
+		return apicredentialcontract.ErrNotFound
 	}
 
 	cred.Status = constants.ApiCredentialStatusRejected
@@ -151,10 +144,10 @@ func (s *Service) SetActive(id uint, active bool) error {
 		return err
 	}
 	if cred == nil {
-		return ErrApiCredentialNotFound
+		return apicredentialcontract.ErrNotFound
 	}
 	if cred.Status != constants.ApiCredentialStatusApproved {
-		return ErrApiCredentialNotApproved
+		return apicredentialcontract.ErrNotApproved
 	}
 
 	cred.IsActive = active
@@ -168,10 +161,10 @@ func (s *Service) SetActiveByUserID(userID uint, active bool) error {
 		return err
 	}
 	if cred == nil {
-		return ErrApiCredentialNotFound
+		return apicredentialcontract.ErrNotFound
 	}
 	if cred.Status != constants.ApiCredentialStatusApproved {
-		return ErrApiCredentialNotApproved
+		return apicredentialcontract.ErrNotApproved
 	}
 
 	cred.IsActive = active
@@ -185,10 +178,10 @@ func (s *Service) Regenerate(id uint) (string, error) {
 		return "", err
 	}
 	if cred == nil {
-		return "", ErrApiCredentialNotFound
+		return "", apicredentialcontract.ErrNotFound
 	}
 	if cred.Status != constants.ApiCredentialStatusApproved {
-		return "", ErrApiCredentialNotApproved
+		return "", apicredentialcontract.ErrNotApproved
 	}
 
 	newSecret, err := generateRandomHex(64)
@@ -210,23 +203,23 @@ func (s *Service) RegenerateByUserID(userID uint) (string, error) {
 		return "", err
 	}
 	if cred == nil {
-		return "", ErrApiCredentialNotFound
+		return "", apicredentialcontract.ErrNotFound
 	}
 	return s.Regenerate(cred.ID)
 }
 
 // GetByUserID 获取用户的凭证
-func (s *Service) GetByUserID(userID uint) (*models.ApiCredential, error) {
+func (s *Service) GetByUserID(userID uint) (*apicredentialdomain.ApiCredential, error) {
 	return s.credRepo.GetByUserID(userID)
 }
 
 // GetByID 根据 ID 获取凭证
-func (s *Service) GetByID(id uint) (*models.ApiCredential, error) {
+func (s *Service) GetByID(id uint) (*apicredentialdomain.ApiCredential, error) {
 	return s.credRepo.GetByID(id)
 }
 
 // List 列表查询
-func (s *Service) List(filter ListFilter) ([]models.ApiCredential, int64, error) {
+func (s *Service) List(filter apicredentialcontract.ListFilter) ([]apicredentialdomain.ApiCredential, int64, error) {
 	return s.credRepo.List(filter)
 }
 

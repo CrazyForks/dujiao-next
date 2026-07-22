@@ -5,7 +5,7 @@ import (
 	telegrambroadcast "github.com/dujiao-next/internal/bootstrap/telegrambroadcast"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/apicredential"
+	apicredentialapp "github.com/dujiao-next/internal/modules/apicredential/application"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
 	"github.com/dujiao-next/internal/modules/content"
@@ -36,7 +36,7 @@ func (c *Container) initIntegrationServices() {
 		c.NotificationLogService,
 		telegrammodule.NewNotifyService(c.SettingService, c.Config.TelegramAuth),
 	)
-	c.ApiCredentialService = apicredential.NewService(c.ApiCredentialRepo)
+	c.ApiCredentialService = apicredentialapp.NewService(c.ApiCredentialRepo)
 	c.SiteConnectionService = siteconnectionapp.NewService(c.SiteConnectionRepo, c.Config.App.SecretKey, "uploads")
 	mediaCore := content.NewMediaService(
 		contentgormstore.NewMediaStore(models.DB),

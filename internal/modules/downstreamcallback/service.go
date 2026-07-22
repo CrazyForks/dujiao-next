@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
@@ -38,7 +40,7 @@ type OrderReader interface {
 
 // CredentialReader 是下游回调签名链路读取凭证的最小接口。
 type CredentialReader interface {
-	GetByID(id uint) (*models.ApiCredential, error)
+	GetByID(id uint) (*apicredentialdomain.ApiCredential, error)
 }
 
 // CallbackQueue 是下游回调重试任务的入队端口。

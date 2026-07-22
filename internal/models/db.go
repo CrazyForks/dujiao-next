@@ -9,6 +9,7 @@ import (
 	"time"
 
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -185,7 +186,7 @@ func AutoMigrate() error {
 		&PostCategory{},
 		&Banner{},
 		&settingsstore.SettingRecord{},
-		&ApiCredential{},
+		&apicredentialdomain.ApiCredential{},
 		&siteconnectiondomain.Connection{},
 		&mappingdomain.Mapping{},
 		&mappingdomain.SKUMapping{},
