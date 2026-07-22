@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	downstreamcallbackdomain "github.com/dujiao-next/internal/modules/downstreamcallback/domain"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
@@ -128,8 +129,8 @@ type ProcurementOrders interface {
 }
 
 type DownstreamOrderReferences interface {
-	Create(ref *models.DownstreamOrderRef) error
-	GetByCredentialAndDownstreamNo(credentialID uint, downstreamOrderNo string) (*models.DownstreamOrderRef, error)
+	Create(ref *downstreamcallbackdomain.OrderRef) error
+	GetByCredentialAndDownstreamNo(credentialID uint, downstreamOrderNo string) (*downstreamcallbackdomain.OrderRef, error)
 }
 
 type SiteConnections interface {

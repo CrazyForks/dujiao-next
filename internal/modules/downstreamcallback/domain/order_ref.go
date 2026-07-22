@@ -1,11 +1,17 @@
-package models
+package domain
 
 import (
 	"time"
 )
 
-// DownstreamOrderRef 下游订单引用表（B 侧记录来自下游站点的订单）
-type DownstreamOrderRef struct {
+const (
+	StatusPending = "pending"
+	StatusSent    = "sent"
+	StatusFailed  = "failed"
+)
+
+// OrderRef 是 B 侧保存的下游订单回调引用。
+type OrderRef struct {
 	ID                 uint       `gorm:"primarykey" json:"id"`
 	OrderID            uint       `gorm:"uniqueIndex;not null" json:"order_id"`
 	ApiCredentialID    uint       `gorm:"index;not null" json:"api_credential_id"`
@@ -20,6 +26,6 @@ type DownstreamOrderRef struct {
 }
 
 // TableName 指定表名
-func (DownstreamOrderRef) TableName() string {
+func (OrderRef) TableName() string {
 	return "downstream_order_refs"
 }

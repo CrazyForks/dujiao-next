@@ -4,7 +4,6 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/logger"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
@@ -36,7 +35,7 @@ type PaymentService struct {
 	affiliateSvc            AffiliatePaymentLifecycle
 	notificationSvc         notificationcontract.NotificationEnqueuer
 	procurementSvc          ProcurementCreator
-	downstreamCallbackSvc   *downstreamcallback.Service
+	downstreamCallbackSvc   DownstreamCallbackEnqueuer
 	memberLevelSvc          MemberLevelProgressor
 	paymentProviderRegistry *provider.Registry
 	resellerAccountingSvc   *ResellerAccountingService
@@ -49,6 +48,11 @@ type MemberLevelProgressor interface {
 
 type ProcurementCreator interface {
 	CreateForOrder(orderID uint) error
+}
+
+// DownstreamCallbackEnqueuer 是支付与交付上下文触发下游回调所需的最小端口。
+type DownstreamCallbackEnqueuer interface {
+	EnqueueCallback(orderID uint)
 }
 
 type paymentProductStore interface {
@@ -72,7 +76,7 @@ func (s *PaymentService) SetProcurementService(svc ProcurementCreator) {
 }
 
 // SetDownstreamCallbackService 设置下游回调服务（解决循环依赖）
-func (s *PaymentService) SetDownstreamCallbackService(svc *downstreamcallback.Service) {
+func (s *PaymentService) SetDownstreamCallbackService(svc DownstreamCallbackEnqueuer) {
 	s.downstreamCallbackSvc = svc
 }
 

@@ -413,13 +413,6 @@ const (
 	ApiCredentialStatusDisabled      = "disabled"
 )
 
-// 下游回调状态常量
-const (
-	CallbackStatusPending = "pending"
-	CallbackStatusSent    = "sent"
-	CallbackStatusFailed  = "failed"
-)
-
 // 对账类型常量
 const (
 	ReconciliationTypeStatus = "status"

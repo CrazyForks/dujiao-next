@@ -12,6 +12,7 @@ import (
 	channelclientstore "github.com/dujiao-next/internal/modules/channelclient/infrastructure/gormstore"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	dashboardgormstore "github.com/dujiao-next/internal/modules/dashboard/infrastructure/gormstore"
+	downstreamcallbackgormstore "github.com/dujiao-next/internal/modules/downstreamcallback/infrastructure/gormstore"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/infrastructure/gormstore"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
@@ -65,7 +66,7 @@ func (c *Container) initRepositories() {
 	c.ProductMappingRepo = mappinggormstore.NewMappingStore(db)
 	c.SKUMappingRepo = mappinggormstore.NewSKUMappingStore(db)
 	c.ProcurementOrderRepo = procurementgormstore.New(db)
-	c.DownstreamOrderRefRepo = repository.NewDownstreamOrderRefRepository(db)
+	c.DownstreamOrderRefRepo = downstreamcallbackgormstore.New(db)
 	reconciliationStore := reconciliationgormstore.New(db)
 	c.ReconciliationJobRepo = reconciliationStore
 	c.ReconciliationItemRepo = reconciliationgormstore.NewItemStore(reconciliationStore)

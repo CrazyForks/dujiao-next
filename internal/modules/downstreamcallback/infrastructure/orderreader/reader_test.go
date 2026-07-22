@@ -1,0 +1,54 @@
+package orderreader
+
+import (
+	"testing"
+	"time"
+
+	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
+)
+
+type sourceStub struct {
+	order *models.Order
+}
+
+func (s sourceStub) GetByID(uint) (*models.Order, error) {
+	return s.order, nil
+}
+
+func TestReaderProjectsParentAndChildFulfillment(t *testing.T) {
+	parentID := uint(8)
+	deliveredAt := time.Unix(1_700_000_000, 0).UTC()
+	source := sourceStub{order: &models.Order{
+		ID:      parentID,
+		OrderNo: "DJ-8",
+		Status:  "completed",
+		Children: []models.Order{{
+			ID:       9,
+			ParentID: &parentID,
+			Status:   "delivered",
+			Fulfillment: &models.Fulfillment{
+				Type:          "manual",
+				Status:        "delivered",
+				Payload:       "code-123",
+				LogisticsJSON: jsonmap.JSON{"tracking_no": "TRACK-1"},
+				DeliveredAt:   &deliveredAt,
+			},
+		}},
+	}}
+
+	projection, err := New(source).GetByID(parentID)
+	if err != nil {
+		t.Fatalf("GetByID() error = %v", err)
+	}
+	if projection.ID != parentID || projection.OrderNo != "DJ-8" || len(projection.Children) != 1 {
+		t.Fatalf("order projection mismatch: %#v", projection)
+	}
+	fulfillment := projection.Children[0].Fulfillment
+	if fulfillment == nil || fulfillment.Payload != "code-123" || fulfillment.DeliveryData["tracking_no"] != "TRACK-1" {
+		t.Fatalf("fulfillment projection mismatch: %#v", fulfillment)
+	}
+	if fulfillment.DeliveredAt == nil || !fulfillment.DeliveredAt.Equal(deliveredAt) {
+		t.Fatalf("delivered time mismatch: %#v", fulfillment.DeliveredAt)
+	}
+}

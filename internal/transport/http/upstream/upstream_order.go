@@ -8,7 +8,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
+	downstreamcallbackdomain "github.com/dujiao-next/internal/modules/downstreamcallback/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
@@ -117,13 +117,13 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 	}
 
 	// 创建下游订单引用记录（用于回调通知下游）
-	ref := &models.DownstreamOrderRef{
+	ref := &downstreamcallbackdomain.OrderRef{
 		OrderID:           order.ID,
 		ApiCredentialID:   credentialID,
 		DownstreamOrderNo: req.DownstreamOrderNo,
 		CallbackURL:       req.CallbackURL,
 		TraceID:           req.TraceID,
-		CallbackStatus:    "pending",
+		CallbackStatus:    downstreamcallbackdomain.StatusPending,
 	}
 	if createErr := h.DownstreamRefs.Create(ref); createErr != nil {
 		logger.Errorw("upstream_create_downstream_ref_failed",

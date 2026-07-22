@@ -31,7 +31,8 @@ import (
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	dashboardapp "github.com/dujiao-next/internal/modules/dashboard/application"
 	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
-	"github.com/dujiao-next/internal/modules/downstreamcallback"
+	downstreamcallbackapp "github.com/dujiao-next/internal/modules/downstreamcallback/application"
+	downstreamcallbackcontract "github.com/dujiao-next/internal/modules/downstreamcallback/contract"
 	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/infrastructure/gormstore"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
@@ -109,7 +110,7 @@ type Container struct {
 	ProductMappingRepo         *mappinggormstore.MappingStore
 	SKUMappingRepo             *mappinggormstore.SKUMappingStore
 	ProcurementOrderRepo       procurement.Repository
-	DownstreamOrderRefRepo     repository.DownstreamOrderRefRepository
+	DownstreamOrderRefRepo     downstreamcallbackcontract.Repository
 	ReconciliationJobRepo      reconciliation.JobRepository
 	ReconciliationItemRepo     reconciliation.ItemRepository
 	ChannelClientStore         channelclientcontract.Store
@@ -168,7 +169,7 @@ type Container struct {
 	SiteConnectionService         *siteconnectionapp.Service
 	ProductMappingService         *mappingapp.Service
 	ProcurementOrderService       *procurement.Service
-	DownstreamCallbackService     *downstreamcallback.Service
+	DownstreamCallbackService     *downstreamcallbackapp.Service
 	ReconciliationService         *reconciliation.Service
 	ChannelClientService          *channelclientapp.Service
 	TelegramBroadcastService      *broadcastapp.Service

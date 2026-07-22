@@ -12,7 +12,12 @@ import (
 	localfilestore "github.com/dujiao-next/internal/modules/content/infrastructure/filestore/local"
 	contentgormstore "github.com/dujiao-next/internal/modules/content/infrastructure/gormstore"
 	dashboardapp "github.com/dujiao-next/internal/modules/dashboard/application"
-	"github.com/dujiao-next/internal/modules/downstreamcallback"
+	downstreamcallbackapp "github.com/dujiao-next/internal/modules/downstreamcallback/application"
+	downstreamcallbackcontract "github.com/dujiao-next/internal/modules/downstreamcallback/contract"
+	downstreamcallbackclient "github.com/dujiao-next/internal/modules/downstreamcallback/infrastructure/callbackclient"
+	downstreamcallbackcredentialreader "github.com/dujiao-next/internal/modules/downstreamcallback/infrastructure/credentialreader"
+	downstreamcallbackorderreader "github.com/dujiao-next/internal/modules/downstreamcallback/infrastructure/orderreader"
+	downstreamcallbackqueue "github.com/dujiao-next/internal/modules/downstreamcallback/infrastructure/queueadapter"
 	notificationapp "github.com/dujiao-next/internal/modules/notification/application"
 	notificationasyncqueue "github.com/dujiao-next/internal/modules/notification/infrastructure/asyncqueue"
 	"github.com/dujiao-next/internal/modules/procurement"
@@ -66,7 +71,17 @@ func (c *Container) initIntegrationServices() {
 	c.ProductMappingService.SetSettings(c.SettingService)
 	c.SiteConnectionService.SetMarkupReapplier(c.ProductMappingService)
 	c.OrderService.SetProductMappingService(c.ProductMappingService)
-	c.DownstreamCallbackService = downstreamcallback.NewService(c.DownstreamOrderRefRepo, c.OrderRepo, c.ApiCredentialRepo, c.QueueClient)
+	var downstreamQueue downstreamcallbackcontract.CallbackQueue
+	if c.QueueClient != nil {
+		downstreamQueue = downstreamcallbackqueue.New(c.QueueClient)
+	}
+	c.DownstreamCallbackService = downstreamcallbackapp.NewService(downstreamcallbackapp.Options{
+		References:  c.DownstreamOrderRefRepo,
+		Orders:      downstreamcallbackorderreader.New(c.OrderRepo),
+		Credentials: downstreamcallbackcredentialreader.New(c.ApiCredentialRepo),
+		Queue:       downstreamQueue,
+		Deliverer:   downstreamcallbackclient.New(),
+	})
 	c.PaymentService = service.NewPaymentService(service.PaymentServiceOptions{
 		OrderRepo:                 c.OrderRepo,
 		ProductRepo:               c.ProductRepo,

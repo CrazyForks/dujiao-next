@@ -17,6 +17,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
 	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+	downstreamcallbackdomain "github.com/dujiao-next/internal/modules/downstreamcallback/domain"
 	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
@@ -195,7 +196,7 @@ func AutoMigrate() error {
 		&mappingdomain.Mapping{},
 		&mappingdomain.SKUMapping{},
 		&ProcurementOrder{},
-		&DownstreamOrderRef{},
+		&downstreamcallbackdomain.OrderRef{},
 		&ReconciliationJob{},
 		&ReconciliationItem{},
 		&channelclientdomain.Client{},

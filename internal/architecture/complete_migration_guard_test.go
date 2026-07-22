@@ -339,6 +339,10 @@ var completedMigrationPaths = []string{
 	"internal/modules/telegram/errors.go",
 	"internal/transport/http/telegram",
 	"internal/wiring/telegram",
+	"internal/models/downstream_order_ref.go",
+	"internal/repository/downstream_order_ref_repository.go",
+	"internal/modules/downstreamcallback/service.go",
+	"internal/integration/downstreamcallback",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

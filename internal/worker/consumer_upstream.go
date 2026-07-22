@@ -83,7 +83,7 @@ func (c *Consumer) handleProcurementSyncAccepted(_ context.Context, _ *asynq.Tas
 }
 
 // handleDownstreamCallback 处理下游回调发送任务。
-func (c *Consumer) handleDownstreamCallback(_ context.Context, task *asynq.Task) error {
+func (c *Consumer) handleDownstreamCallback(ctx context.Context, task *asynq.Task) error {
 	if c == nil || task == nil || c.DownstreamCallbackService == nil {
 		logger.Debugw("worker_downstream_callback_skip_nil")
 		return nil
@@ -96,7 +96,7 @@ func (c *Consumer) handleDownstreamCallback(_ context.Context, task *asynq.Task)
 	if payload.DownstreamOrderRefID == 0 {
 		return nil
 	}
-	if err := c.DownstreamCallbackService.SendCallback(payload.DownstreamOrderRefID); err != nil {
+	if err := c.DownstreamCallbackService.SendCallback(ctx, payload.DownstreamOrderRefID); err != nil {
 		logger.Warnw("worker_downstream_callback_failed",
 			"ref_id", payload.DownstreamOrderRefID,
 			"error", err,
