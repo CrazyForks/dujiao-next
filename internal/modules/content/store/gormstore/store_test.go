@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/content"
@@ -24,7 +26,7 @@ func setupContentStoreTest(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.PostCategory{},
 		&models.Post{},
@@ -45,7 +47,7 @@ func TestPostStoreQueriesAndOrderedRelations(t *testing.T) {
 	older := now.Add(-2 * time.Hour)
 	newer := now.Add(-time.Hour)
 
-	category := models.Category{Slug: "products", NameJSON: jsonmap.JSON{"zh-CN": "products"}, IsActive: true}
+	category := categorydomain.Category{Slug: "products", NameJSON: jsonmap.JSON{"zh-CN": "products"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create product category: %v", err)
 	}

@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"testing"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -14,7 +16,7 @@ import (
 func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:     "auto-card-secret-category",
 		NameJSON: jsonmap.JSON{"zh-CN": "auto-card-secret-category"},
 	}

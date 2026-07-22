@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"testing"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/cardsecret"
@@ -33,15 +35,15 @@ func (stub *productRepositoryStub) GetAdminByID(string) (*models.Product, error)
 }
 
 type categoryRepositoryStub struct {
-	byID map[string]*models.Category
-	rows []models.Category
+	byID map[string]*categorydomain.Category
+	rows []categorydomain.Category
 }
 
-func (stub categoryRepositoryStub) GetByID(id string) (*models.Category, error) {
+func (stub categoryRepositoryStub) GetByID(id string) (*categorydomain.Category, error) {
 	return stub.byID[id], nil
 }
 
-func (stub categoryRepositoryStub) List() ([]models.Category, error) {
+func (stub categoryRepositoryStub) List() ([]categorydomain.Category, error) {
 	return stub.rows, nil
 }
 
@@ -64,10 +66,10 @@ func (stub stockCounterStub) CountStockByProductIDs([]uint) ([]cardsecret.SKUSto
 func TestListPublicForTenantBuildsVisibilityFilterBeforePagination(t *testing.T) {
 	products := &productRepositoryStub{total: 2}
 	categories := categoryRepositoryStub{
-		byID: map[string]*models.Category{
+		byID: map[string]*categorydomain.Category{
 			"10": {ID: 10, IsActive: true},
 		},
-		rows: []models.Category{
+		rows: []categorydomain.Category{
 			{ID: 10, IsActive: true},
 			{ID: 11, ParentID: 10, IsActive: true},
 			{ID: 12, ParentID: 10, IsActive: false},

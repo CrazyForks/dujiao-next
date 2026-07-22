@@ -46,6 +46,7 @@ func TestRouteDomainFilesPreserveTrustBoundaries(t *testing.T) {
 			required: []string{
 				`storefront.Use(ResellerTenantMiddleware(`,
 				`catalogtransport.RegisterPublicRoutes(public, publicCatalogHandler)`,
+				`categoryhttp.RegisterPublicRoutes(public, publicCategoryHandler)`,
 				`contenttransport.RegisterPublicRoutes(public, publicContentHandler)`,
 				`captchatransport.RegisterPublicRoutes(public,`,
 				`affiliatetransport.RegisterPublicRoutes(public, affiliateHandler)`,
@@ -152,7 +153,7 @@ func TestRouteDomainFilesPreserveTrustBoundaries(t *testing.T) {
 				`affiliatetransport.RegisterAdminRoutes(authorized, adminAffiliateHandler)`,
 				`affiliatetransport.RegisterAdminFinanceRoutes(paymentProtected, adminAffiliateHandler)`,
 				`catalogtransport.RegisterAdminProductRoutes(authorized, adminCatalogProductHandler)`,
-				`catalogtransport.RegisterAdminCategoryRoutes(authorized, adminCatalogCategoryHandler)`,
+				`categoryhttp.RegisterAdminRoutes(authorized, adminCatalogCategoryHandler)`,
 				`catalogtransport.RegisterAdminProductMappingRoutes(authorized, adminCatalogProductMappingHandler)`,
 				`coupontransport.RegisterAdminRoutes(authorized, adminCouponHandler)`,
 				`promotiontransport.RegisterAdminRoutes(authorized, adminPromotionHandler)`,

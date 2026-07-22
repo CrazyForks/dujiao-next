@@ -5,9 +5,9 @@ import (
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	apicredentialgormstore "github.com/dujiao-next/internal/modules/apicredential/store/gormstore"
 	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/store/gormstore"
+	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
-	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	channelclientstore "github.com/dujiao-next/internal/modules/channelclient/infrastructure/gormstore"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
 	dashboardgormstore "github.com/dujiao-next/internal/modules/dashboard/store/gormstore"
@@ -47,7 +47,7 @@ func (c *Container) initRepositories() {
 	c.PromotionRepo = promotiongormstore.New(db)
 	c.WalletRepo = repository.NewWalletRepository(db)
 	c.OrderRefundRecordRepo = repository.NewOrderRefundRecordRepository(db)
-	c.CategoryRepo = cataloggormstore.NewCategoryStore(db)
+	c.CategoryRepo = categorygormstore.NewCategoryStore(db)
 	c.SettingRepo = settingsstore.New(db)
 	c.UserLoginLogRepo = auditloggormstore.NewUserLoginStore(db)
 	c.AuthzAuditLogRepo = auditloggormstore.NewAuthzStore(db)

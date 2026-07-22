@@ -9,19 +9,6 @@ func RegisterPublicRoutes(public gin.IRoutes, handler *PublicHandler) {
 	}
 	public.GET("/products", handler.GetProducts)
 	public.GET("/products/:slug", handler.GetProductBySlug)
-	public.GET("/categories", handler.GetCategories)
-}
-
-// RegisterAdminCategoryRoutes 注册商品分类后台端点。
-func RegisterAdminCategoryRoutes(admin gin.IRoutes, handler *AdminCategoryHandler) {
-	if admin == nil || handler == nil {
-		panic("catalog admin category routes: required dependency is nil")
-	}
-	admin.GET("/categories", handler.GetAdminCategories)
-	admin.POST("/categories", handler.CreateCategory)
-	admin.PUT("/categories/:id", handler.UpdateCategory)
-	admin.PATCH("/categories/:id/active", handler.PatchCategoryActive)
-	admin.DELETE("/categories/:id", handler.DeleteCategory)
 }
 
 // RegisterAdminProductRoutes 注册商品后台端点。

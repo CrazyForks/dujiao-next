@@ -3,12 +3,15 @@ package reselleradmin_test
 import (
 	"encoding/json"
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
@@ -51,7 +54,7 @@ func setupAdminResellerManagementHandlerTest(t *testing.T) (*adminResellerFixtur
 		&userdomain.User{},
 		&admindomain.Admin{},
 		&models.AuthzAuditLog{},
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.Order{},
@@ -498,7 +501,7 @@ func TestAdminResellerManagementSetPrimaryDomainRejectsUnverifiedDomain(t *testi
 
 func seedResellerProductSettingProductForAdminHandler(t *testing.T, db *gorm.DB) (models.Product, []models.ProductSKU) {
 	t.Helper()
-	category := models.Category{Slug: fmt.Sprintf("admin-setting-cat-%d", time.Now().UnixNano()), NameJSON: jsonmap.JSON{"zh-CN": "分类"}, IsActive: true}
+	category := categorydomain.Category{Slug: fmt.Sprintf("admin-setting-cat-%d", time.Now().UnixNano()), NameJSON: jsonmap.JSON{"zh-CN": "分类"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}

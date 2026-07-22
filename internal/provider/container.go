@@ -12,7 +12,8 @@ import (
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	"github.com/dujiao-next/internal/modules/cart"
-	"github.com/dujiao-next/internal/modules/catalog"
+	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
+	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
@@ -85,7 +86,7 @@ type Container struct {
 	PromotionRepo              *promotiongormstore.Store
 	WalletRepo                 repository.WalletRepository
 	OrderRefundRecordRepo      repository.OrderRefundRecordRepository
-	CategoryRepo               catalog.CategoryRepository
+	CategoryRepo               categorycontract.Repository
 	SettingRepo                settingscontract.Store
 	UserLoginLogRepo           auditlog.UserLoginRepository
 	AuthzAuditLogRepo          auditlog.AuthzRepository
@@ -127,7 +128,7 @@ type Container struct {
 	ContentPostCategoryService    *content.PostCategoryService
 	ContentBannerService          *content.BannerService
 	ContentMediaService           *content.MediaService
-	CategoryService               *catalog.CategoryService
+	CategoryService               *categoryapp.Service
 	SettingService                *settingsapp.Service
 	SitemapService                *sitemap.Service
 	CartService                   *cart.Service

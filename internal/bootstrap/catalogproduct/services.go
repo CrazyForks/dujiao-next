@@ -3,7 +3,8 @@ package catalogproductbootstrap
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/modules/catalog"
+	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
+
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
@@ -43,7 +44,7 @@ type Dependencies struct {
 	SKUs              SKUStore
 	CardSecrets       repository.CardSecretRepository
 	CardSecretBatches repository.CardSecretBatchRepository
-	Categories        catalog.CategoryRepository
+	Categories        categorycontract.Repository
 	MemberLevelPrices memberLevelPriceCleaner
 	Carts             repository.CartRepository
 	ProductMappings   MappingStore

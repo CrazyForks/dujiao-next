@@ -2,9 +2,11 @@ package gormstore
 
 import (
 	"errors"
+	"time"
 
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/catalog"
+	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"gorm.io/gorm"
 )
@@ -14,7 +16,7 @@ type CategoryStore struct {
 	db *gorm.DB
 }
 
-var _ catalog.CategoryRepository = (*CategoryStore)(nil)
+var _ categorycontract.Repository = (*CategoryStore)(nil)
 
 // NewCategoryStore 创建分类存储。
 func NewCategoryStore(db *gorm.DB) *CategoryStore {
@@ -22,27 +24,27 @@ func NewCategoryStore(db *gorm.DB) *CategoryStore {
 }
 
 // List 分类列表
-func (r *CategoryStore) List() ([]models.Category, error) {
-	var categories []models.Category
-	if err := r.db.Order("sort_order DESC, id ASC").Find(&categories).Error; err != nil {
+func (r *CategoryStore) List() ([]categorydomain.Category, error) {
+	var categories []categorydomain.Category
+	if err := r.db.Where("deleted_at IS NULL").Order("sort_order DESC, id ASC").Find(&categories).Error; err != nil {
 		return nil, err
 	}
 	return categories, nil
 }
 
 // ListActive 启用的分类列表
-func (r *CategoryStore) ListActive() ([]models.Category, error) {
-	var categories []models.Category
-	if err := r.db.Where("is_active = ?", true).Order("sort_order DESC, id ASC").Find(&categories).Error; err != nil {
+func (r *CategoryStore) ListActive() ([]categorydomain.Category, error) {
+	var categories []categorydomain.Category
+	if err := r.db.Where("deleted_at IS NULL AND is_active = ?", true).Order("sort_order DESC, id ASC").Find(&categories).Error; err != nil {
 		return nil, err
 	}
 	return categories, nil
 }
 
 // GetByID 根据 ID 获取分类
-func (r *CategoryStore) GetByID(id string) (*models.Category, error) {
-	var category models.Category
-	if err := r.db.First(&category, id).Error; err != nil {
+func (r *CategoryStore) GetByID(id string) (*categorydomain.Category, error) {
+	var category categorydomain.Category
+	if err := r.db.Where("deleted_at IS NULL").First(&category, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -52,29 +54,29 @@ func (r *CategoryStore) GetByID(id string) (*models.Category, error) {
 }
 
 // Create 创建分类
-func (r *CategoryStore) Create(category *models.Category) error {
+func (r *CategoryStore) Create(category *categorydomain.Category) error {
 	return r.db.Create(category).Error
 }
 
 // Update 更新分类
-func (r *CategoryStore) Update(category *models.Category) error {
+func (r *CategoryStore) Update(category *categorydomain.Category) error {
 	return r.db.Save(category).Error
 }
 
 // UpdateActive 更新启用状态
 func (r *CategoryStore) UpdateActive(id string, active bool) error {
-	return r.db.Model(&models.Category{}).Where("id = ?", id).Update("is_active", active).Error
+	return r.db.Model(&categorydomain.Category{}).Where("id = ?", id).Update("is_active", active).Error
 }
 
 // Delete 删除分类
 func (r *CategoryStore) Delete(id string) error {
-	return r.db.Delete(&models.Category{}, id).Error
+	return r.db.Model(&categorydomain.Category{}).Where("id = ? AND deleted_at IS NULL", id).Update("deleted_at", time.Now()).Error
 }
 
 // CountBySlug 统计 slug 数量
 func (r *CategoryStore) CountBySlug(slug string, excludeID *string) (int64, error) {
 	var count int64
-	query := r.db.Model(&models.Category{}).Where("slug = ?", slug)
+	query := r.db.Model(&categorydomain.Category{}).Where("deleted_at IS NULL AND slug = ?", slug)
 	if excludeID != nil {
 		query = query.Where("id != ?", *excludeID)
 	}
@@ -87,7 +89,7 @@ func (r *CategoryStore) CountBySlug(slug string, excludeID *string) (int64, erro
 // CountChildren 统计某分类的子分类数量
 func (r *CategoryStore) CountChildren(categoryID string) (int64, error) {
 	var count int64
-	if err := r.db.Model(&models.Category{}).Where("parent_id = ?", categoryID).Count(&count).Error; err != nil {
+	if err := r.db.Model(&categorydomain.Category{}).Where("deleted_at IS NULL AND parent_id = ?", categoryID).Count(&count).Error; err != nil {
 		return 0, err
 	}
 	return count, nil
@@ -103,9 +105,9 @@ func (r *CategoryStore) CountProducts(categoryID string) (int64, error) {
 }
 
 // GetBySlug 根据 slug 获取分类
-func (r *CategoryStore) GetBySlug(slug string) (*models.Category, error) {
-	var category models.Category
-	if err := r.db.Where("slug = ?", slug).First(&category).Error; err != nil {
+func (r *CategoryStore) GetBySlug(slug string) (*categorydomain.Category, error) {
+	var category categorydomain.Category
+	if err := r.db.Where("deleted_at IS NULL AND slug = ?", slug).First(&category).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -115,8 +117,8 @@ func (r *CategoryStore) GetBySlug(slug string) (*models.Category, error) {
 }
 
 // GetBySlugUnscoped 根据 slug 获取分类，包含软删除记录。
-func (r *CategoryStore) GetBySlugUnscoped(slug string) (*models.Category, error) {
-	var category models.Category
+func (r *CategoryStore) GetBySlugUnscoped(slug string) (*categorydomain.Category, error) {
+	var category categorydomain.Category
 	if err := r.db.Unscoped().Where("slug = ?", slug).First(&category).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -127,8 +129,8 @@ func (r *CategoryStore) GetBySlugUnscoped(slug string) (*models.Category, error)
 }
 
 // Restore 恢复软删除分类并刷新展示信息。
-func (r *CategoryStore) Restore(category *models.Category) error {
-	return r.db.Unscoped().Model(&models.Category{}).Where("id = ?", category.ID).Updates(map[string]interface{}{
+func (r *CategoryStore) Restore(category *categorydomain.Category) error {
+	return r.db.Unscoped().Model(&categorydomain.Category{}).Where("id = ?", category.ID).Updates(map[string]interface{}{
 		"parent_id":  category.ParentID,
 		"name_json":  category.NameJSON,
 		"icon":       category.Icon,

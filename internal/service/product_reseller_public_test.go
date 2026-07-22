@@ -2,16 +2,19 @@ package service
 
 import (
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
+
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
-	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -31,7 +34,7 @@ func newProductServiceForResellerPublicTest(t *testing.T) (*ProductService, repo
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.CardSecret{},
@@ -54,7 +57,7 @@ func newProductServiceForResellerPublicTest(t *testing.T) (*ProductService, repo
 		productgormstore.NewSKUStore(db),
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		cataloggormstore.NewCategoryStore(db),
+		categorygormstore.NewCategoryStore(db),
 		memberlevelgormstore.NewPriceStore(db),
 		repository.NewCartRepository(db),
 		mappinggormstore.NewMappingStore(db),
@@ -121,7 +124,7 @@ func createResellerPublicSetting(t *testing.T, db *gorm.DB, setting models.Resel
 
 func TestProductServiceListPublicForTenantExcludesResellerHiddenProductsBeforePagination(t *testing.T) {
 	svc, resellerRepo, db := newProductServiceForResellerPublicTest(t)
-	category := models.Category{Slug: "reseller-public", NameJSON: jsonmap.JSON{"zh-CN": "reseller-public"}, IsActive: true}
+	category := categorydomain.Category{Slug: "reseller-public", NameJSON: jsonmap.JSON{"zh-CN": "reseller-public"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
@@ -164,7 +167,7 @@ func TestProductServiceListPublicForTenantExcludesResellerHiddenProductsBeforePa
 
 func TestProductServiceGetPublicBySlugForTenantRejectsHiddenProduct(t *testing.T) {
 	svc, resellerRepo, db := newProductServiceForResellerPublicTest(t)
-	category := models.Category{Slug: "reseller-detail", NameJSON: jsonmap.JSON{"zh-CN": "reseller-detail"}, IsActive: true}
+	category := categorydomain.Category{Slug: "reseller-detail", NameJSON: jsonmap.JSON{"zh-CN": "reseller-detail"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}

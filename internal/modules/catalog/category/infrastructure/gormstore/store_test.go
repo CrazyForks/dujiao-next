@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -18,7 +18,7 @@ func setupCategoryStoreTest(t *testing.T) *CategoryStore {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Category{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}); err != nil {
 		t.Fatalf("migrate category failed: %v", err)
 	}
 	return NewCategoryStore(db)
@@ -27,12 +27,12 @@ func setupCategoryStoreTest(t *testing.T) *CategoryStore {
 func TestCategoryStoreListSortOrderDescending(t *testing.T) {
 	repo := setupCategoryStoreTest(t)
 
-	high := &models.Category{
+	high := &categorydomain.Category{
 		Slug:      "high",
 		NameJSON:  jsonmap.JSON{"zh-CN": "high"},
 		SortOrder: 100,
 	}
-	low := &models.Category{
+	low := &categorydomain.Category{
 		Slug:      "low",
 		NameJSON:  jsonmap.JSON{"zh-CN": "low"},
 		SortOrder: 1,
@@ -62,7 +62,7 @@ func TestCategoryStoreListSortOrderDescending(t *testing.T) {
 func TestCategoryStoreRestoreRevivesSoftDeletedSlug(t *testing.T) {
 	store := setupCategoryStoreTest(t)
 
-	existing := &models.Category{
+	existing := &categorydomain.Category{
 		ParentID: 0,
 		Slug:     "softdel-streaming",
 		NameJSON: jsonmap.JSON{"zh-CN": "旧名"},

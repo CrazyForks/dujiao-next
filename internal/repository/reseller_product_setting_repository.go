@@ -75,7 +75,7 @@ func (r *GormResellerProductSettingRepository) ListProductsWithSettings(filter R
 		return []ResellerProductSettingProductRow{}, 0, nil
 	}
 	query := r.db.Model(&models.Product{}).
-		Preload("Category").
+		Preload("Category", "deleted_at IS NULL").
 		Preload("SKUs", func(db *gorm.DB) *gorm.DB {
 			if filter.OnlyActive {
 				db = db.Where("is_active = ?", true)
@@ -133,7 +133,7 @@ func (r *GormResellerProductSettingRepository) GetProductWithSettings(resellerID
 		return nil, nil
 	}
 	var product models.Product
-	err := r.db.Preload("Category").
+	err := r.db.Preload("Category", "deleted_at IS NULL").
 		Preload("SKUs", func(db *gorm.DB) *gorm.DB {
 			return db.Where("is_active = ?", true).Order("sort_order DESC, id ASC")
 		}).

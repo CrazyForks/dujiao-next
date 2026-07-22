@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 )
@@ -18,7 +20,7 @@ var (
 
 // CategoryAssignmentRepository 是商品分类归属校验所需的最小端口。
 type CategoryAssignmentRepository interface {
-	GetByID(id string) (*models.Category, error)
+	GetByID(id string) (*categorydomain.Category, error)
 	CountChildren(categoryID string) (int64, error)
 }
 

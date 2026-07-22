@@ -3,14 +3,17 @@ package sitemap_test
 import (
 	"context"
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"strings"
 	"testing"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
+	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
 	"github.com/dujiao-next/internal/modules/content/store/gormstore"
 	"github.com/dujiao-next/internal/modules/sitemap"
@@ -31,7 +34,7 @@ func newSitemapServiceForTest(t *testing.T, reader sitemap.PublishedPostReader) 
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.Post{},
@@ -64,7 +67,7 @@ func newSitemapServiceForTest(t *testing.T, reader sitemap.PublishedPostReader) 
 	}
 	svc, err := sitemap.NewService(
 		productgormstore.NewProductStore(db),
-		cataloggormstore.NewCategoryStore(db),
+		categorygormstore.NewCategoryStore(db),
 		reader,
 	)
 	if err != nil {
@@ -121,8 +124,8 @@ func TestSitemapServicePropagatesPublishedPostReaderFailure(t *testing.T) {
 func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 	svc, db := newSitemapServiceForTest(t, nil)
 
-	activeCategory := models.Category{Slug: "games", NameJSON: jsonmap.JSON{"zh-CN": "games"}, IsActive: true}
-	inactiveCategory := models.Category{Slug: "hidden", NameJSON: jsonmap.JSON{"zh-CN": "hidden"}, IsActive: true}
+	activeCategory := categorydomain.Category{Slug: "games", NameJSON: jsonmap.JSON{"zh-CN": "games"}, IsActive: true}
+	inactiveCategory := categorydomain.Category{Slug: "hidden", NameJSON: jsonmap.JSON{"zh-CN": "hidden"}, IsActive: true}
 	if err := db.Create(&activeCategory).Error; err != nil {
 		t.Fatalf("create active category: %v", err)
 	}
@@ -130,7 +133,7 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 		t.Fatalf("create inactive category: %v", err)
 	}
 	// GORM 的 default:true tag 会让零值 false 写入时被 DB 默认值覆盖，需显式 Update 才能落到 false
-	if err := db.Model(&models.Category{}).Where("id = ?", inactiveCategory.ID).Update("is_active", false).Error; err != nil {
+	if err := db.Model(&categorydomain.Category{}).Where("id = ?", inactiveCategory.ID).Update("is_active", false).Error; err != nil {
 		t.Fatalf("update inactive category: %v", err)
 	}
 

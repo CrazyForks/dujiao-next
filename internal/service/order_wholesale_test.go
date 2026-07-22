@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"strings"
 	"testing"
 	"time"
+
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
@@ -45,7 +48,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.Promotion{},
@@ -59,7 +62,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 	}
 
 	now := time.Now()
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:      name + "-category",
 		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		CreatedAt: now,

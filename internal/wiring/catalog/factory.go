@@ -13,7 +13,6 @@ func NewPublicHandler(c *provider.Container) *catalogtransport.PublicHandler {
 	}
 	return catalogtransport.NewPublicHandler(
 		catalogPublicProductAdapter{products: c.ProductReadService, hidden: c.ResellerRepo},
-		c.CategoryService,
 		c.ResellerPricingResolver,
 		promotions,
 		c.MemberLevelService,

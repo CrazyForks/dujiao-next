@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
@@ -24,7 +26,7 @@ func setupMappingStoreTest(t *testing.T) (*MappingStore, *SKUMappingStore, *gorm
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.SiteConnection{},
@@ -33,7 +35,7 @@ func setupMappingStoreTest(t *testing.T) (*MappingStore, *SKUMappingStore, *gorm
 	); err != nil {
 		t.Fatalf("migrate mapping models failed: %v", err)
 	}
-	defaultCategory := models.Category{
+	defaultCategory := categorydomain.Category{
 		ID:       1,
 		Slug:     "default-test-category",
 		NameJSON: jsonmap.JSON{"zh-CN": "default"},

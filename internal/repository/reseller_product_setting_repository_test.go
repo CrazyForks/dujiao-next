@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/models"
@@ -24,7 +26,7 @@ func openResellerProductSettingRepoTestDB(t *testing.T) *gorm.DB {
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.ResellerProfile{},
@@ -56,7 +58,7 @@ func seedResellerProductSettingProfile(t *testing.T, db *gorm.DB, email string) 
 
 func seedResellerProductSettingProduct(t *testing.T, db *gorm.DB, slug string) (models.Product, []models.ProductSKU) {
 	t.Helper()
-	category := models.Category{Slug: "cat-" + slug, NameJSON: jsonmap.JSON{"zh-CN": "分类"}, IsActive: true}
+	category := categorydomain.Category{Slug: "cat-" + slug, NameJSON: jsonmap.JSON{"zh-CN": "分类"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}

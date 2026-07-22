@@ -3,6 +3,8 @@ package productwrite
 import (
 	"strings"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -40,7 +42,7 @@ func (s *WriteService) Update(id string, input CreateProductInput) (*models.Prod
 	}
 
 	product.CategoryID = input.CategoryID
-	product.Category = models.Category{}
+	product.Category = categorydomain.Category{}
 	product.Slug = input.Slug
 	product.SeoMetaJSON = jsonmap.JSON(input.SeoMetaJSON)
 	product.TitleJSON = jsonmap.JSON(input.TitleJSON)

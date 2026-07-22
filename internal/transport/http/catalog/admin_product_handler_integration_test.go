@@ -9,16 +9,18 @@ import (
 	"testing"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/store/gormstore"
+	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
-	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -120,7 +122,7 @@ func setupAdminProductHandlerTest(t *testing.T) (*cataloghttp.AdminProductHandle
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.CardSecret{},
@@ -140,7 +142,7 @@ func setupAdminProductHandlerTest(t *testing.T) (*cataloghttp.AdminProductHandle
 	skuStore := productgormstore.NewSKUStore(db)
 	cardSecretStore := cardsecretgormstore.New(db)
 	cardSecretBatchStore := cardsecretgormstore.NewBatch(db)
-	categoryStore := cataloggormstore.NewCategoryStore(db)
+	categoryStore := categorygormstore.NewCategoryStore(db)
 	memberLevelPriceStore := memberlevelgormstore.NewPriceStore(db)
 	mappingStore := mappinggormstore.NewMappingStore(db)
 	skuMappingStore := mappinggormstore.NewSKUMappingStore(db)

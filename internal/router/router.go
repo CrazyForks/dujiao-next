@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
+	categoryhttp "github.com/dujiao-next/internal/modules/catalog/category/transport/http"
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	apicredentialtransport "github.com/dujiao-next/internal/transport/http/apicredential"
@@ -91,6 +92,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 		c.ContentBannerService,
 	)
 	publicCatalogHandler := catalogwiring.NewPublicHandler(c)
+	publicCategoryHandler := categoryhttp.NewPublicHandler(c.CategoryService)
 	adminContentHandler := contenttransport.NewAdminHandler(
 		c.ContentPostService,
 		c.ContentPostCategoryService,
@@ -118,7 +120,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 	userApiCredentialHandler := apicredentialtransport.NewUserHandler(c.ApiCredentialService)
 	adminAuditLogHandler := auditlogtransport.NewAdminHandler(c.AuthzAuditService, c.UserLoginLogService)
 	adminCardSecretHandler := cardsecrettransport.NewAdminHandler(c.CardSecretService)
-	adminCatalogCategoryHandler := catalogtransport.NewAdminCategoryHandler(c.CategoryService)
+	adminCatalogCategoryHandler := categoryhttp.NewAdminCategoryHandler(c.CategoryService)
 	adminCatalogProductHandler := catalogtransport.NewAdminProductHandler(
 		c.ProductReadService,
 		c.ProductWriteService,
@@ -195,7 +197,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 	sitemaptransport.RegisterRoutes(r, sitemapwiring.NewHandler(c))
 
 	apiV1 := r.Group("/api/v1")
-	registerStorefrontRoutes(apiV1, cfg, c, publicContentHandler, publicCatalogHandler, userResellerHandler, userResellerProductSettingHandler, userResellerFinanceHandler, userResellerOrderHandler, userApiCredentialHandler, userAuditLogHandler, userGiftCardHandler, publicMemberLevelHandler, userProfileHandler, userEmailHandler, userPasswordHandler, userVerifyHandler, userTelegramOIDCHandler, userTelegramHandler, userLoginHandler, user2FAHandler, publicConfigHandler, userCartHandler, userOrderHandler, guestOrderHandler, orderPreviewHandler, orderCreateHandler, paymentLatestHandler, paymentWriteHandler, userWalletHandler, redisClient, loginRule)
+	registerStorefrontRoutes(apiV1, cfg, c, publicContentHandler, publicCatalogHandler, publicCategoryHandler, userResellerHandler, userResellerProductSettingHandler, userResellerFinanceHandler, userResellerOrderHandler, userApiCredentialHandler, userAuditLogHandler, userGiftCardHandler, publicMemberLevelHandler, userProfileHandler, userEmailHandler, userPasswordHandler, userVerifyHandler, userTelegramOIDCHandler, userTelegramHandler, userLoginHandler, user2FAHandler, publicConfigHandler, userCartHandler, userOrderHandler, guestOrderHandler, orderPreviewHandler, orderCreateHandler, paymentLatestHandler, paymentWriteHandler, userWalletHandler, redisClient, loginRule)
 	registerUpstreamRoutes(apiV1, c, upstreamHandler, redisClient, upstreamAPIRule)
 	registerChannelRoutes(apiV1, c, channelHandler, channelMemberLevelHandler, channelGiftCardHandler, channelAffiliateHandler, channelTelegramBotHandler, channelWalletHandler)
 	registerPaymentCallbackRoutes(apiV1, paymentCallbackHandler, paymentWebhookHandler)

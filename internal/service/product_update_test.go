@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -15,7 +17,7 @@ import (
 func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:     "mapped-category",
 		NameJSON: jsonmap.JSON{"zh-CN": "mapped-category"},
 	}
@@ -84,7 +86,7 @@ func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T)
 func TestProductServiceUpdateFiltersUnavailablePaymentChannels(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:     "payment-channel-update-category",
 		NameJSON: jsonmap.JSON{"zh-CN": "payment-channel-update-category"},
 	}
@@ -131,7 +133,7 @@ func TestProductServiceUpdateFiltersUnavailablePaymentChannels(t *testing.T) {
 func TestProductServiceUpdateRejectsInvalidPurchaseLimits(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	cat := models.Category{Slug: "test-purchase-limit-update", NameJSON: jsonmap.JSON{"zh-CN": "test"}}
+	cat := categorydomain.Category{Slug: "test-purchase-limit-update", NameJSON: jsonmap.JSON{"zh-CN": "test"}}
 	if err := db.Create(&cat).Error; err != nil {
 		t.Fatalf("create category: %v", err)
 	}

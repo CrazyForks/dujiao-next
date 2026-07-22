@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
@@ -498,10 +499,10 @@ func ensureCategoryParentMigration() error {
 		return nil
 	}
 
-	if !DB.Migrator().HasColumn(&Category{}, "parent_id") {
+	if !DB.Migrator().HasColumn(&categorydomain.Category{}, "parent_id") {
 		return nil
 	}
-	if err := DB.Model(&Category{}).Where("parent_id IS NULL").Update("parent_id", 0).Error; err != nil {
+	if err := DB.Model(&categorydomain.Category{}).Where("parent_id IS NULL").Update("parent_id", 0).Error; err != nil {
 		return err
 	}
 

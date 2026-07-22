@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/shopspring/decimal"
@@ -67,7 +69,7 @@ func TestAdminServiceQuickUpdateValidatesActivationCategory(t *testing.T) {
 	products := &productRepositoryStub{product: &models.Product{ID: 11, CategoryID: 3}}
 	service := NewAdminService(Options{
 		Products:   products,
-		Categories: categoryRepositoryStub{categories: map[string]*models.Category{"5": {ID: 5, IsActive: true}}},
+		Categories: categoryRepositoryStub{categories: map[string]*categorydomain.Category{"5": {ID: 5, IsActive: true}}},
 		Errors: ErrorSet{
 			ProductCategoryInvalid: invalidCategory,
 		},
@@ -155,11 +157,11 @@ func (repository *productRepositoryStub) QuickUpdate(_ string, fields map[string
 }
 
 type categoryRepositoryStub struct {
-	categories map[string]*models.Category
+	categories map[string]*categorydomain.Category
 	children   map[string]int64
 }
 
-func (repository categoryRepositoryStub) GetByID(id string) (*models.Category, error) {
+func (repository categoryRepositoryStub) GetByID(id string) (*categorydomain.Category, error) {
 	return repository.categories[id], nil
 }
 

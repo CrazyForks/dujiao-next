@@ -5,6 +5,7 @@ import (
 	settingsbootstrap "github.com/dujiao-next/internal/bootstrap/settingshttp"
 	"github.com/dujiao-next/internal/config"
 	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
+	categoryhttp "github.com/dujiao-next/internal/modules/catalog/category/transport/http"
 	channelclienthttp "github.com/dujiao-next/internal/modules/channelclient/transport/http"
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	broadcasthttp "github.com/dujiao-next/internal/modules/telegram/broadcast/transport/http"
@@ -64,7 +65,7 @@ func registerAdminRoutes(
 	adminApiCredentialHandler *apicredentialtransport.AdminHandler,
 	adminAuditLogHandler *auditlogtransport.AdminHandler,
 	adminCardSecretHandler *cardsecrettransport.AdminHandler,
-	adminCatalogCategoryHandler *catalogtransport.AdminCategoryHandler,
+	adminCatalogCategoryHandler *categoryhttp.AdminCategoryHandler,
 	adminCatalogProductHandler *catalogtransport.AdminProductHandler,
 	adminCatalogProductMappingHandler *catalogtransport.AdminProductMappingHandler,
 	adminCouponHandler *coupontransport.AdminHandler,
@@ -109,7 +110,7 @@ func registerAdminRoutes(
 	// 商品 / 分类管理
 	catalogtransport.RegisterAdminProductRoutes(authorized, adminCatalogProductHandler)
 	contenttransport.RegisterAdminRoutes(authorized, adminContentHandler)
-	catalogtransport.RegisterAdminCategoryRoutes(authorized, adminCatalogCategoryHandler)
+	categoryhttp.RegisterAdminRoutes(authorized, adminCatalogCategoryHandler)
 
 	// 设置管理
 	settingstransport.RegisterAdminRoutes(authorized, adminSettingsHandler)

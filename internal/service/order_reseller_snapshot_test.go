@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"strings"
 	"testing"
 	"time"
+
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
@@ -69,7 +72,7 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.Order{},
@@ -87,7 +90,7 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	category := models.Category{Slug: "reseller-order", NameJSON: jsonmap.JSON{"zh-CN": "reseller-order"}, IsActive: true}
+	category := categorydomain.Category{Slug: "reseller-order", NameJSON: jsonmap.JSON{"zh-CN": "reseller-order"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}

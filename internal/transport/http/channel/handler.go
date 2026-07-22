@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/models"
@@ -134,7 +136,7 @@ type CreatePaymentResult struct {
 }
 
 type CategoryService interface {
-	ListActive() ([]models.Category, error)
+	ListActive() ([]categorydomain.Category, error)
 }
 
 type CategoryRepository interface {

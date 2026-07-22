@@ -6,9 +6,11 @@ import (
 	"strconv"
 	"time"
 
+	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/catalog"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
@@ -87,9 +89,9 @@ type SKURepository interface {
 // CategoryRepository 分类查找与复活端口（含商品分类归属校验）。
 type CategoryRepository interface {
 	productdomain.CategoryAssignmentRepository
-	GetBySlug(slug string) (*models.Category, error)
-	GetBySlugUnscoped(slug string) (*models.Category, error)
-	Restore(category *models.Category) error
+	GetBySlug(slug string) (*categorydomain.Category, error)
+	GetBySlugUnscoped(slug string) (*categorydomain.Category, error)
+	Restore(category *categorydomain.Category) error
 }
 
 // ConnectionProvider 隔离站点连接的读取与上游协议适配器构造。
@@ -105,7 +107,7 @@ type MediaRecorder interface {
 
 // CategoryCreator 自动建分类端口，由 Catalog CategoryService 实现，setter 注入避免装配顺序耦合。
 type CategoryCreator interface {
-	Create(input catalog.CreateCategoryInput) (*models.Category, error)
+	Create(input categoryapp.UpsertInput) (*categorydomain.Category, error)
 }
 
 // SettingsProvider 读取上游同步动态配置。

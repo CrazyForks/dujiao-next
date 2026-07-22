@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/models"
@@ -58,7 +60,7 @@ type CreatePaymentResult struct {
 }
 
 type CategoryRepository interface {
-	List() ([]models.Category, error)
+	List() ([]categorydomain.Category, error)
 }
 
 type ProductService interface {

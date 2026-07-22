@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/models"
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
+	categorypresenter "github.com/dujiao-next/internal/modules/catalog/category/transport/presenter"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
 	"github.com/dujiao-next/internal/modules/reseller"
@@ -118,7 +119,7 @@ func (v *publicProductView) toProductResp() dto.ProductResp {
 		StockStatus:          v.StockStatus,
 		IsSoldOut:            v.IsSoldOut,
 		PaymentChannelIDs:    decodeChannelIDs(v.Product.PaymentChannelIDs),
-		Category:             dto.NewCategoryResp(&v.Product.Category),
+		Category:             categorypresenter.New(&v.Product.Category),
 		SKUs:                 skus,
 		PromotionID:          v.PromotionID,
 		PromotionName:        v.PromotionName,

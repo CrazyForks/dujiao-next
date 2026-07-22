@@ -72,45 +72,42 @@ func TestCatalogStockConsumersUseSharedPolicy(t *testing.T) {
 
 func TestCatalogCategoryImplementationLivesInBoundedContextDirectories(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "catalog")
-	storeRoot := filepath.Join(moduleRoot, "store", "gormstore")
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "catalog")
-	integrationRoot := filepath.Join(repositoryRoot, "internal", "integration", "catalog")
+	catalogRoot := filepath.Join(repositoryRoot, "internal", "modules", "catalog")
+	categoryRoot := filepath.Join(catalogRoot, "category")
+	domainRoot := filepath.Join(categoryRoot, "domain")
+	contractRoot := filepath.Join(categoryRoot, "contract")
+	applicationRoot := filepath.Join(categoryRoot, "application")
+	storeRoot := filepath.Join(categoryRoot, "infrastructure", "gormstore")
+	transportRoot := filepath.Join(categoryRoot, "transport", "http")
+	presenterRoot := filepath.Join(categoryRoot, "transport", "presenter")
+	integrationRoot := filepath.Join(categoryRoot, "integrationtest")
 
-	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "category_service.go"), []string{
-		"CategoryRepository", "CategoryService", "CreateCategoryInput",
-	})
-	assertFileDeclaresFunctions(t, filepath.Join(moduleRoot, "category_service.go"), []string{
-		"NewCategoryService",
-	})
-	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "category_store.go"), []string{"CategoryStore"})
-	assertFileDeclaresFunctions(t, filepath.Join(storeRoot, "category_store.go"), []string{"NewCategoryStore"})
-	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "admin_category_handler.go"), []string{
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "category.go"), []string{"Category"})
+	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "repository.go"), []string{"Repository"})
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "service.go"), []string{"Service", "UpsertInput"})
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "service.go"), []string{"NewService"})
+	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "store.go"), []string{"CategoryStore"})
+	assertFileDeclaresFunctions(t, filepath.Join(storeRoot, "store.go"), []string{"NewCategoryStore"})
+	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "admin_handler.go"), []string{
 		"CategoryService", "AdminCategoryHandler", "CreateCategoryRequest", "PatchCategoryActiveRequest",
 	})
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{
-		"RegisterPublicRoutes",
-		"RegisterAdminCategoryRoutes",
-		"RegisterAdminProductRoutes",
-		"RegisterAdminProductMappingRoutes",
+		"RegisterPublicRoutes", "RegisterAdminRoutes",
 	})
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "public_handler.go"), []string{
-		"PublicProductQueries", "PublicCategoryQueries", "ResellerDisplayPricer",
-		"ProductPromotionDecorator", "MemberLevelPricing", "LocalProductMappingReader",
-		"RelatedPostReader", "PublicHandler",
+		"PublicQueries", "PublicHandler",
 	})
-	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "admin_product_handler.go"), []string{
-		"ProductQueries", "ProductWriter", "ProductAdminCommands", "LowStockThresholdProvider",
-		"ProductMappingLookup", "SKUMappingLookup", "AdminProductHandler",
-	})
-	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "admin_product_mapping_handler.go"), []string{
-		"ProductMappingService", "AdminProductMappingHandler",
-	})
+	assertFileDeclaresTypes(t, filepath.Join(presenterRoot, "category.go"), []string{"Category"})
+	assertFileDeclaresFunctions(t, filepath.Join(presenterRoot, "category.go"), []string{"New", "List"})
 
-	assertDirectoryGoFileBudget(t, moduleRoot, 4)
+	assertDirectoryGoFileBudget(t, catalogRoot, 2)
+	assertDirectoryGoFileBudget(t, domainRoot, 1)
+	assertDirectoryGoFileBudget(t, contractRoot, 1)
+	assertDirectoryGoFileBudget(t, applicationRoot, 1)
 	assertDirectoryGoFileBudget(t, storeRoot, 2)
-	assertDirectoryGoFileBudget(t, transportRoot, 14)
-	assertDirectoryGoFileBudget(t, integrationRoot, 2)
+	assertDirectoryGoFileBudget(t, transportRoot, 3)
+	assertDirectoryGoFileBudget(t, presenterRoot, 2)
+	assertDirectoryGoFileBudget(t, integrationRoot, 1)
 
 	for _, legacy := range []string{
 		filepath.Join(repositoryRoot, "internal", "http", "handlers", "public", "catalog.go"),
@@ -128,6 +125,11 @@ func TestCatalogCategoryImplementationLivesInBoundedContextDirectories(t *testin
 func TestCatalogCategoryLegacyFlatFilesStayRemoved(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	patterns := []string{
+		filepath.Join(repositoryRoot, "internal", "models", "category.go"),
+		filepath.Join(repositoryRoot, "internal", "modules", "catalog", "category_service.go"),
+		filepath.Join(repositoryRoot, "internal", "modules", "catalog", "store", "gormstore", "category_store*.go"),
+		filepath.Join(repositoryRoot, "internal", "transport", "http", "catalog", "admin_category_handler.go"),
+		filepath.Join(repositoryRoot, "internal", "integration", "catalog", "category_service_test.go"),
 		filepath.Join(repositoryRoot, "internal", "service", "category_service*.go"),
 		filepath.Join(repositoryRoot, "internal", "repository", "category_repository*.go"),
 		filepath.Join(repositoryRoot, "internal", "http", "handlers", "admin", "admin_category*.go"),

@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
@@ -26,7 +28,7 @@ func openResellerPricingRepoTestDB(t *testing.T) *gorm.DB {
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.Order{},
@@ -44,8 +46,8 @@ func openResellerPricingRepoTestDB(t *testing.T) *gorm.DB {
 
 func seedResellerPricingProduct(t *testing.T, db *gorm.DB, slug string, activeSKUCount int) (models.Product, []models.ProductSKU) {
 	t.Helper()
-	var category models.Category
-	if err := db.FirstOrCreate(&category, models.Category{
+	var category categorydomain.Category
+	if err := db.FirstOrCreate(&category, categorydomain.Category{
 		Slug:     "repo-pricing",
 		NameJSON: jsonmap.JSON{"zh-CN": "repo-pricing"},
 		IsActive: true,

@@ -3,19 +3,22 @@ package channel_test
 import (
 	"encoding/json"
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/catalog"
+	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
-	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
@@ -38,18 +41,18 @@ func TestGetCategoriesIncludesParentIDAndVisibleParent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Category{}, &models.Product{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	parent := models.Category{
+	parent := categorydomain.Category{
 		Slug:     "games",
 		NameJSON: jsonmap.JSON{"zh-CN": "游戏"},
 	}
 	if err := db.Create(&parent).Error; err != nil {
 		t.Fatalf("create parent category failed: %v", err)
 	}
-	child := models.Category{
+	child := categorydomain.Category{
 		ParentID: parent.ID,
 		Slug:     "steam",
 		NameJSON: jsonmap.JSON{"zh-CN": "Steam"},
@@ -57,7 +60,7 @@ func TestGetCategoriesIncludesParentIDAndVisibleParent(t *testing.T) {
 	if err := db.Create(&child).Error; err != nil {
 		t.Fatalf("create child category failed: %v", err)
 	}
-	hidden := models.Category{
+	hidden := categorydomain.Category{
 		Slug:     "hidden",
 		NameJSON: jsonmap.JSON{"zh-CN": "hidden"},
 	}
@@ -76,9 +79,9 @@ func TestGetCategoriesIncludesParentIDAndVisibleParent(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	categoryRepo := cataloggormstore.NewCategoryStore(db)
+	categoryRepo := categorygormstore.NewCategoryStore(db)
 	handler := &channeltransport.Handler{Dependencies: channeltransport.Dependencies{
-		CategoryRepo: categoryRepo, CategoryService: catalog.NewCategoryService(categoryRepo),
+		CategoryRepo: categoryRepo, CategoryService: categoryapp.NewService(categoryRepo),
 	}}
 
 	gin.SetMode(gin.TestMode)
@@ -149,11 +152,11 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Category{}, &models.Product{}, &models.ProductSKU{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}, &models.ProductSKU{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:     "games",
 		NameJSON: jsonmap.JSON{"zh-CN": "游戏"},
 		IsActive: true,

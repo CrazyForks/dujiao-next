@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/catalog"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/upstream"
 )
@@ -186,7 +188,7 @@ func (s *Service) BatchImportByCategory(
 // findOrCreateCategoryFromUpstream 根据上游分类信息查找或创建本地分类
 func (s *Service) findOrCreateCategoryFromUpstream(
 	upstreamCategoryID uint, catMap map[uint]upstream.UpstreamCategory,
-) (*models.Category, error) {
+) (*categorydomain.Category, error) {
 	target, ok := catMap[upstreamCategoryID]
 	if !ok {
 		return nil, fmt.Errorf("upstream category %d not found", upstreamCategoryID)
@@ -208,7 +210,7 @@ func (s *Service) findOrCreateCategoryFromUpstream(
 }
 
 // findOrCreateLocalCategory 按 slug 查找或创建本地分类
-func (s *Service) findOrCreateLocalCategory(slug string, nameJSON jsonmap.JSON, parentID uint) (*models.Category, error) {
+func (s *Service) findOrCreateLocalCategory(slug string, nameJSON jsonmap.JSON, parentID uint) (*categorydomain.Category, error) {
 	// 先查找是否已存在同 slug 分类
 	existing, err := s.categories.GetBySlug(slug)
 	if err != nil {
@@ -237,17 +239,17 @@ func (s *Service) findOrCreateLocalCategory(slug string, nameJSON jsonmap.JSON, 
 		return nil, fmt.Errorf("category service not available")
 	}
 
-	cat, err := s.categoryCreator.Create(catalog.CreateCategoryInput{
+	cat, err := s.categoryCreator.Create(categoryapp.UpsertInput{
 		ParentID: parentID,
 		Slug:     slug,
 		NameJSON: map[string]interface{}(nameJSON),
 	})
 	if err != nil {
 		// slug 冲突，追加后缀重试
-		if errors.Is(err, catalog.ErrCategorySlugExists) {
+		if errors.Is(err, categoryapp.ErrSlugExists) {
 			for i := 2; i <= 10; i++ {
 				suffixedSlug := fmt.Sprintf("%s-%d", slug, i)
-				cat, err = s.categoryCreator.Create(catalog.CreateCategoryInput{
+				cat, err = s.categoryCreator.Create(categoryapp.UpsertInput{
 					ParentID: parentID,
 					Slug:     suffixedSlug,
 					NameJSON: map[string]interface{}(nameJSON),
@@ -255,7 +257,7 @@ func (s *Service) findOrCreateLocalCategory(slug string, nameJSON jsonmap.JSON, 
 				if err == nil {
 					return cat, nil
 				}
-				if !errors.Is(err, catalog.ErrCategorySlugExists) {
+				if !errors.Is(err, categoryapp.ErrSlugExists) {
 					return nil, err
 				}
 			}

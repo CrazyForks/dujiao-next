@@ -1,4 +1,4 @@
-package catalog_test
+package categoryintegrationtest
 
 import (
 	"fmt"
@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/catalog"
-	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
+	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
@@ -15,7 +16,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func newCategoryServiceForTest(t *testing.T) (*catalog.CategoryService, *gorm.DB) {
+func newCategoryServiceForTest(t *testing.T) (*categoryapp.Service, *gorm.DB) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:category_service_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -23,17 +24,17 @@ func newCategoryServiceForTest(t *testing.T) (*catalog.CategoryService, *gorm.DB
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Category{}, &models.Product{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}); err != nil {
 		t.Fatalf("auto migrate category/product failed: %v", err)
 	}
 
-	return catalog.NewCategoryService(cataloggormstore.NewCategoryStore(db)), db
+	return categoryapp.NewService(categorygormstore.NewCategoryStore(db)), db
 }
 
-func createCategoryFixture(t *testing.T, db *gorm.DB, slug string, parentID uint) models.Category {
+func createCategoryFixture(t *testing.T, db *gorm.DB, slug string, parentID uint) categorydomain.Category {
 	t.Helper()
 
-	category := models.Category{
+	category := categorydomain.Category{
 		ParentID: parentID,
 		Slug:     slug,
 		NameJSON: jsonmap.JSON{
@@ -65,7 +66,7 @@ func TestCategoryServiceCreateSupportsSecondLevelCategory(t *testing.T) {
 	svc, db := newCategoryServiceForTest(t)
 	parent := createCategoryFixture(t, db, "games", 0)
 
-	category, err := svc.Create(catalog.CreateCategoryInput{
+	category, err := svc.Create(categoryapp.UpsertInput{
 		ParentID: parent.ID,
 		Slug:     "steam",
 		NameJSON: map[string]interface{}{
@@ -85,21 +86,21 @@ func TestCategoryServiceCreateRejectsMissingOrSecondLevelParent(t *testing.T) {
 	parent := createCategoryFixture(t, db, "games", 0)
 	child := createCategoryFixture(t, db, "steam", parent.ID)
 
-	_, err := svc.Create(catalog.CreateCategoryInput{
+	_, err := svc.Create(categoryapp.UpsertInput{
 		ParentID: 9999,
 		Slug:     "missing-parent",
 		NameJSON: map[string]interface{}{"zh-CN": "missing-parent"},
 	})
-	if err != catalog.ErrCategoryParentInvalid {
+	if err != categoryapp.ErrParentInvalid {
 		t.Fatalf("expected ErrCategoryParentInvalid for missing parent, got %v", err)
 	}
 
-	_, err = svc.Create(catalog.CreateCategoryInput{
+	_, err = svc.Create(categoryapp.UpsertInput{
 		ParentID: child.ID,
 		Slug:     "steam-gift-card",
 		NameJSON: map[string]interface{}{"zh-CN": "steam-gift-card"},
 	})
-	if err != catalog.ErrCategoryParentInvalid {
+	if err != categoryapp.ErrParentInvalid {
 		t.Fatalf("expected ErrCategoryParentInvalid for second-level parent, got %v", err)
 	}
 }
@@ -110,21 +111,21 @@ func TestCategoryServiceUpdateRejectsInvalidParentAssignment(t *testing.T) {
 	rootB := createCategoryFixture(t, db, "cards", 0)
 	_ = createCategoryFixture(t, db, "steam", rootA.ID)
 
-	_, err := svc.Update(fmt.Sprintf("%d", rootA.ID), catalog.CreateCategoryInput{
+	_, err := svc.Update(fmt.Sprintf("%d", rootA.ID), categoryapp.UpsertInput{
 		ParentID: rootA.ID,
 		Slug:     rootA.Slug,
 		NameJSON: map[string]interface{}{"zh-CN": rootA.Slug},
 	})
-	if err != catalog.ErrCategoryParentInvalid {
+	if err != categoryapp.ErrParentInvalid {
 		t.Fatalf("expected ErrCategoryParentInvalid for self parent, got %v", err)
 	}
 
-	_, err = svc.Update(fmt.Sprintf("%d", rootA.ID), catalog.CreateCategoryInput{
+	_, err = svc.Update(fmt.Sprintf("%d", rootA.ID), categoryapp.UpsertInput{
 		ParentID: rootB.ID,
 		Slug:     rootA.Slug,
 		NameJSON: map[string]interface{}{"zh-CN": rootA.Slug},
 	})
-	if err != catalog.ErrCategoryParentInvalid {
+	if err != categoryapp.ErrParentInvalid {
 		t.Fatalf("expected ErrCategoryParentInvalid when moving parent with children, got %v", err)
 	}
 }
@@ -134,12 +135,12 @@ func TestCategoryServiceDeleteRejectsCategoriesWithChildrenOrProducts(t *testing
 	parent := createCategoryFixture(t, db, "games", 0)
 	child := createCategoryFixture(t, db, "steam", parent.ID)
 
-	if err := svc.Delete(fmt.Sprintf("%d", parent.ID)); err != catalog.ErrCategoryInUse {
+	if err := svc.Delete(fmt.Sprintf("%d", parent.ID)); err != categoryapp.ErrInUse {
 		t.Fatalf("expected ErrCategoryInUse for category with children, got %v", err)
 	}
 
 	createProductFixture(t, db, child.ID, "steam-product")
-	if err := svc.Delete(fmt.Sprintf("%d", child.ID)); err != catalog.ErrCategoryInUse {
+	if err := svc.Delete(fmt.Sprintf("%d", child.ID)); err != categoryapp.ErrInUse {
 		t.Fatalf("expected ErrCategoryInUse for category with products, got %v", err)
 	}
 }
@@ -147,12 +148,12 @@ func TestCategoryServiceDeleteRejectsCategoriesWithChildrenOrProducts(t *testing
 func TestCategoryServiceListSortOrderDescending(t *testing.T) {
 	svc, db := newCategoryServiceForTest(t)
 
-	high := models.Category{
+	high := categorydomain.Category{
 		Slug:      "high",
 		NameJSON:  jsonmap.JSON{"zh-CN": "high"},
 		SortOrder: 100,
 	}
-	low := models.Category{
+	low := categorydomain.Category{
 		Slug:      "low",
 		NameJSON:  jsonmap.JSON{"zh-CN": "low"},
 		SortOrder: 1,

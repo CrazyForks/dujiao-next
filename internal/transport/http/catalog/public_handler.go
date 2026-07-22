@@ -26,11 +26,6 @@ type PublicProductQueries interface {
 	ApplyAutoStockCounts(products []models.Product) error
 }
 
-// PublicCategoryQueries 是公开分类列表所需的最小用例接口。
-type PublicCategoryQueries interface {
-	ListActive() ([]models.Category, error)
-}
-
 // ResellerDisplayPricer 是分销站展示价解析端口。
 type ResellerDisplayPricer interface {
 	LoadDisplayPricingBatch(tenant reseller.TenantContext, products []models.Product) (*reseller.DisplayPricingBatch, error)
@@ -62,7 +57,6 @@ type RelatedPostReader interface {
 // PublicHandler 处理公开商品目录 HTTP 请求。
 type PublicHandler struct {
 	products     PublicProductQueries
-	categories   PublicCategoryQueries
 	pricer       ResellerDisplayPricer
 	promotions   ProductPromotionDecorator
 	memberLevels MemberLevelPricing
@@ -74,7 +68,6 @@ type PublicHandler struct {
 // NewPublicHandler 创建公开商品目录 Handler。
 func NewPublicHandler(
 	products PublicProductQueries,
-	categories PublicCategoryQueries,
 	pricer ResellerDisplayPricer,
 	promotions ProductPromotionDecorator,
 	memberLevels MemberLevelPricing,
@@ -82,12 +75,11 @@ func NewPublicHandler(
 	skuMappings SKUMappingLookup,
 	relatedPosts RelatedPostReader,
 ) *PublicHandler {
-	if products == nil || categories == nil || relatedPosts == nil {
+	if products == nil || relatedPosts == nil {
 		panic("catalog public handler: required dependency is nil")
 	}
 	return &PublicHandler{
 		products:     products,
-		categories:   categories,
 		pricer:       pricer,
 		promotions:   promotions,
 		memberLevels: memberLevels,
@@ -216,15 +208,4 @@ func (h *PublicHandler) loadRelatedPostCards(ctx context.Context, productID uint
 		return nil, err
 	}
 	return dto.NewRelatedPostCardList(posts), nil
-}
-
-// GetCategories 获取分类列表
-func (h *PublicHandler) GetCategories(c *gin.Context) {
-	categories, err := h.categories.ListActive()
-	if err != nil {
-		ginutil.RespondError(c, response.CodeInternal, "error.category_fetch_failed", err)
-		return
-	}
-
-	response.Success(c, dto.NewCategoryRespList(categories))
 }

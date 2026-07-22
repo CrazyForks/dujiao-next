@@ -3,11 +3,12 @@ package provider
 import (
 	"context"
 
+	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
+
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	"github.com/dujiao-next/internal/modules/cart"
-	"github.com/dujiao-next/internal/modules/catalog"
 	"github.com/dujiao-next/internal/modules/content"
 	"github.com/dujiao-next/internal/modules/content/store/gormstore"
 	"github.com/dujiao-next/internal/modules/coupon"
@@ -29,7 +30,7 @@ func (c *Container) initApplicationServices() {
 		content.SystemClock{},
 	)
 	c.ContentPostCategoryService = content.NewPostCategoryService(postCategoryStore)
-	c.CategoryService = catalog.NewCategoryService(c.CategoryRepo)
+	c.CategoryService = categoryapp.NewService(c.CategoryRepo)
 	sitemapService, err := sitemap.NewService(
 		c.ProductRepo,
 		c.CategoryRepo,

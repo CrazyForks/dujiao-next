@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
@@ -25,7 +27,7 @@ func setupProductStoreTest(t *testing.T) (*ProductStore, *gorm.DB) {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.CardSecret{},
@@ -35,7 +37,7 @@ func setupProductStoreTest(t *testing.T) (*ProductStore, *gorm.DB) {
 	); err != nil {
 		t.Fatalf("migrate product/sku/card_secret/mappings failed: %v", err)
 	}
-	defaultCategory := models.Category{
+	defaultCategory := categorydomain.Category{
 		ID:       1,
 		Slug:     "default-test-category",
 		NameJSON: jsonmap.JSON{"zh-CN": "default"},

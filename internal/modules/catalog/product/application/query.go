@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	"github.com/dujiao-next/internal/modules/catalog/product"
@@ -25,8 +27,8 @@ type ProductRepository interface {
 
 // CategoryRepository 是公开分类展开所需的最小分类端口。
 type CategoryRepository interface {
-	GetByID(id string) (*models.Category, error)
-	List() ([]models.Category, error)
+	GetByID(id string) (*categorydomain.Category, error)
+	List() ([]categorydomain.Category, error)
 }
 
 // HiddenProductRepository 是商品读取用例所需的最小分销可见性端口。

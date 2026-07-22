@@ -10,14 +10,16 @@ import (
 	"testing"
 	"time"
 
+	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/catalog"
+	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
-	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	cataloghttp "github.com/dujiao-next/internal/transport/http/catalog"
 	"github.com/dujiao-next/internal/upstream"
@@ -78,7 +80,7 @@ func setupAdminProductMappingHandlerTest(t *testing.T, upstreamHandler http.Hand
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.SiteConnection{},
@@ -89,8 +91,8 @@ func setupAdminProductMappingHandlerTest(t *testing.T, upstreamHandler http.Hand
 	}
 
 	server := httptest.NewServer(upstreamHandler)
-	categoryRepo := cataloggormstore.NewCategoryStore(db)
-	categoryService := catalog.NewCategoryService(categoryRepo)
+	categoryRepo := categorygormstore.NewCategoryStore(db)
+	categoryService := categoryapp.NewService(categoryRepo)
 
 	conn := models.SiteConnection{
 		Name:      "upstream",
@@ -200,7 +202,7 @@ func TestBatchImportUpstreamProductsAutoCreatesCategory(t *testing.T) {
 		t.Fatalf("expected imported product to be assigned to auto-created category")
 	}
 
-	var category models.Category
+	var category categorydomain.Category
 	if err := db.First(&category, imported.CategoryID).Error; err != nil {
 		t.Fatalf("load auto-created category failed: %v", err)
 	}
@@ -242,7 +244,7 @@ func TestBatchImportUpstreamProductsRestoresSoftDeletedAutoCategory(t *testing.T
 	})
 	defer cleanup()
 
-	deletedCategory := models.Category{
+	deletedCategory := categorydomain.Category{
 		Slug:     "upstream-streaming",
 		NameJSON: jsonmap.JSON{"zh-CN": "已删除分类"},
 		IsActive: true,
@@ -250,7 +252,7 @@ func TestBatchImportUpstreamProductsRestoresSoftDeletedAutoCategory(t *testing.T
 	if err := db.Create(&deletedCategory).Error; err != nil {
 		t.Fatalf("create soft-delete target category failed: %v", err)
 	}
-	if err := db.Delete(&deletedCategory).Error; err != nil {
+	if err := categorygormstore.NewCategoryStore(db).Delete(fmt.Sprintf("%d", deletedCategory.ID)); err != nil {
 		t.Fatalf("soft delete category failed: %v", err)
 	}
 
@@ -275,7 +277,7 @@ func TestBatchImportUpstreamProductsRestoresSoftDeletedAutoCategory(t *testing.T
 		t.Fatalf("expected imported product category %d, got %d", deletedCategory.ID, imported.CategoryID)
 	}
 
-	var restored models.Category
+	var restored categorydomain.Category
 	if err := db.First(&restored, deletedCategory.ID).Error; err != nil {
 		t.Fatalf("expected category to be restored, got %v", err)
 	}

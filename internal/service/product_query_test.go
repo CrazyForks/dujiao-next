@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"testing"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -13,11 +15,11 @@ import (
 func TestProductServiceListPublicIncludesChildProductsForParentCategory(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	parent := models.Category{
+	parent := categorydomain.Category{
 		Slug:     "games",
 		NameJSON: jsonmap.JSON{"zh-CN": "games"},
 	}
-	child := models.Category{
+	child := categorydomain.Category{
 		ParentID: 1,
 		Slug:     "steam",
 		NameJSON: jsonmap.JSON{"zh-CN": "steam"},
@@ -66,7 +68,7 @@ func TestProductServiceListPublicIncludesChildProductsForParentCategory(t *testi
 func TestProductServiceListPublicSortOrderDescending(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:     "sort-test",
 		NameJSON: jsonmap.JSON{"zh-CN": "sort-test"},
 		IsActive: true,
@@ -116,7 +118,7 @@ func TestProductServiceListPublicSortOrderDescending(t *testing.T) {
 func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:     "sku-sort-test",
 		NameJSON: jsonmap.JSON{"zh-CN": "sku-sort-test"},
 		IsActive: true,

@@ -2,15 +2,18 @@ package service
 
 import (
 	"errors"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"strconv"
 	"testing"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
-	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -53,7 +56,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
 	// 创建分类
-	cat := models.Category{Slug: "test-cat", NameJSON: jsonmap.JSON{"zh-CN": "test"}}
+	cat := categorydomain.Category{Slug: "test-cat", NameJSON: jsonmap.JSON{"zh-CN": "test"}}
 	if err := db.Create(&cat).Error; err != nil {
 		t.Fatalf("create category: %v", err)
 	}
@@ -185,7 +188,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 		productgormstore.NewSKUStore(db),
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		cataloggormstore.NewCategoryStore(db),
+		categorygormstore.NewCategoryStore(db),
 		memberlevelgormstore.NewPriceStore(db),
 		repository.NewCartRepository(db),
 		mappinggormstore.NewMappingStore(db),

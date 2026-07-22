@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
 	"github.com/dujiao-next/internal/shared/money"
@@ -47,8 +48,8 @@ type Product struct {
 	DeletedAt            gorm.DeletedAt      `gorm:"index" json:"-"`                                                      // 软删除时间
 
 	// 关联
-	Category Category     `gorm:"foreignKey:CategoryID" json:"category,omitempty"` // 分类信息
-	SKUs     []ProductSKU `gorm:"foreignKey:ProductID" json:"skus,omitempty"`      // SKU 列表
+	Category categorydomain.Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"` // 分类信息
+	SKUs     []ProductSKU            `gorm:"foreignKey:ProductID" json:"skus,omitempty"`      // SKU 列表
 }
 
 // TableName 指定表名

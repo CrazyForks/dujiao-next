@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -274,7 +276,7 @@ func TestProductServiceUpdateWholesalePricesOptionalSemantics(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 	boolPtr := func(v bool) *bool { return &v }
 
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:     "wholesale-update-category",
 		NameJSON: jsonmap.JSON{"zh-CN": "wholesale-update-category"},
 	}
@@ -340,7 +342,7 @@ func TestProductServiceUpdateWholesalePricesOptionalSemantics(t *testing.T) {
 func TestProductServiceUpdateWholesalePricesOnlyTouchesWholesaleField(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:     "wholesale-narrow-category",
 		NameJSON: jsonmap.JSON{"zh-CN": "wholesale-narrow-category"},
 		IsActive: true,

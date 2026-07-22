@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -13,14 +15,14 @@ import (
 func TestProductServiceCreateRejectsParentCategoryWithChildren(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	parent := models.Category{
+	parent := categorydomain.Category{
 		Slug:     "games",
 		NameJSON: jsonmap.JSON{"zh-CN": "games"},
 	}
 	if err := db.Create(&parent).Error; err != nil {
 		t.Fatalf("create parent category failed: %v", err)
 	}
-	child := models.Category{
+	child := categorydomain.Category{
 		ParentID: parent.ID,
 		Slug:     "steam",
 		NameJSON: jsonmap.JSON{"zh-CN": "steam"},
@@ -49,7 +51,7 @@ func TestProductServiceCreateRejectsParentCategoryWithChildren(t *testing.T) {
 func TestProductServiceCreateFiltersUnavailablePaymentChannels(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:     "payment-channel-category",
 		NameJSON: jsonmap.JSON{"zh-CN": "payment-channel-category"},
 	}
@@ -87,7 +89,7 @@ func TestProductServiceCreateFiltersUnavailablePaymentChannels(t *testing.T) {
 func TestProductServiceCreateRejectsInvalidPurchaseLimits(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	cat := models.Category{Slug: "test-purchase-limit", NameJSON: jsonmap.JSON{"zh-CN": "test"}}
+	cat := categorydomain.Category{Slug: "test-purchase-limit", NameJSON: jsonmap.JSON{"zh-CN": "test"}}
 	if err := db.Create(&cat).Error; err != nil {
 		t.Fatalf("create category: %v", err)
 	}
@@ -112,7 +114,7 @@ func TestProductServiceCreateRejectsInvalidPurchaseLimits(t *testing.T) {
 
 func TestProductServiceCreateRollsBackProductAndSKUWhenWholesaleValidationFails(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:     "write-rollback-category",
 		NameJSON: jsonmap.JSON{"zh-CN": "write-rollback-category"},
 	}

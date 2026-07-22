@@ -3,9 +3,12 @@ package service
 import (
 	"errors"
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
+
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
@@ -42,12 +45,12 @@ func assertBuildOrderResultRejectsPurchaseQuantity(t *testing.T, fixture orderPu
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Category{}, &models.Product{}, &models.ProductSKU{}, &models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}, &models.ProductSKU{}, &models.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
 	now := time.Now()
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:      fixture.categorySlug,
 		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		SortOrder: 0,
@@ -117,12 +120,12 @@ func TestBuildOrderResultRejectsZeroPromotionPrice(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Category{}, &models.Product{}, &models.ProductSKU{}, &models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}, &models.ProductSKU{}, &models.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
 	now := time.Now()
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:      "test-category",
 		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		SortOrder: 0,
@@ -206,7 +209,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.Promotion{},
@@ -218,7 +221,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 	}
 
 	now := time.Now()
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:      "manual-member-preview-category",
 		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		SortOrder: 0,
@@ -337,7 +340,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.Promotion{},
@@ -349,7 +352,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 	}
 
 	now := time.Now()
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:      "stack-promo-member-category",
 		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		SortOrder: 0,
@@ -509,12 +512,12 @@ func TestBuildOrderResultOriginalAmountBeforePromotion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Category{}, &models.Product{}, &models.ProductSKU{}, &models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}, &models.ProductSKU{}, &models.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
 	now := time.Now()
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:      "test-category-original",
 		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		SortOrder: 0,
@@ -614,12 +617,12 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Category{}, &models.Product{}, &models.ProductSKU{}, &models.Coupon{}, &models.CouponUsage{}, &models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}, &models.ProductSKU{}, &models.Coupon{}, &models.CouponUsage{}, &models.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
 	now := time.Now()
-	category := models.Category{
+	category := categorydomain.Category{
 		Slug:      "test-category-coupon",
 		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		SortOrder: 0,

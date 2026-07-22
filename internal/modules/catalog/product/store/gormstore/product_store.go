@@ -45,7 +45,7 @@ func (r *ProductStore) List(filter catalogproduct.ListFilter) ([]models.Product,
 
 	query := r.db.Model(&models.Product{})
 	if filter.WithCategory {
-		query = query.Preload("Category")
+		query = query.Preload("Category", "deleted_at IS NULL")
 	}
 	if filter.OnlyActive {
 		query = query.Where("products.is_active = ?", true)
@@ -177,7 +177,7 @@ func applyStockStatusFilter(query *gorm.DB, status string, lowStockThreshold int
 
 // GetBySlug 根据 slug 获取商品
 func (r *ProductStore) GetBySlug(slug string, onlyActive bool) (*models.Product, error) {
-	query := r.db.Preload("Category").Where("products.slug = ?", slug)
+	query := r.db.Preload("Category", "deleted_at IS NULL").Where("products.slug = ?", slug)
 	if onlyActive {
 		query = query.Where("products.is_active = ?", true)
 		query = query.Where("EXISTS (SELECT 1 FROM categories c WHERE c.id = products.category_id AND c.is_active = ? AND c.deleted_at IS NULL)", true)
@@ -203,7 +203,7 @@ func (r *ProductStore) GetBySlug(slug string, onlyActive bool) (*models.Product,
 // GetByID 根据 ID 获取商品
 func (r *ProductStore) GetByID(id string) (*models.Product, error) {
 	var product models.Product
-	if err := r.db.Preload("Category").
+	if err := r.db.Preload("Category", "deleted_at IS NULL").
 		Preload("SKUs", func(db *gorm.DB) *gorm.DB {
 			return db.Where("is_active = ?", true).Order("sort_order DESC, id ASC")
 		}).
@@ -219,7 +219,7 @@ func (r *ProductStore) GetByID(id string) (*models.Product, error) {
 // GetAdminByID 根据 ID 获取后台商品详情，包含全部 SKU
 func (r *ProductStore) GetAdminByID(id string) (*models.Product, error) {
 	var product models.Product
-	if err := r.db.Preload("Category").
+	if err := r.db.Preload("Category", "deleted_at IS NULL").
 		Preload("SKUs", func(db *gorm.DB) *gorm.DB {
 			return db.Order("sort_order DESC, id ASC")
 		}).

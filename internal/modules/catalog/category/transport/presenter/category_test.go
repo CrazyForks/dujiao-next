@@ -1,16 +1,17 @@
-package dto
+package categorypresenter
 
 import (
 	"encoding/json"
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestCategoryRespOmitsSensitiveFields(t *testing.T) {
-	cat := &models.Category{
+	cat := &categorydomain.Category{
 		ID:        1,
 		ParentID:  0,
 		Slug:      "games",
@@ -19,7 +20,7 @@ func TestCategoryRespOmitsSensitiveFields(t *testing.T) {
 		SortOrder: 10,
 	}
 
-	resp := NewCategoryResp(cat)
+	resp := New(cat)
 	data, _ := json.Marshal(resp)
 	jsonStr := string(data)
 
@@ -35,7 +36,7 @@ func TestCategoryRespOmitsSensitiveFields(t *testing.T) {
 }
 
 func TestCategoryRespListEmpty(t *testing.T) {
-	result := NewCategoryRespList(nil)
+	result := List(nil)
 	if len(result) != 0 {
 		t.Errorf("expected empty list, got %d", len(result))
 	}

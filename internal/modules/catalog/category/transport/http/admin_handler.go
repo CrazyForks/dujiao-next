@@ -1,10 +1,10 @@
-package cataloghttp
+package categoryhttp
 
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/catalog"
+	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -13,10 +13,10 @@ import (
 
 // CategoryService 是后台分类 HTTP 端点所需的最小用例接口。
 type CategoryService interface {
-	List() ([]models.Category, error)
-	Create(input catalog.CreateCategoryInput) (*models.Category, error)
-	Update(id string, input catalog.CreateCategoryInput) (*models.Category, error)
-	SetActive(id string, active bool) (*models.Category, error)
+	List() ([]categorydomain.Category, error)
+	Create(input categoryapp.UpsertInput) (*categorydomain.Category, error)
+	Update(id string, input categoryapp.UpsertInput) (*categorydomain.Category, error)
+	SetActive(id string, active bool) (*categorydomain.Category, error)
 	Delete(id string) error
 }
 
@@ -62,7 +62,7 @@ func (h *AdminCategoryHandler) CreateCategory(c *gin.Context) {
 		return
 	}
 
-	category, err := h.service.Create(catalog.CreateCategoryInput{
+	category, err := h.service.Create(categoryapp.UpsertInput{
 		ParentID:  req.ParentID,
 		Slug:      req.Slug,
 		NameJSON:  req.NameJSON,
@@ -70,11 +70,11 @@ func (h *AdminCategoryHandler) CreateCategory(c *gin.Context) {
 		SortOrder: req.SortOrder,
 	})
 	if err != nil {
-		if errors.Is(err, catalog.ErrCategorySlugExists) {
+		if errors.Is(err, categoryapp.ErrSlugExists) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
 			return
 		}
-		if errors.Is(err, catalog.ErrCategoryParentInvalid) {
+		if errors.Is(err, categoryapp.ErrParentInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.category_parent_invalid", nil)
 			return
 		}
@@ -95,7 +95,7 @@ func (h *AdminCategoryHandler) UpdateCategory(c *gin.Context) {
 		return
 	}
 
-	category, err := h.service.Update(id, catalog.CreateCategoryInput{
+	category, err := h.service.Update(id, categoryapp.UpsertInput{
 		ParentID:  req.ParentID,
 		Slug:      req.Slug,
 		NameJSON:  req.NameJSON,
@@ -103,15 +103,15 @@ func (h *AdminCategoryHandler) UpdateCategory(c *gin.Context) {
 		SortOrder: req.SortOrder,
 	})
 	if err != nil {
-		if errors.Is(err, catalog.ErrCategoryNotFound) {
+		if errors.Is(err, categoryapp.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
 			return
 		}
-		if errors.Is(err, catalog.ErrCategorySlugExists) {
+		if errors.Is(err, categoryapp.ErrSlugExists) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.slug_used", nil)
 			return
 		}
-		if errors.Is(err, catalog.ErrCategoryParentInvalid) {
+		if errors.Is(err, categoryapp.ErrParentInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.category_parent_invalid", nil)
 			return
 		}
@@ -139,7 +139,7 @@ func (h *AdminCategoryHandler) PatchCategoryActive(c *gin.Context) {
 
 	category, err := h.service.SetActive(id, req.IsActive)
 	if err != nil {
-		if errors.Is(err, catalog.ErrCategoryNotFound) {
+		if errors.Is(err, categoryapp.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
 			return
 		}
@@ -155,11 +155,11 @@ func (h *AdminCategoryHandler) DeleteCategory(c *gin.Context) {
 	id := c.Param("id")
 
 	if err := h.service.Delete(id); err != nil {
-		if errors.Is(err, catalog.ErrCategoryInUse) {
+		if errors.Is(err, categoryapp.ErrInUse) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.category_in_use", nil)
 			return
 		}
-		if errors.Is(err, catalog.ErrCategoryNotFound) {
+		if errors.Is(err, categoryapp.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
 			return
 		}

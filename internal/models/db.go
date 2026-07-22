@@ -9,6 +9,7 @@ import (
 	"time"
 
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
@@ -169,7 +170,7 @@ func AutoMigrate() error {
 		&Coupon{},
 		&CouponUsage{},
 		&Promotion{},
-		&Category{},
+		&categorydomain.Category{},
 		&Product{},
 		&ProductSKU{},
 		&Post{},

@@ -4,17 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/catalog"
+	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
-	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	"github.com/dujiao-next/internal/modules/siteconnection"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -34,7 +37,7 @@ func newTestMappingService(
 	skuMappingRepo SKUMappingStore,
 	productRepo ProductStore,
 	productSKURepo SKUStore,
-	categoryRepo catalog.CategoryRepository,
+	categoryRepo categorycontract.Repository,
 	connService *siteconnection.Service,
 	mediaRecorder catalogmapping.MediaRecorder,
 ) (*catalogmapping.Service, error) {
@@ -94,7 +97,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.SiteConnection{},
@@ -103,8 +106,8 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	categoryRepo := cataloggormstore.NewCategoryStore(db)
-	if err := categoryRepo.Create(&models.Category{
+	categoryRepo := categorygormstore.NewCategoryStore(db)
+	if err := categoryRepo.Create(&categorydomain.Category{
 		ParentID: 0,
 		Slug:     "test-category",
 		NameJSON: jsonmap.JSON{"zh-CN": "Test Category"},
@@ -207,7 +210,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.SiteConnection{},
@@ -219,8 +222,8 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 
 	server := httptest.NewServer(handler)
 
-	categoryRepo := cataloggormstore.NewCategoryStore(db)
-	if err := categoryRepo.Create(&models.Category{Slug: "c", NameJSON: jsonmap.JSON{"zh-CN": "C"}}); err != nil {
+	categoryRepo := categorygormstore.NewCategoryStore(db)
+	if err := categoryRepo.Create(&categorydomain.Category{Slug: "c", NameJSON: jsonmap.JSON{"zh-CN": "C"}}); err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
 
@@ -771,7 +774,7 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.SiteConnection{},
@@ -781,8 +784,8 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	categoryRepo := cataloggormstore.NewCategoryStore(db)
-	if err := categoryRepo.Create(&models.Category{Slug: "c", NameJSON: jsonmap.JSON{"zh-CN": "C"}}); err != nil {
+	categoryRepo := categorygormstore.NewCategoryStore(db)
+	if err := categoryRepo.Create(&categorydomain.Category{Slug: "c", NameJSON: jsonmap.JSON{"zh-CN": "C"}}); err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
 

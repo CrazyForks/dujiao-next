@@ -2,6 +2,7 @@ package dto
 
 import (
 	"github.com/dujiao-next/internal/models"
+	categorypresenter "github.com/dujiao-next/internal/modules/catalog/category/transport/presenter"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
 	"github.com/dujiao-next/internal/shared/money"
@@ -41,8 +42,8 @@ type ProductResp struct {
 	PaymentChannelIDs []uint `json:"payment_channel_ids,omitempty"`
 
 	// 关联
-	Category CategoryResp `json:"category,omitempty"`
-	SKUs     []SKUResp    `json:"skus,omitempty"`
+	Category categorypresenter.Category `json:"category,omitempty"`
+	SKUs     []SKUResp                  `json:"skus,omitempty"`
 
 	// 促销/会员价
 	PromotionID          *uint               `json:"promotion_id,omitempty"`
@@ -106,37 +107,6 @@ type SKUResp struct {
 	// 促销/会员价附加
 	PromotionPriceAmount *money.Amount `json:"promotion_price_amount,omitempty"`
 	MemberPriceAmount    *money.Amount `json:"member_price_amount,omitempty"`
-}
-
-// CategoryResp 分类公共响应
-type CategoryResp struct {
-	ID        uint         `json:"id"`
-	ParentID  uint         `json:"parent_id"`
-	Slug      string       `json:"slug"`
-	Name      jsonmap.JSON `json:"name"`
-	Icon      string       `json:"icon,omitempty"`
-	SortOrder int          `json:"sort_order"`
-}
-
-// NewCategoryResp 从 models.Category 构造响应
-func NewCategoryResp(c *models.Category) CategoryResp {
-	return CategoryResp{
-		ID:        c.ID,
-		ParentID:  c.ParentID,
-		Slug:      c.Slug,
-		Name:      c.NameJSON,
-		Icon:      c.Icon,
-		SortOrder: c.SortOrder,
-	}
-}
-
-// NewCategoryRespList 批量转换分类列表
-func NewCategoryRespList(categories []models.Category) []CategoryResp {
-	result := make([]CategoryResp, 0, len(categories))
-	for i := range categories {
-		result = append(result, NewCategoryResp(&categories[i]))
-	}
-	return result
 }
 
 // PromotionRuleResp 活动规则展示

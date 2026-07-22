@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
@@ -46,14 +48,14 @@ func setupPostgresIntegrationDB(t *testing.T) *gorm.DB {
 		&models.Order{},
 		&models.PostProduct{},
 		&models.Product{},
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Banner{},
 		&models.Post{},
 	}
 	_ = db.Migrator().DropTable(cleanupModels...)
 
 	if err := db.AutoMigrate(
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.Post{},
 		&models.PostProduct{},
@@ -80,7 +82,7 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 	db := setupPostgresIntegrationDB(t)
 	ctx := context.Background()
 
-	category := &models.Category{
+	category := &categorydomain.Category{
 		Slug:     "pg-category",
 		NameJSON: jsonmap.JSON{"zh-CN": "Postgres 分类"},
 	}
@@ -281,7 +283,7 @@ func TestPostgresDashboardQueries(t *testing.T) {
 	repo := dashboardgormstore.New(db)
 	now := time.Now().UTC().Truncate(time.Second)
 
-	category := &models.Category{
+	category := &categorydomain.Category{
 		Slug:     "pg-dashboard-category",
 		NameJSON: jsonmap.JSON{"zh-CN": "仪表盘分类"},
 	}

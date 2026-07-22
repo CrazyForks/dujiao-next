@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 )
@@ -98,11 +100,11 @@ func TestProductConfigurationNormalizersKeepDefaultsAndRejectUnknownValues(t *te
 }
 
 type categoryAssignmentRepositoryStub struct {
-	category *models.Category
+	category *categorydomain.Category
 	children int64
 }
 
-func (stub categoryAssignmentRepositoryStub) GetByID(string) (*models.Category, error) {
+func (stub categoryAssignmentRepositoryStub) GetByID(string) (*categorydomain.Category, error) {
 	return stub.category, nil
 }
 
@@ -113,7 +115,7 @@ func (stub categoryAssignmentRepositoryStub) CountChildren(string) (int64, error
 func TestValidateCategoryAssignmentPreservesCompatibilityError(t *testing.T) {
 	compatibilityError := errors.New("legacy category invalid")
 	repository := categoryAssignmentRepositoryStub{
-		category: &models.Category{ID: 10},
+		category: &categorydomain.Category{ID: 10},
 		children: 1,
 	}
 

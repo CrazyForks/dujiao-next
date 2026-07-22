@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
@@ -25,7 +27,7 @@ func setupDashboardRepositoryTest(t *testing.T) (*Store, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&userdomain.User{}, &models.Category{}, &models.Product{}, &models.Order{}, &models.OrderItem{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &categorydomain.Category{}, &models.Product{}, &models.Order{}, &models.OrderItem{}); err != nil {
 		t.Fatalf("migrate dashboard models failed: %v", err)
 	}
 	if err := db.AutoMigrate(&models.ProductSKU{}); err != nil {
@@ -37,9 +39,9 @@ func setupDashboardRepositoryTest(t *testing.T) (*Store, *gorm.DB) {
 	return New(db), db
 }
 
-func createDashboardCategory(t *testing.T, db *gorm.DB, slug string) *models.Category {
+func createDashboardCategory(t *testing.T, db *gorm.DB, slug string) *categorydomain.Category {
 	t.Helper()
-	category := &models.Category{
+	category := &categorydomain.Category{
 		Slug:     slug,
 		NameJSON: jsonmap.JSON{"zh-CN": "测试分类"},
 	}

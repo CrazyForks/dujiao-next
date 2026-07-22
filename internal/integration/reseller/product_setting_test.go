@@ -2,9 +2,12 @@ package resellerintegration_test
 
 import (
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
+
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
@@ -27,7 +30,7 @@ func openResellerProductSettingServiceTestDB(t *testing.T) *gorm.DB {
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.Category{},
+		&categorydomain.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.ResellerProfile{},
@@ -54,7 +57,7 @@ func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (userdomai
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
-	category := models.Category{Slug: "service-category", NameJSON: jsonmap.JSON{"zh-CN": "分类"}, IsActive: true}
+	category := categorydomain.Category{Slug: "service-category", NameJSON: jsonmap.JSON{"zh-CN": "分类"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}

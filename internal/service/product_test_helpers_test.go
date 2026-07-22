@@ -2,18 +2,21 @@ package service
 
 import (
 	"fmt"
-	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"testing"
 	"time"
 
+	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
+	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+
+	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+
 	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/catalog"
+	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
-	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/glebarez/sqlite"
@@ -39,7 +42,7 @@ func NewProductService(
 	skus catalogproductbootstrap.SKUStore,
 	cardSecrets repository.CardSecretRepository,
 	cardSecretBatches repository.CardSecretBatchRepository,
-	categories catalog.CategoryRepository,
+	categories categorycontract.Repository,
 	memberLevelPrices memberLevelPriceCleaner,
 	carts repository.CartRepository,
 	productMappings catalogproductbootstrap.MappingStore,
@@ -99,7 +102,7 @@ func newProductServiceForTest(t *testing.T) (*ProductService, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Category{}, &models.Product{}, &models.ProductSKU{}, &models.CardSecret{}, &models.CardSecretBatch{}, &models.MemberLevelPrice{}, &models.CartItem{}, &models.ProductMapping{}, &models.SKUMapping{}, &models.Order{}, &models.OrderItem{}, &models.PaymentChannel{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &models.Product{}, &models.ProductSKU{}, &models.CardSecret{}, &models.CardSecretBatch{}, &models.MemberLevelPrice{}, &models.CartItem{}, &models.ProductMapping{}, &models.SKUMapping{}, &models.Order{}, &models.OrderItem{}, &models.PaymentChannel{}); err != nil {
 		t.Fatalf("auto migrate product service tables failed: %v", err)
 	}
 
@@ -108,7 +111,7 @@ func newProductServiceForTest(t *testing.T) (*ProductService, *gorm.DB) {
 		productgormstore.NewSKUStore(db),
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		cataloggormstore.NewCategoryStore(db),
+		categorygormstore.NewCategoryStore(db),
 		memberlevelgormstore.NewPriceStore(db),
 		repository.NewCartRepository(db),
 		mappinggormstore.NewMappingStore(db),

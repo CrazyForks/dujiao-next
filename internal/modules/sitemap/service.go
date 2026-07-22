@@ -8,8 +8,9 @@ import (
 	"strings"
 	"time"
 
+	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
+
 	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/modules/catalog"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 )
 
@@ -36,14 +37,14 @@ func (f PublishedPostReaderFunc) ListPublishedPosts(ctx context.Context, limit i
 // Service 生成 sitemap.xml / robots.txt 内容。
 type Service struct {
 	productRepo  catalogproduct.Repository
-	categoryRepo catalog.CategoryRepository
+	categoryRepo categorycontract.Repository
 	posts        PublishedPostReader
 }
 
 // NewService 创建 sitemap 服务。
 func NewService(
 	productRepo catalogproduct.Repository,
-	categoryRepo catalog.CategoryRepository,
+	categoryRepo categorycontract.Repository,
 	posts PublishedPostReader,
 ) (*Service, error) {
 	if productRepo == nil || categoryRepo == nil || posts == nil {

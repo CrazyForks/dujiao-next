@@ -3,7 +3,8 @@ package catalogmappingbootstrap
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/modules/catalog"
+	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
+
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/modules/siteconnection"
@@ -42,7 +43,7 @@ type Dependencies struct {
 	SKUMappings SKUMappingStore
 	Products    ProductStore
 	SKUs        SKUStore
-	Categories  catalog.CategoryRepository
+	Categories  categorycontract.Repository
 	Connections *siteconnection.Service
 	Media       catalogmapping.MediaRecorder
 }
