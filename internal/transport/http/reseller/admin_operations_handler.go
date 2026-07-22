@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/dujiao-next/internal/modules/reporting"
+	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
 	reportinghttp "github.com/dujiao-next/internal/modules/reporting/transport/http"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
@@ -15,8 +15,8 @@ import (
 
 // AdminOperationsService 是后台分销运营看板端点所需的最小用例接口。
 type AdminOperationsService interface {
-	GetOverview(ctx context.Context, input reporting.Query) (*resellermodule.OperationsOverviewResponse, error)
-	GetFinance(ctx context.Context, input reporting.Query) (*resellermodule.OperationsFinanceResponse, error)
+	GetOverview(ctx context.Context, input reportingdomain.Query) (*resellermodule.OperationsOverviewResponse, error)
+	GetFinance(ctx context.Context, input reportingdomain.Query) (*resellermodule.OperationsFinanceResponse, error)
 }
 
 // AdminOperationsHandler 处理后台分销运营看板请求。
@@ -40,7 +40,7 @@ func (h *AdminOperationsHandler) GetOverview(c *gin.Context) {
 	}
 	data, err := h.service.GetOverview(c.Request.Context(), input)
 	if err != nil {
-		if errors.Is(err, reporting.ErrRangeInvalid) {
+		if errors.Is(err, reportingdomain.ErrRangeInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 			return
 		}
@@ -59,7 +59,7 @@ func (h *AdminOperationsHandler) GetFinance(c *gin.Context) {
 	}
 	data, err := h.service.GetFinance(c.Request.Context(), input)
 	if err != nil {
-		if errors.Is(err, reporting.ErrRangeInvalid) {
+		if errors.Is(err, reportingdomain.ErrRangeInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 			return
 		}

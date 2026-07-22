@@ -26,7 +26,7 @@ func TestDashboardImplementationLivesInBoundedContextDirectories(t *testing.T) {
 		"StockStatsRow", "InventoryAlertRow", "ProductRankingRow", "ChannelRankingRow",
 	})
 	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "types.go"), []string{
-		"QueryInput", "OverviewResponse", "KPI", "Funnel", "AlertItem", "TrendResponse",
+		"OverviewResponse", "KPI", "Funnel", "AlertItem", "TrendResponse",
 		"TrendPoint", "RankingsResponse", "ProductRanking", "ChannelRanking",
 	})
 
@@ -49,7 +49,7 @@ func TestDashboardImplementationLivesInBoundedContextDirectories(t *testing.T) {
 		t.Fatalf("dashboard module root must remain structural only, got production=%d total=%d", production, total)
 	}
 	assertDirectoryGoFileBudget(t, applicationRoot, 4)
-	assertDirectoryGoFileBudget(t, contractRoot, 3)
+	assertDirectoryGoFileBudget(t, contractRoot, 2)
 	assertDirectoryGoFileBudget(t, storeRoot, 16)
 	assertDirectoryGoFileBudget(t, transportRoot, 6)
 	assertProductionImportsAbsent(t, applicationRoot, moduleImportPath+"/internal/models")

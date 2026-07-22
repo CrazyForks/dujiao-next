@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/modules/reporting"
+	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,11 +20,11 @@ type operationsServiceStub struct {
 	err      error
 }
 
-func (s operationsServiceStub) GetOverview(ctx context.Context, input reporting.Query) (*resellermodule.OperationsOverviewResponse, error) {
+func (s operationsServiceStub) GetOverview(ctx context.Context, input reportingdomain.Query) (*resellermodule.OperationsOverviewResponse, error) {
 	return s.overview, s.err
 }
 
-func (s operationsServiceStub) GetFinance(ctx context.Context, input reporting.Query) (*resellermodule.OperationsFinanceResponse, error) {
+func (s operationsServiceStub) GetFinance(ctx context.Context, input reportingdomain.Query) (*resellermodule.OperationsFinanceResponse, error) {
 	return s.finance, s.err
 }
 
@@ -63,7 +63,7 @@ func TestAdminOperationsHandlerOverview(t *testing.T) {
 
 func TestAdminOperationsHandlerFinanceMapsInvalidRange(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	h := NewAdminOperationsHandler(operationsServiceStub{err: reporting.ErrRangeInvalid})
+	h := NewAdminOperationsHandler(operationsServiceStub{err: reportingdomain.ErrRangeInvalid})
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest(http.MethodGet, "/admin/resellers/operations/finance?range=today&tz=Asia/Shanghai", nil)

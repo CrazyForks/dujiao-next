@@ -43,7 +43,7 @@ type packageFileBudget struct {
 // already-focused packages use the default limit below. Entries disappear as
 // their packages are split into bounded-context leaf packages.
 var transitionalPackageFileBudgets = map[string]packageFileBudget{
-	"internal/architecture":            {production: 0, total: 54},
+	"internal/architecture":            {production: 0, total: 55},
 	"internal/dto":                     {production: 15, total: 24},
 	"internal/models":                  {production: 54, total: 59},
 	"internal/modules/reseller":        {production: 19, total: 26},
@@ -58,6 +58,8 @@ var transitionalPackageFileBudgets = map[string]packageFileBudget{
 // bounded context reaches this list, recreating its former horizontal package
 // is an architecture regression rather than an allowed transitional change.
 var completedMigrationPaths = []string{
+	"internal/modules/reporting/window.go",
+	"internal/modules/reporting/window_test.go",
 	"internal/modules/orderrisk/service.go",
 	"internal/modules/orderrisk/service_test.go",
 	"internal/http/handlers/shared/captcha_payload.go",

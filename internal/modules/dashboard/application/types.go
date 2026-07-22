@@ -1,11 +1,6 @@
 package application
 
-import (
-	"github.com/dujiao-next/internal/modules/reporting"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-)
-
-type QueryInput = reporting.Query
+import "github.com/dujiao-next/internal/shared/jsonmap"
 
 type OverviewResponse struct {
 	Range    string      `json:"range"`

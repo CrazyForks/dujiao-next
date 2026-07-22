@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/modules/reporting"
+	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
 	"github.com/shopspring/decimal"
 )
 
@@ -39,7 +39,7 @@ func TestResellerOperationsServiceOverviewBuildsAlertsAndFormatsAverage(t *testi
 			},
 		},
 	})
-	resp, err := svc.GetOverview(context.Background(), reporting.Query{Range: "today", Timezone: "Asia/Shanghai"})
+	resp, err := svc.GetOverview(context.Background(), reportingdomain.Query{Range: "today", Timezone: "Asia/Shanghai"})
 	if err != nil {
 		t.Fatalf("GetOverview failed: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestResellerOperationsServiceFinanceFormatsCurrencyRows(t *testing.T) {
 			}},
 		},
 	})
-	resp, err := svc.GetFinance(context.Background(), reporting.Query{Range: "today", Timezone: "Asia/Shanghai"})
+	resp, err := svc.GetFinance(context.Background(), reportingdomain.Query{Range: "today", Timezone: "Asia/Shanghai"})
 	if err != nil {
 		t.Fatalf("GetFinance failed: %v", err)
 	}

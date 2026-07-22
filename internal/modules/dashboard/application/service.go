@@ -8,7 +8,8 @@ import (
 
 	"github.com/dujiao-next/internal/cache"
 	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
-	"github.com/dujiao-next/internal/modules/reporting"
+	reportingapp "github.com/dujiao-next/internal/modules/reporting/application"
+	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
 	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 )
 
@@ -27,12 +28,12 @@ func NewService(repo dashboardcontract.Repository, settingService dashboardcontr
 }
 
 // GetOverview 获取仪表盘总览
-func (s *Service) GetOverview(ctx context.Context, input QueryInput) (*OverviewResponse, error) {
+func (s *Service) GetOverview(ctx context.Context, input reportingdomain.Query) (*OverviewResponse, error) {
 	if s == nil || s.repo == nil {
 		return &OverviewResponse{}, nil
 	}
 
-	window, err := reporting.Resolve(input, time.Now())
+	window, err := reportingapp.Resolve(input, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -163,12 +164,12 @@ func (s *Service) GetPaymentOrderAlertCounts(_ context.Context, startAt, endAt t
 }
 
 // GetTrends 获取仪表盘趋势
-func (s *Service) GetTrends(ctx context.Context, input QueryInput) (*TrendResponse, error) {
+func (s *Service) GetTrends(ctx context.Context, input reportingdomain.Query) (*TrendResponse, error) {
 	if s == nil || s.repo == nil {
 		return &TrendResponse{}, nil
 	}
 
-	window, err := reporting.Resolve(input, time.Now())
+	window, err := reportingapp.Resolve(input, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -239,12 +240,12 @@ func (s *Service) GetTrends(ctx context.Context, input QueryInput) (*TrendRespon
 }
 
 // GetRankings 获取仪表盘排行榜
-func (s *Service) GetRankings(ctx context.Context, input QueryInput) (*RankingsResponse, error) {
+func (s *Service) GetRankings(ctx context.Context, input reportingdomain.Query) (*RankingsResponse, error) {
 	if s == nil || s.repo == nil {
 		return &RankingsResponse{}, nil
 	}
 
-	window, err := reporting.Resolve(input, time.Now())
+	window, err := reportingapp.Resolve(input, time.Now())
 	if err != nil {
 		return nil, err
 	}

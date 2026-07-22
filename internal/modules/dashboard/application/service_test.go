@@ -6,6 +6,7 @@ import (
 	"time"
 
 	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
+	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
 )
 
 type dashboardServiceRepoStub struct {
@@ -71,7 +72,7 @@ func TestDashboardOverviewUsesPaidOrdersForPaymentConversionRate(t *testing.T) {
 		stock: dashboardcontract.StockStatsRow{},
 	}, nil)
 
-	response, err := service.GetOverview(context.Background(), QueryInput{
+	response, err := service.GetOverview(context.Background(), reportingdomain.Query{
 		Range:    "today",
 		Timezone: "Asia/Shanghai",
 	})
@@ -101,7 +102,7 @@ func TestDashboardOverviewBuildsInventoryAlertsFromStockStats(t *testing.T) {
 		},
 	}, nil)
 
-	response, err := service.GetOverview(context.Background(), QueryInput{
+	response, err := service.GetOverview(context.Background(), reportingdomain.Query{
 		Range:    "today",
 		Timezone: "Asia/Shanghai",
 	})

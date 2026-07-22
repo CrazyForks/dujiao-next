@@ -6,6 +6,7 @@ import (
 
 	dashboardapp "github.com/dujiao-next/internal/modules/dashboard/application"
 	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
+	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
 	reportinghttp "github.com/dujiao-next/internal/modules/reporting/transport/http"
 	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
@@ -16,9 +17,9 @@ import (
 
 // Reader is the minimal dashboard use-case surface consumed by HTTP.
 type Reader interface {
-	GetOverview(ctx context.Context, input dashboardapp.QueryInput) (*dashboardapp.OverviewResponse, error)
-	GetTrends(ctx context.Context, input dashboardapp.QueryInput) (*dashboardapp.TrendResponse, error)
-	GetRankings(ctx context.Context, input dashboardapp.QueryInput) (*dashboardapp.RankingsResponse, error)
+	GetOverview(ctx context.Context, input reportingdomain.Query) (*dashboardapp.OverviewResponse, error)
+	GetTrends(ctx context.Context, input reportingdomain.Query) (*dashboardapp.TrendResponse, error)
+	GetRankings(ctx context.Context, input reportingdomain.Query) (*dashboardapp.RankingsResponse, error)
 	LoadDashboardAlertSetting() settingsstorefront.DashboardAlertSetting
 	GetInventoryAlertItems(ctx context.Context, lowStockThreshold int64) ([]dashboardcontract.InventoryAlertRow, error)
 }
@@ -96,17 +97,17 @@ func (h *AdminHandler) GetInventoryAlerts(c *gin.Context) {
 	response.Success(c, mapInventoryAlerts(items))
 }
 
-func parseQuery(c *gin.Context) (dashboardapp.QueryInput, bool) {
+func parseQuery(c *gin.Context) (reportingdomain.Query, bool) {
 	input, err := reportinghttp.ParseQuery(c)
 	if err != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
-		return dashboardapp.QueryInput{}, false
+		return reportingdomain.Query{}, false
 	}
 	return input, true
 }
 
 func respondFetchError(c *gin.Context, err error) {
-	if errors.Is(err, dashboardcontract.ErrRangeInvalid) {
+	if errors.Is(err, reportingdomain.ErrRangeInvalid) {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}

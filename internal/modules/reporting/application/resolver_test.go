@@ -1,14 +1,16 @@
-package reporting
+package application
 
 import (
 	"errors"
 	"testing"
 	"time"
+
+	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
 )
 
 func TestResolveTodayInRequestedTimezone(t *testing.T) {
 	now := time.Date(2026, 7, 20, 18, 0, 0, 0, time.UTC)
-	window, err := Resolve(Query{Range: "today", Timezone: "Asia/Shanghai"}, now)
+	window, err := Resolve(reportingdomain.Query{Range: "today", Timezone: "Asia/Shanghai"}, now)
 	if err != nil {
 		t.Fatalf("resolve today: %v", err)
 	}
@@ -23,8 +25,8 @@ func TestResolveTodayInRequestedTimezone(t *testing.T) {
 func TestResolveRejectsOversizedCustomRange(t *testing.T) {
 	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := from.AddDate(0, 0, CustomMaxDays+1)
-	_, err := Resolve(Query{Range: "custom", From: &from, To: &to, Timezone: "UTC"}, from)
-	if !errors.Is(err, ErrRangeInvalid) {
+	_, err := Resolve(reportingdomain.Query{Range: "custom", From: &from, To: &to, Timezone: "UTC"}, from)
+	if !errors.Is(err, reportingdomain.ErrRangeInvalid) {
 		t.Fatalf("want ErrRangeInvalid, got %v", err)
 	}
 }

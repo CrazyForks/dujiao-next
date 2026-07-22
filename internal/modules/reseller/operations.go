@@ -5,7 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/modules/reporting"
+	reportingapp "github.com/dujiao-next/internal/modules/reporting/application"
+	reportingdomain "github.com/dujiao-next/internal/modules/reporting/domain"
 	"github.com/shopspring/decimal"
 )
 
@@ -105,8 +106,8 @@ type OperationsCurrentCurrencyResponse struct {
 	FrozenBalanceAccounts   int64  `json:"frozen_balance_accounts"`
 }
 
-func (s *OperationsService) GetOverview(_ context.Context, input reporting.Query) (*OperationsOverviewResponse, error) {
-	window, err := reporting.Resolve(input, time.Now())
+func (s *OperationsService) GetOverview(_ context.Context, input reportingdomain.Query) (*OperationsOverviewResponse, error) {
+	window, err := reportingapp.Resolve(input, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -125,8 +126,8 @@ func (s *OperationsService) GetOverview(_ context.Context, input reporting.Query
 	return resp, nil
 }
 
-func (s *OperationsService) GetFinance(_ context.Context, input reporting.Query) (*OperationsFinanceResponse, error) {
-	window, err := reporting.Resolve(input, time.Now())
+func (s *OperationsService) GetFinance(_ context.Context, input reportingdomain.Query) (*OperationsFinanceResponse, error) {
+	window, err := reportingapp.Resolve(input, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +167,7 @@ func (s *OperationsService) GetFinance(_ context.Context, input reporting.Query)
 	return resp, nil
 }
 
-func emptyOperationsOverviewResponse(window reporting.Window) *OperationsOverviewResponse {
+func emptyOperationsOverviewResponse(window reportingdomain.Window) *OperationsOverviewResponse {
 	return &OperationsOverviewResponse{
 		Range:        window.Range,
 		From:         window.StartAt.Format(time.RFC3339),
@@ -177,7 +178,7 @@ func emptyOperationsOverviewResponse(window reporting.Window) *OperationsOvervie
 	}
 }
 
-func emptyOperationsFinanceResponse(window reporting.Window) *OperationsFinanceResponse {
+func emptyOperationsFinanceResponse(window reportingdomain.Window) *OperationsFinanceResponse {
 	return &OperationsFinanceResponse{
 		Range:               window.Range,
 		From:                window.StartAt.Format(time.RFC3339),
