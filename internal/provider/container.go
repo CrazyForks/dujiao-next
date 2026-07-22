@@ -21,6 +21,7 @@ import (
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
 	emailverificationcontract "github.com/dujiao-next/internal/modules/identity/emailverification/contract"
+	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
@@ -53,7 +54,7 @@ type Container struct {
 	// Repositories
 	AdminRepo                  repository.AdminRepository
 	UserRepo                   repository.UserRepository
-	UserOAuthIdentityRepo      repository.UserOAuthIdentityRepository
+	ExternalIdentityStore      externalidentitycontract.Store
 	EmailVerificationStore     emailverificationcontract.Store
 	OrderRepo                  repository.OrderRepository
 	PaymentRepo                repository.PaymentRepository

@@ -5,21 +5,21 @@ import (
 	"errors"
 
 	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
+	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
 	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/repository"
 )
 
 type UserDirectory struct {
-	repository repository.UserOAuthIdentityRepository
+	store externalidentitycontract.Store
 }
 
-func NewUserDirectory(repository repository.UserOAuthIdentityRepository) UserDirectory {
-	return UserDirectory{repository: repository}
+func NewUserDirectory(store externalidentitycontract.Store) UserDirectory {
+	return UserDirectory{store: store}
 }
 
 func (directory UserDirectory) ListTelegramUsers(query broadcastapp.UserQuery) ([]broadcastapp.UserItem, int64, error) {
-	items, total, err := directory.repository.ListTelegramUsers(repository.TelegramUserListFilter{
+	items, total, err := directory.store.ListTelegramUsers(externalidentitycontract.TelegramUserFilter{
 		Page: query.Page, PageSize: query.PageSize, UserIDs: query.UserIDs,
 		Keyword: query.Keyword, DisplayName: query.DisplayName,
 		TelegramUsername: query.TelegramUsername, TelegramUserID: query.TelegramUserID,

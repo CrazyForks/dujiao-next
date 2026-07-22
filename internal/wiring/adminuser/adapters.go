@@ -8,6 +8,8 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/coupon"
+	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	adminusertransport "github.com/dujiao-next/internal/transport/http/adminuser"
@@ -72,10 +74,10 @@ func (a adminUserWalletAdapter) GetAccount(userID uint) (*models.WalletAccount, 
 }
 
 type adminUserOAuthAdapter struct {
-	identities repository.UserOAuthIdentityRepository
+	identities externalidentitycontract.Store
 }
 
-func (a adminUserOAuthAdapter) ListByUserID(userID uint) ([]models.UserOAuthIdentity, error) {
+func (a adminUserOAuthAdapter) ListByUserID(userID uint) ([]externalidentitydomain.Identity, error) {
 	return a.identities.ListByUserID(userID)
 }
 

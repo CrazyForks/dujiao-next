@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -48,7 +49,7 @@ type LoginRecorder interface {
 type UserTelegramOIDCService interface {
 	StartTelegramOIDC(ctx context.Context, intent string, userID uint) (string, error)
 	LoginWithTelegramOIDC(ctx context.Context, code, state string) (*AuthLoginResult, error)
-	BindTelegramOIDC(ctx context.Context, userID uint, code, state string) (*models.UserOAuthIdentity, error)
+	BindTelegramOIDC(ctx context.Context, userID uint, code, state string) (*externalidentitydomain.Identity, error)
 }
 
 // UserTelegramOIDCHandler 处理 Telegram OIDC 登录与绑定 HTTP 请求。

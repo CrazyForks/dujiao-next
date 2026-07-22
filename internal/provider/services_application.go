@@ -88,7 +88,7 @@ func (c *Container) initApplicationServices() {
 	c.FulfillmentService = service.NewFulfillmentService(
 		c.OrderRepo, c.FulfillmentRepo, c.CardSecretRepo, c.QueueClient,
 		c.SettingService, c.Config.Email,
-		c.UserOAuthIdentityRepo,
+		c.ExternalIdentityStore,
 	)
 	c.CardSecretService = cardsecret.NewService(cardsecret.ServiceOptions{
 		Secrets:      c.CardSecretRepo,

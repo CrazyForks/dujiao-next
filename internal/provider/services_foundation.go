@@ -80,7 +80,7 @@ func (c *Container) initIdentityAndCatalogServices() {
 	c.TOTPService = service.NewTOTPService(c.Config, c.AdminRepo, cache.Client())
 	c.UserTOTPService = service.NewUserTOTPService(c.Config, c.UserRepo, cache.Client())
 	c.TelegramAuthService = telegramauthapp.NewService(c.Config.TelegramAuth, telegramauthcache.Options()...)
-	c.UserAuthService = service.NewUserAuthService(c.Config, c.UserRepo, c.UserOAuthIdentityRepo, c.EmailVerificationStore, c.SettingService, c.EmailService, c.TelegramAuthService)
+	c.UserAuthService = service.NewUserAuthService(c.Config, c.UserRepo, c.ExternalIdentityStore, c.EmailVerificationStore, c.SettingService, c.EmailService, c.TelegramAuthService)
 	c.UploadService = upload.NewService(c.Config)
 	c.AffiliateService = service.NewAffiliateService(c.AffiliateRepo, c.UserRepo, c.OrderRepo, c.ProductRepo, c.SettingService)
 	c.ProductService = service.NewProductService(c.ProductRepo, c.ProductSKURepo, c.CardSecretRepo, c.CardSecretBatchRepo, c.CategoryRepo, c.MemberLevelPriceRepo, c.CartRepo, c.ProductMappingRepo, c.OrderRepo, c.PaymentChannelRepo)

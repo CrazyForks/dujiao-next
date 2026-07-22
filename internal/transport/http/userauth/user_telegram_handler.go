@@ -7,7 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -35,9 +35,9 @@ type TelegramAuthPayload struct {
 type UserTelegramService interface {
 	LoginWithTelegram(ctx context.Context, payload TelegramAuthPayload) (*AuthLoginResult, error)
 	LoginWithTelegramMiniApp(ctx context.Context, initData string) (*AuthLoginResult, error)
-	GetTelegramBinding(userID uint) (*models.UserOAuthIdentity, error)
-	BindTelegram(ctx context.Context, userID uint, payload TelegramAuthPayload) (*models.UserOAuthIdentity, error)
-	BindTelegramMiniApp(ctx context.Context, userID uint, initData string) (*models.UserOAuthIdentity, error)
+	GetTelegramBinding(userID uint) (*externalidentitydomain.Identity, error)
+	BindTelegram(ctx context.Context, userID uint, payload TelegramAuthPayload) (*externalidentitydomain.Identity, error)
+	BindTelegramMiniApp(ctx context.Context, userID uint, initData string) (*externalidentitydomain.Identity, error)
 	UnbindTelegram(userID uint) error
 }
 

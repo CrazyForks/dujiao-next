@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 )
 
@@ -81,7 +82,7 @@ func (s *UserAuthService) loginWithVerifiedTelegram(verified *telegramauthapp.Id
 		if err != nil {
 			return nil, err
 		}
-		identity = &models.UserOAuthIdentity{
+		identity = &externalidentitydomain.Identity{
 			UserID:         user.ID,
 			Provider:       verified.Provider,
 			ProviderUserID: verified.ProviderUserID,

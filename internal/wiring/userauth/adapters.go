@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
@@ -156,12 +157,12 @@ func (a userTelegramTransportAdapter) LoginWithTelegramMiniApp(ctx context.Conte
 	return a.toAuthLoginResult(res), nil
 }
 
-func (a userTelegramTransportAdapter) GetTelegramBinding(userID uint) (*models.UserOAuthIdentity, error) {
+func (a userTelegramTransportAdapter) GetTelegramBinding(userID uint) (*externalidentitydomain.Identity, error) {
 	identity, err := a.auth.GetTelegramBinding(userID)
 	return identity, mapUserAuthTransportError(err)
 }
 
-func (a userTelegramTransportAdapter) BindTelegram(ctx context.Context, userID uint, payload userauthtransport.TelegramAuthPayload) (*models.UserOAuthIdentity, error) {
+func (a userTelegramTransportAdapter) BindTelegram(ctx context.Context, userID uint, payload userauthtransport.TelegramAuthPayload) (*externalidentitydomain.Identity, error) {
 	identity, err := a.auth.BindTelegram(service.BindTelegramInput{
 		UserID:  userID,
 		Payload: a.toServicePayload(payload),
@@ -170,7 +171,7 @@ func (a userTelegramTransportAdapter) BindTelegram(ctx context.Context, userID u
 	return identity, mapUserAuthTransportError(err)
 }
 
-func (a userTelegramTransportAdapter) BindTelegramMiniApp(ctx context.Context, userID uint, initData string) (*models.UserOAuthIdentity, error) {
+func (a userTelegramTransportAdapter) BindTelegramMiniApp(ctx context.Context, userID uint, initData string) (*externalidentitydomain.Identity, error) {
 	identity, err := a.auth.BindTelegramMiniApp(service.BindTelegramMiniAppInput{
 		UserID:   userID,
 		InitData: initData,
@@ -219,7 +220,7 @@ func (a userTelegramOIDCTransportAdapter) LoginWithTelegramOIDC(ctx context.Cont
 	}, nil
 }
 
-func (a userTelegramOIDCTransportAdapter) BindTelegramOIDC(ctx context.Context, userID uint, code, state string) (*models.UserOAuthIdentity, error) {
+func (a userTelegramOIDCTransportAdapter) BindTelegramOIDC(ctx context.Context, userID uint, code, state string) (*externalidentitydomain.Identity, error) {
 	identity, err := a.auth.BindTelegramOIDC(service.BindTelegramOIDCInput{
 		UserID:  userID,
 		Code:    code,

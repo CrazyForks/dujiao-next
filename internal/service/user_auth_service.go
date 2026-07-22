@@ -19,6 +19,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	emailverificationcontract "github.com/dujiao-next/internal/modules/identity/emailverification/contract"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
+	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	"github.com/dujiao-next/internal/repository"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -30,7 +31,7 @@ import (
 type UserAuthService struct {
 	cfg                   *config.Config
 	userRepo              repository.UserRepository
-	userOAuthIdentityRepo repository.UserOAuthIdentityRepository
+	userOAuthIdentityRepo externalidentitycontract.Store
 	codeRepo              emailverificationcontract.Store
 	settingService        *settingsapp.Service
 	emailService          *EmailService
@@ -51,7 +52,7 @@ func (s *UserAuthService) SetMemberLevelService(svc MemberLevelAssigner) {
 func NewUserAuthService(
 	cfg *config.Config,
 	userRepo repository.UserRepository,
-	userOAuthIdentityRepo repository.UserOAuthIdentityRepository,
+	userOAuthIdentityRepo externalidentitycontract.Store,
 	codeRepo emailverificationcontract.Store,
 	settingService *settingsapp.Service,
 	emailService *EmailService,

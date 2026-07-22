@@ -1,77 +1,30 @@
-package repository
+package externalidentitystore
 
 import (
 	"errors"
+	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"strings"
-	"time"
-
-	"github.com/dujiao-next/internal/models"
 
 	"gorm.io/gorm"
 )
 
-// TelegramUserListFilter Telegram 用户筛选条件。
-type TelegramUserListFilter struct {
-	Page             int
-	PageSize         int
-	Keyword          string
-	DisplayName      string
-	TelegramUsername string
-	TelegramUserID   string
-	CreatedFrom      *time.Time
-	CreatedTo        *time.Time
-	UserIDs          []uint
-}
-
-// TelegramUserListItem Telegram 用户候选项。
-type TelegramUserListItem struct {
-	UserID           uint      `json:"user_id"`
-	DisplayName      string    `json:"display_name"`
-	UserEmail        string    `json:"user_email"`
-	TelegramUsername string    `json:"telegram_username"`
-	TelegramUserID   string    `json:"telegram_user_id"`
-	BoundAt          time.Time `json:"bound_at"`
-	UserCreatedAt    time.Time `json:"user_created_at"`
-}
-
-// UserOAuthIdentityRepository 用户第三方身份映射仓储接口
-type UserOAuthIdentityRepository interface {
-	GetByProviderUserID(provider, providerUserID string) (*models.UserOAuthIdentity, error)
-	GetByUserProvider(userID uint, provider string) (*models.UserOAuthIdentity, error)
-	ListByUserID(userID uint) ([]models.UserOAuthIdentity, error)
-	ListTelegramUsers(filter TelegramUserListFilter) ([]TelegramUserListItem, int64, error)
-	Create(identity *models.UserOAuthIdentity) error
-	Update(identity *models.UserOAuthIdentity) error
-	DeleteByID(id uint) error
-	WithTx(tx *gorm.DB) *GormUserOAuthIdentityRepository
-}
-
-// GormUserOAuthIdentityRepository GORM 实现
-type GormUserOAuthIdentityRepository struct {
+type Store struct {
 	db *gorm.DB
 }
 
-// NewUserOAuthIdentityRepository 创建仓储
-func NewUserOAuthIdentityRepository(db *gorm.DB) *GormUserOAuthIdentityRepository {
-	return &GormUserOAuthIdentityRepository{db: db}
-}
-
-// WithTx 绑定事务
-func (r *GormUserOAuthIdentityRepository) WithTx(tx *gorm.DB) *GormUserOAuthIdentityRepository {
-	if tx == nil {
-		return r
-	}
-	return &GormUserOAuthIdentityRepository{db: tx}
+func New(db *gorm.DB) *Store {
+	return &Store{db: db}
 }
 
 // GetByProviderUserID 按提供方用户ID查询绑定
-func (r *GormUserOAuthIdentityRepository) GetByProviderUserID(provider, providerUserID string) (*models.UserOAuthIdentity, error) {
+func (r *Store) GetByProviderUserID(provider, providerUserID string) (*externalidentitydomain.Identity, error) {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	providerUserID = strings.TrimSpace(providerUserID)
 	if provider == "" || providerUserID == "" {
 		return nil, nil
 	}
-	var identity models.UserOAuthIdentity
+	var identity externalidentitydomain.Identity
 	if err := r.db.Where("provider = ? AND provider_user_id = ?", provider, providerUserID).First(&identity).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -82,12 +35,12 @@ func (r *GormUserOAuthIdentityRepository) GetByProviderUserID(provider, provider
 }
 
 // GetByUserProvider 按用户查询某个提供方绑定
-func (r *GormUserOAuthIdentityRepository) GetByUserProvider(userID uint, provider string) (*models.UserOAuthIdentity, error) {
+func (r *Store) GetByUserProvider(userID uint, provider string) (*externalidentitydomain.Identity, error) {
 	provider = strings.ToLower(strings.TrimSpace(provider))
 	if userID == 0 || provider == "" {
 		return nil, nil
 	}
-	var identity models.UserOAuthIdentity
+	var identity externalidentitydomain.Identity
 	if err := r.db.Where("user_id = ? AND provider = ?", userID, provider).First(&identity).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -98,11 +51,11 @@ func (r *GormUserOAuthIdentityRepository) GetByUserProvider(userID uint, provide
 }
 
 // ListByUserID 查询用户全部第三方绑定。
-func (r *GormUserOAuthIdentityRepository) ListByUserID(userID uint) ([]models.UserOAuthIdentity, error) {
+func (r *Store) ListByUserID(userID uint) ([]externalidentitydomain.Identity, error) {
 	if userID == 0 {
-		return []models.UserOAuthIdentity{}, nil
+		return []externalidentitydomain.Identity{}, nil
 	}
-	var identities []models.UserOAuthIdentity
+	var identities []externalidentitydomain.Identity
 	if err := r.db.Where("user_id = ?", userID).Order("created_at DESC").Find(&identities).Error; err != nil {
 		return nil, err
 	}
@@ -110,7 +63,7 @@ func (r *GormUserOAuthIdentityRepository) ListByUserID(userID uint) ([]models.Us
 }
 
 // ListTelegramUsers 查询 Telegram 用户候选列表。
-func (r *GormUserOAuthIdentityRepository) ListTelegramUsers(filter TelegramUserListFilter) ([]TelegramUserListItem, int64, error) {
+func (r *Store) ListTelegramUsers(filter externalidentitycontract.TelegramUserFilter) ([]externalidentitycontract.TelegramUser, int64, error) {
 	query := r.db.Table("user_oauth_identities").
 		Select(""+
 			"users.id AS user_id, "+
@@ -157,10 +110,14 @@ func (r *GormUserOAuthIdentityRepository) ListTelegramUsers(filter TelegramUserL
 	}
 
 	if filter.PageSize > 0 {
-		query = applyPagination(query, filter.Page, filter.PageSize)
+		page := filter.Page
+		if page < 1 {
+			page = 1
+		}
+		query = query.Offset((page - 1) * filter.PageSize).Limit(filter.PageSize)
 	}
 
-	var items []TelegramUserListItem
+	var items []externalidentitycontract.TelegramUser
 	if err := query.Order("user_oauth_identities.created_at DESC").Scan(&items).Error; err != nil {
 		return nil, 0, err
 	}
@@ -168,7 +125,7 @@ func (r *GormUserOAuthIdentityRepository) ListTelegramUsers(filter TelegramUserL
 }
 
 // Create 创建绑定
-func (r *GormUserOAuthIdentityRepository) Create(identity *models.UserOAuthIdentity) error {
+func (r *Store) Create(identity *externalidentitydomain.Identity) error {
 	if identity == nil {
 		return nil
 	}
@@ -176,7 +133,7 @@ func (r *GormUserOAuthIdentityRepository) Create(identity *models.UserOAuthIdent
 }
 
 // Update 更新绑定
-func (r *GormUserOAuthIdentityRepository) Update(identity *models.UserOAuthIdentity) error {
+func (r *Store) Update(identity *externalidentitydomain.Identity) error {
 	if identity == nil {
 		return nil
 	}
@@ -184,9 +141,9 @@ func (r *GormUserOAuthIdentityRepository) Update(identity *models.UserOAuthIdent
 }
 
 // DeleteByID 删除绑定
-func (r *GormUserOAuthIdentityRepository) DeleteByID(id uint) error {
+func (r *Store) DeleteByID(id uint) error {
 	if id == 0 {
 		return nil
 	}
-	return r.db.Delete(&models.UserOAuthIdentity{}, id).Error
+	return r.db.Delete(&externalidentitydomain.Identity{}, id).Error
 }

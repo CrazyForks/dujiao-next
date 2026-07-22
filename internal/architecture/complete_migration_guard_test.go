@@ -87,6 +87,9 @@ var completedMigrationPaths = []string{
 	"internal/service/telegram_oidc_test.go",
 	"internal/models/email_verify_code.go",
 	"internal/repository/email_verify_code_repository.go",
+	"internal/models/user_oauth_identity.go",
+	"internal/repository/user_oauth_identity_repository.go",
+	"internal/repository/user_oauth_identity_repository_test.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/telegramidentity"
 )
@@ -27,7 +28,7 @@ type BindTelegramChannelByEmailCodeInput struct {
 }
 
 // ResolveTelegramChannelIdentity 解析 Telegram 渠道身份
-func (s *UserAuthService) ResolveTelegramChannelIdentity(input TelegramChannelIdentityInput) (*models.User, *models.UserOAuthIdentity, error) {
+func (s *UserAuthService) ResolveTelegramChannelIdentity(input TelegramChannelIdentityInput) (*models.User, *externalidentitydomain.Identity, error) {
 	verified, err := normalizeTelegramChannelIdentityInput(input)
 	if err != nil {
 		return nil, nil, err
@@ -36,7 +37,7 @@ func (s *UserAuthService) ResolveTelegramChannelIdentity(input TelegramChannelId
 }
 
 // ProvisionTelegramChannelIdentity 预置 Telegram 渠道身份
-func (s *UserAuthService) ProvisionTelegramChannelIdentity(input TelegramChannelIdentityInput) (*models.User, *models.UserOAuthIdentity, bool, error) {
+func (s *UserAuthService) ProvisionTelegramChannelIdentity(input TelegramChannelIdentityInput) (*models.User, *externalidentitydomain.Identity, bool, error) {
 	verified, err := normalizeTelegramChannelIdentityInput(input)
 	if err != nil {
 		return nil, nil, false, err
@@ -45,7 +46,7 @@ func (s *UserAuthService) ProvisionTelegramChannelIdentity(input TelegramChannel
 }
 
 // BindTelegramChannelByEmailCode 使用邮箱验证码绑定 Telegram 渠道身份到既有账号
-func (s *UserAuthService) BindTelegramChannelByEmailCode(input BindTelegramChannelByEmailCodeInput) (*models.User, *models.UserOAuthIdentity, uint, error) {
+func (s *UserAuthService) BindTelegramChannelByEmailCode(input BindTelegramChannelByEmailCodeInput) (*models.User, *externalidentitydomain.Identity, uint, error) {
 	verified, err := normalizeTelegramChannelIdentityInput(input.Identity)
 	if err != nil {
 		return nil, nil, 0, err
@@ -76,7 +77,7 @@ func (s *UserAuthService) BindTelegramChannelByEmailCode(input BindTelegramChann
 	return s.bindTelegramIdentityToUser(targetUser, verified)
 }
 
-func (s *UserAuthService) resolveTelegramChannelIdentity(verified *telegramauthapp.IdentityVerified) (*models.User, *models.UserOAuthIdentity, error) {
+func (s *UserAuthService) resolveTelegramChannelIdentity(verified *telegramauthapp.IdentityVerified) (*models.User, *externalidentitydomain.Identity, error) {
 	if verified == nil {
 		return nil, nil, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
@@ -105,7 +106,7 @@ func (s *UserAuthService) resolveTelegramChannelIdentity(verified *telegramautha
 	return user, identity, nil
 }
 
-func (s *UserAuthService) provisionTelegramChannelIdentity(verified *telegramauthapp.IdentityVerified) (*models.User, *models.UserOAuthIdentity, bool, error) {
+func (s *UserAuthService) provisionTelegramChannelIdentity(verified *telegramauthapp.IdentityVerified) (*models.User, *externalidentitydomain.Identity, bool, error) {
 	if verified == nil {
 		return nil, nil, false, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
@@ -149,7 +150,7 @@ func (s *UserAuthService) provisionTelegramChannelIdentity(verified *telegramaut
 		return user, identity, created, nil
 	}
 
-	identity = &models.UserOAuthIdentity{
+	identity = &externalidentitydomain.Identity{
 		UserID:         user.ID,
 		Provider:       verified.Provider,
 		ProviderUserID: verified.ProviderUserID,
@@ -178,7 +179,7 @@ func (s *UserAuthService) provisionTelegramChannelIdentity(verified *telegramaut
 	return user, identity, created, nil
 }
 
-func (s *UserAuthService) bindTelegramIdentityToUser(targetUser *models.User, verified *telegramauthapp.IdentityVerified) (*models.User, *models.UserOAuthIdentity, uint, error) {
+func (s *UserAuthService) bindTelegramIdentityToUser(targetUser *models.User, verified *telegramauthapp.IdentityVerified) (*models.User, *externalidentitydomain.Identity, uint, error) {
 	if targetUser == nil || verified == nil {
 		return nil, nil, 0, ErrNotFound
 	}
@@ -227,7 +228,7 @@ func (s *UserAuthService) bindTelegramIdentityToUser(targetUser *models.User, ve
 		return targetUser, occupied, previousUserID, nil
 	}
 
-	identity := &models.UserOAuthIdentity{
+	identity := &externalidentitydomain.Identity{
 		UserID:         targetUser.ID,
 		Provider:       verified.Provider,
 		ProviderUserID: verified.ProviderUserID,

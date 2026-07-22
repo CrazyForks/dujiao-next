@@ -1,10 +1,10 @@
-package models
+package externalidentitydomain
 
 import "time"
 
 // UserOAuthIdentity 用户第三方身份映射
 // 说明：用于保存第三方账号与站内用户的绑定关系。
-type UserOAuthIdentity struct {
+type Identity struct {
 	ID             uint       `gorm:"primarykey" json:"id"`                                                              // 主键
 	UserID         uint       `gorm:"index;not null" json:"user_id"`                                                     // 绑定用户ID
 	Provider       string     `gorm:"type:varchar(32);index:idx_provider_user,unique;not null" json:"provider"`          // 提供方
@@ -17,6 +17,6 @@ type UserOAuthIdentity struct {
 }
 
 // TableName 指定表名
-func (UserOAuthIdentity) TableName() string {
+func (Identity) TableName() string {
 	return "user_oauth_identities"
 }

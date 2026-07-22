@@ -14,6 +14,8 @@ import (
 	"github.com/dujiao-next/internal/models"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 
 	"github.com/glebarez/sqlite"
@@ -27,7 +29,7 @@ func newRegistrationDomainPolicyAuthService(t *testing.T) (*UserAuthService, *go
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 	cfg := &config.Config{
@@ -39,7 +41,7 @@ func newRegistrationDomainPolicyAuthService(t *testing.T) (*UserAuthService, *go
 	return NewUserAuthService(
 		cfg,
 		repository.NewUserRepository(db),
-		repository.NewUserOAuthIdentityRepository(db),
+		externalidentitystore.New(db),
 		emailverificationstore.New(db),
 		settingSvc,
 		NewEmailService(&cfg.Email),

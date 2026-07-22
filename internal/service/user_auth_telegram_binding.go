@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 )
 
@@ -24,7 +24,7 @@ type BindTelegramMiniAppInput struct {
 }
 
 // BindTelegram 绑定 Telegram
-func (s *UserAuthService) BindTelegram(input BindTelegramInput) (*models.UserOAuthIdentity, error) {
+func (s *UserAuthService) BindTelegram(input BindTelegramInput) (*externalidentitydomain.Identity, error) {
 	if input.UserID == 0 {
 		return nil, ErrNotFound
 	}
@@ -43,7 +43,7 @@ func (s *UserAuthService) BindTelegram(input BindTelegramInput) (*models.UserOAu
 }
 
 // BindTelegramMiniApp 绑定当前用户的 Telegram Mini App 身份
-func (s *UserAuthService) BindTelegramMiniApp(input BindTelegramMiniAppInput) (*models.UserOAuthIdentity, error) {
+func (s *UserAuthService) BindTelegramMiniApp(input BindTelegramMiniAppInput) (*externalidentitydomain.Identity, error) {
 	if input.UserID == 0 {
 		return nil, ErrNotFound
 	}
@@ -61,7 +61,7 @@ func (s *UserAuthService) BindTelegramMiniApp(input BindTelegramMiniAppInput) (*
 	return s.bindVerifiedTelegram(input.UserID, verified)
 }
 
-func (s *UserAuthService) bindVerifiedTelegram(userID uint, verified *telegramauthapp.IdentityVerified) (*models.UserOAuthIdentity, error) {
+func (s *UserAuthService) bindVerifiedTelegram(userID uint, verified *telegramauthapp.IdentityVerified) (*externalidentitydomain.Identity, error) {
 	if _, err := s.getActiveUserByID(userID); err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (s *UserAuthService) bindVerifiedTelegram(userID uint, verified *telegramau
 		return nil, ErrUserOAuthAlreadyBound
 	}
 	if current == nil {
-		current = &models.UserOAuthIdentity{
+		current = &externalidentitydomain.Identity{
 			UserID:         userID,
 			Provider:       verified.Provider,
 			ProviderUserID: verified.ProviderUserID,
@@ -141,7 +141,7 @@ func (s *UserAuthService) UnbindTelegram(userID uint) error {
 }
 
 // GetTelegramBinding 获取 Telegram 绑定
-func (s *UserAuthService) GetTelegramBinding(userID uint) (*models.UserOAuthIdentity, error) {
+func (s *UserAuthService) GetTelegramBinding(userID uint) (*externalidentitydomain.Identity, error) {
 	if userID == 0 {
 		return nil, ErrNotFound
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
@@ -42,7 +43,7 @@ func setupAdminOrderRefundHandlerTest(t *testing.T) (*ordertransport.AdminRefund
 	}
 	if err := db.AutoMigrate(
 		&models.User{},
-		&models.UserOAuthIdentity{},
+		&externalidentitydomain.Identity{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
@@ -82,7 +83,7 @@ func seedAdminOrderRefundData(t *testing.T, db *gorm.DB) adminOrderRefundFixture
 	if err := db.Create(member).Error; err != nil {
 		t.Fatalf("create member user failed: %v", err)
 	}
-	if err := db.Create(&models.UserOAuthIdentity{
+	if err := db.Create(&externalidentitydomain.Identity{
 		UserID:         member.ID,
 		Provider:       "telegram",
 		ProviderUserID: "700001",

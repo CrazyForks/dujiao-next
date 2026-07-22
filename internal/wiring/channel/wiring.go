@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/modules/orderrisk"
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/repository"
@@ -37,11 +38,11 @@ func identityServiceInput(input channeltransport.TelegramIdentityInput) service.
 	}
 }
 
-func (a identityAdapter) ResolveTelegramChannelIdentity(input channeltransport.TelegramIdentityInput) (*models.User, *models.UserOAuthIdentity, error) {
+func (a identityAdapter) ResolveTelegramChannelIdentity(input channeltransport.TelegramIdentityInput) (*models.User, *externalidentitydomain.Identity, error) {
 	return a.auth.ResolveTelegramChannelIdentity(identityServiceInput(input))
 }
 
-func (a identityAdapter) ProvisionTelegramChannelIdentity(input channeltransport.TelegramIdentityInput) (*models.User, *models.UserOAuthIdentity, bool, error) {
+func (a identityAdapter) ProvisionTelegramChannelIdentity(input channeltransport.TelegramIdentityInput) (*models.User, *externalidentitydomain.Identity, bool, error) {
 	return a.auth.ProvisionTelegramChannelIdentity(identityServiceInput(input))
 }
 
@@ -56,7 +57,7 @@ func (a identityAdapter) ProvisionTelegramChannelUserID(input channeltransport.T
 	return user.ID, nil
 }
 
-func (a identityAdapter) BindTelegramChannelByEmailCode(input channeltransport.BindTelegramIdentityInput) (*models.User, *models.UserOAuthIdentity, uint, error) {
+func (a identityAdapter) BindTelegramChannelByEmailCode(input channeltransport.BindTelegramIdentityInput) (*models.User, *externalidentitydomain.Identity, uint, error) {
 	return a.auth.BindTelegramChannelByEmailCode(service.BindTelegramChannelByEmailCodeInput{
 		Identity: identityServiceInput(input.Identity), Email: input.Email, Code: input.Code,
 	})

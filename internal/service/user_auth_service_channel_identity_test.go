@@ -10,6 +10,8 @@ import (
 	"github.com/dujiao-next/internal/models"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 
 	"github.com/glebarez/sqlite"
@@ -24,12 +26,12 @@ func setupUserAuthServiceChannelIdentityTest(t *testing.T) (*UserAuthService, *g
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &emailverificationdomain.Code{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
 	userRepo := repository.NewUserRepository(db)
-	identityRepo := repository.NewUserOAuthIdentityRepository(db)
+	identityRepo := externalidentitystore.New(db)
 
 	return NewUserAuthService(&config.Config{}, userRepo, identityRepo, emailverificationstore.New(db), nil, nil, nil), db
 }
@@ -51,7 +53,7 @@ func TestResolveTelegramChannelIdentityReturnsBoundUser(t *testing.T) {
 		t.Fatalf("create user failed: %v", err)
 	}
 
-	identity := &models.UserOAuthIdentity{
+	identity := &externalidentitydomain.Identity{
 		UserID:         user.ID,
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: "123456",
@@ -86,7 +88,7 @@ func TestResolveTelegramChannelIdentityReturnsBoundUser(t *testing.T) {
 		t.Fatalf("resolved avatar_url mismatch: %s", resolvedIdentity.AvatarURL)
 	}
 
-	var refreshed models.UserOAuthIdentity
+	var refreshed externalidentitydomain.Identity
 	if err := db.First(&refreshed, identity.ID).Error; err != nil {
 		t.Fatalf("reload identity failed: %v", err)
 	}
@@ -139,7 +141,7 @@ func TestProvisionTelegramChannelIdentityCreatesUserAndIdentity(t *testing.T) {
 	}
 
 	var identityCount int64
-	if err := db.Model(&models.UserOAuthIdentity{}).Count(&identityCount).Error; err != nil {
+	if err := db.Model(&externalidentitydomain.Identity{}).Count(&identityCount).Error; err != nil {
 		t.Fatalf("count identities failed: %v", err)
 	}
 	if identityCount != 1 {
@@ -176,7 +178,7 @@ func TestBindTelegramChannelByEmailCodeRebindsPlaceholderIdentity(t *testing.T) 
 		t.Fatalf("create target user failed: %v", err)
 	}
 
-	identity := &models.UserOAuthIdentity{
+	identity := &externalidentitydomain.Identity{
 		UserID:         placeholderUser.ID,
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: "456789",

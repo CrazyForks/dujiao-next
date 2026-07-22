@@ -15,6 +15,8 @@ import (
 	"github.com/dujiao-next/internal/models"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
@@ -34,7 +36,7 @@ func setupTelegramOAuthTestService(t *testing.T) (*UserAuthService, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -48,7 +50,7 @@ func setupTelegramOAuthTestService(t *testing.T) (*UserAuthService, *gorm.DB) {
 	svc := NewUserAuthService(
 		cfg,
 		repository.NewUserRepository(db),
-		repository.NewUserOAuthIdentityRepository(db),
+		externalidentitystore.New(db),
 		emailverificationstore.New(db),
 		settingSvc,
 		nil,
@@ -132,7 +134,7 @@ func TestLoginWithTelegramAllowsExistingIdentityWhenRegistrationDisabled(t *test
 	if err := db.Create(user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	identity := &models.UserOAuthIdentity{
+	identity := &externalidentitydomain.Identity{
 		UserID:         user.ID,
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: "10002",
@@ -185,7 +187,7 @@ func TestLoginWithTelegramMigratesOIDCSubjectIdentityToTelegramID(t *testing.T) 
 	if err := db.Create(user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	identity := &models.UserOAuthIdentity{
+	identity := &externalidentitydomain.Identity{
 		UserID:         user.ID,
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: "1234123412341234123",
@@ -212,7 +214,7 @@ func TestLoginWithTelegramMigratesOIDCSubjectIdentityToTelegramID(t *testing.T) 
 		t.Fatalf("expected existing user %d, got %+v", user.ID, res.User)
 	}
 
-	var migrated models.UserOAuthIdentity
+	var migrated externalidentitydomain.Identity
 	if err := db.First(&migrated, identity.ID).Error; err != nil {
 		t.Fatalf("load migrated identity failed: %v", err)
 	}

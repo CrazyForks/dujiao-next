@@ -10,7 +10,7 @@ func NewHandler(c *provider.Container) *adminusertransport.AdminHandler {
 		adminUserDirectoryAdapter{users: c.UserRepo},
 		adminUserEmailAdapter{},
 		adminUserWalletAdapter{wallets: c.WalletService},
-		adminUserOAuthAdapter{identities: c.UserOAuthIdentityRepo},
+		adminUserOAuthAdapter{identities: c.ExternalIdentityStore},
 		adminUserTelegramAdapter{auth: c.UserAuthService},
 		adminUserCouponUsageAdapter{usages: c.CouponUsageRepo},
 		adminUserCouponAdapter{coupons: c.CouponRepo},

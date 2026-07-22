@@ -18,6 +18,8 @@ import (
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	giftcardtransport "github.com/dujiao-next/internal/transport/http/giftcard"
@@ -62,7 +64,7 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 	}
 	if err := db.AutoMigrate(
 		&models.User{},
-		&models.UserOAuthIdentity{},
+		&externalidentitydomain.Identity{},
 		&emailverificationdomain.Code{},
 		&models.Order{},
 		&models.OrderItem{},
@@ -78,7 +80,7 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 	models.DB = db
 
 	userRepo := repository.NewUserRepository(db)
-	identityRepo := repository.NewUserOAuthIdentityRepository(db)
+	identityRepo := externalidentitystore.New(db)
 	emailVerifyRepo := emailverificationstore.New(db)
 	orderRepo := repository.NewOrderRepository(db)
 	walletRepo := repository.NewWalletRepository(db)
@@ -190,7 +192,7 @@ func TestRedeemGiftCardChannelHandlerSuccess(t *testing.T) {
 		t.Fatalf("expected wallet_delta=88.80, got %v", payload.Data["wallet_delta"])
 	}
 
-	var identity models.UserOAuthIdentity
+	var identity externalidentitydomain.Identity
 	if err := db.Where("provider = ? AND provider_user_id = ?", constants.UserOAuthProviderTelegram, "998877").First(&identity).Error; err != nil {
 		t.Fatalf("expected provisioned telegram identity: %v", err)
 	}
@@ -247,7 +249,7 @@ func TestRedeemGiftCardChannelHandlerReturnsMappedRedeemedError(t *testing.T) {
 		t.Fatalf("expected error_code=gift_card_redeemed, got %s", payload.ErrorCode)
 	}
 
-	var identity models.UserOAuthIdentity
+	var identity externalidentitydomain.Identity
 	if err := db.Where("provider = ? AND provider_user_id = ?", constants.UserOAuthProviderTelegram, "556677").First(&identity).Error; err != nil {
 		t.Fatalf("expected provisioned telegram identity on failure path: %v", err)
 	}

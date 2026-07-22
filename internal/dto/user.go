@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 )
 
 // UserProfileResp 用户资料响应
@@ -51,8 +52,8 @@ type TelegramBindingResp struct {
 	AuthAt         *time.Time `json:"auth_at,omitempty"`
 }
 
-// NewTelegramBindingResp 从 models.UserOAuthIdentity 构造响应
-func NewTelegramBindingResp(identity *models.UserOAuthIdentity) TelegramBindingResp {
+// NewTelegramBindingResp 从外部身份领域实体构造响应。
+func NewTelegramBindingResp(identity *externalidentitydomain.Identity) TelegramBindingResp {
 	if identity == nil {
 		return TelegramBindingResp{Bound: false}
 	}

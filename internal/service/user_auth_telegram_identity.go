@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/telegramidentity"
 
@@ -88,7 +89,7 @@ func (s *UserAuthService) findOrCreateTelegramUser(verified *telegramauthapp.Ide
 }
 
 // getTelegramIdentityByVerifiedID 按 Telegram 数字 ID 查询绑定，未命中时兼容历史 OIDC subject 绑定。
-func (s *UserAuthService) getTelegramIdentityByVerifiedID(verified *telegramauthapp.IdentityVerified) (*models.UserOAuthIdentity, error) {
+func (s *UserAuthService) getTelegramIdentityByVerifiedID(verified *telegramauthapp.IdentityVerified) (*externalidentitydomain.Identity, error) {
 	if verified == nil || s.userOAuthIdentityRepo == nil {
 		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
@@ -110,7 +111,7 @@ func (s *UserAuthService) getTelegramIdentityByVerifiedID(verified *telegramauth
 }
 
 // canonicalizeTelegramProviderUserID 将历史 OIDC subject 绑定迁移为 Telegram 数字用户 ID。
-func (s *UserAuthService) canonicalizeTelegramProviderUserID(verified *telegramauthapp.IdentityVerified, identity *models.UserOAuthIdentity) (bool, error) {
+func (s *UserAuthService) canonicalizeTelegramProviderUserID(verified *telegramauthapp.IdentityVerified, identity *externalidentitydomain.Identity) (bool, error) {
 	if verified == nil || identity == nil || identity.ProviderUserID == verified.ProviderUserID {
 		return false, nil
 	}
@@ -142,7 +143,7 @@ func telegramProviderUserIDMatchesVerified(providerUserID string, verified *tele
 	return false
 }
 
-func applyTelegramIdentity(verified *telegramauthapp.IdentityVerified, identity *models.UserOAuthIdentity) bool {
+func applyTelegramIdentity(verified *telegramauthapp.IdentityVerified, identity *externalidentitydomain.Identity) bool {
 	if verified == nil || identity == nil {
 		return false
 	}

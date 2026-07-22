@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
@@ -23,7 +24,7 @@ func setupOrderRefundRecordRepositoryTest(t *testing.T) (*GormOrderRefundRecordR
 	}
 	if err := db.AutoMigrate(
 		&models.User{},
-		&models.UserOAuthIdentity{},
+		&externalidentitydomain.Identity{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.OrderRefundRecord{},
@@ -59,7 +60,7 @@ func TestOrderRefundRecordRepositoryListAdminFilters(t *testing.T) {
 	if err := db.Create(user2).Error; err != nil {
 		t.Fatalf("create user2 failed: %v", err)
 	}
-	if err := db.Create(&models.UserOAuthIdentity{
+	if err := db.Create(&externalidentitydomain.Identity{
 		UserID:         user1.ID,
 		Provider:       "telegram",
 		ProviderUserID: "6059928735",

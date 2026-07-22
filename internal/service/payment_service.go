@@ -4,6 +4,7 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
+	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	"github.com/dujiao-next/internal/modules/notification"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	"github.com/dujiao-next/internal/payment/provider"
@@ -23,7 +24,7 @@ type PaymentService struct {
 	channelRepo             repository.PaymentChannelRepository
 	walletRepo              repository.WalletRepository
 	userRepo                repository.UserRepository
-	userOAuthIdentityRepo   repository.UserOAuthIdentityRepository
+	userOAuthIdentityRepo   externalidentitycontract.Store
 	queueClient             *queue.Client
 	walletSvc               *WalletService
 	settingService          *settingsapp.Service
@@ -71,7 +72,7 @@ type PaymentServiceOptions struct {
 	ChannelRepo               repository.PaymentChannelRepository
 	WalletRepo                repository.WalletRepository
 	UserRepo                  repository.UserRepository
-	UserOAuthIdentityRepo     repository.UserOAuthIdentityRepository
+	ExternalIdentityStore     externalidentitycontract.Store
 	QueueClient               *queue.Client
 	WalletService             *WalletService
 	SettingService            *settingsapp.Service
@@ -93,7 +94,7 @@ func NewPaymentService(opts PaymentServiceOptions) *PaymentService {
 		channelRepo:             opts.ChannelRepo,
 		walletRepo:              opts.WalletRepo,
 		userRepo:                opts.UserRepo,
-		userOAuthIdentityRepo:   opts.UserOAuthIdentityRepo,
+		userOAuthIdentityRepo:   opts.ExternalIdentityStore,
 		queueClient:             opts.QueueClient,
 		walletSvc:               opts.WalletService,
 		settingService:          opts.SettingService,

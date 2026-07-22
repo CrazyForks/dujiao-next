@@ -70,7 +70,7 @@ func (c *Container) initIntegrationServices() {
 		ChannelRepo:               c.PaymentChannelRepo,
 		WalletRepo:                c.WalletRepo,
 		UserRepo:                  c.UserRepo,
-		UserOAuthIdentityRepo:     c.UserOAuthIdentityRepo,
+		ExternalIdentityStore:     c.ExternalIdentityStore,
 		QueueClient:               c.QueueClient,
 		WalletService:             c.WalletService,
 		SettingService:            c.SettingService,
@@ -101,7 +101,7 @@ func (c *Container) initIntegrationServices() {
 	c.ChannelClientService = channelclientapp.NewService(c.ChannelClientStore, c.Config.App.SecretKey)
 	c.TelegramBroadcastService = broadcastapp.NewService(
 		c.TelegramBroadcastRepo,
-		telegrambroadcast.NewUserDirectory(c.UserOAuthIdentityRepo),
+		telegrambroadcast.NewUserDirectory(c.ExternalIdentityStore),
 		telegrambroadcast.NewBotTokenResolver(c.ChannelClientService),
 		telegrambroadcast.NewDispatcher(c.QueueClient),
 		telegrammodule.NewNotifyService(c.SettingService, c.Config.TelegramAuth),

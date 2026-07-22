@@ -11,6 +11,8 @@ import (
 	"github.com/dujiao-next/internal/models"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/repository"
 
@@ -24,7 +26,7 @@ func TestLoginWithTelegramMiniAppCreatesUserIdentityAndToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &emailverificationdomain.Code{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -46,7 +48,7 @@ func TestLoginWithTelegramMiniAppCreatesUserIdentityAndToken(t *testing.T) {
 	svc := NewUserAuthService(
 		cfg,
 		repository.NewUserRepository(db),
-		repository.NewUserOAuthIdentityRepository(db),
+		externalidentitystore.New(db),
 		emailverificationstore.New(db),
 		nil,
 		nil,
@@ -86,7 +88,7 @@ func TestLoginWithTelegramMiniAppCreatesUserIdentityAndToken(t *testing.T) {
 		t.Fatalf("claims user id want %d got %d", user.ID, claims.UserID)
 	}
 
-	var identity models.UserOAuthIdentity
+	var identity externalidentitydomain.Identity
 	if err := db.Where("provider = ? AND provider_user_id = ?", constants.UserOAuthProviderTelegram, "987654").First(&identity).Error; err != nil {
 		t.Fatalf("load identity failed: %v", err)
 	}

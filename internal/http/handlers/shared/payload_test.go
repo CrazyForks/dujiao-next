@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,7 +18,7 @@ func TestBuildChannelIdentityResponse(t *testing.T) {
 		Locale:                "zh-CN",
 		PasswordSetupRequired: true,
 	}
-	identity := &models.UserOAuthIdentity{
+	identity := &externalidentitydomain.Identity{
 		Provider:       "telegram",
 		ProviderUserID: "12",
 		Username:       "buyer12",

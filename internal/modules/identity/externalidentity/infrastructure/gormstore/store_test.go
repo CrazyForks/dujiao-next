@@ -1,10 +1,12 @@
-package repository
+package externalidentitystore
 
 import (
 	"testing"
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -14,7 +16,7 @@ func TestListTelegramUsers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &externalidentitydomain.Identity{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -39,7 +41,7 @@ func TestListTelegramUsers(t *testing.T) {
 
 	boundAt1 := time.Date(2026, 3, 1, 10, 0, 0, 0, time.UTC)
 	boundAt2 := time.Date(2026, 3, 5, 10, 0, 0, 0, time.UTC)
-	identity1 := &models.UserOAuthIdentity{
+	identity1 := &externalidentitydomain.Identity{
 		UserID:         user1.ID,
 		Provider:       "telegram",
 		ProviderUserID: "10001",
@@ -47,7 +49,7 @@ func TestListTelegramUsers(t *testing.T) {
 		CreatedAt:      boundAt1,
 		UpdatedAt:      boundAt1,
 	}
-	identity2 := &models.UserOAuthIdentity{
+	identity2 := &externalidentitydomain.Identity{
 		UserID:         user2.ID,
 		Provider:       "telegram",
 		ProviderUserID: "20002",
@@ -62,9 +64,9 @@ func TestListTelegramUsers(t *testing.T) {
 		t.Fatalf("create identity2 failed: %v", err)
 	}
 
-	repo := NewUserOAuthIdentityRepository(db)
+	repo := New(db)
 
-	items, total, err := repo.ListTelegramUsers(TelegramUserListFilter{
+	items, total, err := repo.ListTelegramUsers(externalidentitycontract.TelegramUserFilter{
 		Keyword:  "alice",
 		Page:     1,
 		PageSize: 10,
@@ -79,7 +81,7 @@ func TestListTelegramUsers(t *testing.T) {
 		t.Fatalf("unexpected list result: %+v", items)
 	}
 
-	items, total, err = repo.ListTelegramUsers(TelegramUserListFilter{
+	items, total, err = repo.ListTelegramUsers(externalidentitycontract.TelegramUserFilter{
 		TelegramUserID: "200",
 		Page:           1,
 		PageSize:       10,
@@ -91,7 +93,7 @@ func TestListTelegramUsers(t *testing.T) {
 		t.Fatalf("unexpected list by telegram id: total=%d items=%+v", total, items)
 	}
 
-	items, total, err = repo.ListTelegramUsers(TelegramUserListFilter{
+	items, total, err = repo.ListTelegramUsers(externalidentitycontract.TelegramUserFilter{
 		CreatedFrom: ptrTime(boundAt2.Add(-time.Hour)),
 		CreatedTo:   ptrTime(boundAt2.Add(time.Hour)),
 		Page:        1,
@@ -102,6 +104,35 @@ func TestListTelegramUsers(t *testing.T) {
 	}
 	if total != 1 || len(items) != 1 || items[0].TelegramUsername != "bob_tg" {
 		t.Fatalf("unexpected list by created range: total=%d items=%+v", total, items)
+	}
+
+	got, err := repo.GetByProviderUserID(" Telegram ", "10001")
+	if err != nil {
+		t.Fatalf("get normalized provider identity failed: %v", err)
+	}
+	if got == nil || got.ID != identity1.ID {
+		t.Fatalf("unexpected normalized provider identity: %#v", got)
+	}
+	got.Username = "alice_updated"
+	if err := repo.Update(got); err != nil {
+		t.Fatalf("update identity failed: %v", err)
+	}
+	byUser, err := repo.GetByUserProvider(user1.ID, "telegram")
+	if err != nil {
+		t.Fatalf("get user provider identity failed: %v", err)
+	}
+	if byUser == nil || byUser.Username != "alice_updated" {
+		t.Fatalf("identity update was not persisted: %#v", byUser)
+	}
+	if err := repo.DeleteByID(identity1.ID); err != nil {
+		t.Fatalf("delete identity failed: %v", err)
+	}
+	deleted, err := repo.GetByProviderUserID("telegram", "10001")
+	if err != nil {
+		t.Fatalf("get deleted identity failed: %v", err)
+	}
+	if deleted != nil {
+		t.Fatalf("deleted identity must be absent: %#v", deleted)
 	}
 }
 

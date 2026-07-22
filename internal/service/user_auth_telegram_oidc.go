@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 )
 
@@ -65,7 +65,7 @@ func (s *UserAuthService) LoginWithTelegramOIDC(input LoginWithTelegramOIDCInput
 }
 
 // BindTelegramOIDC 通过 Telegram OIDC 回调绑定当前用户
-func (s *UserAuthService) BindTelegramOIDC(input BindTelegramOIDCInput) (*models.UserOAuthIdentity, error) {
+func (s *UserAuthService) BindTelegramOIDC(input BindTelegramOIDCInput) (*externalidentitydomain.Identity, error) {
 	if input.UserID == 0 {
 		return nil, ErrNotFound
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/coupon"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -64,7 +65,7 @@ type WalletBalances interface {
 
 // OAuthIdentityDirectory 第三方身份查询端口。
 type OAuthIdentityDirectory interface {
-	ListByUserID(userID uint) ([]models.UserOAuthIdentity, error)
+	ListByUserID(userID uint) ([]externalidentitydomain.Identity, error)
 }
 
 // TelegramBinder 解绑 Telegram 端口。

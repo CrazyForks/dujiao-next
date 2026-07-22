@@ -10,6 +10,7 @@ import (
 
 	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
 	"github.com/glebarez/sqlite" // 纯 Go SQLite 驱动（基于 modernc.org/sqlite）
@@ -128,7 +129,7 @@ func AutoMigrate() error {
 	if err := DB.AutoMigrate(
 		&Admin{},
 		&User{},
-		&UserOAuthIdentity{},
+		&externalidentitydomain.Identity{},
 		&AffiliateProfile{},
 		&AffiliateClick{},
 		&AffiliateCommission{},

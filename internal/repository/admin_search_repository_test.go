@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -17,7 +18,7 @@ func setupAdminSearchRepositoryTest(t *testing.T) (*GormUserRepository, *GormOrd
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &models.Order{}, &models.OrderItem{}, &models.Fulfillment{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &externalidentitydomain.Identity{}, &models.Order{}, &models.OrderItem{}, &models.Fulfillment{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 	return NewUserRepository(db), NewOrderRepository(db), db
@@ -34,7 +35,7 @@ func TestUserRepositoryListSupportsOAuthKeyword(t *testing.T) {
 	if err := db.Create(&user2).Error; err != nil {
 		t.Fatalf("create user2 failed: %v", err)
 	}
-	if err := db.Create(&models.UserOAuthIdentity{
+	if err := db.Create(&externalidentitydomain.Identity{
 		UserID:         user1.ID,
 		Provider:       "telegram",
 		ProviderUserID: "6059928735",
@@ -75,7 +76,7 @@ func TestOrderRepositoryListAdminSupportsUserKeyword(t *testing.T) {
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	if err := db.Create(&models.UserOAuthIdentity{
+	if err := db.Create(&externalidentitydomain.Identity{
 		UserID:         user.ID,
 		Provider:       "telegram",
 		ProviderUserID: "6059928735",

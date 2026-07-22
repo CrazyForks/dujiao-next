@@ -19,6 +19,8 @@ import (
 	"github.com/dujiao-next/internal/modules/affiliate"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	affiliatetransport "github.com/dujiao-next/internal/transport/http/affiliate"
@@ -95,7 +97,7 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 	}
 	if err := db.AutoMigrate(
 		&models.User{},
-		&models.UserOAuthIdentity{},
+		&externalidentitydomain.Identity{},
 		&emailverificationdomain.Code{},
 		&settingsstore.SettingRecord{},
 		&models.Order{},
@@ -111,7 +113,7 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 	models.DB = db
 
 	userRepo := repository.NewUserRepository(db)
-	identityRepo := repository.NewUserOAuthIdentityRepository(db)
+	identityRepo := externalidentitystore.New(db)
 	emailVerifyRepo := emailverificationstore.New(db)
 	settingRepo := settingsstore.New(db)
 	orderRepo := repository.NewOrderRepository(db)
@@ -183,7 +185,7 @@ func TestChannelAffiliateOpenAndDashboard(t *testing.T) {
 		t.Fatalf("expected affiliate code in open response, got=%v", payload.Data["code"])
 	}
 
-	var identity models.UserOAuthIdentity
+	var identity externalidentitydomain.Identity
 	if err := db.Where("provider = ? AND provider_user_id = ?", constants.UserOAuthProviderTelegram, "998877").First(&identity).Error; err != nil {
 		t.Fatalf("expected telegram identity to be provisioned: %v", err)
 	}
@@ -228,7 +230,7 @@ func TestChannelAffiliateListsCommissionAndWithdrawRecords(t *testing.T) {
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	identity := models.UserOAuthIdentity{
+	identity := externalidentitydomain.Identity{
 		UserID:         user.ID,
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: "556677",
@@ -426,7 +428,7 @@ func TestChannelAffiliateApplyWithdraw(t *testing.T) {
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	identity := models.UserOAuthIdentity{
+	identity := externalidentitydomain.Identity{
 		UserID:         user.ID,
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: "667788",
