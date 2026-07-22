@@ -153,31 +153,6 @@ func (s *WalletService) changeBalance(userID uint, delta decimal.Decimal, txnTyp
 	return accountResult, txnResult, nil
 }
 
-func (s *WalletService) getOrCreateAccount(userID uint) (*models.WalletAccount, error) {
-	account, err := s.walletRepo.GetAccountByUserID(userID)
-	if err != nil {
-		return nil, err
-	}
-	if account != nil {
-		return account, nil
-	}
-	now := time.Now()
-	account = &models.WalletAccount{
-		UserID:    userID,
-		Balance:   models.NewMoneyFromDecimal(decimal.Zero),
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-	if err := s.walletRepo.CreateAccount(account); err != nil {
-		created, queryErr := s.walletRepo.GetAccountByUserID(userID)
-		if queryErr == nil && created != nil {
-			return created, nil
-		}
-		return nil, ErrWalletAccountCreateFailed
-	}
-	return account, nil
-}
-
 func (s *WalletService) ensureAccountForUpdate(repo *repository.GormWalletRepository, userID uint, now time.Time) (*models.WalletAccount, error) {
 	account, err := repo.GetAccountByUserIDForUpdate(userID)
 	if err != nil {

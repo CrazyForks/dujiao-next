@@ -241,12 +241,7 @@ func (h *PreviewHandler) PreviewGuestOrder(c *gin.Context) {
 func mapOrderItems(items []OrderItemRequest) []CreateOrderItem {
 	out := make([]CreateOrderItem, 0, len(items))
 	for _, item := range items {
-		out = append(out, CreateOrderItem{
-			ProductID:       item.ProductID,
-			SKUID:           item.SKUID,
-			Quantity:        item.Quantity,
-			FulfillmentType: item.FulfillmentType,
-		})
+		out = append(out, CreateOrderItem(item))
 	}
 	return out
 }

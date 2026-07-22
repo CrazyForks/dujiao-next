@@ -40,7 +40,6 @@ func TestWalletServiceIsSplitByResponsibility(t *testing.T) {
 		"ApplyRechargePayment":               "wallet_recharge.go",
 		"CreditInTx":                         "wallet_credit.go",
 		"changeBalance":                      "wallet_credit.go",
-		"getOrCreateAccount":                 "wallet_credit.go",
 		"ensureAccountForUpdate":             "wallet_credit.go",
 	}
 	expectedTypeOwner := map[string]string{

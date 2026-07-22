@@ -103,15 +103,7 @@ func (h *AdminBroadcastHandler) CreateTelegramBroadcast(c *gin.Context) {
 		return
 	}
 
-	result, err := h.broadcasts.CreateBroadcast(c.Request.Context(), BroadcastCreateInput{
-		Title:          req.Title,
-		RecipientType:  req.RecipientType,
-		UserIDs:        req.UserIDs,
-		Filters:        req.Filters,
-		AttachmentURL:  req.AttachmentURL,
-		AttachmentName: req.AttachmentName,
-		MessageHTML:    req.MessageHTML,
-	})
+	result, err := h.broadcasts.CreateBroadcast(c.Request.Context(), BroadcastCreateInput(req))
 	if err != nil {
 		if errors.Is(err, telegram.ErrBroadcastInvalid) ||
 			errors.Is(err, telegram.ErrBroadcastNoRecipients) ||

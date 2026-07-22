@@ -15,9 +15,6 @@ const (
 	resellerRuleSourceProduct = resellermodule.RuleSourceProduct
 	resellerRuleSourceProfile = resellermodule.RuleSourceProfile
 	resellerRuleSourceInherit = resellermodule.RuleSourceInherit
-
-	resellerProfitBlockOwner          = resellermodule.ProfitBlockOwner
-	resellerProfitBlockRelatedAccount = resellermodule.ProfitBlockRelatedAccount
 )
 
 // ResellerPricingResolver resolves reseller-facing prices before order transactions.

@@ -90,17 +90,11 @@ func (r UserTelegramMiniAppAuthRequest) initData() string {
 }
 
 func (r UserTelegramLoginRequest) payload() TelegramAuthPayload {
-	return TelegramAuthPayload{
-		ID: r.ID, FirstName: r.FirstName, LastName: r.LastName,
-		Username: r.Username, PhotoURL: r.PhotoURL, AuthDate: r.AuthDate, Hash: r.Hash,
-	}
+	return TelegramAuthPayload(r)
 }
 
 func (r UserBindTelegramRequest) payload() TelegramAuthPayload {
-	return TelegramAuthPayload{
-		ID: r.ID, FirstName: r.FirstName, LastName: r.LastName,
-		Username: r.Username, PhotoURL: r.PhotoURL, AuthDate: r.AuthDate, Hash: r.Hash,
-	}
+	return TelegramAuthPayload(r)
 }
 
 type telegramLoginErrorRule struct {

@@ -189,24 +189,7 @@ func emptyOperationsFinanceResponse(window reporting.Window) *OperationsFinanceR
 }
 
 func mapOperationsLifecycle(row OperationsLifecycleRow) OperationsLifecycleResponse {
-	return OperationsLifecycleResponse{
-		ProfilesTotal:                   row.ProfilesTotal,
-		ProfilesPendingReview:           row.ProfilesPendingReview,
-		ProfilesActive:                  row.ProfilesActive,
-		ProfilesRejected:                row.ProfilesRejected,
-		ProfilesDisabled:                row.ProfilesDisabled,
-		ProfilesSettlementFrozen:        row.ProfilesSettlementFrozen,
-		DomainsTotal:                    row.DomainsTotal,
-		DomainsPendingReview:            row.DomainsPendingReview,
-		DomainsActive:                   row.DomainsActive,
-		DomainsDisabled:                 row.DomainsDisabled,
-		DomainsPendingVerification:      row.DomainsPendingVerification,
-		DomainsVerified:                 row.DomainsVerified,
-		CustomDomains:                   row.CustomDomains,
-		Subdomains:                      row.Subdomains,
-		SiteConfigsTotal:                row.SiteConfigsTotal,
-		ActiveProfilesWithoutSiteConfig: row.ActiveProfilesWithoutSiteConfig,
-	}
+	return OperationsLifecycleResponse(row)
 }
 
 func mapOperationsOrders(row OperationsOrdersRow) OperationsOrdersResponse {

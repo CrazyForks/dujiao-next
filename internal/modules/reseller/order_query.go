@@ -109,7 +109,7 @@ func (s *OrderQueryService) StatsUserOrders(userID uint, input OrderListInput) (
 	if err != nil {
 		return OrderStats{}, err
 	}
-	return OrderStats{Total: row.Total, ByStatus: row.ByStatus, ByCurrency: row.ByCurrency}, nil
+	return OrderStats(row), nil
 }
 
 func orderSnapshotFilter(resellerID uint, input OrderListInput) OrderSnapshotListFilter {

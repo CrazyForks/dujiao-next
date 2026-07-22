@@ -146,6 +146,9 @@ func forEachProductionGoFile(t *testing.T, directory string, visit func(path str
 	t.Helper()
 	entries, err := os.ReadDir(directory)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return
+		}
 		t.Fatalf("read Go package %s: %v", directory, err)
 	}
 	for _, entry := range entries {

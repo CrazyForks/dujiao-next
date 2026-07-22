@@ -181,12 +181,7 @@ func buildChannelOrderItems(items []channelOrderItemRequest, legacyProductID, le
 		if item.ProductID == 0 || item.Quantity <= 0 {
 			return nil, ErrInvalidOrderItem
 		}
-		result = append(result, CreateOrderItem{
-			ProductID:       item.ProductID,
-			SKUID:           item.SKUID,
-			Quantity:        item.Quantity,
-			FulfillmentType: item.FulfillmentType,
-		})
+		result = append(result, CreateOrderItem(item))
 	}
 	return result, nil
 }

@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -166,14 +165,6 @@ func telegramChannelIdentityInput(channelUserID, legacyUserID, username, legacyU
 		LastName:      strings.TrimSpace(lastName),
 		AvatarURL:     strings.TrimSpace(avatarURL),
 	}
-}
-
-func (h *Handler) provisionTelegramChannelUser(input TelegramIdentityInput) (*models.User, *models.UserOAuthIdentity, error) {
-	user, identity, _, err := h.UserAuthService.ProvisionTelegramChannelIdentity(input)
-	if err != nil {
-		return nil, nil, err
-	}
-	return user, identity, nil
 }
 
 func (h *Handler) provisionTelegramChannelUserID(input TelegramIdentityInput) (uint, error) {

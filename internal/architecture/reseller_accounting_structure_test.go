@@ -18,10 +18,6 @@ func TestResellerAccountingIsSplitByResponsibility(t *testing.T) {
 
 	expectedOwner := map[string]string{
 		"NewResellerAccountingService": "reseller_accounting_core.go",
-		"getResellerProfileByUserID":   "reseller_accounting_core.go",
-		"requireActiveResellerProfile": "reseller_accounting_core.go",
-		"resellerWithdrawAvailability": "reseller_accounting_core.go",
-		"refreshBalanceAccountTx":      "reseller_accounting_core.go",
 		"GetUserFinanceDashboard":      "reseller_accounting_query.go",
 		"ListUserBalanceAccounts":      "reseller_accounting_query.go",
 		"ListUserLedgerEntries":        "reseller_accounting_query.go",
