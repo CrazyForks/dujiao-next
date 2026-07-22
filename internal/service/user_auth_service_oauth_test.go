@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
@@ -63,7 +64,7 @@ func TestFindOrCreateTelegramUserRespectsRegistrationSetting(t *testing.T) {
 		t.Fatalf("disable registration failed: %v", err)
 	}
 
-	user, err := svc.findOrCreateTelegramUser(&TelegramIdentityVerified{
+	user, err := svc.findOrCreateTelegramUser(&telegramauthapp.IdentityVerified{
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: "10001",
 		Username:       "tg_new_user",
@@ -92,7 +93,7 @@ func TestFindOrCreateTelegramUserIgnoresEmailDomainAllowlist(t *testing.T) {
 		t.Fatalf("update registration config failed: %v", err)
 	}
 
-	user, err := svc.findOrCreateTelegramUser(&TelegramIdentityVerified{
+	user, err := svc.findOrCreateTelegramUser(&telegramauthapp.IdentityVerified{
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: "allowlist_tg_10001",
 		Username:       "allowlist_tg",
@@ -147,7 +148,7 @@ func TestLoginWithTelegramAllowsExistingIdentityWhenRegistrationDisabled(t *test
 		t.Fatalf("disable registration failed: %v", err)
 	}
 
-	res, err := svc.loginWithVerifiedTelegram(&TelegramIdentityVerified{
+	res, err := svc.loginWithVerifiedTelegram(&telegramauthapp.IdentityVerified{
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: "10002",
 		Username:       "tg_existing",
@@ -195,7 +196,7 @@ func TestLoginWithTelegramMigratesOIDCSubjectIdentityToTelegramID(t *testing.T) 
 		t.Fatalf("create identity failed: %v", err)
 	}
 
-	res, err := svc.loginWithVerifiedTelegram(&TelegramIdentityVerified{
+	res, err := svc.loginWithVerifiedTelegram(&telegramauthapp.IdentityVerified{
 		Provider:              constants.UserOAuthProviderTelegram,
 		ProviderUserID:        "987654321",
 		ProviderUserIDAliases: []string{"1234123412341234123"},
@@ -223,15 +224,14 @@ func TestLoginWithTelegramMigratesOIDCSubjectIdentityToTelegramID(t *testing.T) 
 
 func TestTelegramMiniAppLoginReturnsRegistrationDisabledWhenCreatingNewUser(t *testing.T) {
 	svc, _ := setupTelegramOAuthTestService(t)
-	telegramSvc := NewTelegramAuthService(config.TelegramAuthConfig{
+	telegramSvc := telegramauthapp.NewService(config.TelegramAuthConfig{
 		Enabled:            true,
 		BotToken:           "test-bot-token",
 		LoginExpireSeconds: 300,
 		ReplayTTLSeconds:   300,
-	})
-	telegramSvc.replaySetNX = func(ctx context.Context, key string, value interface{}, ttl time.Duration) (bool, error) {
+	}, telegramauthapp.WithReplaySetNX(func(ctx context.Context, key string, value interface{}, ttl time.Duration) (bool, error) {
 		return true, nil
-	}
+	}))
 	svc.telegramAuthService = telegramSvc
 
 	if _, err := svc.settingService.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
@@ -240,7 +240,7 @@ func TestTelegramMiniAppLoginReturnsRegistrationDisabledWhenCreatingNewUser(t *t
 		t.Fatalf("disable registration failed: %v", err)
 	}
 
-	initData := buildTestTelegramMiniAppInitData(t, "test-bot-token", time.Now().Unix(), `{"id":10003,"first_name":"Mini","last_name":"Blocked","username":"mini_blocked"}`)
+	initData := buildUserAuthTestTelegramMiniAppInitData(t, "test-bot-token", time.Now().Unix(), `{"id":10003,"first_name":"Mini","last_name":"Blocked","username":"mini_blocked"}`)
 	res, err := svc.LoginWithTelegramMiniApp(LoginWithTelegramMiniAppInput{
 		InitData: initData,
 		Context:  context.Background(),
@@ -277,7 +277,7 @@ func TestLoginWithTelegramAssignsDefaultMemberLevel(t *testing.T) {
 		repository.NewUserRepository(db),
 	))
 
-	res, err := svc.loginWithVerifiedTelegram(&TelegramIdentityVerified{
+	res, err := svc.loginWithVerifiedTelegram(&telegramauthapp.IdentityVerified{
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: "20001",
 		Username:       "tg_level_user",

@@ -1,4 +1,4 @@
-package service
+package telegramauthapp
 
 import (
 	"context"
@@ -16,14 +16,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 )
 
-// TelegramLoginPayload Telegram 登录载荷
-type TelegramLoginPayload struct {
+// LoginPayload is the Telegram Login Widget payload.
+type LoginPayload struct {
 	ID        int64
 	FirstName string
 	LastName  string
@@ -33,8 +32,8 @@ type TelegramLoginPayload struct {
 	Hash      string
 }
 
-// TelegramIdentityVerified Telegram 身份校验结果
-type TelegramIdentityVerified struct {
+// IdentityVerified is the canonical verified Telegram identity.
+type IdentityVerified struct {
 	Provider              string
 	ProviderUserID        string
 	ProviderUserIDAliases []string
@@ -45,43 +44,64 @@ type TelegramIdentityVerified struct {
 	AuthAt                time.Time
 }
 
-type telegramReplaySetNXFunc func(ctx context.Context, key string, value interface{}, ttl time.Duration) (bool, error)
+type ReplaySetNXFunc func(ctx context.Context, key string, value interface{}, ttl time.Duration) (bool, error)
+type OIDCStateSetFunc func(ctx context.Context, key string, value string, ttlSeconds int) (bool, error)
+type OIDCStateTakeFunc func(ctx context.Context, key string) (string, bool, error)
 
-// TelegramAuthService Telegram 登录校验服务
-type TelegramAuthService struct {
+type Option func(*Service)
+
+func WithReplaySetNX(replaySetNX ReplaySetNXFunc) Option {
+	return func(service *Service) {
+		if replaySetNX != nil {
+			service.replaySetNX = replaySetNX
+		}
+	}
+}
+
+func WithOIDCStateStore(set OIDCStateSetFunc, take OIDCStateTakeFunc) Option {
+	return func(service *Service) {
+		if set != nil && take != nil {
+			service.oidcStateSet = set
+			service.oidcStateTake = take
+		}
+	}
+}
+
+// Service verifies Telegram authentication payloads.
+type Service struct {
 	cfg         config.TelegramAuthConfig
-	replaySetNX telegramReplaySetNXFunc
+	replaySetNX ReplaySetNXFunc
 
 	httpClient        *http.Client
 	oidcAuthEndpoint  string
 	oidcTokenEndpoint string
 	oidcJWKSEndpoint  string
-	oidcStateSet      func(ctx context.Context, key string, value string, ttlSeconds int) (bool, error)
-	oidcStateTake     func(ctx context.Context, key string) (string, bool, error)
+	oidcStateSet      OIDCStateSetFunc
+	oidcStateTake     OIDCStateTakeFunc
 
 	jwksMu        sync.Mutex
 	jwksCache     map[string]*rsa.PublicKey
 	jwksFetchedAt time.Time
 }
 
-// NewTelegramAuthService 创建 Telegram 登录校验服务
-func NewTelegramAuthService(cfg config.TelegramAuthConfig) *TelegramAuthService {
-	svc := &TelegramAuthService{
-		cfg:         normalizeTelegramAuthConfig(cfg),
-		replaySetNX: cache.SetNX,
-	}
+// NewService creates the Telegram authentication service.
+func NewService(cfg config.TelegramAuthConfig, options ...Option) *Service {
+	svc := &Service{cfg: normalizeTelegramAuthConfig(cfg)}
 	svc.httpClient = &http.Client{Timeout: 10 * time.Second}
 	svc.oidcAuthEndpoint = "https://oauth.telegram.org/auth"
 	svc.oidcTokenEndpoint = "https://oauth.telegram.org/token"
 	svc.oidcJWKSEndpoint = "https://oauth.telegram.org/.well-known/jwks.json"
-	svc.oidcStateSet = defaultTelegramOIDCStateSet
-	svc.oidcStateTake = defaultTelegramOIDCStateTake
 	svc.jwksCache = map[string]*rsa.PublicKey{}
+	for _, option := range options {
+		if option != nil {
+			option(svc)
+		}
+	}
 	return svc
 }
 
 // SetConfig 更新运行时配置
-func (s *TelegramAuthService) SetConfig(cfg config.TelegramAuthConfig) {
+func (s *Service) SetConfig(cfg config.TelegramAuthConfig) {
 	if s == nil {
 		return
 	}
@@ -89,7 +109,7 @@ func (s *TelegramAuthService) SetConfig(cfg config.TelegramAuthConfig) {
 }
 
 // PublicConfig 返回前台可见配置
-func (s *TelegramAuthService) PublicConfig() map[string]interface{} {
+func (s *Service) PublicConfig() map[string]interface{} {
 	if s == nil {
 		return map[string]interface{}{
 			"enabled":      false,
@@ -111,7 +131,7 @@ func (s *TelegramAuthService) PublicConfig() map[string]interface{} {
 	}
 }
 
-func (s *TelegramAuthService) currentLoginMode() (config.TelegramAuthConfig, settingssecurity.TelegramLoginMode) {
+func (s *Service) currentLoginMode() (config.TelegramAuthConfig, settingssecurity.TelegramLoginMode) {
 	cfg := normalizeTelegramAuthConfig(s.cfg)
 	mode := settingssecurity.ResolveTelegramLoginMode(settingssecurity.TelegramAuthSetting{
 		Enabled: cfg.Enabled, BotUsername: cfg.BotUsername, BotToken: cfg.BotToken,
@@ -121,7 +141,7 @@ func (s *TelegramAuthService) currentLoginMode() (config.TelegramAuthConfig, set
 }
 
 // VerifyLogin 校验 Telegram 登录载荷
-func (s *TelegramAuthService) VerifyLogin(ctx context.Context, payload TelegramLoginPayload) (*TelegramIdentityVerified, error) {
+func (s *Service) VerifyLogin(ctx context.Context, payload LoginPayload) (*IdentityVerified, error) {
 	if s == nil {
 		return nil, ErrTelegramAuthConfigInvalid
 	}
@@ -153,7 +173,7 @@ func (s *TelegramAuthService) VerifyLogin(ctx context.Context, payload TelegramL
 		return nil, err
 	}
 
-	return &TelegramIdentityVerified{
+	return &IdentityVerified{
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: strconv.FormatInt(normalized.ID, 10),
 		Username:       normalized.Username,
@@ -165,7 +185,7 @@ func (s *TelegramAuthService) VerifyLogin(ctx context.Context, payload TelegramL
 }
 
 // VerifyMiniAppInitData 校验 Telegram Mini App initData。
-func (s *TelegramAuthService) VerifyMiniAppInitData(ctx context.Context, initData string) (*TelegramIdentityVerified, error) {
+func (s *Service) VerifyMiniAppInitData(ctx context.Context, initData string) (*IdentityVerified, error) {
 	if s == nil {
 		return nil, ErrTelegramAuthConfigInvalid
 	}
@@ -197,7 +217,7 @@ func (s *TelegramAuthService) VerifyMiniAppInitData(ctx context.Context, initDat
 		return nil, err
 	}
 
-	return &TelegramIdentityVerified{
+	return &IdentityVerified{
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: strconv.FormatInt(parsed.User.ID, 10),
 		Username:       parsed.User.Username,
@@ -225,8 +245,8 @@ func normalizeTelegramAuthConfig(cfg config.TelegramAuthConfig) config.TelegramA
 	return cfg
 }
 
-func normalizeTelegramLoginPayload(payload TelegramLoginPayload) (TelegramLoginPayload, error) {
-	normalized := TelegramLoginPayload{
+func normalizeTelegramLoginPayload(payload LoginPayload) (LoginPayload, error) {
+	normalized := LoginPayload{
 		ID:        payload.ID,
 		FirstName: strings.TrimSpace(payload.FirstName),
 		LastName:  strings.TrimSpace(payload.LastName),
@@ -236,7 +256,7 @@ func normalizeTelegramLoginPayload(payload TelegramLoginPayload) (TelegramLoginP
 		Hash:      strings.ToLower(strings.TrimSpace(payload.Hash)),
 	}
 	if normalized.ID <= 0 || normalized.AuthDate <= 0 || normalized.Hash == "" {
-		return TelegramLoginPayload{}, ErrTelegramAuthPayloadInvalid
+		return LoginPayload{}, ErrTelegramAuthPayloadInvalid
 	}
 	return normalized, nil
 }
@@ -299,7 +319,7 @@ func normalizeTelegramMiniAppInitData(raw string) (*telegramMiniAppInitDataVerif
 	}, nil
 }
 
-func buildTelegramDataCheckString(payload TelegramLoginPayload) string {
+func buildTelegramDataCheckString(payload LoginPayload) string {
 	values := map[string]string{
 		"auth_date": strconv.FormatInt(payload.AuthDate, 10),
 		"id":        strconv.FormatInt(payload.ID, 10),
@@ -375,7 +395,7 @@ func validateTelegramAuthTime(now, authAt time.Time, expireSeconds int) error {
 	return nil
 }
 
-func (s *TelegramAuthService) markTelegramReplay(ctx context.Context, userID int64, hash string, replayTTLSeconds int) error {
+func (s *Service) markTelegramReplay(ctx context.Context, userID int64, hash string, replayTTLSeconds int) error {
 	if s == nil {
 		return ErrTelegramAuthConfigInvalid
 	}
@@ -384,7 +404,7 @@ func (s *TelegramAuthService) markTelegramReplay(ctx context.Context, userID int
 	}
 	setNX := s.replaySetNX
 	if setNX == nil {
-		setNX = cache.SetNX
+		return ErrTelegramAuthConfigInvalid
 	}
 	replayTTL := time.Duration(replayTTLSeconds) * time.Second
 	replayKey := fmt.Sprintf("telegram:auth:replay:%d:%s", userID, hash)

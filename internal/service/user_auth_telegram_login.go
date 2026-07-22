@@ -6,11 +6,12 @@ import (
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 )
 
 // LoginWithTelegramInput Telegram 登录输入
 type LoginWithTelegramInput struct {
-	Payload TelegramLoginPayload
+	Payload telegramauthapp.LoginPayload
 	Context context.Context
 }
 
@@ -23,7 +24,7 @@ type LoginWithTelegramMiniAppInput struct {
 // LoginWithTelegram Telegram 登录（已启用 2FA 的账号会返回挑战 token，不直接发 JWT）
 func (s *UserAuthService) LoginWithTelegram(input LoginWithTelegramInput) (*UserLoginResult, error) {
 	if s.telegramAuthService == nil || s.userOAuthIdentityRepo == nil {
-		return nil, ErrTelegramAuthConfigInvalid
+		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 	ctx := input.Context
 	if ctx == nil {
@@ -39,7 +40,7 @@ func (s *UserAuthService) LoginWithTelegram(input LoginWithTelegramInput) (*User
 // LoginWithTelegramMiniApp Telegram Mini App 登录（已启用 2FA 的账号会返回挑战 token，不直接发 JWT）
 func (s *UserAuthService) LoginWithTelegramMiniApp(input LoginWithTelegramMiniAppInput) (*UserLoginResult, error) {
 	if s.telegramAuthService == nil || s.userOAuthIdentityRepo == nil {
-		return nil, ErrTelegramAuthConfigInvalid
+		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 	ctx := input.Context
 	if ctx == nil {
@@ -52,7 +53,7 @@ func (s *UserAuthService) LoginWithTelegramMiniApp(input LoginWithTelegramMiniAp
 	return s.loginWithVerifiedTelegram(verified)
 }
 
-func (s *UserAuthService) loginWithVerifiedTelegram(verified *TelegramIdentityVerified) (*UserLoginResult, error) {
+func (s *UserAuthService) loginWithVerifiedTelegram(verified *telegramauthapp.IdentityVerified) (*UserLoginResult, error) {
 	identity, err := s.getTelegramIdentityByVerifiedID(verified)
 	if err != nil {
 		return nil, err

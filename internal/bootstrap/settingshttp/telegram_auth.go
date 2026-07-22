@@ -2,15 +2,15 @@ package settingsbootstrap
 
 import (
 	"github.com/dujiao-next/internal/config"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
-	"github.com/dujiao-next/internal/service"
 )
 
 type settingsTelegramAuthAdapter struct {
 	settings     *settingsapp.Service
 	cfg          *config.Config
-	telegramAuth *service.TelegramAuthService
+	telegramAuth *telegramauthapp.Service
 }
 
 func (a settingsTelegramAuthAdapter) GetTelegramAuthSetting() (settingssecurity.TelegramAuthSetting, error) {

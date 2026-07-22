@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 
 	"github.com/dujiao-next/internal/cache"
@@ -31,7 +32,7 @@ type UserAuthService struct {
 	codeRepo              repository.EmailVerifyCodeRepository
 	settingService        *settingsapp.Service
 	emailService          *EmailService
-	telegramAuthService   *TelegramAuthService
+	telegramAuthService   *telegramauthapp.Service
 	memberLevelSvc        MemberLevelAssigner
 }
 
@@ -52,7 +53,7 @@ func NewUserAuthService(
 	codeRepo repository.EmailVerifyCodeRepository,
 	settingService *settingsapp.Service,
 	emailService *EmailService,
-	telegramAuthService *TelegramAuthService,
+	telegramAuthService *telegramauthapp.Service,
 ) *UserAuthService {
 	return &UserAuthService{
 		cfg:                   cfg,

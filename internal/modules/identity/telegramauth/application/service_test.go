@@ -1,4 +1,4 @@
-package service
+package telegramauthapp
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 )
 
 func TestVerifyMiniAppInitDataSuccess(t *testing.T) {
-	svc := NewTelegramAuthService(config.TelegramAuthConfig{
+	svc := NewService(config.TelegramAuthConfig{
 		Enabled:            true,
 		BotToken:           "test-bot-token",
 		LoginExpireSeconds: 300,
@@ -42,7 +42,7 @@ func TestVerifyMiniAppInitDataSuccess(t *testing.T) {
 }
 
 func TestVerifyMiniAppInitDataExpired(t *testing.T) {
-	svc := NewTelegramAuthService(config.TelegramAuthConfig{
+	svc := NewService(config.TelegramAuthConfig{
 		Enabled:            true,
 		BotToken:           "test-bot-token",
 		LoginExpireSeconds: 60,
@@ -60,7 +60,7 @@ func TestVerifyMiniAppInitDataExpired(t *testing.T) {
 }
 
 func TestVerifyMiniAppInitDataRejectsInvalidSignature(t *testing.T) {
-	svc := NewTelegramAuthService(config.TelegramAuthConfig{
+	svc := NewService(config.TelegramAuthConfig{
 		Enabled:            true,
 		BotToken:           "test-bot-token",
 		LoginExpireSeconds: 300,
@@ -79,7 +79,7 @@ func TestVerifyMiniAppInitDataRejectsInvalidSignature(t *testing.T) {
 }
 
 func TestVerifyMiniAppInitDataAcceptsSignatureField(t *testing.T) {
-	svc := NewTelegramAuthService(config.TelegramAuthConfig{
+	svc := NewService(config.TelegramAuthConfig{
 		Enabled:            true,
 		BotToken:           "test-bot-token",
 		LoginExpireSeconds: 300,
@@ -103,7 +103,7 @@ func TestVerifyMiniAppInitDataAcceptsSignatureField(t *testing.T) {
 }
 
 func TestVerifyMiniAppInitDataRejectsReplay(t *testing.T) {
-	svc := NewTelegramAuthService(config.TelegramAuthConfig{
+	svc := NewService(config.TelegramAuthConfig{
 		Enabled:            true,
 		BotToken:           "test-bot-token",
 		LoginExpireSeconds: 300,
@@ -129,7 +129,7 @@ func TestVerifyMiniAppInitDataRejectsReplay(t *testing.T) {
 }
 
 func TestTelegramAuthServicePublicConfigIncludesMiniAppURL(t *testing.T) {
-	svc := NewTelegramAuthService(config.TelegramAuthConfig{
+	svc := NewService(config.TelegramAuthConfig{
 		Enabled:     true,
 		BotUsername: "demo_bot",
 		MiniAppURL:  " https://example.com/mini-app ",

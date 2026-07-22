@@ -6,12 +6,13 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 )
 
 // BindTelegramInput 绑定 Telegram 输入
 type BindTelegramInput struct {
 	UserID  uint
-	Payload TelegramLoginPayload
+	Payload telegramauthapp.LoginPayload
 	Context context.Context
 }
 
@@ -28,7 +29,7 @@ func (s *UserAuthService) BindTelegram(input BindTelegramInput) (*models.UserOAu
 		return nil, ErrNotFound
 	}
 	if s.telegramAuthService == nil || s.userOAuthIdentityRepo == nil {
-		return nil, ErrTelegramAuthConfigInvalid
+		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 	ctx := input.Context
 	if ctx == nil {
@@ -47,7 +48,7 @@ func (s *UserAuthService) BindTelegramMiniApp(input BindTelegramMiniAppInput) (*
 		return nil, ErrNotFound
 	}
 	if s.telegramAuthService == nil || s.userOAuthIdentityRepo == nil {
-		return nil, ErrTelegramAuthConfigInvalid
+		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 	ctx := input.Context
 	if ctx == nil {
@@ -60,7 +61,7 @@ func (s *UserAuthService) BindTelegramMiniApp(input BindTelegramMiniAppInput) (*
 	return s.bindVerifiedTelegram(input.UserID, verified)
 }
 
-func (s *UserAuthService) bindVerifiedTelegram(userID uint, verified *TelegramIdentityVerified) (*models.UserOAuthIdentity, error) {
+func (s *UserAuthService) bindVerifiedTelegram(userID uint, verified *telegramauthapp.IdentityVerified) (*models.UserOAuthIdentity, error) {
 	if _, err := s.getActiveUserByID(userID); err != nil {
 		return nil, err
 	}
@@ -116,7 +117,7 @@ func (s *UserAuthService) UnbindTelegram(userID uint) error {
 		return ErrNotFound
 	}
 	if s.userOAuthIdentityRepo == nil {
-		return ErrTelegramAuthConfigInvalid
+		return telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 	user, err := s.getActiveUserByID(userID)
 	if err != nil {
@@ -145,7 +146,7 @@ func (s *UserAuthService) GetTelegramBinding(userID uint) (*models.UserOAuthIden
 		return nil, ErrNotFound
 	}
 	if s.userOAuthIdentityRepo == nil {
-		return nil, ErrTelegramAuthConfigInvalid
+		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 	return s.userOAuthIdentityRepo.GetByUserProvider(userID, constants.UserOAuthProviderTelegram)
 }

@@ -1,4 +1,4 @@
-package service
+package telegramauthapp
 
 import (
 	"context"
@@ -18,7 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/constants"
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 	"github.com/golang-jwt/jwt/v5"
@@ -33,26 +32,15 @@ const (
 	telegramOIDCStatePrefix = "telegram:oidc:state:"
 )
 
+const (
+	IntentLogin = telegramOIDCIntentLogin
+	IntentBind  = telegramOIDCIntentBind
+)
+
 type telegramOIDCState struct {
 	CodeVerifier string `json:"v"`
 	Intent       string `json:"i"`
 	UserID       uint   `json:"u"`
-}
-
-func defaultTelegramOIDCStateSet(ctx context.Context, key string, value string, ttlSeconds int) (bool, error) {
-	return cache.SetNX(ctx, key, value, time.Duration(ttlSeconds)*time.Second)
-}
-
-func defaultTelegramOIDCStateTake(ctx context.Context, key string) (string, bool, error) {
-	v, err := cache.GetString(ctx, key)
-	if err != nil {
-		return "", false, err
-	}
-	if v == "" {
-		return "", false, nil
-	}
-	_ = cache.Del(ctx, key)
-	return v, true, nil
 }
 
 func base64URLNoPad(b []byte) string {
@@ -82,7 +70,7 @@ func newOIDCState() (string, error) {
 }
 
 // StartOIDCLogin 生成授权 URL 并把 PKCE/state 存入缓存
-func (s *TelegramAuthService) StartOIDCLogin(ctx context.Context, intent string, userID uint) (string, error) {
+func (s *Service) StartOIDCLogin(ctx context.Context, intent string, userID uint) (string, error) {
 	if s == nil {
 		return "", ErrTelegramAuthConfigInvalid
 	}
@@ -102,6 +90,9 @@ func (s *TelegramAuthService) StartOIDCLogin(ctx context.Context, intent string,
 	}
 	if intent != telegramOIDCIntentLogin && intent != telegramOIDCIntentBind {
 		return "", ErrTelegramAuthPayloadInvalid
+	}
+	if s.oidcStateSet == nil {
+		return "", ErrTelegramAuthConfigInvalid
 	}
 
 	state, err := newOIDCState()
@@ -178,7 +169,7 @@ func parseTelegramJWKS(raw []byte) (map[string]*rsa.PublicKey, error) {
 	return out, nil
 }
 
-func (s *TelegramAuthService) jwksKey(ctx context.Context, kid string) (*rsa.PublicKey, error) {
+func (s *Service) jwksKey(ctx context.Context, kid string) (*rsa.PublicKey, error) {
 	if kid == "" {
 		kid = "_default"
 	}
@@ -240,8 +231,8 @@ type telegramOIDCIDClaims struct {
 	Picture           string      `json:"picture"`
 }
 
-// CompleteOIDCLogin 用授权码换 id_token、验签、解析为 TelegramIdentityVerified
-func (s *TelegramAuthService) CompleteOIDCLogin(ctx context.Context, code, state string) (*TelegramIdentityVerified, string, uint, error) {
+// CompleteOIDCLogin exchanges a code and returns a verified identity.
+func (s *Service) CompleteOIDCLogin(ctx context.Context, code, state string) (*IdentityVerified, string, uint, error) {
 	if s == nil {
 		return nil, "", 0, ErrTelegramAuthConfigInvalid
 	}
@@ -262,6 +253,9 @@ func (s *TelegramAuthService) CompleteOIDCLogin(ctx context.Context, code, state
 	}
 	clientID := settingssecurity.TelegramBotIDFromToken(cfg.BotToken)
 	if clientID == "" {
+		return nil, "", 0, ErrTelegramAuthConfigInvalid
+	}
+	if s.oidcStateTake == nil {
 		return nil, "", 0, ErrTelegramAuthConfigInvalid
 	}
 
@@ -333,7 +327,7 @@ func (s *TelegramAuthService) CompleteOIDCLogin(ctx context.Context, code, state
 		return nil, "", 0, err
 	}
 
-	return &TelegramIdentityVerified{
+	return &IdentityVerified{
 		Provider:              constants.UserOAuthProviderTelegram,
 		ProviderUserID:        providerUserID,
 		ProviderUserIDAliases: providerUserIDAliases,

@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/repository"
 
 	"github.com/glebarez/sqlite"
@@ -31,15 +32,14 @@ func TestLoginWithTelegramMiniAppCreatesUserIdentityAndToken(t *testing.T) {
 			ExpireHours: 24,
 		},
 	}
-	telegramSvc := NewTelegramAuthService(config.TelegramAuthConfig{
+	telegramSvc := telegramauthapp.NewService(config.TelegramAuthConfig{
 		Enabled:            true,
 		BotToken:           "test-bot-token",
 		LoginExpireSeconds: 300,
 		ReplayTTLSeconds:   300,
-	})
-	telegramSvc.replaySetNX = func(ctx context.Context, key string, value interface{}, ttl time.Duration) (bool, error) {
+	}, telegramauthapp.WithReplaySetNX(func(ctx context.Context, key string, value interface{}, ttl time.Duration) (bool, error) {
 		return true, nil
-	}
+	}))
 
 	svc := NewUserAuthService(
 		cfg,
@@ -51,7 +51,7 @@ func TestLoginWithTelegramMiniAppCreatesUserIdentityAndToken(t *testing.T) {
 		telegramSvc,
 	)
 
-	initData := buildTestTelegramMiniAppInitData(t, "test-bot-token", time.Now().Unix(), `{"id":987654,"first_name":"Mini","last_name":"Buyer","username":"mini_buyer"}`)
+	initData := buildUserAuthTestTelegramMiniAppInitData(t, "test-bot-token", time.Now().Unix(), `{"id":987654,"first_name":"Mini","last_name":"Buyer","username":"mini_buyer"}`)
 	res, err := svc.LoginWithTelegramMiniApp(LoginWithTelegramMiniAppInput{
 		InitData: initData,
 		Context:  context.Background(),

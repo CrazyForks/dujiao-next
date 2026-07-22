@@ -81,6 +81,10 @@ var completedMigrationPaths = []string{
 	"internal/transport/http/channelclient",
 	"internal/wiring/channelclient",
 	"internal/wiring/telegram/channel_bot.go",
+	"internal/service/telegram_auth_service.go",
+	"internal/service/telegram_auth_service_test.go",
+	"internal/service/telegram_oidc.go",
+	"internal/service/telegram_oidc_test.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

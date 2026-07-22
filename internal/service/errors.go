@@ -15,7 +15,6 @@ import (
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 	walletmodule "github.com/dujiao-next/internal/modules/wallet"
 )
 
@@ -39,15 +38,6 @@ var (
 	ErrEmailServiceDisabled                = errors.New("email service disabled")
 	ErrEmailServiceNotConfigured           = errors.New("email service not configured")
 	ErrEmailRecipientRejected              = errors.New("email recipient rejected")
-	ErrTelegramAuthDisabled                = errors.New("telegram auth disabled")
-	ErrTelegramAuthConfigInvalid           = settingssecurity.ErrTelegramAuthConfigInvalid
-	ErrTelegramAuthPayloadInvalid          = errors.New("telegram auth payload invalid")
-	ErrTelegramAuthSignatureInvalid        = errors.New("telegram auth signature invalid")
-	ErrTelegramAuthExpired                 = errors.New("telegram auth expired")
-	ErrTelegramAuthReplay                  = errors.New("telegram auth replay")
-	ErrTelegramOIDCStateInvalid            = errors.New("telegram oidc state invalid")
-	ErrTelegramOIDCTokenExchange           = errors.New("telegram oidc token exchange failed")
-	ErrTelegramOIDCIDTokenInvalid          = errors.New("telegram oidc id token invalid")
 	ErrUserOAuthIdentityExists             = errors.New("user oauth identity exists")
 	ErrUserOAuthAlreadyBound               = errors.New("user oauth already bound")
 	ErrUserOAuthNotBound                   = errors.New("user oauth not bound")

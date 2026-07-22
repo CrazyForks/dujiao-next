@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/modules/captcha"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -117,7 +118,7 @@ func (a publicConfigCaptchaAdapter) GetPublicSetting() (jsonmap.JSON, error) {
 }
 
 type publicConfigTelegramAdapter struct {
-	svc *service.TelegramAuthService
+	svc *telegramauthapp.Service
 }
 
 func (a publicConfigTelegramAdapter) PublicConfig() map[string]interface{} {

@@ -20,6 +20,7 @@ import (
 	"github.com/dujiao-next/internal/modules/dashboard"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/modules/notification"
@@ -99,7 +100,7 @@ type Container struct {
 	TOTPService                   *service.TOTPService
 	UserTOTPService               *service.UserTOTPService
 	UserAuthService               *service.UserAuthService
-	TelegramAuthService           *service.TelegramAuthService
+	TelegramAuthService           *telegramauthapp.Service
 	EmailService                  *service.EmailService
 	CaptchaService                *captcha.Service
 	UploadService                 *upload.Service

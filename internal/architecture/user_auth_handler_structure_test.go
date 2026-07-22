@@ -6,6 +6,36 @@ import (
 	"testing"
 )
 
+func TestTelegramAuthLivesInIdentityModule(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	identityRoot := filepath.Join(repositoryRoot, "internal", "modules", "identity")
+	moduleRoot := filepath.Join(identityRoot, "telegramauth")
+	applicationRoot := filepath.Join(moduleRoot, "application")
+
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "service.go"), []string{
+		"Service", "LoginPayload", "IdentityVerified", "Option",
+	})
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "service.go"), []string{
+		"NewService", "WithReplaySetNX", "WithOIDCStateStore",
+	})
+	assertDirectoryGoFileBudget(t, identityRoot, 0)
+	assertDirectoryGoFileBudget(t, moduleRoot, 0)
+	assertDirectoryGoFileBudget(t, applicationRoot, 5)
+
+	for _, legacy := range []string{
+		filepath.Join(repositoryRoot, "internal", "service", "telegram_auth_service.go"),
+		filepath.Join(repositoryRoot, "internal", "service", "telegram_auth_service_test.go"),
+		filepath.Join(repositoryRoot, "internal", "service", "telegram_oidc.go"),
+		filepath.Join(repositoryRoot, "internal", "service", "telegram_oidc_test.go"),
+	} {
+		if _, err := os.Stat(legacy); err == nil {
+			t.Fatalf("legacy Telegram auth path must stay removed: %s", legacy)
+		} else if !os.IsNotExist(err) {
+			t.Fatalf("stat legacy Telegram auth path: %v", err)
+		}
+	}
+}
+
 func TestUserProfileHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "userauth")

@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	userauthtransport "github.com/dujiao-next/internal/transport/http/userauth"
@@ -107,8 +108,8 @@ type userTelegramTransportAdapter struct {
 	auth *service.UserAuthService
 }
 
-func (a userTelegramTransportAdapter) toServicePayload(payload userauthtransport.TelegramAuthPayload) service.TelegramLoginPayload {
-	return service.TelegramLoginPayload{
+func (a userTelegramTransportAdapter) toServicePayload(payload userauthtransport.TelegramAuthPayload) telegramauthapp.LoginPayload {
+	return telegramauthapp.LoginPayload{
 		ID:        payload.ID,
 		FirstName: payload.FirstName,
 		LastName:  payload.LastName,
@@ -475,15 +476,15 @@ func mapUserAuthTransportError(err error) error {
 		{service.ErrInvalidVerifyPurpose, userauthtransport.ErrInvalidVerifyPurpose},
 		{service.ErrEmailExists, userauthtransport.ErrEmailExists},
 		{settingsapp.ErrEmailDomainNotAllowed, userauthtransport.ErrEmailDomainNotAllowed},
-		{service.ErrTelegramAuthDisabled, userauthtransport.ErrTelegramAuthDisabled},
-		{service.ErrTelegramAuthConfigInvalid, userauthtransport.ErrTelegramAuthConfigInvalid},
-		{service.ErrTelegramOIDCStateInvalid, userauthtransport.ErrTelegramOIDCStateInvalid},
-		{service.ErrTelegramOIDCTokenExchange, userauthtransport.ErrTelegramOIDCTokenExchange},
-		{service.ErrTelegramOIDCIDTokenInvalid, userauthtransport.ErrTelegramOIDCIDTokenInvalid},
-		{service.ErrTelegramAuthPayloadInvalid, userauthtransport.ErrTelegramAuthPayloadInvalid},
-		{service.ErrTelegramAuthSignatureInvalid, userauthtransport.ErrTelegramAuthSignatureInvalid},
-		{service.ErrTelegramAuthExpired, userauthtransport.ErrTelegramAuthExpired},
-		{service.ErrTelegramAuthReplay, userauthtransport.ErrTelegramAuthReplay},
+		{telegramauthapp.ErrTelegramAuthDisabled, userauthtransport.ErrTelegramAuthDisabled},
+		{telegramauthapp.ErrTelegramAuthConfigInvalid, userauthtransport.ErrTelegramAuthConfigInvalid},
+		{telegramauthapp.ErrTelegramOIDCStateInvalid, userauthtransport.ErrTelegramOIDCStateInvalid},
+		{telegramauthapp.ErrTelegramOIDCTokenExchange, userauthtransport.ErrTelegramOIDCTokenExchange},
+		{telegramauthapp.ErrTelegramOIDCIDTokenInvalid, userauthtransport.ErrTelegramOIDCIDTokenInvalid},
+		{telegramauthapp.ErrTelegramAuthPayloadInvalid, userauthtransport.ErrTelegramAuthPayloadInvalid},
+		{telegramauthapp.ErrTelegramAuthSignatureInvalid, userauthtransport.ErrTelegramAuthSignatureInvalid},
+		{telegramauthapp.ErrTelegramAuthExpired, userauthtransport.ErrTelegramAuthExpired},
+		{telegramauthapp.ErrTelegramAuthReplay, userauthtransport.ErrTelegramAuthReplay},
 		{service.ErrUserOAuthIdentityExists, userauthtransport.ErrUserOAuthIdentityExists},
 		{service.ErrUserOAuthAlreadyBound, userauthtransport.ErrUserOAuthAlreadyBound},
 		{service.ErrUserOAuthNotBound, userauthtransport.ErrUserOAuthNotBound},

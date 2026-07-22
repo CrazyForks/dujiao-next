@@ -1,4 +1,4 @@
-package service
+package telegramauthapp
 
 import (
 	"context"
@@ -19,9 +19,9 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func newTestTelegramAuthServiceOIDC(t *testing.T) *TelegramAuthService {
+func newTestTelegramAuthServiceOIDC(t *testing.T) *Service {
 	t.Helper()
-	svc := NewTelegramAuthService(config.TelegramAuthConfig{
+	svc := NewService(config.TelegramAuthConfig{
 		Enabled:         true,
 		BotUsername:     "mybot",
 		BotToken:        "123456789:AAAA-bbbbcccc",
@@ -81,7 +81,7 @@ func TestStartOIDCLoginBuildsAuthURL(t *testing.T) {
 }
 
 func TestStartOIDCLoginRejectsWidgetMode(t *testing.T) {
-	svc := NewTelegramAuthService(config.TelegramAuthConfig{Enabled: true, BotUsername: "mybot", BotToken: "1:abc"})
+	svc := NewService(config.TelegramAuthConfig{Enabled: true, BotUsername: "mybot", BotToken: "1:abc"})
 	if _, err := svc.StartOIDCLogin(context.Background(), telegramOIDCIntentLogin, 0); err == nil {
 		t.Fatalf("expected error in widget mode")
 	}

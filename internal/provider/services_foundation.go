@@ -2,11 +2,13 @@ package provider
 
 import (
 	"github.com/dujiao-next/internal/authz"
+	telegramauthcache "github.com/dujiao-next/internal/bootstrap/telegramauthcache"
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/compliance"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/modules/reseller"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
@@ -77,7 +79,7 @@ func (c *Container) initIdentityAndCatalogServices() {
 	c.AuthService = service.NewAuthService(c.Config, c.AdminRepo)
 	c.TOTPService = service.NewTOTPService(c.Config, c.AdminRepo, cache.Client())
 	c.UserTOTPService = service.NewUserTOTPService(c.Config, c.UserRepo, cache.Client())
-	c.TelegramAuthService = service.NewTelegramAuthService(c.Config.TelegramAuth)
+	c.TelegramAuthService = telegramauthapp.NewService(c.Config.TelegramAuth, telegramauthcache.Options()...)
 	c.UserAuthService = service.NewUserAuthService(c.Config, c.UserRepo, c.UserOAuthIdentityRepo, c.EmailVerifyCodeRepo, c.SettingService, c.EmailService, c.TelegramAuthService)
 	c.UploadService = upload.NewService(c.Config)
 	c.AffiliateService = service.NewAffiliateService(c.AffiliateRepo, c.UserRepo, c.OrderRepo, c.ProductRepo, c.SettingService)

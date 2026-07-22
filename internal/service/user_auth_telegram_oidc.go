@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/dujiao-next/internal/models"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 )
 
 // StartTelegramOIDCInput 启动 Telegram OIDC 流程输入
@@ -31,15 +32,15 @@ type BindTelegramOIDCInput struct {
 // StartTelegramOIDC 生成 Telegram OIDC 授权 URL
 func (s *UserAuthService) StartTelegramOIDC(input StartTelegramOIDCInput) (string, error) {
 	if s.telegramAuthService == nil {
-		return "", ErrTelegramAuthConfigInvalid
+		return "", telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 	ctx := input.Context
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	intent := input.Intent
-	if intent != telegramOIDCIntentLogin && intent != telegramOIDCIntentBind {
-		return "", ErrTelegramAuthPayloadInvalid
+	if intent != telegramauthapp.IntentLogin && intent != telegramauthapp.IntentBind {
+		return "", telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
 	return s.telegramAuthService.StartOIDCLogin(ctx, intent, input.UserID)
 }
@@ -47,7 +48,7 @@ func (s *UserAuthService) StartTelegramOIDC(input StartTelegramOIDCInput) (strin
 // LoginWithTelegramOIDC 通过 Telegram OIDC 回调登录
 func (s *UserAuthService) LoginWithTelegramOIDC(input LoginWithTelegramOIDCInput) (*UserLoginResult, error) {
 	if s.telegramAuthService == nil || s.userOAuthIdentityRepo == nil {
-		return nil, ErrTelegramAuthConfigInvalid
+		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 	ctx := input.Context
 	if ctx == nil {
@@ -57,8 +58,8 @@ func (s *UserAuthService) LoginWithTelegramOIDC(input LoginWithTelegramOIDCInput
 	if err != nil {
 		return nil, err
 	}
-	if intent != telegramOIDCIntentLogin {
-		return nil, ErrTelegramAuthPayloadInvalid
+	if intent != telegramauthapp.IntentLogin {
+		return nil, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
 	return s.loginWithVerifiedTelegram(verified)
 }
@@ -69,7 +70,7 @@ func (s *UserAuthService) BindTelegramOIDC(input BindTelegramOIDCInput) (*models
 		return nil, ErrNotFound
 	}
 	if s.telegramAuthService == nil || s.userOAuthIdentityRepo == nil {
-		return nil, ErrTelegramAuthConfigInvalid
+		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 	ctx := input.Context
 	if ctx == nil {
@@ -79,8 +80,8 @@ func (s *UserAuthService) BindTelegramOIDC(input BindTelegramOIDCInput) (*models
 	if err != nil {
 		return nil, err
 	}
-	if intent != telegramOIDCIntentBind || userID != input.UserID {
-		return nil, ErrTelegramAuthPayloadInvalid
+	if intent != telegramauthapp.IntentBind || userID != input.UserID {
+		return nil, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
 	return s.bindVerifiedTelegram(input.UserID, verified)
 }

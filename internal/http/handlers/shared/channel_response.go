@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/i18n"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/service"
@@ -59,7 +60,7 @@ func ChannelBindError(c *gin.Context, err error) {
 // ChannelIdentityError 映射并返回渠道身份相关错误。
 func ChannelIdentityError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, service.ErrTelegramAuthPayloadInvalid):
+	case errors.Is(err, telegramauthapp.ErrTelegramAuthPayloadInvalid):
 		ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
 	case errors.Is(err, service.ErrInvalidEmail):
 		ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.email_invalid", nil)

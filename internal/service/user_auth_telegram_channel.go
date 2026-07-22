@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/telegramidentity"
 )
 
@@ -50,7 +51,7 @@ func (s *UserAuthService) BindTelegramChannelByEmailCode(input BindTelegramChann
 		return nil, nil, 0, err
 	}
 	if s.userOAuthIdentityRepo == nil || s.userRepo == nil || s.codeRepo == nil {
-		return nil, nil, 0, ErrTelegramAuthConfigInvalid
+		return nil, nil, 0, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 
 	email, err := normalizeEmail(input.Email)
@@ -75,12 +76,12 @@ func (s *UserAuthService) BindTelegramChannelByEmailCode(input BindTelegramChann
 	return s.bindTelegramIdentityToUser(targetUser, verified)
 }
 
-func (s *UserAuthService) resolveTelegramChannelIdentity(verified *TelegramIdentityVerified) (*models.User, *models.UserOAuthIdentity, error) {
+func (s *UserAuthService) resolveTelegramChannelIdentity(verified *telegramauthapp.IdentityVerified) (*models.User, *models.UserOAuthIdentity, error) {
 	if verified == nil {
-		return nil, nil, ErrTelegramAuthPayloadInvalid
+		return nil, nil, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
 	if s.userOAuthIdentityRepo == nil || s.userRepo == nil {
-		return nil, nil, ErrTelegramAuthConfigInvalid
+		return nil, nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 
 	identity, err := s.userOAuthIdentityRepo.GetByProviderUserID(verified.Provider, verified.ProviderUserID)
@@ -104,12 +105,12 @@ func (s *UserAuthService) resolveTelegramChannelIdentity(verified *TelegramIdent
 	return user, identity, nil
 }
 
-func (s *UserAuthService) provisionTelegramChannelIdentity(verified *TelegramIdentityVerified) (*models.User, *models.UserOAuthIdentity, bool, error) {
+func (s *UserAuthService) provisionTelegramChannelIdentity(verified *telegramauthapp.IdentityVerified) (*models.User, *models.UserOAuthIdentity, bool, error) {
 	if verified == nil {
-		return nil, nil, false, ErrTelegramAuthPayloadInvalid
+		return nil, nil, false, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
 	if s.userOAuthIdentityRepo == nil || s.userRepo == nil {
-		return nil, nil, false, ErrTelegramAuthConfigInvalid
+		return nil, nil, false, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 
 	user, identity, err := s.resolveTelegramChannelIdentity(verified)
@@ -177,12 +178,12 @@ func (s *UserAuthService) provisionTelegramChannelIdentity(verified *TelegramIde
 	return user, identity, created, nil
 }
 
-func (s *UserAuthService) bindTelegramIdentityToUser(targetUser *models.User, verified *TelegramIdentityVerified) (*models.User, *models.UserOAuthIdentity, uint, error) {
+func (s *UserAuthService) bindTelegramIdentityToUser(targetUser *models.User, verified *telegramauthapp.IdentityVerified) (*models.User, *models.UserOAuthIdentity, uint, error) {
 	if targetUser == nil || verified == nil {
 		return nil, nil, 0, ErrNotFound
 	}
 	if s.userOAuthIdentityRepo == nil {
-		return nil, nil, 0, ErrTelegramAuthConfigInvalid
+		return nil, nil, 0, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
 
 	current, err := s.userOAuthIdentityRepo.GetByUserProvider(targetUser.ID, verified.Provider)
@@ -242,12 +243,12 @@ func (s *UserAuthService) bindTelegramIdentityToUser(targetUser *models.User, ve
 	return targetUser, identity, 0, nil
 }
 
-func normalizeTelegramChannelIdentityInput(input TelegramChannelIdentityInput) (*TelegramIdentityVerified, error) {
+func normalizeTelegramChannelIdentityInput(input TelegramChannelIdentityInput) (*telegramauthapp.IdentityVerified, error) {
 	providerUserID := strings.TrimSpace(input.ChannelUserID)
 	if providerUserID == "" {
-		return nil, ErrTelegramAuthPayloadInvalid
+		return nil, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
-	return &TelegramIdentityVerified{
+	return &telegramauthapp.IdentityVerified{
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: providerUserID,
 		Username:       strings.TrimSpace(input.Username),
