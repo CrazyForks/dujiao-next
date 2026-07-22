@@ -6,8 +6,8 @@ import (
 	"mime/multipart"
 
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
-	domaincontent "github.com/dujiao-next/internal/modules/content"
+	contentapp "github.com/dujiao-next/internal/modules/content/application"
+	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
 	uploadmodule "github.com/dujiao-next/internal/modules/upload"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -22,7 +22,7 @@ type FileUploader interface {
 
 // MediaRecorder 是上传 HTTP 消费方所需的最小 Content 写入接口。
 type MediaRecorder interface {
-	RecordMedia(ctx context.Context, result domaincontent.UploadResult, scene string) (*models.Media, error)
+	RecordMedia(ctx context.Context, result contentapp.UploadResult, scene string) (*contentdomain.Media, error)
 }
 
 // AdminHandler 处理后台文件上传请求。
@@ -58,7 +58,7 @@ func (h *AdminHandler) UploadFile(c *gin.Context) {
 	}
 
 	var mediaID uint
-	media, err := h.media.RecordMedia(c.Request.Context(), domaincontent.UploadResult{
+	media, err := h.media.RecordMedia(c.Request.Context(), contentapp.UploadResult{
 		URL:      result.URL,
 		Filename: result.Filename,
 		MimeType: result.MimeType,

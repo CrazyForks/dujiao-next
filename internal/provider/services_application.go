@@ -10,8 +10,8 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	"github.com/dujiao-next/internal/modules/cart"
-	"github.com/dujiao-next/internal/modules/content"
-	"github.com/dujiao-next/internal/modules/content/store/gormstore"
+	contentapp "github.com/dujiao-next/internal/modules/content/application"
+	"github.com/dujiao-next/internal/modules/content/infrastructure/gormstore"
 	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
 	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
 	giftcardsettingscurrency "github.com/dujiao-next/internal/modules/giftcard/infrastructure/settingscurrency"
@@ -26,19 +26,19 @@ import (
 func (c *Container) initApplicationServices() {
 	postStore := gormstore.NewPostStore(models.DB)
 	postCategoryStore := gormstore.NewPostCategoryStore(models.DB)
-	c.ContentPostService = content.NewPostService(
+	c.ContentPostService = contentapp.NewPostService(
 		postStore,
 		postStore,
 		postCategoryStore,
-		content.SystemClock{},
+		contentapp.SystemClock{},
 	)
-	c.ContentPostCategoryService = content.NewPostCategoryService(postCategoryStore)
+	c.ContentPostCategoryService = contentapp.NewPostCategoryService(postCategoryStore)
 	c.CategoryService = categoryapp.NewService(c.CategoryRepo)
 	sitemapService, err := sitemap.NewService(
 		c.ProductRepo,
 		c.CategoryRepo,
 		sitemap.PublishedPostReaderFunc(func(ctx context.Context, limit int) ([]sitemap.SitemapPost, error) {
-			posts, _, listErr := c.ContentPostService.ListPublic(ctx, content.PublicPostQuery{
+			posts, _, listErr := c.ContentPostService.ListPublic(ctx, contentapp.PublicPostQuery{
 				Page:     1,
 				PageSize: limit,
 			})
@@ -109,8 +109,8 @@ func (c *Container) initApplicationServices() {
 	})
 	c.CouponAdminService = couponapp.NewAdminService(c.CouponRepo)
 	c.PromotionAdminService = promotionapp.NewAdminService(c.PromotionRepo)
-	c.ContentBannerService = content.NewBannerService(
+	c.ContentBannerService = contentapp.NewBannerService(
 		gormstore.NewBannerStore(models.DB),
-		content.SystemClock{},
+		contentapp.SystemClock{},
 	)
 }

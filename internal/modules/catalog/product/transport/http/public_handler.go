@@ -15,7 +15,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	productpresenter "github.com/dujiao-next/internal/modules/catalog/product/transport/presenter"
 
-	"github.com/dujiao-next/internal/models"
+	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -59,7 +59,7 @@ type LocalProductMappingReader interface {
 
 // RelatedPostReader 是商品详情消费方所需的最小 Content 读取接口。
 type RelatedPostReader interface {
-	ListPostsForProduct(ctx context.Context, productID uint, limit int) ([]models.Post, error)
+	ListPostsForProduct(ctx context.Context, productID uint, limit int) ([]contentcontract.RelatedPost, error)
 }
 
 // PublicHandler 处理公开商品目录 HTTP 请求。
@@ -222,8 +222,8 @@ func (h *PublicHandler) loadRelatedPostCards(ctx context.Context, productID uint
 			ID:          post.ID,
 			Slug:        post.Slug,
 			Type:        post.Type,
-			Title:       post.TitleJSON,
-			Summary:     post.SummaryJSON,
+			Title:       post.Title,
+			Summary:     post.Summary,
 			Thumbnail:   post.Thumbnail,
 			PublishedAt: post.PublishedAt,
 		})

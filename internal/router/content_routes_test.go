@@ -15,13 +15,13 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/authz"
+	contenttransport "github.com/dujiao-next/internal/modules/content/transport/http"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
 	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
 	"github.com/dujiao-next/internal/modules/identity/jwttoken"
 	"github.com/dujiao-next/internal/platform/http/response"
-	contenttransport "github.com/dujiao-next/internal/transport/http/content"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"github.com/golang-jwt/jwt/v5"
@@ -153,7 +153,7 @@ func extractPublicContentRoutesFromSource() ([]adminRoute, error) {
 	if !ok {
 		return nil, fmt.Errorf("resolve content route test filename")
 	}
-	routerSource := filepath.Join(filepath.Dir(thisFile), "..", "transport", "http", "content", "routes.go")
+	routerSource := filepath.Join(filepath.Dir(thisFile), "..", "modules", "content", "transport", "http", "routes.go")
 	raw, err := os.ReadFile(routerSource)
 	if err != nil {
 		return nil, err

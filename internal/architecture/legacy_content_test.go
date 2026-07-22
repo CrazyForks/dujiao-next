@@ -61,6 +61,29 @@ func TestLegacyContentVerticalStaysRemoved(t *testing.T) {
 	assertProductionImportsAbsent(t, filepath.Join(repositoryRoot, "internal", "service"), moduleImportPath+"/internal/modules/content")
 }
 
+func TestContentOwnsCompleteVerticalSlice(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "content")
+	production, total := countDirectGoFiles(t, moduleRoot)
+	if production != 0 || total != 0 {
+		t.Fatalf("content module root must remain structural only, got production=%d total=%d", production, total)
+	}
+
+	domainRoot := filepath.Join(moduleRoot, "domain")
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "post.go"), []string{"Post", "PostProduct"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "post_category.go"), []string{"PostCategory"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "banner.go"), []string{"Banner"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "media.go"), []string{"Media"})
+
+	assertProductionImportsAbsent(t, filepath.Join(moduleRoot, "application"), moduleImportPath+"/internal/models")
+	assertProductionImportsAbsent(t, filepath.Join(moduleRoot, "contract"), moduleImportPath+"/internal/models")
+	assertProductionImportsAbsent(t, domainRoot, moduleImportPath+"/internal/models")
+	assertProductionImportsAbsent(t, filepath.Join(moduleRoot, "application"), moduleImportPath+"/internal/modules/catalog")
+	assertProductionImportsAbsent(t, filepath.Join(moduleRoot, "contract"), moduleImportPath+"/internal/modules/catalog")
+	assertProductionImportsAbsent(t, filepath.Join(moduleRoot, "transport", "http"), moduleImportPath+"/internal/modules/catalog")
+	assertProductionImportsAbsent(t, filepath.Join(moduleRoot, "transport", "presenter"), moduleImportPath+"/internal/modules/catalog")
+}
+
 func assertTypesAbsent(t *testing.T, directory string, forbidden map[string]struct{}) {
 	t.Helper()
 	forEachProductionGoFile(t, directory, func(path string, parsed *ast.File) {
@@ -136,7 +159,7 @@ func assertProductionImportsAbsent(t *testing.T, directory, forbidden string) {
 				t.Fatalf("unquote import in %s: %v", path, err)
 			}
 			if importMatches(importPath, forbidden) {
-				t.Errorf("legacy service package must not import Content module in %s", path)
+				t.Errorf("%s must not import %s", path, forbidden)
 			}
 		}
 	})

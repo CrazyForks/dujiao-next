@@ -8,9 +8,9 @@ import (
 	apicredentialapp "github.com/dujiao-next/internal/modules/apicredential/application"
 	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
-	"github.com/dujiao-next/internal/modules/content"
-	localfilestore "github.com/dujiao-next/internal/modules/content/filestore/local"
-	contentgormstore "github.com/dujiao-next/internal/modules/content/store/gormstore"
+	contentapp "github.com/dujiao-next/internal/modules/content/application"
+	localfilestore "github.com/dujiao-next/internal/modules/content/infrastructure/filestore/local"
+	contentgormstore "github.com/dujiao-next/internal/modules/content/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/dashboard"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	notificationapp "github.com/dujiao-next/internal/modules/notification/application"
@@ -40,10 +40,10 @@ func (c *Container) initIntegrationServices() {
 	)
 	c.ApiCredentialService = apicredentialapp.NewService(c.ApiCredentialRepo)
 	c.SiteConnectionService = siteconnectionapp.NewService(c.SiteConnectionRepo, c.Config.App.SecretKey, "uploads")
-	mediaCore := content.NewMediaService(
+	mediaCore := contentapp.NewMediaService(
 		contentgormstore.NewMediaStore(models.DB),
 		localfilestore.New(),
-		content.WarningLoggerFunc(logger.Warnw),
+		contentapp.WarningLoggerFunc(logger.Warnw),
 	)
 	c.ContentMediaService = mediaCore
 	productMappingService, err := catalogmappingbootstrap.New(catalogmappingbootstrap.Dependencies{

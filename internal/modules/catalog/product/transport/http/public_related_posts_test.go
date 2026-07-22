@@ -5,20 +5,20 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
 )
 
 type relatedPostReaderStub struct {
 	receivedContext context.Context
 	productID       uint
 	limit           int
-	posts           []models.Post
+	posts           []contentcontract.RelatedPost
 	err             error
 }
 
 var _ RelatedPostReader = (*relatedPostReaderStub)(nil)
 
-func (s *relatedPostReaderStub) ListPostsForProduct(ctx context.Context, productID uint, limit int) ([]models.Post, error) {
+func (s *relatedPostReaderStub) ListPostsForProduct(ctx context.Context, productID uint, limit int) ([]contentcontract.RelatedPost, error) {
 	s.receivedContext = ctx
 	s.productID = productID
 	s.limit = limit
@@ -30,7 +30,7 @@ func TestLoadRelatedPostCardsUsesConsumerOwnedReaderAndRequestContext(t *testing
 
 	type contextKey struct{}
 	requestContext := context.WithValue(context.Background(), contextKey{}, "product-request")
-	reader := &relatedPostReaderStub{posts: []models.Post{{Slug: "guide"}}}
+	reader := &relatedPostReaderStub{posts: []contentcontract.RelatedPost{{Slug: "guide"}}}
 	handler := &PublicHandler{relatedPosts: reader}
 
 	cards, err := handler.loadRelatedPostCards(requestContext, 42)

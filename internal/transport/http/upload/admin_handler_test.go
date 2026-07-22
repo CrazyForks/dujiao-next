@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
-	domaincontent "github.com/dujiao-next/internal/modules/content"
+	contentapp "github.com/dujiao-next/internal/modules/content/application"
+	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
 	uploadmodule "github.com/dujiao-next/internal/modules/upload"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -21,15 +21,15 @@ import (
 
 type recordingMediaRecorder struct {
 	ctx    context.Context
-	result domaincontent.UploadResult
+	result contentapp.UploadResult
 	scene  string
-	media  *models.Media
+	media  *contentdomain.Media
 	err    error
 }
 
 var _ MediaRecorder = (*recordingMediaRecorder)(nil)
 
-func (r *recordingMediaRecorder) RecordMedia(ctx context.Context, result domaincontent.UploadResult, scene string) (*models.Media, error) {
+func (r *recordingMediaRecorder) RecordMedia(ctx context.Context, result contentapp.UploadResult, scene string) (*contentdomain.Media, error) {
 	r.ctx = ctx
 	r.result = result
 	r.scene = scene
@@ -117,7 +117,7 @@ func TestUploadFileUsesInjectedMediaRecorderAndRequestContext(t *testing.T) {
 		t.Fatalf("close writer: %v", err)
 	}
 
-	media := &models.Media{}
+	media := &contentdomain.Media{}
 	media.ID = 91
 	recorder := &recordingMediaRecorder{media: media}
 	uploader := &fakeUploader{result: &uploadmodule.Result{

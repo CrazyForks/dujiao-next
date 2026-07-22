@@ -14,10 +14,10 @@ import (
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
-	domaincontent "github.com/dujiao-next/internal/modules/content"
-	"github.com/dujiao-next/internal/modules/content/store/gormstore"
+	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
+	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
+	"github.com/dujiao-next/internal/modules/content/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/sitemap"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -39,7 +39,7 @@ func newSitemapServiceForTest(t *testing.T, reader sitemap.PublishedPostReader) 
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.Post{},
+		&contentdomain.Post{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -47,11 +47,11 @@ func newSitemapServiceForTest(t *testing.T, reader sitemap.PublishedPostReader) 
 	postStore := gormstore.NewPostStore(db)
 	if reader == nil {
 		reader = sitemap.PublishedPostReaderFunc(func(ctx context.Context, limit int) ([]sitemap.SitemapPost, error) {
-			posts, _, err := postStore.List(ctx, domaincontent.PostQuery{
+			posts, _, err := postStore.List(ctx, contentcontract.PostQuery{
 				Page:          1,
 				PageSize:      limit,
 				OnlyPublished: true,
-				Order:         domaincontent.PostOrderPublishedDesc,
+				Order:         contentcontract.PostOrderPublishedDesc,
 			})
 			if err != nil {
 				return nil, err
@@ -178,13 +178,13 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 		t.Fatalf("create hidden-category product: %v", err)
 	}
 
-	publishedPost := models.Post{
+	publishedPost := contentdomain.Post{
 		Slug:        "hello",
 		Type:        constants.PostTypeBlog,
 		TitleJSON:   jsonmap.JSON{"zh-CN": "hello"},
 		IsPublished: true,
 	}
-	draftPost := models.Post{
+	draftPost := contentdomain.Post{
 		Slug:        "draft",
 		Type:        constants.PostTypeBlog,
 		TitleJSON:   jsonmap.JSON{"zh-CN": "draft"},

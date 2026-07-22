@@ -12,10 +12,10 @@ import (
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
 	productpresenter "github.com/dujiao-next/internal/modules/catalog/product/transport/presenter"
+	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/reseller"
@@ -46,7 +46,7 @@ func (staticPublicProductQueries) ApplyAutoStockCounts([]productdomain.Product) 
 
 type emptyRelatedPostReader struct{}
 
-func (emptyRelatedPostReader) ListPostsForProduct(context.Context, uint, int) ([]models.Post, error) {
+func (emptyRelatedPostReader) ListPostsForProduct(context.Context, uint, int) ([]contentcontract.RelatedPost, error) {
 	return nil, nil
 }
 

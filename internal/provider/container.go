@@ -25,7 +25,7 @@ import (
 	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
 	channelclientcontract "github.com/dujiao-next/internal/modules/channelclient/contract"
 	"github.com/dujiao-next/internal/modules/compliance"
-	"github.com/dujiao-next/internal/modules/content"
+	contentapp "github.com/dujiao-next/internal/modules/content/application"
 	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/dashboard"
@@ -129,10 +129,10 @@ type Container struct {
 	ProductReadService            *productapplication.Service
 	ProductAdminService           *productadmin.AdminService
 	ProductWriteService           *productwrite.WriteService
-	ContentPostService            *content.PostService
-	ContentPostCategoryService    *content.PostCategoryService
-	ContentBannerService          *content.BannerService
-	ContentMediaService           *content.MediaService
+	ContentPostService            *contentapp.PostService
+	ContentPostCategoryService    *contentapp.PostCategoryService
+	ContentBannerService          *contentapp.BannerService
+	ContentMediaService           *contentapp.MediaService
 	CategoryService               *categoryapp.Service
 	SettingService                *settingsapp.Service
 	SitemapService                *sitemap.Service

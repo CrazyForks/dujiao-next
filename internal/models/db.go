@@ -14,6 +14,7 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
 	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -183,10 +184,10 @@ func AutoMigrate() error {
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&Post{},
-		&PostProduct{},
-		&PostCategory{},
-		&Banner{},
+		&contentdomain.Post{},
+		&contentdomain.PostProduct{},
+		&contentdomain.PostCategory{},
+		&contentdomain.Banner{},
 		&settingsstore.SettingRecord{},
 		&apicredentialdomain.ApiCredential{},
 		&siteconnectiondomain.Connection{},
@@ -200,7 +201,7 @@ func AutoMigrate() error {
 		&broadcastdomain.Broadcast{},
 		&memberleveldomain.MemberLevel{},
 		&memberleveldomain.MemberLevelPrice{},
-		&Media{},
+		&contentdomain.Media{},
 	); err != nil {
 		return err
 	}

@@ -61,62 +61,62 @@ func TestValidateImportRules(t *testing.T) {
 		wantViolation bool
 	}{
 		{
-			name:          "content core cannot import gorm",
-			file:          "internal/modules/content/post_service.go",
+			name:          "content application cannot import gorm",
+			file:          "internal/modules/content/application/post_service.go",
 			importPath:    "gorm.io/gorm",
 			wantViolation: true,
 		},
 		{
-			name:          "content core cannot import gin",
-			file:          "internal/modules/content/post_service.go",
+			name:          "content application cannot import gin",
+			file:          "internal/modules/content/application/post_service.go",
 			importPath:    "github.com/gin-gonic/gin",
 			wantViolation: true,
 		},
 		{
-			name:          "content core cannot import legacy repository",
-			file:          "internal/modules/content/post_service.go",
+			name:          "content application cannot import legacy repository",
+			file:          "internal/modules/content/application/post_service.go",
 			importPath:    moduleImportPath + "/internal/repository",
 			wantViolation: true,
 		},
 		{
 			name:          "gorm store can import gorm",
-			file:          "internal/modules/content/store/gormstore/post_store.go",
+			file:          "internal/modules/content/infrastructure/gormstore/post_store.go",
 			importPath:    "gorm.io/gorm",
 			wantViolation: false,
 		},
 		{
 			name:          "gorm store cannot import legacy service",
-			file:          "internal/modules/content/store/gormstore/post_store.go",
+			file:          "internal/modules/content/infrastructure/gormstore/post_store.go",
 			importPath:    moduleImportPath + "/internal/service",
 			wantViolation: true,
 		},
 		{
-			name:          "content core can temporarily import shared models",
-			file:          "internal/modules/content/post_service.go",
+			name:          "content application cannot import shared models after complete migration",
+			file:          "internal/modules/content/application/post_service.go",
 			importPath:    moduleImportPath + "/internal/models",
-			wantViolation: false,
+			wantViolation: true,
 		},
 		{
 			name:          "content transport can import gin",
-			file:          "internal/transport/http/content/public_handler.go",
+			file:          "internal/modules/content/transport/http/public_handler.go",
 			importPath:    "github.com/gin-gonic/gin",
 			wantViolation: false,
 		},
 		{
 			name:          "content transport cannot import repository",
-			file:          "internal/transport/http/content/public_handler.go",
+			file:          "internal/modules/content/transport/http/public_handler.go",
 			importPath:    moduleImportPath + "/internal/repository",
 			wantViolation: true,
 		},
 		{
 			name:          "content transport cannot import service",
-			file:          "internal/transport/http/content/public_handler.go",
+			file:          "internal/modules/content/transport/http/public_handler.go",
 			importPath:    moduleImportPath + "/internal/service",
 			wantViolation: true,
 		},
 		{
 			name:          "content transport cannot import provider container",
-			file:          "internal/transport/http/content/public_handler.go",
+			file:          "internal/modules/content/transport/http/public_handler.go",
 			importPath:    moduleImportPath + "/internal/provider",
 			wantViolation: true,
 		},
@@ -200,7 +200,7 @@ func TestValidateImportRules(t *testing.T) {
 		},
 		{
 			name:          "content black box integration test can import gorm",
-			file:          "internal/transport/http/content/admin_integration_test.go",
+			file:          "internal/modules/content/integrationtest/http/admin_integration_test.go",
 			importPath:    "gorm.io/gorm",
 			wantViolation: false,
 		},
@@ -239,12 +239,12 @@ func TestValidateImportRules(t *testing.T) {
 
 func TestInspectImportsRejectsForbiddenDependency(t *testing.T) {
 	repositoryRoot := t.TempDir()
-	contentRoot := filepath.Join(repositoryRoot, "internal", "modules", "content")
+	contentRoot := filepath.Join(repositoryRoot, "internal", "modules", "content", "application")
 	if err := os.MkdirAll(contentRoot, 0o755); err != nil {
 		t.Fatalf("create synthetic content module: %v", err)
 	}
 
-	source := []byte("package content\n\nimport _ \"gorm.io/gorm\"\n")
+	source := []byte("package application\n\nimport _ \"gorm.io/gorm\"\n")
 	if err := os.WriteFile(filepath.Join(contentRoot, "post_service.go"), source, 0o600); err != nil {
 		t.Fatalf("write synthetic content source: %v", err)
 	}
@@ -331,6 +331,9 @@ func validateImport(file, importPath string) string {
 
 	if pathWithin(file, "internal/modules") {
 		integrationTest := isModuleIntegrationTest(file)
+		if pathWithin(file, "internal/modules/content") && importMatches(importPath, moduleImportPath+"/internal/models") {
+			return "the completed Content vertical must own its domain models"
+		}
 		if forbiddenLegacyImport(importPath) && !integrationTest {
 			return "domain modules must not depend on legacy service, repository, HTTP, router, or provider packages"
 		}
