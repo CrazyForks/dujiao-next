@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
@@ -24,8 +26,8 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/coupon"
-	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
+	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
+	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
@@ -58,8 +60,8 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices produ
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
 		&promotiondomain.Promotion{},
-		&models.Coupon{},
-		&models.CouponUsage{},
+		&coupondomain.Coupon{},
+		&coupondomain.CouponUsage{},
 		&userdomain.User{},
 		&memberleveldomain.MemberLevel{},
 		&memberleveldomain.MemberLevelPrice{},
@@ -165,14 +167,14 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices produ
 	return wholesaleOrderFixture{db: db, svc: svc, product: product, sku: sku, user: user}
 }
 
-func createWholesaleOrderCouponFixture(t *testing.T, db *gorm.DB, productIDs []uint, disabledWholesalePrice bool) models.Coupon {
+func createWholesaleOrderCouponFixture(t *testing.T, db *gorm.DB, productIDs []uint, disabledWholesalePrice bool) coupondomain.Coupon {
 	t.Helper()
 
 	scopeIDs, err := json.Marshal(productIDs)
 	if err != nil {
 		t.Fatalf("marshal coupon scope failed: %v", err)
 	}
-	coupon := models.Coupon{
+	coupon := coupondomain.Coupon{
 		Code:                   "STACK10",
 		Type:                   constants.CouponTypePercent,
 		Value:                  money.FromDecimal(decimal.NewFromInt(10)),
@@ -291,7 +293,7 @@ func TestBuildOrderResultAppliesCouponAfterBestPromotionOrWholesalePrice(t *test
 				{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 			}
 			fixture := setupWholesaleOrderFixture(t, strings.ReplaceAll(tc.name, " ", "_"), wholesalePrices, &tc.promotionPercent, nil)
-			coupon := models.Coupon{
+			coupon := coupondomain.Coupon{
 				Code:        "STACK10",
 				Type:        constants.CouponTypePercent,
 				Value:       money.FromDecimal(decimal.NewFromInt(10)),
@@ -354,8 +356,8 @@ func TestBuildOrderResultRejectsCouponWhenDisabledForAllWholesaleItems(t *testin
 			{ProductID: fixture.product.ID, SKUID: fixture.sku.ID, Quantity: 5},
 		},
 	})
-	if !errors.Is(err, coupon.ErrWholesaleDisabled) {
-		t.Fatalf("expected coupon.ErrWholesaleDisabled, got %v", err)
+	if !errors.Is(err, couponcontract.ErrWholesaleDisabled) {
+		t.Fatalf("expected couponcontract.ErrWholesaleDisabled, got %v", err)
 	}
 }
 

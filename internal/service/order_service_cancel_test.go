@@ -5,12 +5,14 @@ import (
 	"testing"
 	"time"
 
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
+	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -31,8 +33,8 @@ func TestCancelExpiredOrderExpiresPendingPayments(t *testing.T) {
 		&models.Fulfillment{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.Coupon{},
-		&models.CouponUsage{},
+		&coupondomain.Coupon{},
+		&coupondomain.CouponUsage{},
 		&models.Payment{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
@@ -146,8 +148,8 @@ func setupCancelPaymentTestDB(t *testing.T, namespace string) *gorm.DB {
 		&models.Fulfillment{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.Coupon{},
-		&models.CouponUsage{},
+		&coupondomain.Coupon{},
+		&coupondomain.CouponUsage{},
 		&models.Payment{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
@@ -14,7 +16,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
-	"github.com/dujiao-next/internal/modules/coupon"
+	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
 	"github.com/dujiao-next/internal/modules/orderrisk"
 	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	"github.com/dujiao-next/internal/modules/reseller"
@@ -69,10 +71,10 @@ func (a orderAdminUserAdapter) GetByID(id uint) (*userdomain.User, error) {
 }
 
 type orderAdminCouponAdapter struct {
-	coupons coupon.Repository
+	coupons couponcontract.Repository
 }
 
-func (a orderAdminCouponAdapter) GetByID(id uint) (*models.Coupon, error) {
+func (a orderAdminCouponAdapter) GetByID(id uint) (*coupondomain.Coupon, error) {
 	return a.coupons.GetByID(id)
 }
 

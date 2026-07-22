@@ -24,8 +24,8 @@ import (
 	channelclientcontract "github.com/dujiao-next/internal/modules/channelclient/contract"
 	"github.com/dujiao-next/internal/modules/compliance"
 	"github.com/dujiao-next/internal/modules/content"
-	"github.com/dujiao-next/internal/modules/coupon"
-	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
+	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
+	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/dashboard"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
@@ -138,7 +138,7 @@ type Container struct {
 	OrderRefundService            *service.OrderRefundService
 	OrderService                  *service.OrderService
 	FulfillmentService            *service.FulfillmentService
-	CouponAdminService            *coupon.AdminService
+	CouponAdminService            *couponapp.AdminService
 	PromotionAdminService         *promotionapp.AdminService
 	PaymentService                *service.PaymentService
 	CardSecretService             *cardsecret.Service

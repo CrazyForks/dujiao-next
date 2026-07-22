@@ -11,7 +11,9 @@ import (
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
-	couponmodule "github.com/dujiao-next/internal/modules/coupon"
+	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
+	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -279,15 +281,24 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 	}
 
 	discountAmount := decimal.Zero
-	var appliedCoupon *models.Coupon
+	var appliedCoupon *coupondomain.Coupon
 	couponCode := strings.TrimSpace(input.CouponCode)
 	if !resellerOrder && couponCode != "" {
-		couponService := couponmodule.NewService(s.couponRepo, s.couponUsageRepo)
+		couponService := couponapp.NewService(s.couponRepo, s.couponUsageRepo)
+		couponItems := make([]couponcontract.EligibilityItem, 0, len(orderItems))
+		for _, item := range orderItems {
+			couponItems = append(couponItems, couponcontract.EligibilityItem{
+				ProductID:         item.ProductID,
+				Quantity:          item.Quantity,
+				TotalPrice:        item.TotalPrice,
+				WholesaleDiscount: item.WholesaleDiscount,
+			})
+		}
 		discount, coupon, err := couponService.ApplyCoupon(
 			money.FromDecimal(originalAmount),
 			couponCode,
 			input.UserID,
-			orderItems,
+			couponItems,
 			input.IsGuest,
 			userMemberLevelID,
 		)
@@ -418,17 +429,17 @@ func mergeCreateOrderItems(items []CreateOrderItem) ([]CreateOrderItem, error) {
 }
 
 // applyCouponDiscountToItems 分摊优惠券折扣到订单项
-func applyCouponDiscountToItems(plans []childOrderPlan, coupon *models.Coupon, discountAmount decimal.Decimal) error {
+func applyCouponDiscountToItems(plans []childOrderPlan, coupon *coupondomain.Coupon, discountAmount decimal.Decimal) error {
 	if coupon == nil || discountAmount.LessThanOrEqual(decimal.Zero) {
 		return nil
 	}
 	scopeType := strings.ToLower(strings.TrimSpace(coupon.ScopeType))
 	if scopeType != constants.ScopeTypeProduct {
-		return couponmodule.ErrScopeInvalid
+		return couponcontract.ErrScopeInvalid
 	}
-	ids, err := couponmodule.DecodeScopeIDs(coupon.ScopeRefIDs)
+	ids, err := coupondomain.DecodeScopeIDs(coupon.ScopeRefIDs)
 	if err != nil {
-		return couponmodule.ErrScopeInvalid
+		return couponcontract.ErrScopeInvalid
 	}
 	eligibleIndexes := make([]int, 0, len(plans))
 	eligibleTotal := decimal.Zero
@@ -448,9 +459,9 @@ func applyCouponDiscountToItems(plans []childOrderPlan, coupon *models.Coupon, d
 	}
 	if len(eligibleIndexes) == 0 || eligibleTotal.LessThanOrEqual(decimal.Zero) {
 		if scopeMatched > 0 && wholesaleExcluded == scopeMatched {
-			return couponmodule.ErrWholesaleDisabled
+			return couponcontract.ErrWholesaleDisabled
 		}
-		return couponmodule.ErrScopeInvalid
+		return couponcontract.ErrScopeInvalid
 	}
 
 	remaining := discountAmount

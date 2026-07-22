@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -22,7 +24,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
+	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
@@ -82,8 +84,8 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
-		&models.Coupon{},
-		&models.CouponUsage{},
+		&coupondomain.Coupon{},
+		&coupondomain.CouponUsage{},
 		&promotiondomain.Promotion{},
 		&models.Payment{},
 		&models.ResellerProfile{},

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
@@ -14,7 +16,7 @@ import (
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/coupon"
+	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
@@ -98,18 +100,18 @@ func (a adminUserTelegramAdapter) UnbindTelegram(userID uint) error {
 }
 
 type adminUserCouponUsageAdapter struct {
-	usages coupon.UsageRepository
+	usages couponcontract.UsageRepository
 }
 
-func (a adminUserCouponUsageAdapter) ListByUser(filter coupon.UsageListFilter) ([]models.CouponUsage, int64, error) {
+func (a adminUserCouponUsageAdapter) ListByUser(filter couponcontract.UsageListFilter) ([]coupondomain.CouponUsage, int64, error) {
 	return a.usages.ListByUser(filter)
 }
 
 type adminUserCouponAdapter struct {
-	coupons coupon.Repository
+	coupons couponcontract.Repository
 }
 
-func (a adminUserCouponAdapter) ListByIDs(ids []uint) ([]models.Coupon, error) {
+func (a adminUserCouponAdapter) ListByIDs(ids []uint) ([]coupondomain.Coupon, error) {
 	return a.coupons.ListByIDs(ids)
 }
 

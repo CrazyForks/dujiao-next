@@ -1,4 +1,4 @@
-package gormstore_test
+package integrationtest
 
 import (
 	"fmt"
@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/coupon"
-	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
+	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
+	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonslice"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
@@ -16,7 +17,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func newCouponServiceForTest(t *testing.T) (*coupon.Service, *gorm.DB) {
+func newCouponServiceForTest(t *testing.T) (*couponapp.Service, *gorm.DB) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:coupon_service_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -24,16 +25,16 @@ func newCouponServiceForTest(t *testing.T) (*coupon.Service, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Coupon{}, &models.CouponUsage{}); err != nil {
+	if err := db.AutoMigrate(&coupondomain.Coupon{}, &coupondomain.CouponUsage{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
 	couponRepo := coupongormstore.New(db)
 	usageRepo := coupongormstore.NewUsageStore(db)
-	return coupon.NewService(couponRepo, usageRepo), db
+	return couponapp.NewService(couponRepo, usageRepo), db
 }
 
-func createCouponFixture(t *testing.T, db *gorm.DB, coupon models.Coupon) models.Coupon {
+func createCouponFixture(t *testing.T, db *gorm.DB, coupon coupondomain.Coupon) coupondomain.Coupon {
 	t.Helper()
 	if err := db.Create(&coupon).Error; err != nil {
 		t.Fatalf("create coupon fixture failed: %v", err)
@@ -44,7 +45,7 @@ func createCouponFixture(t *testing.T, db *gorm.DB, coupon models.Coupon) models
 func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T) {
 	svc, db := newCouponServiceForTest(t)
 	now := time.Now()
-	items := []models.OrderItem{
+	items := []couponcontract.EligibilityItem{
 		{
 			ProductID:  100,
 			Quantity:   1,
@@ -74,7 +75,7 @@ func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T
 			roles:         jsonslice.Strings{constants.PaymentRoleMember},
 			isGuest:       true,
 			memberLevelID: 0,
-			expectErr:     coupon.ErrPaymentRoleMemberOnly,
+			expectErr:     couponcontract.ErrPaymentRoleMemberOnly,
 		},
 		{
 			name:          "guest-only coupon blocks member",
@@ -82,7 +83,7 @@ func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T
 			roles:         jsonslice.Strings{constants.PaymentRoleGuest},
 			isGuest:       false,
 			memberLevelID: 1,
-			expectErr:     coupon.ErrPaymentRoleGuestOnly,
+			expectErr:     couponcontract.ErrPaymentRoleGuestOnly,
 		},
 		{
 			name:          "member-level limited coupon blocks other levels",
@@ -90,7 +91,7 @@ func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T
 			memberLevels:  jsonslice.Uints{2},
 			isGuest:       false,
 			memberLevelID: 1,
-			expectErr:     coupon.ErrMemberLevelNotAllowed,
+			expectErr:     couponcontract.ErrMemberLevelNotAllowed,
 		},
 		{
 			name:          "member-level limited coupon allows matching level",
@@ -111,7 +112,7 @@ func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_ = createCouponFixture(t, db, models.Coupon{
+			_ = createCouponFixture(t, db, coupondomain.Coupon{
 				Code:         tc.code,
 				Type:         constants.CouponTypeFixed,
 				Value:        money.FromDecimal(decimal.NewFromInt(10)),
@@ -138,7 +139,7 @@ func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T
 
 func TestCouponServiceApplyCouponFixedPerItemDiscount(t *testing.T) {
 	svc, db := newCouponServiceForTest(t)
-	items := []models.OrderItem{
+	items := []couponcontract.EligibilityItem{
 		{
 			ProductID:  100,
 			Quantity:   3,
@@ -147,7 +148,7 @@ func TestCouponServiceApplyCouponFixedPerItemDiscount(t *testing.T) {
 	}
 	subtotal := money.FromDecimal(decimal.NewFromInt(375))
 
-	_ = createCouponFixture(t, db, models.Coupon{
+	_ = createCouponFixture(t, db, coupondomain.Coupon{
 		Code:            "FIXED_ONCE",
 		Type:            constants.CouponTypeFixed,
 		Value:           money.FromDecimal(decimal.NewFromInt(5)),
@@ -166,7 +167,7 @@ func TestCouponServiceApplyCouponFixedPerItemDiscount(t *testing.T) {
 		t.Fatalf("expected fixed once discount 5, got %s", discount.String())
 	}
 
-	_ = createCouponFixture(t, db, models.Coupon{
+	_ = createCouponFixture(t, db, coupondomain.Coupon{
 		Code:            "FIXED_PER_ITEM",
 		Type:            constants.CouponTypeFixed,
 		Value:           money.FromDecimal(decimal.NewFromInt(5)),
@@ -188,7 +189,7 @@ func TestCouponServiceApplyCouponFixedPerItemDiscount(t *testing.T) {
 
 func TestCouponServiceApplyCouponFixedPerItemDiscountRespectsMaxDiscount(t *testing.T) {
 	svc, db := newCouponServiceForTest(t)
-	items := []models.OrderItem{
+	items := []couponcontract.EligibilityItem{
 		{
 			ProductID:  100,
 			Quantity:   3,
@@ -197,7 +198,7 @@ func TestCouponServiceApplyCouponFixedPerItemDiscountRespectsMaxDiscount(t *test
 	}
 	subtotal := money.FromDecimal(decimal.NewFromInt(375))
 
-	_ = createCouponFixture(t, db, models.Coupon{
+	_ = createCouponFixture(t, db, coupondomain.Coupon{
 		Code:            "FIXED_PER_ITEM_CAP",
 		Type:            constants.CouponTypeFixed,
 		Value:           money.FromDecimal(decimal.NewFromInt(5)),
@@ -220,7 +221,7 @@ func TestCouponServiceApplyCouponFixedPerItemDiscountRespectsMaxDiscount(t *test
 
 func TestCouponServiceApplyCouponFixedPerItemDiscountExcludesWholesaleItems(t *testing.T) {
 	svc, db := newCouponServiceForTest(t)
-	items := []models.OrderItem{
+	items := []couponcontract.EligibilityItem{
 		{
 			ProductID:         100,
 			Quantity:          5,
@@ -235,7 +236,7 @@ func TestCouponServiceApplyCouponFixedPerItemDiscountExcludesWholesaleItems(t *t
 	}
 	subtotal := money.FromDecimal(decimal.NewFromInt(850))
 
-	_ = createCouponFixture(t, db, models.Coupon{
+	_ = createCouponFixture(t, db, coupondomain.Coupon{
 		Code:                   "FIXED_PER_ITEM_NO_WHOLESALE",
 		Type:                   constants.CouponTypeFixed,
 		Value:                  money.FromDecimal(decimal.NewFromInt(5)),
@@ -259,7 +260,7 @@ func TestCouponServiceApplyCouponFixedPerItemDiscountExcludesWholesaleItems(t *t
 
 func TestCouponServiceApplyCouponPercentIgnoresPerItemDiscount(t *testing.T) {
 	svc, db := newCouponServiceForTest(t)
-	items := []models.OrderItem{
+	items := []couponcontract.EligibilityItem{
 		{
 			ProductID:  100,
 			Quantity:   3,
@@ -268,7 +269,7 @@ func TestCouponServiceApplyCouponPercentIgnoresPerItemDiscount(t *testing.T) {
 	}
 	subtotal := money.FromDecimal(decimal.NewFromInt(300))
 
-	_ = createCouponFixture(t, db, models.Coupon{
+	_ = createCouponFixture(t, db, coupondomain.Coupon{
 		Code:            "PERCENT_PER_ITEM_IGNORED",
 		Type:            constants.CouponTypePercent,
 		Value:           money.FromDecimal(decimal.NewFromInt(10)),

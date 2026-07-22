@@ -1,4 +1,4 @@
-package gormstore_test
+package integrationtest
 
 import (
 	"fmt"
@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	couponmodule "github.com/dujiao-next/internal/modules/coupon"
-	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
+	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
@@ -16,7 +16,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func newCouponAdminServiceForTest(t *testing.T) (*couponmodule.AdminService, *gorm.DB) {
+func newCouponAdminServiceForTest(t *testing.T) (*couponapp.AdminService, *gorm.DB) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:coupon_admin_service_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -24,14 +24,14 @@ func newCouponAdminServiceForTest(t *testing.T) (*couponmodule.AdminService, *go
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Coupon{}); err != nil {
+	if err := db.AutoMigrate(&coupondomain.Coupon{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
-	return couponmodule.NewAdminService(coupongormstore.New(db)), db
+	return couponapp.NewAdminService(coupongormstore.New(db)), db
 }
 
-func validCouponAdminInput(code string) couponmodule.CreateCouponInput {
-	return couponmodule.CreateCouponInput{
+func validCouponAdminInput(code string) couponapp.CreateCouponInput {
+	return couponapp.CreateCouponInput{
 		Code:        code,
 		Type:        constants.CouponTypePercent,
 		Value:       money.FromDecimal(decimal.NewFromInt(10)),
@@ -70,7 +70,7 @@ func TestCouponAdminServiceCreateAndUpdateDisabledWholesalePrice(t *testing.T) {
 		t.Fatalf("disabled_wholesale_price should be true after create")
 	}
 
-	updateInput := couponmodule.UpdateCouponInput(validCouponAdminInput("DISABLED_WHOLESALE_RENAMED"))
+	updateInput := couponapp.UpdateCouponInput(validCouponAdminInput("DISABLED_WHOLESALE_RENAMED"))
 	updated, err := svc.Update(coupon.ID, updateInput)
 	if err != nil {
 		t.Fatalf("update coupon failed: %v", err)
@@ -105,7 +105,7 @@ func TestCouponAdminServiceCreateAndUpdatePerItemDiscount(t *testing.T) {
 		t.Fatalf("per_item_discount should be true after fixed coupon create")
 	}
 
-	updateInput := couponmodule.UpdateCouponInput(validCouponAdminInput("PER_ITEM_RENAMED"))
+	updateInput := couponapp.UpdateCouponInput(validCouponAdminInput("PER_ITEM_RENAMED"))
 	updateInput.Type = constants.CouponTypeFixed
 	updated, err := svc.Update(coupon.ID, updateInput)
 	if err != nil {
@@ -140,7 +140,7 @@ func TestCouponAdminServiceIgnoresPerItemDiscountForPercentCoupon(t *testing.T) 
 		t.Fatalf("per_item_discount should be false for percent coupon")
 	}
 
-	updateInput := couponmodule.UpdateCouponInput(validCouponAdminInput("PER_ITEM_PERCENT_RENAMED"))
+	updateInput := couponapp.UpdateCouponInput(validCouponAdminInput("PER_ITEM_PERCENT_RENAMED"))
 	updateInput.PerItemDiscount = &enabled
 	updated, err := svc.Update(coupon.ID, updateInput)
 	if err != nil {

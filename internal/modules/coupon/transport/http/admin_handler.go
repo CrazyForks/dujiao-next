@@ -3,8 +3,9 @@ package couponhttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/coupon"
+	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
+	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/money"
@@ -14,10 +15,10 @@ import (
 )
 
 type AdminService interface {
-	Create(input coupon.CreateCouponInput) (*models.Coupon, error)
-	Update(id uint, input coupon.UpdateCouponInput) (*models.Coupon, error)
+	Create(input couponapp.CreateCouponInput) (*coupondomain.Coupon, error)
+	Update(id uint, input couponapp.UpdateCouponInput) (*coupondomain.Coupon, error)
 	Delete(id uint) error
-	List(filter coupon.ListFilter) ([]models.Coupon, int64, error)
+	List(filter couponcontract.ListFilter) ([]coupondomain.Coupon, int64, error)
 }
 
 type AdminHandler struct {
@@ -47,16 +48,16 @@ type CreateCouponRequest struct {
 	IsActive               *bool    `json:"is_active"`
 }
 
-func buildCreateCouponInputFromRequest(req CreateCouponRequest) (coupon.CreateCouponInput, error) {
+func buildCreateCouponInputFromRequest(req CreateCouponRequest) (couponapp.CreateCouponInput, error) {
 	startsAt, err := ginutil.ParseTimeNullable(req.StartsAt)
 	if err != nil {
-		return coupon.CreateCouponInput{}, err
+		return couponapp.CreateCouponInput{}, err
 	}
 	endsAt, err := ginutil.ParseTimeNullable(req.EndsAt)
 	if err != nil {
-		return coupon.CreateCouponInput{}, err
+		return couponapp.CreateCouponInput{}, err
 	}
-	return coupon.CreateCouponInput{
+	return couponapp.CreateCouponInput{
 		Code:                   req.Code,
 		Type:                   req.Type,
 		Value:                  money.FromDecimal(decimal.NewFromFloat(req.Value)),
@@ -75,12 +76,12 @@ func buildCreateCouponInputFromRequest(req CreateCouponRequest) (coupon.CreateCo
 	}, nil
 }
 
-func buildUpdateCouponInputFromRequest(req CreateCouponRequest) (coupon.UpdateCouponInput, error) {
+func buildUpdateCouponInputFromRequest(req CreateCouponRequest) (couponapp.UpdateCouponInput, error) {
 	input, err := buildCreateCouponInputFromRequest(req)
 	if err != nil {
-		return coupon.UpdateCouponInput{}, err
+		return couponapp.UpdateCouponInput{}, err
 	}
-	return coupon.UpdateCouponInput(input), nil
+	return couponapp.UpdateCouponInput(input), nil
 }
 
 // CreateCoupon 创建优惠券
@@ -100,9 +101,9 @@ func (h *AdminHandler) CreateCoupon(c *gin.Context) {
 	created, err := h.service.Create(input)
 	if err != nil {
 		switch {
-		case errors.Is(err, coupon.ErrInvalid):
+		case errors.Is(err, couponcontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.coupon_invalid", nil)
-		case errors.Is(err, coupon.ErrScopeInvalid):
+		case errors.Is(err, couponcontract.ErrScopeInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.coupon_scope_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.coupon_create_failed", err)
@@ -135,11 +136,11 @@ func (h *AdminHandler) UpdateCoupon(c *gin.Context) {
 	updated, err := h.service.Update(couponID, input)
 	if err != nil {
 		switch {
-		case errors.Is(err, coupon.ErrNotFound):
+		case errors.Is(err, couponcontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.coupon_not_found", nil)
-		case errors.Is(err, coupon.ErrInvalid):
+		case errors.Is(err, couponcontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.coupon_invalid", nil)
-		case errors.Is(err, coupon.ErrScopeInvalid):
+		case errors.Is(err, couponcontract.ErrScopeInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.coupon_scope_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.coupon_update_failed", err)
@@ -159,9 +160,9 @@ func (h *AdminHandler) DeleteCoupon(c *gin.Context) {
 	}
 	if err := h.service.Delete(couponID); err != nil {
 		switch {
-		case errors.Is(err, coupon.ErrNotFound):
+		case errors.Is(err, couponcontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.coupon_not_found", nil)
-		case errors.Is(err, coupon.ErrInvalid):
+		case errors.Is(err, couponcontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.coupon_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.coupon_delete_failed", err)
@@ -194,7 +195,7 @@ func (h *AdminHandler) GetAdminCoupons(c *gin.Context) {
 		return
 	}
 
-	coupons, total, err := h.service.List(coupon.ListFilter{
+	coupons, total, err := h.service.List(couponcontract.ListFilter{
 		ID:         id,
 		Code:       code,
 		ScopeRefID: scopeRefID,

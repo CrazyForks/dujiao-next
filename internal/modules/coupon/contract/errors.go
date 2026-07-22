@@ -1,4 +1,4 @@
-package coupon
+package contract
 
 import "errors"
 

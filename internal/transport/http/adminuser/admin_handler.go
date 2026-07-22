@@ -7,13 +7,15 @@ import (
 	"strings"
 	"time"
 
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/coupon"
+	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -80,12 +82,12 @@ type TelegramBinder interface {
 
 // CouponUsageDirectory 优惠券使用记录端口。
 type CouponUsageDirectory interface {
-	ListByUser(filter coupon.UsageListFilter) ([]models.CouponUsage, int64, error)
+	ListByUser(filter couponcontract.UsageListFilter) ([]coupondomain.CouponUsage, int64, error)
 }
 
 // CouponDirectory 优惠券查询端口。
 type CouponDirectory interface {
-	ListByIDs(ids []uint) ([]models.Coupon, error)
+	ListByIDs(ids []uint) ([]coupondomain.Coupon, error)
 }
 
 // ProductDirectory 商品查询端口。
@@ -496,7 +498,7 @@ func (h *AdminHandler) GetAdminUserCouponUsages(c *gin.Context) {
 
 	page, pageSize := ginutil.ParsePagination(c)
 
-	usages, total, err := h.couponUsages.ListByUser(coupon.UsageListFilter{
+	usages, total, err := h.couponUsages.ListByUser(couponcontract.UsageListFilter{
 		Page:     page,
 		PageSize: pageSize,
 		UserID:   userID,
@@ -518,7 +520,7 @@ func (h *AdminHandler) GetAdminUserCouponUsages(c *gin.Context) {
 		}
 	}
 
-	coupons := make(map[uint]*models.Coupon)
+	coupons := make(map[uint]*coupondomain.Coupon)
 	if len(couponIDs) > 0 {
 		items, err := h.coupons.ListByIDs(couponIDs)
 		if err != nil {

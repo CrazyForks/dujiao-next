@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
@@ -21,8 +23,7 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
+	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
@@ -623,7 +624,7 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.Coupon{}, &models.CouponUsage{}, &promotiondomain.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &coupondomain.Coupon{}, &coupondomain.CouponUsage{}, &promotiondomain.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -668,7 +669,7 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 		t.Fatalf("create sku failed: %v", err)
 	}
 
-	coupon := models.Coupon{
+	coupon := coupondomain.Coupon{
 		Code:        "FREE10",
 		Type:        constants.CouponTypeFixed,
 		Value:       money.FromDecimal(decimal.NewFromInt(10)),

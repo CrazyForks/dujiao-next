@@ -3,9 +3,10 @@ package gormstore
 import (
 	"errors"
 	"fmt"
+	"time"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/coupon"
+	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 
 	"gorm.io/gorm"
 )
@@ -20,7 +21,7 @@ func New(db *gorm.DB) *Store {
 }
 
 // WithTx 绑定事务
-func (r *Store) WithTx(tx *gorm.DB) coupon.Repository {
+func (r *Store) WithTx(tx *gorm.DB) couponcontract.Repository {
 	if tx == nil {
 		return r
 	}
@@ -28,9 +29,9 @@ func (r *Store) WithTx(tx *gorm.DB) coupon.Repository {
 }
 
 // GetByID 根据ID获取优惠券
-func (r *Store) GetByID(id uint) (*models.Coupon, error) {
-	var coupon models.Coupon
-	if err := r.db.First(&coupon, id).Error; err != nil {
+func (r *Store) GetByID(id uint) (*coupondomain.Coupon, error) {
+	var coupon coupondomain.Coupon
+	if err := r.db.Where("deleted_at IS NULL").First(&coupon, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -40,9 +41,9 @@ func (r *Store) GetByID(id uint) (*models.Coupon, error) {
 }
 
 // GetByCode 根据优惠码获取优惠券
-func (r *Store) GetByCode(code string) (*models.Coupon, error) {
-	var coupon models.Coupon
-	if err := r.db.Where("code = ?", code).First(&coupon).Error; err != nil {
+func (r *Store) GetByCode(code string) (*coupondomain.Coupon, error) {
+	var coupon coupondomain.Coupon
+	if err := r.db.Where("deleted_at IS NULL AND code = ?", code).First(&coupon).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -52,36 +53,38 @@ func (r *Store) GetByCode(code string) (*models.Coupon, error) {
 }
 
 // ListByIDs 批量获取优惠券
-func (r *Store) ListByIDs(ids []uint) ([]models.Coupon, error) {
+func (r *Store) ListByIDs(ids []uint) ([]coupondomain.Coupon, error) {
 	if len(ids) == 0 {
-		return []models.Coupon{}, nil
+		return []coupondomain.Coupon{}, nil
 	}
-	var coupons []models.Coupon
-	if err := r.db.Where("id IN ?", ids).Find(&coupons).Error; err != nil {
+	var coupons []coupondomain.Coupon
+	if err := r.db.Where("deleted_at IS NULL AND id IN ?", ids).Find(&coupons).Error; err != nil {
 		return nil, err
 	}
 	return coupons, nil
 }
 
 // Create 创建优惠券
-func (r *Store) Create(coupon *models.Coupon) error {
+func (r *Store) Create(coupon *coupondomain.Coupon) error {
 	return r.db.Create(coupon).Error
 }
 
 // Update 更新优惠券
-func (r *Store) Update(coupon *models.Coupon) error {
+func (r *Store) Update(coupon *coupondomain.Coupon) error {
 	return r.db.Save(coupon).Error
 }
 
 // Delete 删除优惠券
 func (r *Store) Delete(id uint) error {
-	return r.db.Delete(&models.Coupon{}, id).Error
+	return r.db.Model(&coupondomain.Coupon{}).
+		Where("id = ? AND deleted_at IS NULL", id).
+		Update("deleted_at", time.Now()).Error
 }
 
 // List 获取优惠券列表
-func (r *Store) List(filter coupon.ListFilter) ([]models.Coupon, int64, error) {
-	var coupons []models.Coupon
-	query := r.db.Model(&models.Coupon{})
+func (r *Store) List(filter couponcontract.ListFilter) ([]coupondomain.Coupon, int64, error) {
+	var coupons []coupondomain.Coupon
+	query := r.db.Model(&coupondomain.Coupon{}).Where("deleted_at IS NULL")
 
 	if filter.ID > 0 {
 		query = query.Where("id = ?", filter.ID)
@@ -125,8 +128,8 @@ func (r *Store) IncrementUsedCount(id uint, delta int) error {
 	if delta == 0 {
 		delta = 1
 	}
-	return r.db.Model(&models.Coupon{}).
-		Where("id = ?", id).
+	return r.db.Model(&coupondomain.Coupon{}).
+		Where("id = ? AND deleted_at IS NULL", id).
 		UpdateColumn("used_count", gorm.Expr("used_count + ?", delta)).Error
 }
 
@@ -138,10 +141,10 @@ func (r *Store) DecrementUsedCount(id uint, delta int) error {
 	if delta < 0 {
 		delta = -delta
 	}
-	return r.db.Model(&models.Coupon{}).
-		Where("id = ?", id).
+	return r.db.Model(&coupondomain.Coupon{}).
+		Where("id = ? AND deleted_at IS NULL", id).
 		Where("used_count >= ?", delta).
 		UpdateColumn("used_count", gorm.Expr("used_count - ?", delta)).Error
 }
 
-var _ coupon.Repository = (*Store)(nil)
+var _ couponcontract.Repository = (*Store)(nil)

@@ -17,7 +17,8 @@ import (
 	"github.com/dujiao-next/internal/models"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	"github.com/dujiao-next/internal/modules/coupon"
+	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 	"github.com/dujiao-next/internal/modules/orderrisk"
 	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	"github.com/dujiao-next/internal/queue"
@@ -80,13 +81,13 @@ type orderSKUStore interface {
 }
 
 type orderCouponRepository interface {
-	coupon.Repository
-	WithTx(tx *gorm.DB) coupon.Repository
+	couponcontract.Repository
+	WithTx(tx *gorm.DB) couponcontract.Repository
 }
 
 type orderCouponUsageRepository interface {
-	coupon.UsageRepository
-	WithTx(tx *gorm.DB) coupon.UsageRepository
+	couponcontract.UsageRepository
+	WithTx(tx *gorm.DB) couponcontract.UsageRepository
 }
 
 type orderQueueClient interface {
@@ -357,7 +358,7 @@ type orderBuildResult struct {
 	Currency                string
 	OrderPromotionID        *uint
 	MemberLevelID           *uint
-	AppliedCoupon           *models.Coupon
+	AppliedCoupon           *coupondomain.Coupon
 }
 
 // PreviewOrder 用户订单金额预览
@@ -664,7 +665,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 		if result.AppliedCoupon != nil {
 			couponRepo := s.couponRepo.WithTx(tx)
 			usageRepo := s.couponUsageRepo.WithTx(tx)
-			usage := &models.CouponUsage{
+			usage := &coupondomain.CouponUsage{
 				CouponID:       result.AppliedCoupon.ID,
 				UserID:         input.UserID,
 				OrderID:        order.ID,

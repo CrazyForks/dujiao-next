@@ -9,7 +9,7 @@ import (
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	channelclientstore "github.com/dujiao-next/internal/modules/channelclient/infrastructure/gormstore"
-	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
+	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	dashboardgormstore "github.com/dujiao-next/internal/modules/dashboard/store/gormstore"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"

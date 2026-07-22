@@ -1,11 +1,10 @@
-package models
+package domain
 
 import (
 	"time"
 
 	"github.com/dujiao-next/internal/shared/jsonslice"
 	"github.com/dujiao-next/internal/shared/money"
-	"gorm.io/gorm"
 )
 
 // Coupon 优惠券
@@ -30,7 +29,7 @@ type Coupon struct {
 	IsActive               bool              `gorm:"not null;default:true" json:"is_active"`                    // 是否启用
 	CreatedAt              time.Time         `gorm:"index" json:"created_at"`                                   // 创建时间
 	UpdatedAt              time.Time         `gorm:"index" json:"updated_at"`                                   // 更新时间
-	DeletedAt              gorm.DeletedAt    `gorm:"index" json:"-"`                                            // 软删除时间
+	DeletedAt              *time.Time        `gorm:"index" json:"-"`                                            // 软删除时间
 }
 
 // TableName 指定表名

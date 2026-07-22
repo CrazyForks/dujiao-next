@@ -12,6 +12,7 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
@@ -172,8 +173,8 @@ func AutoMigrate() error {
 		&GiftCard{},
 		&GiftCardBatch{},
 		&Fulfillment{},
-		&Coupon{},
-		&CouponUsage{},
+		&coupondomain.Coupon{},
+		&coupondomain.CouponUsage{},
 		&promotiondomain.Promotion{},
 		&categorydomain.Category{},
 		&productdomain.Product{},

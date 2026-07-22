@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/modules/coupon"
+	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
 	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -42,20 +42,20 @@ var channelOrderCreateErrorRules = []mappedChannelError{
 	channelErrorRule(ErrCardSecretInsufficient, http.StatusBadRequest, response.CodeBadRequest, "sku_out_of_stock", "error.card_secret_insufficient"),
 	channelErrorRule(ErrOrderCurrencyMismatch, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.order_currency_mismatch"),
 	channelErrorRule(ErrProductPriceInvalid, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.product_price_invalid"),
-	channelErrorRule(coupon.ErrInvalid, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_invalid"),
-	channelErrorRule(coupon.ErrNotFound, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_not_found"),
-	channelErrorRule(coupon.ErrInactive, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_inactive"),
-	channelErrorRule(coupon.ErrNotStarted, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_not_started"),
-	channelErrorRule(coupon.ErrExpired, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_expired"),
-	channelErrorRule(coupon.ErrUsageLimit, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_usage_limit"),
-	channelErrorRule(coupon.ErrPerUserLimit, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_per_user_limit"),
-	channelErrorRule(coupon.ErrMinAmount, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_min_amount"),
-	channelErrorRule(coupon.ErrScopeInvalid, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_scope_invalid"),
-	channelErrorRule(coupon.ErrPaymentRoleNotAllowed, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_payment_role_not_allowed"),
-	channelErrorRule(coupon.ErrPaymentRoleGuestOnly, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_payment_role_guest_only"),
-	channelErrorRule(coupon.ErrPaymentRoleMemberOnly, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_payment_role_member_only"),
-	channelErrorRule(coupon.ErrMemberLevelNotAllowed, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_member_level_not_allowed"),
-	channelErrorRule(coupon.ErrWholesaleDisabled, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_wholesale_disabled"),
+	channelErrorRule(couponcontract.ErrInvalid, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_invalid"),
+	channelErrorRule(couponcontract.ErrNotFound, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_not_found"),
+	channelErrorRule(couponcontract.ErrInactive, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_inactive"),
+	channelErrorRule(couponcontract.ErrNotStarted, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_not_started"),
+	channelErrorRule(couponcontract.ErrExpired, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_expired"),
+	channelErrorRule(couponcontract.ErrUsageLimit, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_usage_limit"),
+	channelErrorRule(couponcontract.ErrPerUserLimit, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_per_user_limit"),
+	channelErrorRule(couponcontract.ErrMinAmount, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_min_amount"),
+	channelErrorRule(couponcontract.ErrScopeInvalid, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_scope_invalid"),
+	channelErrorRule(couponcontract.ErrPaymentRoleNotAllowed, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_payment_role_not_allowed"),
+	channelErrorRule(couponcontract.ErrPaymentRoleGuestOnly, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_payment_role_guest_only"),
+	channelErrorRule(couponcontract.ErrPaymentRoleMemberOnly, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_payment_role_member_only"),
+	channelErrorRule(couponcontract.ErrMemberLevelNotAllowed, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_member_level_not_allowed"),
+	channelErrorRule(couponcontract.ErrWholesaleDisabled, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_wholesale_disabled"),
 	channelErrorRule(promotioncontract.ErrInvalid, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.promotion_invalid"),
 	channelErrorRule(ErrManualFormSchemaInvalid, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.manual_form_schema_invalid"),
 	channelErrorRule(ErrManualFormRequiredMissing, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.manual_form_required_missing"),

@@ -11,7 +11,7 @@ import (
 	"github.com/dujiao-next/internal/modules/cart"
 	"github.com/dujiao-next/internal/modules/content"
 	"github.com/dujiao-next/internal/modules/content/store/gormstore"
-	"github.com/dujiao-next/internal/modules/coupon"
+	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
 	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
 	"github.com/dujiao-next/internal/modules/orderrisk"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
@@ -99,7 +99,7 @@ func (c *Container) initApplicationServices() {
 		ProductSKUs:  c.ProductSKURepo,
 	})
 	c.GiftCardService = service.NewGiftCardService(c.GiftCardRepo, c.UserStore, c.WalletService, c.SettingService)
-	c.CouponAdminService = coupon.NewAdminService(c.CouponRepo)
+	c.CouponAdminService = couponapp.NewAdminService(c.CouponRepo)
 	c.PromotionAdminService = promotionapp.NewAdminService(c.PromotionRepo)
 	c.ContentBannerService = content.NewBannerService(
 		gormstore.NewBannerStore(models.DB),

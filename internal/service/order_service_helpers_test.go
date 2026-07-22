@@ -3,6 +3,8 @@ package service
 import (
 	"testing"
 
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -52,7 +54,7 @@ func TestApplyCouponDiscountToItems(t *testing.T) {
 		{Item: models.OrderItem{ProductID: 2}, TotalAmount: decimal.NewFromInt(50)},
 		{Item: models.OrderItem{ProductID: 3}, TotalAmount: decimal.NewFromInt(50)},
 	}
-	coupon := &models.Coupon{
+	coupon := &coupondomain.Coupon{
 		ScopeType:   constants.ScopeTypeProduct,
 		ScopeRefIDs: "[1,2]",
 	}

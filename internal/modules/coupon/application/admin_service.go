@@ -1,4 +1,4 @@
-package coupon
+package application
 
 import (
 	"encoding/json"
@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
+	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 	"github.com/dujiao-next/internal/shared/jsonslice"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -15,11 +16,11 @@ import (
 
 // AdminService 优惠券管理服务
 type AdminService struct {
-	repo Repository
+	repo couponcontract.Repository
 }
 
 // NewAdminService 创建优惠券管理服务
-func NewAdminService(repo Repository) *AdminService {
+func NewAdminService(repo couponcontract.Repository) *AdminService {
 	return &AdminService{repo: repo}
 }
 
@@ -62,20 +63,20 @@ type UpdateCouponInput struct {
 }
 
 // Create 创建优惠券
-func (s *AdminService) Create(input CreateCouponInput) (*models.Coupon, error) {
+func (s *AdminService) Create(input CreateCouponInput) (*coupondomain.Coupon, error) {
 	code := strings.TrimSpace(input.Code)
 	if code == "" {
-		return nil, ErrInvalid
+		return nil, couponcontract.ErrInvalid
 	}
 	couponType := strings.ToLower(strings.TrimSpace(input.Type))
 	if couponType != constants.CouponTypeFixed && couponType != constants.CouponTypePercent {
-		return nil, ErrInvalid
+		return nil, couponcontract.ErrInvalid
 	}
 	if input.Value.Decimal.LessThanOrEqual(decimal.Zero) {
-		return nil, ErrInvalid
+		return nil, couponcontract.ErrInvalid
 	}
 	if couponType == constants.CouponTypePercent && input.Value.Decimal.GreaterThan(decimal.NewFromInt(100)) {
-		return nil, ErrInvalid
+		return nil, couponcontract.ErrInvalid
 	}
 
 	exist, err := s.repo.GetByCode(code)
@@ -83,7 +84,7 @@ func (s *AdminService) Create(input CreateCouponInput) (*models.Coupon, error) {
 		return nil, err
 	}
 	if exist != nil {
-		return nil, ErrInvalid
+		return nil, couponcontract.ErrInvalid
 	}
 
 	scopeRefIDs, err := encodeScopeRefIDs(input.ScopeRefIDs)
@@ -97,7 +98,7 @@ func (s *AdminService) Create(input CreateCouponInput) (*models.Coupon, error) {
 	memberLevels := normalizeCouponMemberLevels(input.MemberLevels)
 
 	if input.StartsAt != nil && input.EndsAt != nil && input.EndsAt.Before(*input.StartsAt) {
-		return nil, ErrInvalid
+		return nil, couponcontract.ErrInvalid
 	}
 
 	isActive := true
@@ -113,7 +114,7 @@ func (s *AdminService) Create(input CreateCouponInput) (*models.Coupon, error) {
 		perItemDiscount = *input.PerItemDiscount
 	}
 
-	coupon := &models.Coupon{
+	coupon := &coupondomain.Coupon{
 		Code:                   code,
 		Type:                   couponType,
 		Value:                  input.Value,
@@ -140,31 +141,31 @@ func (s *AdminService) Create(input CreateCouponInput) (*models.Coupon, error) {
 }
 
 // Update 更新优惠券
-func (s *AdminService) Update(id uint, input UpdateCouponInput) (*models.Coupon, error) {
+func (s *AdminService) Update(id uint, input UpdateCouponInput) (*coupondomain.Coupon, error) {
 	if id == 0 {
-		return nil, ErrInvalid
+		return nil, couponcontract.ErrInvalid
 	}
 	existing, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	if existing == nil {
-		return nil, ErrNotFound
+		return nil, couponcontract.ErrNotFound
 	}
 
 	code := strings.TrimSpace(input.Code)
 	if code == "" {
-		return nil, ErrInvalid
+		return nil, couponcontract.ErrInvalid
 	}
 	couponType := strings.ToLower(strings.TrimSpace(input.Type))
 	if couponType != constants.CouponTypeFixed && couponType != constants.CouponTypePercent {
-		return nil, ErrInvalid
+		return nil, couponcontract.ErrInvalid
 	}
 	if input.Value.Decimal.LessThanOrEqual(decimal.Zero) {
-		return nil, ErrInvalid
+		return nil, couponcontract.ErrInvalid
 	}
 	if couponType == constants.CouponTypePercent && input.Value.Decimal.GreaterThan(decimal.NewFromInt(100)) {
-		return nil, ErrInvalid
+		return nil, couponcontract.ErrInvalid
 	}
 
 	if code != existing.Code {
@@ -173,7 +174,7 @@ func (s *AdminService) Update(id uint, input UpdateCouponInput) (*models.Coupon,
 			return nil, err
 		}
 		if dup != nil {
-			return nil, ErrInvalid
+			return nil, couponcontract.ErrInvalid
 		}
 	}
 
@@ -187,7 +188,7 @@ func (s *AdminService) Update(id uint, input UpdateCouponInput) (*models.Coupon,
 	}
 	memberLevels := normalizeCouponMemberLevels(input.MemberLevels)
 	if input.StartsAt != nil && input.EndsAt != nil && input.EndsAt.Before(*input.StartsAt) {
-		return nil, ErrInvalid
+		return nil, couponcontract.ErrInvalid
 	}
 
 	isActive := existing.IsActive
@@ -224,7 +225,7 @@ func (s *AdminService) Update(id uint, input UpdateCouponInput) (*models.Coupon,
 	existing.IsActive = isActive
 
 	if err := s.repo.Update(existing); err != nil {
-		return nil, ErrUpdateFailed
+		return nil, couponcontract.ErrUpdateFailed
 	}
 	return existing, nil
 }
@@ -232,33 +233,33 @@ func (s *AdminService) Update(id uint, input UpdateCouponInput) (*models.Coupon,
 // Delete 删除优惠券
 func (s *AdminService) Delete(id uint) error {
 	if id == 0 {
-		return ErrInvalid
+		return couponcontract.ErrInvalid
 	}
 	existing, err := s.repo.GetByID(id)
 	if err != nil {
 		return err
 	}
 	if existing == nil {
-		return ErrNotFound
+		return couponcontract.ErrNotFound
 	}
 	if err := s.repo.Delete(id); err != nil {
-		return ErrDeleteFailed
+		return couponcontract.ErrDeleteFailed
 	}
 	return nil
 }
 
 // List 获取优惠券列表
-func (s *AdminService) List(filter ListFilter) ([]models.Coupon, int64, error) {
+func (s *AdminService) List(filter couponcontract.ListFilter) ([]coupondomain.Coupon, int64, error) {
 	return s.repo.List(filter)
 }
 
 func encodeScopeRefIDs(ids []uint) (string, error) {
 	if len(ids) == 0 {
-		return "", ErrScopeInvalid
+		return "", couponcontract.ErrScopeInvalid
 	}
 	payload, err := json.Marshal(ids)
 	if err != nil {
-		return "", ErrScopeInvalid
+		return "", couponcontract.ErrScopeInvalid
 	}
 	return string(payload), nil
 }
@@ -280,7 +281,7 @@ func normalizeCouponPaymentRoles(raw []string) (jsonslice.Strings, error) {
 			continue
 		}
 		if _, ok := allowed[role]; !ok {
-			return nil, ErrInvalid
+			return nil, couponcontract.ErrInvalid
 		}
 		if _, ok := seen[role]; ok {
 			continue
