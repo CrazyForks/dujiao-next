@@ -6,9 +6,9 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
+	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/modules/giftcard"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -18,7 +18,7 @@ import (
 
 // CaptchaVerifier 是礼品卡兑换所需的验证码端口。
 type CaptchaVerifier interface {
-	Verify(scene string, payload shared.CaptchaPayloadRequest, clientIP string) error
+	Verify(scene string, payload captchahttp.CaptchaPayloadRequest, clientIP string) error
 }
 
 // UserService 是用户侧礼品卡兑换端口。
@@ -41,7 +41,7 @@ func NewUserHandler(cards UserService, captcha CaptchaVerifier) *UserHandler {
 
 type redeemRequest struct {
 	Code           string                       `json:"code" binding:"required"`
-	CaptchaPayload shared.CaptchaPayloadRequest `json:"captcha_payload"`
+	CaptchaPayload captchahttp.CaptchaPayloadRequest `json:"captcha_payload"`
 }
 
 // Redeem 用户兑换礼品卡。

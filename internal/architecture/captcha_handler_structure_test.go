@@ -9,7 +9,7 @@ import (
 func TestPublicCaptchaHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "captcha")
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "captcha")
+	transportRoot := filepath.Join(moduleRoot, "transport", "http")
 
 	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "service.go"), []string{
 		"Service", "SettingReader", "VerifyPayload", "ImageChallenge",
@@ -20,7 +20,7 @@ func TestPublicCaptchaHTTPLivesInTransport(t *testing.T) {
 		"PublicHandler", "ImageChallengeGenerator",
 	})
 	assertDirectoryGoFileBudget(t, moduleRoot, 2)
-	assertDirectoryGoFileBudget(t, transportRoot, 4)
+	assertDirectoryGoFileBudget(t, transportRoot, 6)
 
 	legacy := filepath.Join(repositoryRoot, "internal", "http", "handlers", "public", "captcha.go")
 	if _, err := os.Stat(legacy); err == nil {

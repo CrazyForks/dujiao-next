@@ -63,10 +63,13 @@ var transitionalPackageFileBudgets = map[string]packageFileBudget{
 // bounded context reaches this list, recreating its former horizontal package
 // is an architecture regression rather than an allowed transitional change.
 var completedMigrationPaths = []string{
+	"internal/http/handlers/shared/captcha_payload.go",
 	"internal/models/setting.go",
 	"internal/repository/setting_repository.go",
 	"internal/service/setting_service.go",
+	"internal/transport/http/captcha",
 	"internal/transport/http/settings",
+	"internal/wiring/captcha",
 	"internal/wiring/settings",
 }
 

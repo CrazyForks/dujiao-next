@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
+	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -97,7 +97,7 @@ type CreateGuestOrderRequest struct {
 	AffiliateCode       string                       `json:"affiliate_code"`
 	AffiliateVisitorKey string                       `json:"affiliate_visitor_key"`
 	ManualFormData      map[string]jsonmap.JSON      `json:"manual_form_data"`
-	CaptchaPayload      shared.CaptchaPayloadRequest `json:"captcha_payload"`
+	CaptchaPayload      captchahttp.CaptchaPayloadRequest `json:"captcha_payload"`
 }
 
 // CreateOrderItem 创建/预览订单项。

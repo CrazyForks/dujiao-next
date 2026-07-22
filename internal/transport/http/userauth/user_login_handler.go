@@ -6,9 +6,9 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
+	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -64,7 +64,7 @@ type UserLoginRequest struct {
 	Email          string                       `json:"email" binding:"required"`
 	Password       string                       `json:"password" binding:"required"`
 	RememberMe     bool                         `json:"remember_me"`
-	CaptchaPayload shared.CaptchaPayloadRequest `json:"captcha_payload"`
+	CaptchaPayload captchahttp.CaptchaPayloadRequest `json:"captcha_payload"`
 }
 
 func (h *UserLoginHandler) recordLogin(c *gin.Context, email string, userID uint, status, failReason, source string) {

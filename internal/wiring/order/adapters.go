@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
+	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/modules/coupon"
 	"github.com/dujiao-next/internal/modules/orderrisk"
 	"github.com/dujiao-next/internal/modules/promotion"
@@ -329,7 +329,7 @@ type orderGuestCreateCaptchaAdapter struct {
 	captcha *captcha.Service
 }
 
-func (a orderGuestCreateCaptchaAdapter) VerifyGuestCreateOrder(payload shared.CaptchaPayloadRequest, clientIP string) error {
+func (a orderGuestCreateCaptchaAdapter) VerifyGuestCreateOrder(payload captchahttp.CaptchaPayloadRequest, clientIP string) error {
 	if a.captcha == nil {
 		return nil
 	}

@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/modules/captcha"
+	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -22,7 +22,7 @@ var (
 
 // CaptchaVerifier 是发送验证码所需的验证码端口。
 type CaptchaVerifier interface {
-	Verify(scene string, payload shared.CaptchaPayloadRequest, clientIP string) error
+	Verify(scene string, payload captchahttp.CaptchaPayloadRequest, clientIP string) error
 }
 
 // UserVerifySettings 是发送验证码所需的设置端口。
@@ -57,7 +57,7 @@ func NewUserVerifyHandler(settings UserVerifySettings, captcha CaptchaVerifier, 
 type UserSendVerifyCodeRequest struct {
 	Email          string                       `json:"email" binding:"required"`
 	Purpose        string                       `json:"purpose" binding:"required"`
-	CaptchaPayload shared.CaptchaPayloadRequest `json:"captcha_payload"`
+	CaptchaPayload captchahttp.CaptchaPayloadRequest `json:"captcha_payload"`
 }
 
 // SendUserVerifyCode 发送用户邮箱验证码。

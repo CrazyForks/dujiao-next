@@ -6,9 +6,9 @@ import (
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/modules/captcha"
+	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
@@ -43,7 +43,7 @@ func (e WeakPasswordError) Args() []interface{} { return e.args }
 
 // CaptchaVerifier 是登录端点所需的验证码端口。
 type CaptchaVerifier interface {
-	Verify(scene string, payload shared.CaptchaPayloadRequest, clientIP string) error
+	Verify(scene string, payload captchahttp.CaptchaPayloadRequest, clientIP string) error
 }
 
 // LoginAuthService 是管理员登录与改密端口。
@@ -83,7 +83,7 @@ func (h *AdminLoginHandler) writeLoginLog(c *gin.Context, adminID uint, username
 type LoginRequest struct {
 	Username       string                       `json:"username" binding:"required"`
 	Password       string                       `json:"password" binding:"required"`
-	CaptchaPayload shared.CaptchaPayloadRequest `json:"captcha_payload"`
+	CaptchaPayload captchahttp.CaptchaPayloadRequest `json:"captcha_payload"`
 }
 
 // AdminLogin 管理员登录。

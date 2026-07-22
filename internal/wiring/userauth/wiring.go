@@ -1,9 +1,9 @@
 package userauthwiring
 
 import (
+	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	userauthtransport "github.com/dujiao-next/internal/transport/http/userauth"
-	captchawiring "github.com/dujiao-next/internal/wiring/captcha"
 )
 
 // Handlers contains the complete user authentication HTTP entrypoint set.
@@ -23,7 +23,7 @@ func New(c *provider.Container) Handlers {
 	verify := userVerifyTransportAdapter{auth: c.UserAuthService, settings: c.SettingService}
 	login := userLoginTransportAdapter{auth: c.UserAuthService, settings: c.SettingService}
 	recorder := userLoginRecorderAdapter{logs: c.UserLoginLogService}
-	captcha := captchawiring.NewVerifier(c.CaptchaService)
+	captcha := captchahttp.NewVerifier(c.CaptchaService)
 
 	return Handlers{
 		Profile: userauthtransport.NewUserProfileHandler(

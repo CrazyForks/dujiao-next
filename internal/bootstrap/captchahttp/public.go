@@ -1,8 +1,8 @@
-package captchawiring
+package captchabootstrap
 
 import (
+	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/provider"
-	captchahttp "github.com/dujiao-next/internal/transport/http/captcha"
 )
 
 func NewPublicHandler(c *provider.Container) *captchahttp.PublicHandler {

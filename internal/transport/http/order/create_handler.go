@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
+	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -25,7 +25,7 @@ type OrderCreateService interface {
 
 // GuestCreateCaptcha 游客下单验证码端口。
 type GuestCreateCaptcha interface {
-	VerifyGuestCreateOrder(payload shared.CaptchaPayloadRequest, clientIP string) error
+	VerifyGuestCreateOrder(payload captchahttp.CaptchaPayloadRequest, clientIP string) error
 }
 
 // CreatePaymentInput 创建支付输入。
@@ -71,7 +71,7 @@ type CreateGuestOrderAndPayRequest struct {
 	AffiliateCode       string                       `json:"affiliate_code"`
 	AffiliateVisitorKey string                       `json:"affiliate_visitor_key"`
 	ManualFormData      map[string]jsonmap.JSON      `json:"manual_form_data"`
-	CaptchaPayload      shared.CaptchaPayloadRequest `json:"captcha_payload"`
+	CaptchaPayload      captchahttp.CaptchaPayloadRequest `json:"captcha_payload"`
 	ChannelID           uint                         `json:"channel_id"`
 }
 
@@ -238,7 +238,7 @@ func (h *CreateHandler) CreateGuestOrderAndPay(c *gin.Context) {
 	h.respondCreateAndPay(c, order, orderResp, req.ChannelID, false)
 }
 
-func (h *CreateHandler) verifyGuestCreateCaptcha(c *gin.Context, payload shared.CaptchaPayloadRequest) bool {
+func (h *CreateHandler) verifyGuestCreateCaptcha(c *gin.Context, payload captchahttp.CaptchaPayloadRequest) bool {
 	if h.captcha == nil {
 		return true
 	}

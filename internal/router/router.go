@@ -11,6 +11,8 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
+	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
+	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	apicredentialtransport "github.com/dujiao-next/internal/transport/http/apicredential"
 	auditlogtransport "github.com/dujiao-next/internal/transport/http/auditlog"
@@ -24,14 +26,12 @@ import (
 	notificationtransport "github.com/dujiao-next/internal/transport/http/notification"
 	procurementtransport "github.com/dujiao-next/internal/transport/http/procurement"
 	promotiontransport "github.com/dujiao-next/internal/transport/http/promotion"
-	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	sitemaptransport "github.com/dujiao-next/internal/transport/http/sitemap"
 	"github.com/dujiao-next/internal/web"
 	adminauthwiring "github.com/dujiao-next/internal/wiring/adminauth"
 	adminauthzwiring "github.com/dujiao-next/internal/wiring/adminauthz"
 	adminuserwiring "github.com/dujiao-next/internal/wiring/adminuser"
 	affiliatewiring "github.com/dujiao-next/internal/wiring/affiliate"
-	captchawiring "github.com/dujiao-next/internal/wiring/captcha"
 	cartwiring "github.com/dujiao-next/internal/wiring/cart"
 	catalogwiring "github.com/dujiao-next/internal/wiring/catalog"
 	channelwiring "github.com/dujiao-next/internal/wiring/channel"
@@ -57,7 +57,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 		log = logger.Init(cfg.Server.Mode, cfg.Log.ToLoggerOptions())
 	}
 	r := gin.New()
-	captchaVerifier := captchawiring.NewVerifier(c.CaptchaService)
+	captchaVerifier := captchahttp.NewVerifier(c.CaptchaService)
 
 	// 初始化 Handler（按前台/后台分组）
 	adminAuthHandlers := adminauthwiring.New(c)

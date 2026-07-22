@@ -112,5 +112,10 @@ func TestUserProfileHTTPLivesInTransport(t *testing.T) {
 		}
 	}
 	assertDirectoryGoFileBudget(t, userAuthWiringRoot, 4)
-	assertDirectoryGoFileBudget(t, filepath.Join(repositoryRoot, "internal", "wiring", "captcha"), 2)
+	captchaWiringRoot := filepath.Join(repositoryRoot, "internal", "wiring", "captcha")
+	if _, err := os.Stat(captchaWiringRoot); err == nil {
+		t.Fatalf("captcha wiring must stay moved into the captcha module/bootstrap boundary: %s", captchaWiringRoot)
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("stat retired captcha wiring: %v", err)
+	}
 }

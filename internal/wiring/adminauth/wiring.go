@@ -1,9 +1,9 @@
 package adminauthwiring
 
 import (
+	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	adminauthtransport "github.com/dujiao-next/internal/transport/http/adminauth"
-	captchawiring "github.com/dujiao-next/internal/wiring/captcha"
 )
 
 type Handlers struct {
@@ -17,7 +17,7 @@ func New(c *provider.Container) Handlers {
 	return Handlers{
 		Login: adminauthtransport.NewAdminLoginHandler(
 			adminLoginAuthTransportAdapter{auth: c.AuthService},
-			captchawiring.NewVerifier(c.CaptchaService),
+			captchahttp.NewVerifier(c.CaptchaService),
 			recorder,
 		),
 		TwoFA: adminauthtransport.NewAdmin2FAHandler(

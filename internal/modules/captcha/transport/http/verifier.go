@@ -1,7 +1,6 @@
-package captchawiring
+package captchahttp
 
 import (
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/modules/captcha"
 )
 
@@ -14,7 +13,7 @@ func NewVerifier(service *captcha.Service) Verifier {
 	return Verifier{service: service}
 }
 
-func (v Verifier) Verify(scene string, payload shared.CaptchaPayloadRequest, clientIP string) error {
+func (v Verifier) Verify(scene string, payload CaptchaPayloadRequest, clientIP string) error {
 	if v.service == nil {
 		return nil
 	}

@@ -1,12 +1,13 @@
 package router
 
 import (
+	captchabootstrap "github.com/dujiao-next/internal/bootstrap/captchahttp"
 	"github.com/dujiao-next/internal/config"
+	captchatransport "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	affiliatetransport "github.com/dujiao-next/internal/transport/http/affiliate"
 	apicredentialtransport "github.com/dujiao-next/internal/transport/http/apicredential"
 	auditlogtransport "github.com/dujiao-next/internal/transport/http/auditlog"
-	captchatransport "github.com/dujiao-next/internal/transport/http/captcha"
 	carttransport "github.com/dujiao-next/internal/transport/http/cart"
 	catalogtransport "github.com/dujiao-next/internal/transport/http/catalog"
 	contenttransport "github.com/dujiao-next/internal/transport/http/content"
@@ -20,7 +21,6 @@ import (
 	userauthtransport "github.com/dujiao-next/internal/transport/http/userauth"
 	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
 	affiliatewiring "github.com/dujiao-next/internal/wiring/affiliate"
-	captchawiring "github.com/dujiao-next/internal/wiring/captcha"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -70,7 +70,7 @@ func registerStorefrontRoutes(
 		publicconfigtransport.RegisterPublicRoutes(public, publicConfigHandler)
 		catalogtransport.RegisterPublicRoutes(public, publicCatalogHandler)
 		contenttransport.RegisterPublicRoutes(public, publicContentHandler)
-		captchatransport.RegisterPublicRoutes(public, captchawiring.NewPublicHandler(c))
+		captchatransport.RegisterPublicRoutes(public, captchabootstrap.NewPublicHandler(c))
 		affiliatetransport.RegisterPublicRoutes(public, affiliateHandler)
 		memberleveltransport.RegisterPublicRoutes(public, publicMemberLevelHandler)
 	}
