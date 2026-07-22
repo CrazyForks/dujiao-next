@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
@@ -97,7 +99,7 @@ type SKUMappingRepository interface {
 
 type MemberLevelService interface {
 	ResolveMemberPrice(levelID, productID, skuID uint, basePrice decimal.Decimal) (decimal.Decimal, decimal.Decimal)
-	GetByID(id uint) (*models.MemberLevel, error)
+	GetByID(id uint) (*memberleveldomain.MemberLevel, error)
 }
 
 type Settings interface {

@@ -12,7 +12,7 @@ import (
 	"github.com/dujiao-next/internal/modules/content"
 	"github.com/dujiao-next/internal/modules/content/store/gormstore"
 	"github.com/dujiao-next/internal/modules/coupon"
-	"github.com/dujiao-next/internal/modules/memberlevel"
+	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
 	"github.com/dujiao-next/internal/modules/orderrisk"
 	"github.com/dujiao-next/internal/modules/promotion"
 	"github.com/dujiao-next/internal/modules/sitemap"
@@ -61,7 +61,7 @@ func (c *Container) initApplicationServices() {
 	c.CartService = cart.NewService(c.CartRepo, c.ProductRepo, c.ProductSKURepo, c.PromotionRepo, c.SettingService)
 	c.WalletService = service.NewWalletService(c.WalletRepo, c.OrderRepo, c.OrderRefundRecordRepo, c.UserStore, c.AffiliateRefundHandler, c.SettingService)
 	c.OrderRefundService = service.NewOrderRefundService(c.OrderRepo, c.UserStore, c.OrderRefundRecordRepo, c.AffiliateRefundHandler, c.SettingService)
-	c.MemberLevelService = memberlevel.NewService(c.MemberLevelRepo, c.MemberLevelPriceRepo, c.MemberLevelUserRepo)
+	c.MemberLevelService = memberlevelapp.NewService(c.MemberLevelRepo, c.MemberLevelPriceRepo, c.MemberLevelUserRepo)
 	c.OrderRiskControlService = orderrisk.NewService(c.SettingService, c.OrderRepo)
 	c.OrderService = service.NewOrderService(service.OrderServiceOptions{
 		OrderRepo:                 c.OrderRepo,

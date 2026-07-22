@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -17,7 +19,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
-	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -61,7 +63,7 @@ func newProductServiceForTest(t *testing.T) (catalogproductbootstrap.Services, *
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.CardSecret{}, &models.CardSecretBatch{}, &models.MemberLevelPrice{}, &models.CartItem{}, &mappingdomain.Mapping{}, &mappingdomain.SKUMapping{}, &models.Order{}, &models.OrderItem{}, &models.PaymentChannel{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.CardSecret{}, &models.CardSecretBatch{}, &memberleveldomain.MemberLevelPrice{}, &models.CartItem{}, &mappingdomain.Mapping{}, &mappingdomain.SKUMapping{}, &models.Order{}, &models.OrderItem{}, &models.PaymentChannel{}); err != nil {
 		t.Fatalf("auto migrate product service tables failed: %v", err)
 	}
 

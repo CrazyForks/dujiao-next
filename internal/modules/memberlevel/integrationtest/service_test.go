@@ -1,4 +1,4 @@
-package gormstore_test
+package integrationtest
 
 import (
 	"fmt"
@@ -6,10 +6,10 @@ import (
 	"time"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/memberlevel"
-	"github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
+	memberlevelcontract "github.com/dujiao-next/internal/modules/memberlevel/contract"
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+	"github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
@@ -17,7 +17,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func newMemberLevelServiceForTest(t *testing.T) (*memberlevel.Service, *gorm.DB) {
+func newMemberLevelServiceForTest(t *testing.T) (*memberlevelapp.Service, *gorm.DB) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:member_level_service_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -25,14 +25,14 @@ func newMemberLevelServiceForTest(t *testing.T) (*memberlevel.Service, *gorm.DB)
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&userdomain.User{}, &models.MemberLevel{}, &models.MemberLevelPrice{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &memberleveldomain.MemberLevel{}, &memberleveldomain.MemberLevelPrice{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
 	levelRepo := gormstore.NewLevelStore(db)
 	priceRepo := gormstore.NewPriceStore(db)
 	userRepo := gormstore.NewUserStore(db)
-	return memberlevel.NewService(levelRepo, priceRepo, userRepo), db
+	return memberlevelapp.NewService(levelRepo, priceRepo, userRepo), db
 }
 
 func createMemberLevelFixture(
@@ -42,10 +42,10 @@ func createMemberLevelFixture(
 	sortOrder int,
 	spendThreshold string,
 	isDefault bool,
-) models.MemberLevel {
+) memberleveldomain.MemberLevel {
 	t.Helper()
 
-	level := models.MemberLevel{
+	level := memberleveldomain.MemberLevel{
 		NameJSON: jsonmap.JSON{
 			"zh-CN": slug,
 		},
@@ -141,7 +141,7 @@ func TestMemberLevelServiceOnOrderPaidUpgradesToHigherSortOrder(t *testing.T) {
 }
 
 type concurrentUserRepository struct {
-	base                     memberlevel.UserRepository
+	base                     memberlevelcontract.UserRepository
 	afterFirstSpendIncrement func()
 	spendIncrementCalled     bool
 }
@@ -193,7 +193,7 @@ func TestMemberLevelServiceOnOrderPaidDoesNotOverwriteConcurrentHigherLevel(t *t
 			}
 		},
 	}
-	svc := memberlevel.NewService(
+	svc := memberlevelapp.NewService(
 		gormstore.NewLevelStore(db),
 		gormstore.NewPriceStore(db),
 		raceRepo,
@@ -222,7 +222,7 @@ func TestMemberLevelServiceCreateLevelRejectsActiveSortOrderConflict(t *testing.
 	svc, db := newMemberLevelServiceForTest(t)
 	_ = createMemberLevelFixture(t, db, "sort-existing", 10, "0", true)
 
-	err := svc.CreateLevel(&models.MemberLevel{
+	err := svc.CreateLevel(&memberleveldomain.MemberLevel{
 		NameJSON:          jsonmap.JSON{"zh-CN": "sort-conflict"},
 		Slug:              "sort-conflict",
 		DiscountRate:      money.FromDecimal(decimal.NewFromInt(100)),

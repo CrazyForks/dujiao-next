@@ -3,8 +3,8 @@ package memberlevelhttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/memberlevel"
+	memberlevelcontract "github.com/dujiao-next/internal/modules/memberlevel/contract"
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -15,13 +15,13 @@ import (
 )
 
 type AdminService interface {
-	ListLevels(filter memberlevel.ListFilter) ([]models.MemberLevel, int64, error)
-	CreateLevel(level *models.MemberLevel) error
-	GetByID(id uint) (*models.MemberLevel, error)
-	UpdateLevel(level *models.MemberLevel) error
+	ListLevels(filter memberlevelcontract.ListFilter) ([]memberleveldomain.MemberLevel, int64, error)
+	CreateLevel(level *memberleveldomain.MemberLevel) error
+	GetByID(id uint) (*memberleveldomain.MemberLevel, error)
+	UpdateLevel(level *memberleveldomain.MemberLevel) error
 	DeleteLevel(id uint) error
-	GetLevelPricesByProduct(productID uint) ([]models.MemberLevelPrice, error)
-	BatchUpsertLevelPrices(prices []models.MemberLevelPrice) error
+	GetLevelPricesByProduct(productID uint) ([]memberleveldomain.MemberLevelPrice, error)
+	BatchUpsertLevelPrices(prices []memberleveldomain.MemberLevelPrice) error
 	DeleteLevelPrice(id uint) error
 	SetUserLevel(userID, levelID uint) error
 	BackfillDefaultLevel() (int64, error)
@@ -58,7 +58,7 @@ func (h *AdminHandler) GetAdminMemberLevels(c *gin.Context) {
 		return
 	}
 
-	levels, total, err := h.service.ListLevels(memberlevel.ListFilter{
+	levels, total, err := h.service.ListLevels(memberlevelcontract.ListFilter{
 		IsActive: isActive,
 		Page:     page,
 		PageSize: pageSize,
@@ -85,7 +85,7 @@ func (h *AdminHandler) CreateMemberLevel(c *gin.Context) {
 		isActive = *req.IsActive
 	}
 
-	level := &models.MemberLevel{
+	level := &memberleveldomain.MemberLevel{
 		NameJSON:          req.NameJSON,
 		Slug:              req.Slug,
 		Icon:              req.Icon,
@@ -99,9 +99,9 @@ func (h *AdminHandler) CreateMemberLevel(c *gin.Context) {
 
 	if err := h.service.CreateLevel(level); err != nil {
 		switch {
-		case errors.Is(err, memberlevel.ErrMemberLevelSlugExists):
+		case errors.Is(err, memberlevelcontract.ErrSlugExists):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.member_level_slug_exists", nil)
-		case errors.Is(err, memberlevel.ErrMemberLevelSortOrderUsed):
+		case errors.Is(err, memberlevelcontract.ErrSortOrderUsed):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.member_level_sort_order_used", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.member_level_create_failed", err)
@@ -150,11 +150,11 @@ func (h *AdminHandler) UpdateMemberLevel(c *gin.Context) {
 
 	if err := h.service.UpdateLevel(existing); err != nil {
 		switch {
-		case errors.Is(err, memberlevel.ErrMemberLevelSlugExists):
+		case errors.Is(err, memberlevelcontract.ErrSlugExists):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.member_level_slug_exists", nil)
-		case errors.Is(err, memberlevel.ErrMemberLevelSortOrderUsed):
+		case errors.Is(err, memberlevelcontract.ErrSortOrderUsed):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.member_level_sort_order_used", nil)
-		case errors.Is(err, memberlevel.ErrMemberLevelNotFound):
+		case errors.Is(err, memberlevelcontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.member_level_not_found", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.member_level_update_failed", err)
@@ -175,9 +175,9 @@ func (h *AdminHandler) DeleteMemberLevel(c *gin.Context) {
 
 	if err := h.service.DeleteLevel(levelID); err != nil {
 		switch {
-		case errors.Is(err, memberlevel.ErrMemberLevelNotFound):
+		case errors.Is(err, memberlevelcontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.member_level_not_found", nil)
-		case errors.Is(err, memberlevel.ErrMemberLevelDeleteDefault):
+		case errors.Is(err, memberlevelcontract.ErrDeleteDefault):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.member_level_cannot_delete_default", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.member_level_delete_failed", err)
@@ -226,9 +226,9 @@ func (h *AdminHandler) BatchUpsertMemberLevelPrices(c *gin.Context) {
 		return
 	}
 
-	prices := make([]models.MemberLevelPrice, 0, len(req.Prices))
+	prices := make([]memberleveldomain.MemberLevelPrice, 0, len(req.Prices))
 	for _, p := range req.Prices {
-		prices = append(prices, models.MemberLevelPrice{
+		prices = append(prices, memberleveldomain.MemberLevelPrice{
 			MemberLevelID: p.MemberLevelID,
 			ProductID:     p.ProductID,
 			SKUID:         p.SKUID,
@@ -281,7 +281,7 @@ func (h *AdminHandler) SetUserMemberLevel(c *gin.Context) {
 
 	if err := h.service.SetUserLevel(userID, req.MemberLevelID); err != nil {
 		switch {
-		case errors.Is(err, memberlevel.ErrMemberLevelNotFound):
+		case errors.Is(err, memberlevelcontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.member_level_not_found", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.user_member_level_update_failed", err)
@@ -297,7 +297,7 @@ func (h *AdminHandler) BackfillMemberLevels(c *gin.Context) {
 	affected, err := h.service.BackfillDefaultLevel()
 	if err != nil {
 		switch {
-		case errors.Is(err, memberlevel.ErrMemberLevelNotFound):
+		case errors.Is(err, memberlevelcontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.member_level_no_default", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.member_level_backfill_failed", err)

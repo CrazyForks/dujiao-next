@@ -207,6 +207,12 @@ var completedMigrationPaths = []string{
 	"internal/modules/catalog/mapping/sync.go",
 	"internal/modules/catalog/mapping/sync_test.go",
 	"internal/modules/catalog/mapping/store",
+	"internal/models/member_level.go",
+	"internal/models/member_level_price.go",
+	"internal/modules/memberlevel/ports.go",
+	"internal/modules/memberlevel/service.go",
+	"internal/modules/memberlevel/store",
+	"internal/transport/http/memberlevel",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

@@ -1,34 +1,25 @@
-package memberlevel
+package application
 
 import (
-	"errors"
-
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-
-	"github.com/dujiao-next/internal/models"
+	memberlevelcontract "github.com/dujiao-next/internal/modules/memberlevel/contract"
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 
 	"github.com/shopspring/decimal"
 )
 
-var (
-	ErrMemberLevelNotFound      = errors.New("member_level_not_found")
-	ErrMemberLevelSlugExists    = errors.New("member_level_slug_exists")
-	ErrMemberLevelSortOrderUsed = errors.New("member_level_sort_order_used")
-	ErrMemberLevelDeleteDefault = errors.New("member_level_cannot_delete_default")
-)
-
 // Service 会员等级服务
 type Service struct {
-	levelRepo LevelRepository
-	priceRepo PriceRepository
-	userRepo  UserRepository
+	levelRepo memberlevelcontract.LevelRepository
+	priceRepo memberlevelcontract.PriceRepository
+	userRepo  memberlevelcontract.UserRepository
 }
 
 // NewService 创建会员等级服务
 func NewService(
-	levelRepo LevelRepository,
-	priceRepo PriceRepository,
-	userRepo UserRepository,
+	levelRepo memberlevelcontract.LevelRepository,
+	priceRepo memberlevelcontract.PriceRepository,
+	userRepo memberlevelcontract.UserRepository,
 ) *Service {
 	return &Service{
 		levelRepo: levelRepo,
@@ -39,25 +30,25 @@ func NewService(
 
 // --- 等级 CRUD ---
 
-func (s *Service) GetByID(id uint) (*models.MemberLevel, error) {
+func (s *Service) GetByID(id uint) (*memberleveldomain.MemberLevel, error) {
 	return s.levelRepo.GetByID(id)
 }
 
-func (s *Service) ListLevels(filter ListFilter) ([]models.MemberLevel, int64, error) {
+func (s *Service) ListLevels(filter memberlevelcontract.ListFilter) ([]memberleveldomain.MemberLevel, int64, error) {
 	return s.levelRepo.List(filter)
 }
 
-func (s *Service) ListActiveLevels() ([]models.MemberLevel, error) {
+func (s *Service) ListActiveLevels() ([]memberleveldomain.MemberLevel, error) {
 	return s.levelRepo.ListAllActive()
 }
 
-func (s *Service) CreateLevel(level *models.MemberLevel) error {
+func (s *Service) CreateLevel(level *memberleveldomain.MemberLevel) error {
 	existing, err := s.levelRepo.GetBySlug(level.Slug)
 	if err != nil {
 		return err
 	}
 	if existing != nil {
-		return ErrMemberLevelSlugExists
+		return memberlevelcontract.ErrSlugExists
 	}
 	if err := s.ensureActiveSortOrderAvailable(level); err != nil {
 		return err
@@ -70,13 +61,13 @@ func (s *Service) CreateLevel(level *models.MemberLevel) error {
 	return s.levelRepo.Create(level)
 }
 
-func (s *Service) UpdateLevel(level *models.MemberLevel) error {
+func (s *Service) UpdateLevel(level *memberleveldomain.MemberLevel) error {
 	existing, err := s.levelRepo.GetBySlug(level.Slug)
 	if err != nil {
 		return err
 	}
 	if existing != nil && existing.ID != level.ID {
-		return ErrMemberLevelSlugExists
+		return memberlevelcontract.ErrSlugExists
 	}
 	if err := s.ensureActiveSortOrderAvailable(level); err != nil {
 		return err
@@ -89,7 +80,7 @@ func (s *Service) UpdateLevel(level *models.MemberLevel) error {
 	return s.levelRepo.Update(level)
 }
 
-func (s *Service) ensureActiveSortOrderAvailable(level *models.MemberLevel) error {
+func (s *Service) ensureActiveSortOrderAvailable(level *memberleveldomain.MemberLevel) error {
 	if level == nil || !level.IsActive {
 		return nil
 	}
@@ -98,7 +89,7 @@ func (s *Service) ensureActiveSortOrderAvailable(level *models.MemberLevel) erro
 		return err
 	}
 	if existing != nil {
-		return ErrMemberLevelSortOrderUsed
+		return memberlevelcontract.ErrSortOrderUsed
 	}
 	return nil
 }
@@ -109,21 +100,21 @@ func (s *Service) DeleteLevel(id uint) error {
 		return err
 	}
 	if level == nil {
-		return ErrMemberLevelNotFound
+		return memberlevelcontract.ErrNotFound
 	}
 	if level.IsDefault {
-		return ErrMemberLevelDeleteDefault
+		return memberlevelcontract.ErrDeleteDefault
 	}
 	return s.levelRepo.Delete(id)
 }
 
 // --- 等级价 CRUD ---
 
-func (s *Service) GetLevelPricesByProduct(productID uint) ([]models.MemberLevelPrice, error) {
+func (s *Service) GetLevelPricesByProduct(productID uint) ([]memberleveldomain.MemberLevelPrice, error) {
 	return s.priceRepo.ListByProduct(productID)
 }
 
-func (s *Service) BatchUpsertLevelPrices(prices []models.MemberLevelPrice) error {
+func (s *Service) BatchUpsertLevelPrices(prices []memberleveldomain.MemberLevelPrice) error {
 	return s.priceRepo.BatchUpsert(prices)
 }
 
@@ -182,7 +173,7 @@ func (s *Service) ResolveMemberPrice(levelID, productID, skuID uint, basePrice d
 }
 
 // ResolveMemberPriceForProducts 批量解析会员价（用于商品列表）
-func (s *Service) ResolveMemberPriceForProducts(levelID uint, productIDs []uint) (map[uint][]models.MemberLevelPrice, error) {
+func (s *Service) ResolveMemberPriceForProducts(levelID uint, productIDs []uint) (map[uint][]memberleveldomain.MemberLevelPrice, error) {
 	if levelID == 0 || len(productIDs) == 0 {
 		return nil, nil
 	}
@@ -195,7 +186,7 @@ func (s *Service) ResolveMemberPriceForProducts(levelID uint, productIDs []uint)
 	if err != nil {
 		return nil, err
 	}
-	result := make(map[uint][]models.MemberLevelPrice)
+	result := make(map[uint][]memberleveldomain.MemberLevelPrice)
 	for _, p := range prices {
 		result[p.ProductID] = append(result[p.ProductID], p)
 	}
@@ -236,7 +227,7 @@ func (s *Service) CheckAndUpgrade(userID uint) error {
 	return nil
 }
 
-func (s *Service) findUpgradeTarget(user *userdomain.User, levels []models.MemberLevel) (*models.MemberLevel, error) {
+func (s *Service) findUpgradeTarget(user *userdomain.User, levels []memberleveldomain.MemberLevel) (*memberleveldomain.MemberLevel, error) {
 	if user == nil {
 		return nil, nil
 	}
@@ -259,7 +250,7 @@ func (s *Service) findUpgradeTarget(user *userdomain.User, levels []models.Membe
 	return nil, nil
 }
 
-func (s *Service) resolveCurrentSortOrder(levelID uint, activeLevels []models.MemberLevel) (int, bool, error) {
+func (s *Service) resolveCurrentSortOrder(levelID uint, activeLevels []memberleveldomain.MemberLevel) (int, bool, error) {
 	if levelID == 0 {
 		return -1 << 60, true, nil
 	}
@@ -276,7 +267,7 @@ func (s *Service) resolveCurrentSortOrder(levelID uint, activeLevels []models.Me
 }
 
 // meetsThreshold 判断用户是否满足等级阈值（充值累计 OR 消费累计）
-func (s *Service) meetsThreshold(user *userdomain.User, level *models.MemberLevel) bool {
+func (s *Service) meetsThreshold(user *userdomain.User, level *memberleveldomain.MemberLevel) bool {
 	rechargeThreshold := level.RechargeThreshold.Decimal
 	spendThreshold := level.SpendThreshold.Decimal
 
@@ -337,7 +328,7 @@ func (s *Service) SetUserLevel(userID, levelID uint) error {
 		return err
 	}
 	if user == nil {
-		return errors.New("user_not_found")
+		return memberlevelcontract.ErrUserNotFound
 	}
 	if levelID > 0 {
 		level, err := s.levelRepo.GetByID(levelID)
@@ -345,7 +336,7 @@ func (s *Service) SetUserLevel(userID, levelID uint) error {
 			return err
 		}
 		if level == nil {
-			return ErrMemberLevelNotFound
+			return memberlevelcontract.ErrNotFound
 		}
 	}
 	user.MemberLevelID = levelID
@@ -359,7 +350,7 @@ func (s *Service) BackfillDefaultLevel() (int64, error) {
 		return 0, err
 	}
 	if defaultLevel == nil {
-		return 0, ErrMemberLevelNotFound
+		return 0, memberlevelcontract.ErrNotFound
 	}
 	return s.userRepo.AssignDefaultMemberLevel(defaultLevel.ID)
 }

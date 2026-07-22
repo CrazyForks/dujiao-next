@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 
 	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
@@ -19,7 +21,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
-	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -92,7 +94,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	}
 
 	// 创建会员等级价格
-	mlp := models.MemberLevelPrice{
+	mlp := memberleveldomain.MemberLevelPrice{
 		ProductID:     product.ID,
 		SKUID:         sku.ID,
 		MemberLevelID: 1,
@@ -147,7 +149,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	}
 
 	var mlpCount int64
-	db.Model(&models.MemberLevelPrice{}).Where("product_id = ?", product.ID).Count(&mlpCount)
+	db.Model(&memberleveldomain.MemberLevelPrice{}).Where("product_id = ?", product.ID).Count(&mlpCount)
 	if mlpCount != 0 {
 		t.Errorf("expected 0 member level prices after delete, got %d", mlpCount)
 	}

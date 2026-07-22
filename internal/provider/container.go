@@ -38,8 +38,9 @@ import (
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
-	"github.com/dujiao-next/internal/modules/memberlevel"
-	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
+	memberlevelcontract "github.com/dujiao-next/internal/modules/memberlevel/contract"
+	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/notification"
 	notificationgormstore "github.com/dujiao-next/internal/modules/notification/store/gormstore"
 	"github.com/dujiao-next/internal/modules/orderrisk"
@@ -108,9 +109,9 @@ type Container struct {
 	ReconciliationItemRepo     reconciliation.ItemRepository
 	ChannelClientStore         channelclientcontract.Store
 	TelegramBroadcastRepo      broadcastcontract.Store
-	MemberLevelRepo            memberlevel.LevelRepository
+	MemberLevelRepo            memberlevelcontract.LevelRepository
 	MemberLevelPriceRepo       *memberlevelgormstore.PriceStore
-	MemberLevelUserRepo        memberlevel.UserRepository
+	MemberLevelUserRepo        memberlevelcontract.UserRepository
 
 	// Services
 	AuthzService                  *authz.Service
@@ -165,7 +166,7 @@ type Container struct {
 	ReconciliationService         *reconciliation.Service
 	ChannelClientService          *channelclientapp.Service
 	TelegramBroadcastService      *broadcastapp.Service
-	MemberLevelService            *memberlevel.Service
+	MemberLevelService            *memberlevelapp.Service
 	AdProxyService                *adproxy.Service
 	OrderRiskControlService       *orderrisk.Service
 	ComplianceService             *compliance.Service

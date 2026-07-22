@@ -13,6 +13,7 @@ import (
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
@@ -191,8 +192,8 @@ func AutoMigrate() error {
 		&ReconciliationItem{},
 		&channelclientdomain.Client{},
 		&broadcastdomain.Broadcast{},
-		&MemberLevel{},
-		&MemberLevelPrice{},
+		&memberleveldomain.MemberLevel{},
+		&memberleveldomain.MemberLevelPrice{},
 		&Media{},
 	); err != nil {
 		return err

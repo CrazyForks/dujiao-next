@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -22,8 +24,8 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/coupon"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
-	"github.com/dujiao-next/internal/modules/memberlevel"
-	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
+	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -57,8 +59,8 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices produ
 		&models.Coupon{},
 		&models.CouponUsage{},
 		&userdomain.User{},
-		&models.MemberLevel{},
-		&models.MemberLevelPrice{},
+		&memberleveldomain.MemberLevel{},
+		&memberleveldomain.MemberLevelPrice{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -75,7 +77,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices produ
 
 	var user userdomain.User
 	if memberRate != nil {
-		level := models.MemberLevel{
+		level := memberleveldomain.MemberLevel{
 			NameJSON:     jsonmap.JSON{"zh-CN": "批发会员"},
 			Slug:         name + "-level",
 			DiscountRate: money.FromDecimal(*memberRate),
@@ -154,7 +156,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices produ
 		PromotionRepo:      promotiongormstore.New(db),
 		CouponRepo:         coupongormstore.New(db),
 		CouponUsageRepo:    coupongormstore.NewUsageStore(db),
-		MemberLevelService: memberlevel.NewService(levelRepo, priceRepo, userRepo),
+		MemberLevelService: memberlevelapp.NewService(levelRepo, priceRepo, userRepo),
 		ExpireMinutes:      15,
 	})
 

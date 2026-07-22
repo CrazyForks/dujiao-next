@@ -6,7 +6,7 @@ import (
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/modules/memberlevel"
+	memberlevelcontract "github.com/dujiao-next/internal/modules/memberlevel/contract"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -93,4 +93,4 @@ func (r *UserStore) AssignDefaultMemberLevel(defaultLevelID uint) (int64, error)
 	return result.RowsAffected, result.Error
 }
 
-var _ memberlevel.UserRepository = (*UserStore)(nil)
+var _ memberlevelcontract.UserRepository = (*UserStore)(nil)

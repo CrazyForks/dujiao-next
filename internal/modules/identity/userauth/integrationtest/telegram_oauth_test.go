@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -16,15 +18,14 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
-	"github.com/dujiao-next/internal/modules/memberlevel"
-	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
+	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/telegramidentity"
 
@@ -261,12 +262,12 @@ func TestTelegramMiniAppLoginReturnsRegistrationDisabledWhenCreatingNewUser(t *t
 // 必须被分配默认会员等级，且不会被后续 Update(Save) 用零值覆盖（issue #197）。
 func TestLoginWithTelegramAssignsDefaultMemberLevel(t *testing.T) {
 	svc, _, db := setupTelegramOAuthTestService(t)
-	if err := db.AutoMigrate(&models.MemberLevel{}); err != nil {
+	if err := db.AutoMigrate(&memberleveldomain.MemberLevel{}); err != nil {
 		t.Fatalf("auto migrate member level failed: %v", err)
 	}
 
 	now := time.Now()
-	defaultLevel := &models.MemberLevel{
+	defaultLevel := &memberleveldomain.MemberLevel{
 		NameJSON:  jsonmap.JSON{"zh-CN": "默认等级"},
 		Slug:      "default",
 		IsDefault: true,
@@ -278,7 +279,7 @@ func TestLoginWithTelegramAssignsDefaultMemberLevel(t *testing.T) {
 		t.Fatalf("create default level failed: %v", err)
 	}
 
-	svc.SetMemberLevelService(memberlevel.NewService(
+	svc.SetMemberLevelService(memberlevelapp.NewService(
 		memberlevelgormstore.NewLevelStore(db),
 		nil,
 		userstore.New(db),

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/models"
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 	memberlevelpresenter "github.com/dujiao-next/internal/modules/memberlevel/transport/presenter"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -16,7 +16,7 @@ import (
 
 // ActiveLevelReader 是前台/渠道会员等级只读端口。
 type ActiveLevelReader interface {
-	ListActiveLevels() ([]models.MemberLevel, error)
+	ListActiveLevels() ([]memberleveldomain.MemberLevel, error)
 }
 
 // PublicHandler 处理前台公开会员等级请求。

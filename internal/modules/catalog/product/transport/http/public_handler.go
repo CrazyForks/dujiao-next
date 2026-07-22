@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
@@ -44,7 +46,7 @@ type ProductPromotionDecorator interface {
 
 // MemberLevelPricing 是公开商品会员价装饰端口。
 type MemberLevelPricing interface {
-	GetLevelPricesByProduct(productID uint) ([]models.MemberLevelPrice, error)
+	GetLevelPricesByProduct(productID uint) ([]memberleveldomain.MemberLevelPrice, error)
 	ResolveMemberPrice(levelID, productID, skuID uint, basePrice decimal.Decimal) (decimal.Decimal, decimal.Decimal)
 }
 

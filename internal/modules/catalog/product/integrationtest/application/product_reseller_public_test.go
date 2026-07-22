@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 
 	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
@@ -21,7 +23,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
-	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -46,7 +48,7 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		&productdomain.ProductSKU{},
 		&models.CardSecret{},
 		&models.CardSecretBatch{},
-		&models.MemberLevelPrice{},
+		&memberleveldomain.MemberLevelPrice{},
 		&models.CartItem{},
 		&mappingdomain.Mapping{},
 		&mappingdomain.SKUMapping{},

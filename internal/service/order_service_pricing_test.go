@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -19,8 +21,8 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
-	"github.com/dujiao-next/internal/modules/memberlevel"
-	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
+	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -216,8 +218,8 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 		&productdomain.ProductSKU{},
 		&models.Promotion{},
 		&userdomain.User{},
-		&models.MemberLevel{},
-		&models.MemberLevelPrice{},
+		&memberleveldomain.MemberLevel{},
+		&memberleveldomain.MemberLevelPrice{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -232,7 +234,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
-	level := models.MemberLevel{
+	level := memberleveldomain.MemberLevel{
 		NameJSON:     jsonmap.JSON{"zh-CN": "金牌会员"},
 		Slug:         "gold",
 		DiscountRate: money.FromDecimal(decimal.NewFromInt(80)),
@@ -303,7 +305,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 		ProductRepo:        productgormstore.NewProductStore(db),
 		ProductSKURepo:     productgormstore.NewSKUStore(db),
 		PromotionRepo:      promotiongormstore.New(db),
-		MemberLevelService: memberlevel.NewService(levelRepo, priceRepo, userRepo),
+		MemberLevelService: memberlevelapp.NewService(levelRepo, priceRepo, userRepo),
 		ExpireMinutes:      15,
 	})
 
@@ -347,8 +349,8 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 		&productdomain.ProductSKU{},
 		&models.Promotion{},
 		&userdomain.User{},
-		&models.MemberLevel{},
-		&models.MemberLevelPrice{},
+		&memberleveldomain.MemberLevel{},
+		&memberleveldomain.MemberLevelPrice{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -363,7 +365,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
-	level := models.MemberLevel{
+	level := memberleveldomain.MemberLevel{
 		NameJSON:     jsonmap.JSON{"zh-CN": "金牌会员"},
 		Slug:         "stack-gold",
 		DiscountRate: money.FromDecimal(decimal.NewFromInt(80)),
@@ -434,7 +436,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 		ProductRepo:        productgormstore.NewProductStore(db),
 		ProductSKURepo:     productgormstore.NewSKUStore(db),
 		PromotionRepo:      promotiongormstore.New(db),
-		MemberLevelService: memberlevel.NewService(levelRepo, priceRepo, userRepo),
+		MemberLevelService: memberlevelapp.NewService(levelRepo, priceRepo, userRepo),
 		ExpireMinutes:      15,
 	})
 

@@ -16,7 +16,7 @@ import (
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
-	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	notificationgormstore "github.com/dujiao-next/internal/modules/notification/store/gormstore"
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/store/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
