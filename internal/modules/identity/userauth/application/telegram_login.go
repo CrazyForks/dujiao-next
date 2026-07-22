@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type LoginWithTelegramMiniAppInput struct {
 }
 
 // LoginWithTelegram Telegram 登录（已启用 2FA 的账号会返回挑战 token，不直接发 JWT）
-func (s *UserAuthService) LoginWithTelegram(input LoginWithTelegramInput) (*UserLoginResult, error) {
+func (s *Service) LoginWithTelegram(input LoginWithTelegramInput) (*UserLoginResult, error) {
 	if s.telegramAuthService == nil || s.userOAuthIdentityRepo == nil {
 		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
@@ -36,11 +36,11 @@ func (s *UserAuthService) LoginWithTelegram(input LoginWithTelegramInput) (*User
 	if err != nil {
 		return nil, err
 	}
-	return s.loginWithVerifiedTelegram(verified)
+	return s.LoginVerifiedTelegram(verified)
 }
 
 // LoginWithTelegramMiniApp Telegram Mini App 登录（已启用 2FA 的账号会返回挑战 token，不直接发 JWT）
-func (s *UserAuthService) LoginWithTelegramMiniApp(input LoginWithTelegramMiniAppInput) (*UserLoginResult, error) {
+func (s *Service) LoginWithTelegramMiniApp(input LoginWithTelegramMiniAppInput) (*UserLoginResult, error) {
 	if s.telegramAuthService == nil || s.userOAuthIdentityRepo == nil {
 		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
@@ -52,10 +52,12 @@ func (s *UserAuthService) LoginWithTelegramMiniApp(input LoginWithTelegramMiniAp
 	if err != nil {
 		return nil, err
 	}
-	return s.loginWithVerifiedTelegram(verified)
+	return s.LoginVerifiedTelegram(verified)
 }
 
-func (s *UserAuthService) loginWithVerifiedTelegram(verified *telegramauthapp.IdentityVerified) (*UserLoginResult, error) {
+// LoginVerifiedTelegram completes a login after a trusted Telegram verifier
+// has authenticated and normalized the upstream identity.
+func (s *Service) LoginVerifiedTelegram(verified *telegramauthapp.IdentityVerified) (*UserLoginResult, error) {
 	identity, err := s.getTelegramIdentityByVerifiedID(verified)
 	if err != nil {
 		return nil, err

@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/shared/passwordpolicy"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
@@ -214,7 +215,7 @@ func (a adminLoginRecorderAdapter) Record(adminID uint, username, eventType, sta
 }
 
 type adminUser2FATransportAdapter struct {
-	totp *service.UserTOTPService
+	totp *usertotpapp.Service
 }
 
 func (a adminUser2FATransportAdapter) AdminResetUser2FA(operatorID, userID uint) (*userdomain.User, error) {
@@ -245,6 +246,7 @@ func mapAdminAuthTransportError(err error) error {
 		target error
 	}{
 		{service.ErrNotFound, adminauthtransport.ErrNotFound},
+		{usertotpapp.ErrNotFound, adminauthtransport.ErrNotFound},
 		{totpapplication.ErrSubjectNotFound, adminauthtransport.ErrNotFound},
 		{service.ErrInvalidCredentials, adminauthtransport.ErrInvalidCredentials},
 		{service.ErrInvalidPassword, adminauthtransport.ErrInvalidPassword},

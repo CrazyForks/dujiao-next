@@ -1,17 +1,17 @@
 package affiliatewiring
 
 import (
-	"github.com/dujiao-next/internal/service"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	affiliatetransport "github.com/dujiao-next/internal/transport/http/affiliate"
 )
 
 // affiliateChannelUserAdapter 将 UserAuthService 适配为渠道推广身份开通端口。
 type affiliateChannelUserAdapter struct {
-	auth *service.UserAuthService
+	auth *userauthapp.Service
 }
 
 func (a affiliateChannelUserAdapter) ProvisionUserID(identity affiliatetransport.ChannelIdentity) (uint, error) {
-	user, _, _, err := a.auth.ProvisionTelegramChannelIdentity(service.TelegramChannelIdentityInput{
+	user, _, _, err := a.auth.ProvisionTelegramChannelIdentity(userauthapp.TelegramChannelIdentityInput{
 		ChannelUserID: identity.ChannelUserID,
 		Username:      identity.Username,
 		FirstName:     identity.FirstName,
@@ -22,7 +22,7 @@ func (a affiliateChannelUserAdapter) ProvisionUserID(identity affiliatetransport
 		return 0, err
 	}
 	if user == nil {
-		return 0, service.ErrNotFound
+		return 0, userauthapp.ErrNotFound
 	}
 	return user.ID, nil
 }

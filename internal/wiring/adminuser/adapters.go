@@ -14,6 +14,7 @@ import (
 	"github.com/dujiao-next/internal/modules/coupon"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/money"
@@ -59,7 +60,7 @@ func (a adminUserDirectoryAdapter) BatchUpdateStatus(ids []uint, status string) 
 type adminUserEmailAdapter struct{}
 
 func (adminUserEmailAdapter) NormalizeEmail(email string) (string, error) {
-	normalized, err := service.NormalizeEmail(email)
+	normalized, err := userauthapp.NormalizeEmail(email)
 	if err != nil {
 		return "", mapAdminUserTransportError(err)
 	}
@@ -87,7 +88,7 @@ func (a adminUserOAuthAdapter) ListByUserID(userID uint) ([]externalidentitydoma
 }
 
 type adminUserTelegramAdapter struct {
-	auth *service.UserAuthService
+	auth *userauthapp.Service
 }
 
 func (a adminUserTelegramAdapter) UnbindTelegram(userID uint) error {
@@ -137,10 +138,10 @@ func mapAdminUserTransportError(err error) error {
 		target error
 	}{
 		{service.ErrNotFound, adminusertransport.ErrNotFound},
-		{service.ErrUserDisabled, adminusertransport.ErrUserDisabled},
-		{service.ErrUserOAuthNotBound, adminusertransport.ErrUserOAuthNotBound},
-		{service.ErrTelegramUnbindRequiresEmail, adminusertransport.ErrTelegramUnbindRequiresEmail},
-		{service.ErrInvalidEmail, adminusertransport.ErrInvalidEmail},
+		{userauthapp.ErrUserDisabled, adminusertransport.ErrUserDisabled},
+		{userauthapp.ErrUserOAuthNotBound, adminusertransport.ErrUserOAuthNotBound},
+		{userauthapp.ErrTelegramUnbindRequiresEmail, adminusertransport.ErrTelegramUnbindRequiresEmail},
+		{userauthapp.ErrInvalidEmail, adminusertransport.ErrInvalidEmail},
 	} {
 		if errors.Is(err, mapping.source) {
 			return fmt.Errorf("%w: %v", mapping.target, err)

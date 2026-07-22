@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"context"
@@ -24,20 +24,22 @@ import (
 	emailverificationcontract "github.com/dujiao-next/internal/modules/identity/emailverification/contract"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
+	"github.com/dujiao-next/internal/modules/identity/jwttoken"
+	"github.com/dujiao-next/internal/modules/identity/userauth/challenge"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// UserAuthService 用户认证服务
-type UserAuthService struct {
+// Service 用户认证服务
+type Service struct {
 	cfg                   *config.Config
 	userRepo              usercontract.Store
 	userOAuthIdentityRepo externalidentitycontract.Store
 	codeRepo              emailverificationcontract.Store
 	settingService        *settingsapp.Service
-	emailService          *EmailService
+	emailService          VerificationEmailSender
 	telegramAuthService   *telegramauthapp.Service
 	memberLevelSvc        MemberLevelAssigner
 }
@@ -47,21 +49,21 @@ type MemberLevelAssigner interface {
 }
 
 // SetMemberLevelService 设置会员等级服务
-func (s *UserAuthService) SetMemberLevelService(svc MemberLevelAssigner) {
+func (s *Service) SetMemberLevelService(svc MemberLevelAssigner) {
 	s.memberLevelSvc = svc
 }
 
-// NewUserAuthService 创建用户认证服务
-func NewUserAuthService(
+// NewService 创建用户认证服务
+func NewService(
 	cfg *config.Config,
 	userRepo usercontract.Store,
 	userOAuthIdentityRepo externalidentitycontract.Store,
 	codeRepo emailverificationcontract.Store,
 	settingService *settingsapp.Service,
-	emailService *EmailService,
+	emailService VerificationEmailSender,
 	telegramAuthService *telegramauthapp.Service,
-) *UserAuthService {
-	return &UserAuthService{
+) *Service {
+	return &Service{
 		cfg:                   cfg,
 		userRepo:              userRepo,
 		userOAuthIdentityRepo: userOAuthIdentityRepo,
@@ -117,7 +119,7 @@ const (
 )
 
 // GenerateUserJWT 生成用户 JWT Token
-func (s *UserAuthService) GenerateUserJWT(user *userdomain.User, expireHours int) (string, time.Time, error) {
+func (s *Service) GenerateUserJWT(user *userdomain.User, expireHours int) (string, time.Time, error) {
 	resolvedHours := expireHours
 	if resolvedHours <= 0 {
 		resolvedHours = resolveUserJWTExpireHours(s.cfg.UserJWT)
@@ -127,7 +129,7 @@ func (s *UserAuthService) GenerateUserJWT(user *userdomain.User, expireHours int
 		UserID:       user.ID,
 		Email:        user.Email,
 		TokenVersion: user.TokenVersion,
-		Typ:          TokenTypAccess,
+		Typ:          jwttoken.TypeAccess,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -144,8 +146,8 @@ func (s *UserAuthService) GenerateUserJWT(user *userdomain.User, expireHours int
 }
 
 // ParseUserJWT 解析用户 JWT Token
-func (s *UserAuthService) ParseUserJWT(tokenString string) (*UserJWTClaims, error) {
-	parser := newHS256JWTParser()
+func (s *Service) ParseUserJWT(tokenString string) (*UserJWTClaims, error) {
+	parser := jwttoken.NewHS256Parser()
 	claims := &UserJWTClaims{}
 	token, err := parser.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.cfg.UserJWT.SecretKey), nil
@@ -160,7 +162,7 @@ func (s *UserAuthService) ParseUserJWT(tokenString string) (*UserJWTClaims, erro
 }
 
 // SendVerifyCode 发送邮箱验证码
-func (s *UserAuthService) SendVerifyCode(email, purpose, locale string) error {
+func (s *Service) SendVerifyCode(email, purpose, locale string) error {
 	if s.emailService == nil {
 		return ErrEmailServiceNotConfigured
 	}
@@ -215,7 +217,7 @@ func (s *UserAuthService) SendVerifyCode(email, purpose, locale string) error {
 	return s.sendVerifyCode(normalized, purpose, locale)
 }
 
-func (s *UserAuthService) checkRegistrationEmailDomain(email string) error {
+func (s *Service) checkRegistrationEmailDomain(email string) error {
 	if s == nil || s.settingService == nil {
 		return nil
 	}
@@ -227,7 +229,7 @@ func (s *UserAuthService) checkRegistrationEmailDomain(email string) error {
 }
 
 // Register 用户注册
-func (s *UserAuthService) Register(email, password, code string, agreementAccepted bool, emailVerificationEnabled bool) (*userdomain.User, string, time.Time, error) {
+func (s *Service) Register(email, password, code string, agreementAccepted bool, emailVerificationEnabled bool) (*userdomain.User, string, time.Time, error) {
 	if !agreementAccepted {
 		return nil, "", time.Time{}, ErrAgreementRequired
 	}
@@ -297,7 +299,7 @@ func (s *UserAuthService) Register(email, password, code string, agreementAccept
 }
 
 // LoginStep1 用户密码登录第一步：校验密码，根据是否启用 2FA 返回 challenge token 或正式 JWT。
-func (s *UserAuthService) LoginStep1(email, password string, rememberMe bool) (*UserLoginResult, error) {
+func (s *Service) LoginStep1(email, password string, rememberMe bool) (*UserLoginResult, error) {
 	normalized, err := normalizeEmail(email)
 	if err != nil {
 		return nil, err
@@ -358,15 +360,15 @@ func (s *UserAuthService) LoginStep1(email, password string, rememberMe bool) (*
 }
 
 // IssueUserChallengeToken 签发用户 2FA 挑战 token
-func (s *UserAuthService) IssueUserChallengeToken(userID uint, rememberMe bool) (token, jti string, expiresAt time.Time, err error) {
+func (s *Service) IssueUserChallengeToken(userID uint, rememberMe bool) (token, jti string, expiresAt time.Time, err error) {
 	jti = uuid.NewString()
-	expiresAt = time.Now().Add(UserChallengeTTL)
+	expiresAt = time.Now().Add(challenge.TTL)
 	claims := UserChallengeClaims{
 		UserID:     userID,
 		JTI:        jti,
-		Purpose:    UserChallengePurpose2FA,
+		Purpose:    challenge.PurposeTwoFactor,
 		RememberMe: rememberMe,
-		Typ:        TokenTyp2FAChallenge,
+		Typ:        jwttoken.TypeTwoFactorChallenge,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -383,8 +385,8 @@ func (s *UserAuthService) IssueUserChallengeToken(userID uint, rememberMe bool) 
 }
 
 // ParseUserChallengeToken 解析并校验用户挑战 token
-func (s *UserAuthService) ParseUserChallengeToken(tokenString string) (*UserChallengeClaims, error) {
-	parser := newHS256JWTParser()
+func (s *Service) ParseUserChallengeToken(tokenString string) (*UserChallengeClaims, error) {
+	parser := jwttoken.NewHS256Parser()
 	tok, err := parser.ParseWithClaims(tokenString, &UserChallengeClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.cfg.UserJWT.SecretKey), nil
 	})
@@ -395,14 +397,14 @@ func (s *UserAuthService) ParseUserChallengeToken(tokenString string) (*UserChal
 	if !ok || !tok.Valid {
 		return nil, errors.New("invalid challenge token")
 	}
-	if claims.Purpose != UserChallengePurpose2FA || claims.Typ != TokenTyp2FAChallenge {
+	if claims.Purpose != challenge.PurposeTwoFactor || claims.Typ != jwttoken.TypeTwoFactorChallenge {
 		return nil, errors.New("invalid challenge purpose")
 	}
 	return claims, nil
 }
 
 // CompleteLoginAfter2FA 用户 2FA 验证通过后完成登录：发正式 JWT、更新 last_login
-func (s *UserAuthService) CompleteLoginAfter2FA(userID uint, rememberMe bool) (*UserLoginResult, error) {
+func (s *Service) CompleteLoginAfter2FA(userID uint, rememberMe bool) (*UserLoginResult, error) {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return nil, err
@@ -427,7 +429,7 @@ func (s *UserAuthService) CompleteLoginAfter2FA(userID uint, rememberMe bool) (*
 	return &UserLoginResult{RequiresTOTP: false, User: user, Token: token, ExpiresAt: expiresAt}, nil
 }
 
-func (s *UserAuthService) verifyCode(email, purpose, code string) (*emailverificationdomain.Code, error) {
+func (s *Service) verifyCode(email, purpose, code string) (*emailverificationdomain.Code, error) {
 	record, err := s.codeRepo.GetLatest(email, purpose)
 	if err != nil {
 		return nil, err
@@ -460,7 +462,7 @@ func (s *UserAuthService) verifyCode(email, purpose, code string) (*emailverific
 	return record, nil
 }
 
-func (s *UserAuthService) sendVerifyCode(email, purpose, locale string) error {
+func (s *Service) sendVerifyCode(email, purpose, locale string) error {
 	latest, err := s.codeRepo.GetLatest(email, purpose)
 	if err != nil {
 		return err

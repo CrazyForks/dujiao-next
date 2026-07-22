@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"fmt"
@@ -15,12 +15,13 @@ import (
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
-func setupUserAuthServiceChannelIdentityTest(t *testing.T) (*UserAuthService, *gorm.DB) {
+func setupUserAuthServiceChannelIdentityTest(t *testing.T) (*userauthapp.Service, *gorm.DB) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:user_auth_service_channel_identity_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -35,7 +36,7 @@ func setupUserAuthServiceChannelIdentityTest(t *testing.T) (*UserAuthService, *g
 	userRepo := userstore.New(db)
 	identityRepo := externalidentitystore.New(db)
 
-	return NewUserAuthService(&config.Config{}, userRepo, identityRepo, emailverificationstore.New(db), nil, nil, nil), db
+	return userauthapp.NewService(&config.Config{}, userRepo, identityRepo, emailverificationstore.New(db), nil, nil, nil), db
 }
 
 func TestResolveTelegramChannelIdentityReturnsBoundUser(t *testing.T) {
@@ -69,7 +70,7 @@ func TestResolveTelegramChannelIdentityReturnsBoundUser(t *testing.T) {
 		t.Fatalf("create identity failed: %v", err)
 	}
 
-	resolvedUser, resolvedIdentity, err := svc.ResolveTelegramChannelIdentity(TelegramChannelIdentityInput{
+	resolvedUser, resolvedIdentity, err := svc.ResolveTelegramChannelIdentity(userauthapp.TelegramChannelIdentityInput{
 		ChannelUserID: "123456",
 		Username:      "new_username",
 		AvatarURL:     "https://new.example/avatar.png",
@@ -102,7 +103,7 @@ func TestResolveTelegramChannelIdentityReturnsBoundUser(t *testing.T) {
 func TestProvisionTelegramChannelIdentityCreatesUserAndIdentity(t *testing.T) {
 	svc, db := setupUserAuthServiceChannelIdentityTest(t)
 
-	user, identity, created, err := svc.ProvisionTelegramChannelIdentity(TelegramChannelIdentityInput{
+	user, identity, created, err := svc.ProvisionTelegramChannelIdentity(userauthapp.TelegramChannelIdentityInput{
 		ChannelUserID: "987654",
 		Username:      "demo_user",
 		FirstName:     "Demo",
@@ -204,8 +205,8 @@ func TestBindTelegramChannelByEmailCodeRebindsPlaceholderIdentity(t *testing.T) 
 		t.Fatalf("create verify code failed: %v", err)
 	}
 
-	boundUser, boundIdentity, previousUserID, err := svc.BindTelegramChannelByEmailCode(BindTelegramChannelByEmailCodeInput{
-		Identity: TelegramChannelIdentityInput{
+	boundUser, boundIdentity, previousUserID, err := svc.BindTelegramChannelByEmailCode(userauthapp.BindTelegramChannelByEmailCodeInput{
+		Identity: userauthapp.TelegramChannelIdentityInput{
 			ChannelUserID: "456789",
 			Username:      "bound_user",
 		},

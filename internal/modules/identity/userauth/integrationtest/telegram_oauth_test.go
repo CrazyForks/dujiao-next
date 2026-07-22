@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -31,7 +32,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func setupTelegramOAuthTestService(t *testing.T) (*UserAuthService, *gorm.DB) {
+func setupTelegramOAuthTestService(t *testing.T, telegramService ...*telegramauthapp.Service) (*userauthapp.Service, *settingsapp.Service, *gorm.DB) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:user_auth_service_oauth_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -50,35 +51,37 @@ func setupTelegramOAuthTestService(t *testing.T) (*UserAuthService, *gorm.DB) {
 		},
 	}
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
-	svc := NewUserAuthService(
+	var verifier *telegramauthapp.Service
+	if len(telegramService) > 0 {
+		verifier = telegramService[0]
+	}
+	svc := userauthapp.NewService(
 		cfg,
 		userstore.New(db),
 		externalidentitystore.New(db),
 		emailverificationstore.New(db),
 		settingSvc,
 		nil,
-		nil,
+		verifier,
 	)
-	return svc, db
+	return svc, settingSvc, db
 }
 
 func TestFindOrCreateTelegramUserRespectsRegistrationSetting(t *testing.T) {
-	svc, db := setupTelegramOAuthTestService(t)
+	svc, settings, db := setupTelegramOAuthTestService(t)
 
-	if _, err := svc.settingService.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
+	if _, err := settings.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
 		constants.SettingFieldRegistrationEnabled: false,
 	}); err != nil {
 		t.Fatalf("disable registration failed: %v", err)
 	}
 
-	user, err := svc.findOrCreateTelegramUser(&telegramauthapp.IdentityVerified{
-		Provider:       constants.UserOAuthProviderTelegram,
-		ProviderUserID: "10001",
-		Username:       "tg_new_user",
-		AuthAt:         time.Now(),
+	user, _, _, err := svc.ProvisionTelegramChannelIdentity(userauthapp.TelegramChannelIdentityInput{
+		ChannelUserID: "10001",
+		Username:      "tg_new_user",
 	})
-	if !errors.Is(err, ErrRegistrationDisabled) {
-		t.Fatalf("expected ErrRegistrationDisabled, got user=%v err=%v", user, err)
+	if !errors.Is(err, userauthapp.ErrRegistrationDisabled) {
+		t.Fatalf("expected userauthapp.ErrRegistrationDisabled, got user=%v err=%v", user, err)
 	}
 
 	var count int64
@@ -91,8 +94,8 @@ func TestFindOrCreateTelegramUserRespectsRegistrationSetting(t *testing.T) {
 }
 
 func TestFindOrCreateTelegramUserIgnoresEmailDomainAllowlist(t *testing.T) {
-	svc, db := setupTelegramOAuthTestService(t)
-	if _, err := svc.settingService.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
+	svc, settings, db := setupTelegramOAuthTestService(t)
+	if _, err := settings.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
 		constants.SettingFieldRegistrationEnabled:         true,
 		constants.SettingFieldEmailDomainAllowlistEnabled: true,
 		constants.SettingFieldAllowedEmailDomains:         []interface{}{"qq.com"},
@@ -100,11 +103,9 @@ func TestFindOrCreateTelegramUserIgnoresEmailDomainAllowlist(t *testing.T) {
 		t.Fatalf("update registration config failed: %v", err)
 	}
 
-	user, err := svc.findOrCreateTelegramUser(&telegramauthapp.IdentityVerified{
-		Provider:       constants.UserOAuthProviderTelegram,
-		ProviderUserID: "allowlist_tg_10001",
-		Username:       "allowlist_tg",
-		AuthAt:         time.Now(),
+	user, _, _, err := svc.ProvisionTelegramChannelIdentity(userauthapp.TelegramChannelIdentityInput{
+		ChannelUserID: "allowlist_tg_10001",
+		Username:      "allowlist_tg",
 	})
 	if err != nil {
 		t.Fatalf("telegram user creation should ignore email domain allowlist: %v", err)
@@ -123,7 +124,7 @@ func TestFindOrCreateTelegramUserIgnoresEmailDomainAllowlist(t *testing.T) {
 }
 
 func TestLoginWithTelegramAllowsExistingIdentityWhenRegistrationDisabled(t *testing.T) {
-	svc, db := setupTelegramOAuthTestService(t)
+	svc, settings, db := setupTelegramOAuthTestService(t)
 
 	now := time.Now()
 	user := &userdomain.User{
@@ -149,13 +150,13 @@ func TestLoginWithTelegramAllowsExistingIdentityWhenRegistrationDisabled(t *test
 	if err := db.Create(identity).Error; err != nil {
 		t.Fatalf("create identity failed: %v", err)
 	}
-	if _, err := svc.settingService.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
+	if _, err := settings.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
 		constants.SettingFieldRegistrationEnabled: false,
 	}); err != nil {
 		t.Fatalf("disable registration failed: %v", err)
 	}
 
-	res, err := svc.loginWithVerifiedTelegram(&telegramauthapp.IdentityVerified{
+	res, err := svc.LoginVerifiedTelegram(&telegramauthapp.IdentityVerified{
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: "10002",
 		Username:       "tg_existing",
@@ -176,7 +177,7 @@ func TestLoginWithTelegramAllowsExistingIdentityWhenRegistrationDisabled(t *test
 }
 
 func TestLoginWithTelegramMigratesOIDCSubjectIdentityToTelegramID(t *testing.T) {
-	svc, db := setupTelegramOAuthTestService(t)
+	svc, _, db := setupTelegramOAuthTestService(t)
 
 	now := time.Now()
 	user := &userdomain.User{
@@ -203,7 +204,7 @@ func TestLoginWithTelegramMigratesOIDCSubjectIdentityToTelegramID(t *testing.T) 
 		t.Fatalf("create identity failed: %v", err)
 	}
 
-	res, err := svc.loginWithVerifiedTelegram(&telegramauthapp.IdentityVerified{
+	res, err := svc.LoginVerifiedTelegram(&telegramauthapp.IdentityVerified{
 		Provider:              constants.UserOAuthProviderTelegram,
 		ProviderUserID:        "987654321",
 		ProviderUserIDAliases: []string{"1234123412341234123"},
@@ -230,7 +231,6 @@ func TestLoginWithTelegramMigratesOIDCSubjectIdentityToTelegramID(t *testing.T) 
 }
 
 func TestTelegramMiniAppLoginReturnsRegistrationDisabledWhenCreatingNewUser(t *testing.T) {
-	svc, _ := setupTelegramOAuthTestService(t)
 	telegramSvc := telegramauthapp.NewService(config.TelegramAuthConfig{
 		Enabled:            true,
 		BotToken:           "test-bot-token",
@@ -239,28 +239,28 @@ func TestTelegramMiniAppLoginReturnsRegistrationDisabledWhenCreatingNewUser(t *t
 	}, telegramauthapp.WithReplaySetNX(func(ctx context.Context, key string, value interface{}, ttl time.Duration) (bool, error) {
 		return true, nil
 	}))
-	svc.telegramAuthService = telegramSvc
+	svc, settings, _ := setupTelegramOAuthTestService(t, telegramSvc)
 
-	if _, err := svc.settingService.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
+	if _, err := settings.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
 		constants.SettingFieldRegistrationEnabled: false,
 	}); err != nil {
 		t.Fatalf("disable registration failed: %v", err)
 	}
 
 	initData := buildUserAuthTestTelegramMiniAppInitData(t, "test-bot-token", time.Now().Unix(), `{"id":10003,"first_name":"Mini","last_name":"Blocked","username":"mini_blocked"}`)
-	res, err := svc.LoginWithTelegramMiniApp(LoginWithTelegramMiniAppInput{
+	res, err := svc.LoginWithTelegramMiniApp(userauthapp.LoginWithTelegramMiniAppInput{
 		InitData: initData,
 		Context:  context.Background(),
 	})
-	if !errors.Is(err, ErrRegistrationDisabled) {
-		t.Fatalf("expected ErrRegistrationDisabled, got res=%+v err=%v", res, err)
+	if !errors.Is(err, userauthapp.ErrRegistrationDisabled) {
+		t.Fatalf("expected userauthapp.ErrRegistrationDisabled, got res=%+v err=%v", res, err)
 	}
 }
 
 // TestLoginWithTelegramAssignsDefaultMemberLevel 回归测试：Telegram 一键登录创建的新用户
 // 必须被分配默认会员等级，且不会被后续 Update(Save) 用零值覆盖（issue #197）。
 func TestLoginWithTelegramAssignsDefaultMemberLevel(t *testing.T) {
-	svc, db := setupTelegramOAuthTestService(t)
+	svc, _, db := setupTelegramOAuthTestService(t)
 	if err := db.AutoMigrate(&models.MemberLevel{}); err != nil {
 		t.Fatalf("auto migrate member level failed: %v", err)
 	}
@@ -284,7 +284,7 @@ func TestLoginWithTelegramAssignsDefaultMemberLevel(t *testing.T) {
 		userstore.New(db),
 	))
 
-	res, err := svc.loginWithVerifiedTelegram(&telegramauthapp.IdentityVerified{
+	res, err := svc.LoginVerifiedTelegram(&telegramauthapp.IdentityVerified{
 		Provider:       constants.UserOAuthProviderTelegram,
 		ProviderUserID: "20001",
 		Username:       "tg_level_user",

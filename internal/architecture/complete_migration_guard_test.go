@@ -103,6 +103,23 @@ var completedMigrationPaths = []string{
 	"internal/service/totp_enable_test.go",
 	"internal/service/recovery_codes.go",
 	"internal/service/password_policy.go",
+	"internal/service/jwt_parser.go",
+	"internal/service/user_auth_service.go",
+	"internal/service/user_auth_service_profile.go",
+	"internal/service/user_auth_telegram_binding.go",
+	"internal/service/user_auth_telegram_channel.go",
+	"internal/service/user_auth_telegram_identity.go",
+	"internal/service/user_auth_telegram_login.go",
+	"internal/service/user_auth_telegram_oidc.go",
+	"internal/service/user_auth_service_2fa_test.go",
+	"internal/service/user_auth_service_channel_identity_test.go",
+	"internal/service/user_auth_service_domain_policy_test.go",
+	"internal/service/user_auth_service_email_mode_test.go",
+	"internal/service/user_auth_service_oauth_miniapp_test.go",
+	"internal/service/user_auth_service_oauth_test.go",
+	"internal/service/user_auth_telegram_test_helpers_test.go",
+	"internal/service/user_totp_service.go",
+	"internal/service/user_totp_service_test.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

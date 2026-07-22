@@ -25,6 +25,8 @@ import (
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/modules/notification"
@@ -102,8 +104,8 @@ type Container struct {
 	AuthzService                  *authz.Service
 	AuthService                   *service.AuthService
 	TOTPService                   *service.TOTPService
-	UserTOTPService               *service.UserTOTPService
-	UserAuthService               *service.UserAuthService
+	UserTOTPService               *usertotpapp.Service
+	UserAuthService               *userauthapp.Service
 	TelegramAuthService           *telegramauthapp.Service
 	EmailService                  *service.EmailService
 	CaptchaService                *captcha.Service

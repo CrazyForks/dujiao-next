@@ -9,6 +9,8 @@ import (
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/compliance"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
 	"github.com/dujiao-next/internal/modules/reseller"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
@@ -78,9 +80,9 @@ func (c *Container) initIdentityAndCatalogServices() {
 	c.CaptchaService = captcha.NewService(c.SettingService, c.Config.Captcha)
 	c.AuthService = service.NewAuthService(c.Config, c.AdminStore)
 	c.TOTPService = service.NewTOTPService(c.Config, c.AdminStore, cache.Client())
-	c.UserTOTPService = service.NewUserTOTPService(c.Config, c.UserStore, cache.Client())
+	c.UserTOTPService = usertotpapp.NewService(c.Config, c.UserStore, cache.Client())
 	c.TelegramAuthService = telegramauthapp.NewService(c.Config.TelegramAuth, telegramauthcache.Options()...)
-	c.UserAuthService = service.NewUserAuthService(c.Config, c.UserStore, c.ExternalIdentityStore, c.EmailVerificationStore, c.SettingService, c.EmailService, c.TelegramAuthService)
+	c.UserAuthService = userauthapp.NewService(c.Config, c.UserStore, c.ExternalIdentityStore, c.EmailVerificationStore, c.SettingService, c.EmailService, c.TelegramAuthService)
 	c.UploadService = upload.NewService(c.Config)
 	c.AffiliateService = service.NewAffiliateService(c.AffiliateRepo, c.UserStore, c.OrderRepo, c.ProductRepo, c.SettingService)
 	c.ProductService = service.NewProductService(c.ProductRepo, c.ProductSKURepo, c.CardSecretRepo, c.CardSecretBatchRepo, c.CategoryRepo, c.MemberLevelPriceRepo, c.CartRepo, c.ProductMappingRepo, c.OrderRepo, c.PaymentChannelRepo)

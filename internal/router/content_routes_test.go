@@ -18,6 +18,7 @@ import (
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
+	"github.com/dujiao-next/internal/modules/identity/jwttoken"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/service"
 	contenttransport "github.com/dujiao-next/internal/transport/http/content"
@@ -245,7 +246,7 @@ func signContentAdminToken(t *testing.T, admin *admindomain.Admin) string {
 		AdminID:      admin.ID,
 		Username:     admin.Username,
 		TokenVersion: admin.TokenVersion,
-		Typ:          service.TokenTypAccess,
+		Typ:          jwttoken.TypeAccess,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(now),

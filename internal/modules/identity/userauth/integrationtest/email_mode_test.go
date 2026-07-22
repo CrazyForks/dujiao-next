@@ -1,9 +1,10 @@
-package service
+package integrationtest
 
 import (
 	"testing"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 
 	"github.com/dujiao-next/internal/telegramidentity"
 )
@@ -39,7 +40,7 @@ func TestIsTelegramPlaceholderEmail(t *testing.T) {
 }
 
 func TestResolvePasswordChangeMode(t *testing.T) {
-	svc := &UserAuthService{}
+	svc := &userauthapp.Service{}
 
 	mode, err := svc.ResolvePasswordChangeMode(&userdomain.User{
 		Email:                 "telegram_1@login.local",
@@ -48,7 +49,7 @@ func TestResolvePasswordChangeMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolvePasswordChangeMode returned error: %v", err)
 	}
-	if mode != PasswordChangeModeSetWithoutOld {
+	if mode != userauthapp.PasswordChangeModeSetWithoutOld {
 		t.Fatalf("unexpected mode for telegram placeholder user: %s", mode)
 	}
 
@@ -59,7 +60,7 @@ func TestResolvePasswordChangeMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ResolvePasswordChangeMode returned error: %v", err)
 	}
-	if mode != PasswordChangeModeChangeWithOld {
+	if mode != userauthapp.PasswordChangeModeChangeWithOld {
 		t.Fatalf("unexpected mode for normal user: %s", mode)
 	}
 }

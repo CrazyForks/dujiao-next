@@ -25,6 +25,7 @@ import (
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	giftcardtransport "github.com/dujiao-next/internal/transport/http/giftcard"
@@ -43,11 +44,11 @@ type channelGiftCardTestResponse struct {
 }
 
 type giftCardChannelUserProvisioner struct {
-	auth *service.UserAuthService
+	auth *userauthapp.Service
 }
 
 func (p giftCardChannelUserProvisioner) ProvisionUserID(channelUserID string) (uint, error) {
-	user, _, _, err := p.auth.ProvisionTelegramChannelIdentity(service.TelegramChannelIdentityInput{
+	user, _, _, err := p.auth.ProvisionTelegramChannelIdentity(userauthapp.TelegramChannelIdentityInput{
 		ChannelUserID: channelUserID,
 	})
 	if err != nil {
@@ -96,7 +97,7 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 	refundRecordRepo := repository.NewOrderRefundRecordRepository(db)
 	walletSvc := service.NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, nil, settingSvc)
 	giftCardSvc := service.NewGiftCardService(giftCardRepo, userRepo, walletSvc, settingSvc)
-	userAuthSvc := service.NewUserAuthService(&config.Config{}, userRepo, identityRepo, emailVerifyRepo, nil, nil, nil)
+	userAuthSvc := userauthapp.NewService(&config.Config{}, userRepo, identityRepo, emailVerifyRepo, nil, nil, nil)
 
 	handler := giftcardtransport.NewChannelHandler(giftCardSvc, giftCardChannelUserProvisioner{auth: userAuthSvc})
 

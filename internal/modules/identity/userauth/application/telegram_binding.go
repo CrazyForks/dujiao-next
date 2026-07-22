@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"context"
@@ -24,7 +24,7 @@ type BindTelegramMiniAppInput struct {
 }
 
 // BindTelegram 绑定 Telegram
-func (s *UserAuthService) BindTelegram(input BindTelegramInput) (*externalidentitydomain.Identity, error) {
+func (s *Service) BindTelegram(input BindTelegramInput) (*externalidentitydomain.Identity, error) {
 	if input.UserID == 0 {
 		return nil, ErrNotFound
 	}
@@ -43,7 +43,7 @@ func (s *UserAuthService) BindTelegram(input BindTelegramInput) (*externalidenti
 }
 
 // BindTelegramMiniApp 绑定当前用户的 Telegram Mini App 身份
-func (s *UserAuthService) BindTelegramMiniApp(input BindTelegramMiniAppInput) (*externalidentitydomain.Identity, error) {
+func (s *Service) BindTelegramMiniApp(input BindTelegramMiniAppInput) (*externalidentitydomain.Identity, error) {
 	if input.UserID == 0 {
 		return nil, ErrNotFound
 	}
@@ -61,7 +61,7 @@ func (s *UserAuthService) BindTelegramMiniApp(input BindTelegramMiniAppInput) (*
 	return s.bindVerifiedTelegram(input.UserID, verified)
 }
 
-func (s *UserAuthService) bindVerifiedTelegram(userID uint, verified *telegramauthapp.IdentityVerified) (*externalidentitydomain.Identity, error) {
+func (s *Service) bindVerifiedTelegram(userID uint, verified *telegramauthapp.IdentityVerified) (*externalidentitydomain.Identity, error) {
 	if _, err := s.getActiveUserByID(userID); err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func (s *UserAuthService) bindVerifiedTelegram(userID uint, verified *telegramau
 }
 
 // UnbindTelegram 解绑 Telegram
-func (s *UserAuthService) UnbindTelegram(userID uint) error {
+func (s *Service) UnbindTelegram(userID uint) error {
 	if userID == 0 {
 		return ErrNotFound
 	}
@@ -141,7 +141,7 @@ func (s *UserAuthService) UnbindTelegram(userID uint) error {
 }
 
 // GetTelegramBinding 获取 Telegram 绑定
-func (s *UserAuthService) GetTelegramBinding(userID uint) (*externalidentitydomain.Identity, error) {
+func (s *Service) GetTelegramBinding(userID uint) (*externalidentitydomain.Identity, error) {
 	if userID == 0 {
 		return nil, ErrNotFound
 	}

@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"strings"
@@ -29,7 +29,7 @@ type BindTelegramChannelByEmailCodeInput struct {
 }
 
 // ResolveTelegramChannelIdentity 解析 Telegram 渠道身份
-func (s *UserAuthService) ResolveTelegramChannelIdentity(input TelegramChannelIdentityInput) (*userdomain.User, *externalidentitydomain.Identity, error) {
+func (s *Service) ResolveTelegramChannelIdentity(input TelegramChannelIdentityInput) (*userdomain.User, *externalidentitydomain.Identity, error) {
 	verified, err := normalizeTelegramChannelIdentityInput(input)
 	if err != nil {
 		return nil, nil, err
@@ -38,7 +38,7 @@ func (s *UserAuthService) ResolveTelegramChannelIdentity(input TelegramChannelId
 }
 
 // ProvisionTelegramChannelIdentity 预置 Telegram 渠道身份
-func (s *UserAuthService) ProvisionTelegramChannelIdentity(input TelegramChannelIdentityInput) (*userdomain.User, *externalidentitydomain.Identity, bool, error) {
+func (s *Service) ProvisionTelegramChannelIdentity(input TelegramChannelIdentityInput) (*userdomain.User, *externalidentitydomain.Identity, bool, error) {
 	verified, err := normalizeTelegramChannelIdentityInput(input)
 	if err != nil {
 		return nil, nil, false, err
@@ -47,7 +47,7 @@ func (s *UserAuthService) ProvisionTelegramChannelIdentity(input TelegramChannel
 }
 
 // BindTelegramChannelByEmailCode 使用邮箱验证码绑定 Telegram 渠道身份到既有账号
-func (s *UserAuthService) BindTelegramChannelByEmailCode(input BindTelegramChannelByEmailCodeInput) (*userdomain.User, *externalidentitydomain.Identity, uint, error) {
+func (s *Service) BindTelegramChannelByEmailCode(input BindTelegramChannelByEmailCodeInput) (*userdomain.User, *externalidentitydomain.Identity, uint, error) {
 	verified, err := normalizeTelegramChannelIdentityInput(input.Identity)
 	if err != nil {
 		return nil, nil, 0, err
@@ -78,7 +78,7 @@ func (s *UserAuthService) BindTelegramChannelByEmailCode(input BindTelegramChann
 	return s.bindTelegramIdentityToUser(targetUser, verified)
 }
 
-func (s *UserAuthService) resolveTelegramChannelIdentity(verified *telegramauthapp.IdentityVerified) (*userdomain.User, *externalidentitydomain.Identity, error) {
+func (s *Service) resolveTelegramChannelIdentity(verified *telegramauthapp.IdentityVerified) (*userdomain.User, *externalidentitydomain.Identity, error) {
 	if verified == nil {
 		return nil, nil, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
@@ -107,7 +107,7 @@ func (s *UserAuthService) resolveTelegramChannelIdentity(verified *telegramautha
 	return user, identity, nil
 }
 
-func (s *UserAuthService) provisionTelegramChannelIdentity(verified *telegramauthapp.IdentityVerified) (*userdomain.User, *externalidentitydomain.Identity, bool, error) {
+func (s *Service) provisionTelegramChannelIdentity(verified *telegramauthapp.IdentityVerified) (*userdomain.User, *externalidentitydomain.Identity, bool, error) {
 	if verified == nil {
 		return nil, nil, false, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
@@ -180,7 +180,7 @@ func (s *UserAuthService) provisionTelegramChannelIdentity(verified *telegramaut
 	return user, identity, created, nil
 }
 
-func (s *UserAuthService) bindTelegramIdentityToUser(targetUser *userdomain.User, verified *telegramauthapp.IdentityVerified) (*userdomain.User, *externalidentitydomain.Identity, uint, error) {
+func (s *Service) bindTelegramIdentityToUser(targetUser *userdomain.User, verified *telegramauthapp.IdentityVerified) (*userdomain.User, *externalidentitydomain.Identity, uint, error) {
 	if targetUser == nil || verified == nil {
 		return nil, nil, 0, ErrNotFound
 	}

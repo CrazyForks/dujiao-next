@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"fmt"
@@ -18,6 +18,10 @@ import (
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
+	"github.com/dujiao-next/internal/modules/identity/jwttoken"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	"github.com/dujiao-next/internal/modules/identity/userauth/challenge"
+	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
 
 	"github.com/glebarez/sqlite"
 	"github.com/pquerna/otp/totp"
@@ -25,7 +29,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func newUser2FATestServices(t *testing.T) (*UserAuthService, *UserTOTPService, usercontract.Store, *gorm.DB) {
+func newUser2FATestServices(t *testing.T) (*userauthapp.Service, *usertotpapp.Service, usercontract.Store, *gorm.DB) {
 	t.Helper()
 	dsn := fmt.Sprintf("file:user_auth_2fa_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
@@ -43,7 +47,7 @@ func newUser2FATestServices(t *testing.T) (*UserAuthService, *UserTOTPService, u
 		},
 	}
 	userRepo := userstore.New(db)
-	authSvc := NewUserAuthService(
+	authSvc := userauthapp.NewService(
 		cfg,
 		userRepo,
 		externalidentitystore.New(db),
@@ -52,7 +56,7 @@ func newUser2FATestServices(t *testing.T) (*UserAuthService, *UserTOTPService, u
 		nil,
 		nil,
 	)
-	totpSvc := NewUserTOTPService(cfg, userRepo, nil)
+	totpSvc := usertotpapp.NewService(cfg, userRepo, nil)
 	return authSvc, totpSvc, userRepo, db
 }
 
@@ -124,10 +128,10 @@ func TestUserLoginStep1WithTOTPReturnsChallenge(t *testing.T) {
 	if claims.UserID != user.ID {
 		t.Fatalf("user id mismatch: %d vs %d", claims.UserID, user.ID)
 	}
-	if claims.Purpose != UserChallengePurpose2FA {
+	if claims.Purpose != challenge.PurposeTwoFactor {
 		t.Fatalf("purpose mismatch: %s", claims.Purpose)
 	}
-	if claims.Typ != TokenTyp2FAChallenge {
+	if claims.Typ != jwttoken.TypeTwoFactorChallenge {
 		t.Fatalf("typ mismatch: %s", claims.Typ)
 	}
 	if !claims.RememberMe {
@@ -158,7 +162,7 @@ func TestUserCompleteLoginAfter2FAIssuesAccessToken(t *testing.T) {
 	if parsed.UserID != user.ID {
 		t.Fatalf("user id mismatch")
 	}
-	if parsed.Typ != TokenTypAccess {
+	if parsed.Typ != jwttoken.TypeAccess {
 		t.Fatalf("expected typ=access, got %q", parsed.Typ)
 	}
 }
@@ -191,10 +195,10 @@ func TestUserParseUserJWTRejectsChallengeToken(t *testing.T) {
 		// 但若解析成功，typ 必须是 2fa_challenge 而非 access
 		return
 	}
-	if parsed.Typ == TokenTypAccess {
+	if parsed.Typ == jwttoken.TypeAccess {
 		t.Fatalf("challenge token must not present as access token; typ=%q", parsed.Typ)
 	}
-	if parsed.Typ != TokenTyp2FAChallenge {
+	if parsed.Typ != jwttoken.TypeTwoFactorChallenge {
 		t.Fatalf("expected typ=2fa_challenge after parsing challenge token, got %q", parsed.Typ)
 	}
 }
@@ -202,10 +206,10 @@ func TestUserParseUserJWTRejectsChallengeToken(t *testing.T) {
 func TestUserLoginStep1RejectsInvalidCredentials(t *testing.T) {
 	authSvc, _, repo, _ := newUser2FATestServices(t)
 	createActiveUser(t, repo, "wrong@example.com", "secret123")
-	if _, err := authSvc.LoginStep1("wrong@example.com", "bad", false); err != ErrInvalidCredentials {
+	if _, err := authSvc.LoginStep1("wrong@example.com", "bad", false); err != userauthapp.ErrInvalidCredentials {
 		t.Fatalf("expected invalid creds, got %v", err)
 	}
-	if _, err := authSvc.LoginStep1("none@example.com", "x", false); err != ErrInvalidCredentials {
+	if _, err := authSvc.LoginStep1("none@example.com", "x", false); err != userauthapp.ErrInvalidCredentials {
 		t.Fatalf("expected invalid creds for missing user, got %v", err)
 	}
 }

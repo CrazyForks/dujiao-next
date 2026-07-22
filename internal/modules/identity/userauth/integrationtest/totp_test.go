@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"strings"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	totpapplication "github.com/dujiao-next/internal/modules/identity/totp/application"
+	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
 
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
@@ -19,7 +20,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func newUserTOTPTestService(t *testing.T) (*UserTOTPService, usercontract.Store, *gorm.DB) {
+func newUserTOTPTestService(t *testing.T) (*usertotpapp.Service, usercontract.Store, *gorm.DB) {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
@@ -30,7 +31,7 @@ func newUserTOTPTestService(t *testing.T) (*UserTOTPService, usercontract.Store,
 	}
 	cfg := &config.Config{App: config.AppConfig{SecretKey: "test-secret-key-for-user-totp"}}
 	userRepo := userstore.New(db)
-	svc := NewUserTOTPService(cfg, userRepo, nil)
+	svc := usertotpapp.NewService(cfg, userRepo, nil)
 	return svc, userRepo, db
 }
 
@@ -72,8 +73,8 @@ func TestUserTOTPSetupAndEnableFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("enable: %v", err)
 	}
-	if len(enableRes.RecoveryCodes) != userTotpRecoveryCodeCount {
-		t.Fatalf("expected %d recovery codes, got %d", userTotpRecoveryCodeCount, len(enableRes.RecoveryCodes))
+	if len(enableRes.RecoveryCodes) != usertotpapp.RecoveryCodeCount {
+		t.Fatalf("expected %d recovery codes, got %d", usertotpapp.RecoveryCodeCount, len(enableRes.RecoveryCodes))
 	}
 	for _, c := range enableRes.RecoveryCodes {
 		if len(c) != 11 || !strings.Contains(c, "-") {
@@ -190,11 +191,11 @@ func TestUserTOTPRecoveryCodeOneShot(t *testing.T) {
 		t.Fatalf("expected totpapplication.ErrRecoveryCodeInvalid on reuse, got %v", err)
 	}
 	st, _ := svc.GetStatus(user.ID)
-	if st.RecoveryCodesRemaining != userTotpRecoveryCodeCount-1 {
-		t.Fatalf("expected %d remaining, got %d", userTotpRecoveryCodeCount-1, st.RecoveryCodesRemaining)
+	if st.RecoveryCodesRemaining != usertotpapp.RecoveryCodeCount-1 {
+		t.Fatalf("expected %d remaining, got %d", usertotpapp.RecoveryCodeCount-1, st.RecoveryCodesRemaining)
 	}
-	if st.RecoveryCodesTotal != userTotpRecoveryCodeCount {
-		t.Fatalf("expected total %d, got %d", userTotpRecoveryCodeCount, st.RecoveryCodesTotal)
+	if st.RecoveryCodesTotal != usertotpapp.RecoveryCodeCount {
+		t.Fatalf("expected total %d, got %d", usertotpapp.RecoveryCodeCount, st.RecoveryCodesTotal)
 	}
 }
 
@@ -227,13 +228,13 @@ func TestUserTOTPRegenerateRecoveryCodes(t *testing.T) {
 	// 时间往后跳一个 TOTP 周期，避免使用同一动态码触发重放保护
 	future := time.Now().Add(31 * time.Second)
 	newCode, _ := totp.GenerateCode(setupRes.Secret, future)
-	svc.now = func() time.Time { return future }
+	svc = usertotpapp.NewService(&config.Config{App: config.AppConfig{SecretKey: "test-secret-key-for-user-totp"}}, repo, nil, usertotpapp.WithClock(func() time.Time { return future }))
 	regen, err := svc.RegenerateRecoveryCodes(user.ID, newCode)
 	if err != nil {
 		t.Fatalf("regenerate: %v", err)
 	}
-	if len(regen) != userTotpRecoveryCodeCount {
-		t.Fatalf("expected %d, got %d", userTotpRecoveryCodeCount, len(regen))
+	if len(regen) != usertotpapp.RecoveryCodeCount {
+		t.Fatalf("expected %d, got %d", usertotpapp.RecoveryCodeCount, len(regen))
 	}
 	for _, oldCode := range first.RecoveryCodes {
 		if err := svc.VerifyChallengeRecoveryCode(user.ID, oldCode); err != totpapplication.ErrRecoveryCodeInvalid {
@@ -296,7 +297,7 @@ func TestUserTOTPDisableRejectsWhenNotEnabled(t *testing.T) {
 
 func TestUserTOTPGetStatusForUnknownUser(t *testing.T) {
 	svc, _, _ := newUserTOTPTestService(t)
-	if _, err := svc.GetStatus(99999); err != ErrNotFound {
+	if _, err := svc.GetStatus(99999); err != usertotpapp.ErrNotFound {
 		t.Fatalf("expected not found, got %v", err)
 	}
 }
@@ -351,8 +352,8 @@ func TestUserTOTPAdminResetRejectsWhenNotEnabled(t *testing.T) {
 
 func TestUserTOTPAdminResetRejectsUnknownUser(t *testing.T) {
 	svc, _, _ := newUserTOTPTestService(t)
-	if _, err := svc.AdminResetUser2FA(1, 99999); err != ErrNotFound {
-		t.Fatalf("expected ErrNotFound, got %v", err)
+	if _, err := svc.AdminResetUser2FA(1, 99999); err != usertotpapp.ErrNotFound {
+		t.Fatalf("expected usertotpapp.ErrNotFound, got %v", err)
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/config"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
+	"github.com/dujiao-next/internal/modules/identity/jwttoken"
 	"github.com/dujiao-next/internal/shared/passwordpolicy"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -50,17 +51,6 @@ func (s *AuthService) ValidatePassword(password string) error {
 		return nil
 	}
 	return passwordpolicy.Validate(s.cfg.Security.PasswordPolicy.ValidationPolicy(), password)
-}
-
-// JWT typ 常量
-const (
-	TokenTypAccess       = "access"
-	TokenTyp2FAChallenge = "2fa_challenge"
-)
-
-// IsAccessTokenTyp 判断 typ 是否为合法访问 token（空字符串兼容旧 token）
-func IsAccessTokenTyp(typ string) bool {
-	return typ == "" || typ == TokenTypAccess
 }
 
 // JWTClaims JWT 声明
@@ -109,7 +99,7 @@ func (s *AuthService) GenerateJWT(admin *admindomain.Admin) (string, time.Time, 
 		AdminID:      admin.ID,
 		Username:     admin.Username,
 		TokenVersion: admin.TokenVersion,
-		Typ:          TokenTypAccess,
+		Typ:          jwttoken.TypeAccess,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -128,7 +118,7 @@ func (s *AuthService) GenerateJWT(admin *admindomain.Admin) (string, time.Time, 
 
 // ParseJWT 解析 JWT Token
 func (s *AuthService) ParseJWT(tokenString string) (*JWTClaims, error) {
-	parser := newHS256JWTParser()
+	parser := jwttoken.NewHS256Parser()
 	token, err := parser.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.cfg.JWT.SecretKey), nil
 	})
@@ -200,7 +190,7 @@ func (s *AuthService) IssueChallengeToken(adminID uint) (token, jti string, expi
 		AdminID: adminID,
 		JTI:     jti,
 		Purpose: ChallengePurpose2FA,
-		Typ:     TokenTyp2FAChallenge,
+		Typ:     jwttoken.TypeTwoFactorChallenge,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -218,7 +208,7 @@ func (s *AuthService) IssueChallengeToken(adminID uint) (token, jti string, expi
 
 // ParseChallengeToken 解析并校验挑战 token
 func (s *AuthService) ParseChallengeToken(tokenString string) (*ChallengeClaims, error) {
-	parser := newHS256JWTParser()
+	parser := jwttoken.NewHS256Parser()
 	tok, err := parser.ParseWithClaims(tokenString, &ChallengeClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.cfg.JWT.SecretKey), nil
 	})
@@ -229,7 +219,7 @@ func (s *AuthService) ParseChallengeToken(tokenString string) (*ChallengeClaims,
 	if !ok || !tok.Valid {
 		return nil, errors.New("invalid challenge token")
 	}
-	if claims.Purpose != ChallengePurpose2FA || claims.Typ != TokenTyp2FAChallenge {
+	if claims.Purpose != ChallengePurpose2FA || claims.Typ != jwttoken.TypeTwoFactorChallenge {
 		return nil, errors.New("invalid challenge purpose")
 	}
 	return claims, nil

@@ -20,13 +20,16 @@ import (
 	"github.com/dujiao-next/internal/modules/auditlog"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	"github.com/dujiao-next/internal/modules/identity/userauth/challenge"
+	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
 	"github.com/dujiao-next/internal/service"
 	userauthtransport "github.com/dujiao-next/internal/transport/http/userauth"
 )
 
 // userProfileTransportAdapter 将用户认证服务适配为用户资料 transport 端口。
 type userProfileTransportAdapter struct {
-	service *service.UserAuthService
+	service *userauthapp.Service
 }
 
 func (a userProfileTransportAdapter) GetUserByID(id uint) (*userdomain.User, error) {
@@ -51,7 +54,7 @@ func (a userProfileTransportAdapter) UpdateProfile(userID uint, nickname, locale
 
 // userEmailTransportAdapter 将用户认证服务适配为更换邮箱 transport 端口。
 type userEmailTransportAdapter struct {
-	service *service.UserAuthService
+	service *userauthapp.Service
 }
 
 func (a userEmailTransportAdapter) SendChangeEmailCode(userID uint, kind, newEmail, locale string) error {
@@ -75,7 +78,7 @@ func (a userEmailTransportAdapter) ResolvePasswordChangeMode(user *userdomain.Us
 
 // userPasswordTransportAdapter 将用户认证/设置服务适配为密码 transport 端口。
 type userPasswordTransportAdapter struct {
-	auth     *service.UserAuthService
+	auth     *userauthapp.Service
 	settings *settingsapp.Service
 }
 
@@ -93,7 +96,7 @@ func (a userPasswordTransportAdapter) ChangePassword(userID uint, oldPassword, n
 
 // userVerifyTransportAdapter 将用户认证/设置服务适配为验证码发送端口。
 type userVerifyTransportAdapter struct {
-	auth     *service.UserAuthService
+	auth     *userauthapp.Service
 	settings *settingsapp.Service
 }
 
@@ -111,7 +114,7 @@ func (a userVerifyTransportAdapter) SendVerifyCode(email, purpose, locale string
 
 // userTelegramTransportAdapter 将用户认证服务适配为 Telegram widget/MiniApp transport 端口。
 type userTelegramTransportAdapter struct {
-	auth *service.UserAuthService
+	auth *userauthapp.Service
 }
 
 func (a userTelegramTransportAdapter) toServicePayload(payload userauthtransport.TelegramAuthPayload) telegramauthapp.LoginPayload {
@@ -126,7 +129,7 @@ func (a userTelegramTransportAdapter) toServicePayload(payload userauthtransport
 	}
 }
 
-func (a userTelegramTransportAdapter) toAuthLoginResult(res *service.UserLoginResult) *userauthtransport.AuthLoginResult {
+func (a userTelegramTransportAdapter) toAuthLoginResult(res *userauthapp.UserLoginResult) *userauthtransport.AuthLoginResult {
 	if res == nil {
 		return nil
 	}
@@ -141,7 +144,7 @@ func (a userTelegramTransportAdapter) toAuthLoginResult(res *service.UserLoginRe
 }
 
 func (a userTelegramTransportAdapter) LoginWithTelegram(ctx context.Context, payload userauthtransport.TelegramAuthPayload) (*userauthtransport.AuthLoginResult, error) {
-	res, err := a.auth.LoginWithTelegram(service.LoginWithTelegramInput{
+	res, err := a.auth.LoginWithTelegram(userauthapp.LoginWithTelegramInput{
 		Payload: a.toServicePayload(payload),
 		Context: ctx,
 	})
@@ -152,7 +155,7 @@ func (a userTelegramTransportAdapter) LoginWithTelegram(ctx context.Context, pay
 }
 
 func (a userTelegramTransportAdapter) LoginWithTelegramMiniApp(ctx context.Context, initData string) (*userauthtransport.AuthLoginResult, error) {
-	res, err := a.auth.LoginWithTelegramMiniApp(service.LoginWithTelegramMiniAppInput{
+	res, err := a.auth.LoginWithTelegramMiniApp(userauthapp.LoginWithTelegramMiniAppInput{
 		InitData: initData,
 		Context:  ctx,
 	})
@@ -168,7 +171,7 @@ func (a userTelegramTransportAdapter) GetTelegramBinding(userID uint) (*external
 }
 
 func (a userTelegramTransportAdapter) BindTelegram(ctx context.Context, userID uint, payload userauthtransport.TelegramAuthPayload) (*externalidentitydomain.Identity, error) {
-	identity, err := a.auth.BindTelegram(service.BindTelegramInput{
+	identity, err := a.auth.BindTelegram(userauthapp.BindTelegramInput{
 		UserID:  userID,
 		Payload: a.toServicePayload(payload),
 		Context: ctx,
@@ -177,7 +180,7 @@ func (a userTelegramTransportAdapter) BindTelegram(ctx context.Context, userID u
 }
 
 func (a userTelegramTransportAdapter) BindTelegramMiniApp(ctx context.Context, userID uint, initData string) (*externalidentitydomain.Identity, error) {
-	identity, err := a.auth.BindTelegramMiniApp(service.BindTelegramMiniAppInput{
+	identity, err := a.auth.BindTelegramMiniApp(userauthapp.BindTelegramMiniAppInput{
 		UserID:   userID,
 		InitData: initData,
 		Context:  ctx,
@@ -191,11 +194,11 @@ func (a userTelegramTransportAdapter) UnbindTelegram(userID uint) error {
 
 // userTelegramOIDCTransportAdapter 将用户认证服务适配为 Telegram OIDC transport 端口。
 type userTelegramOIDCTransportAdapter struct {
-	auth *service.UserAuthService
+	auth *userauthapp.Service
 }
 
 func (a userTelegramOIDCTransportAdapter) StartTelegramOIDC(ctx context.Context, intent string, userID uint) (string, error) {
-	authURL, err := a.auth.StartTelegramOIDC(service.StartTelegramOIDCInput{
+	authURL, err := a.auth.StartTelegramOIDC(userauthapp.StartTelegramOIDCInput{
 		Intent:  intent,
 		UserID:  userID,
 		Context: ctx,
@@ -204,7 +207,7 @@ func (a userTelegramOIDCTransportAdapter) StartTelegramOIDC(ctx context.Context,
 }
 
 func (a userTelegramOIDCTransportAdapter) LoginWithTelegramOIDC(ctx context.Context, code, state string) (*userauthtransport.AuthLoginResult, error) {
-	res, err := a.auth.LoginWithTelegramOIDC(service.LoginWithTelegramOIDCInput{
+	res, err := a.auth.LoginWithTelegramOIDC(userauthapp.LoginWithTelegramOIDCInput{
 		Code:    code,
 		State:   state,
 		Context: ctx,
@@ -226,7 +229,7 @@ func (a userTelegramOIDCTransportAdapter) LoginWithTelegramOIDC(ctx context.Cont
 }
 
 func (a userTelegramOIDCTransportAdapter) BindTelegramOIDC(ctx context.Context, userID uint, code, state string) (*externalidentitydomain.Identity, error) {
-	identity, err := a.auth.BindTelegramOIDC(service.BindTelegramOIDCInput{
+	identity, err := a.auth.BindTelegramOIDC(userauthapp.BindTelegramOIDCInput{
 		UserID:  userID,
 		Code:    code,
 		State:   state,
@@ -237,7 +240,7 @@ func (a userTelegramOIDCTransportAdapter) BindTelegramOIDC(ctx context.Context, 
 
 // userLoginTransportAdapter 将设置/认证服务适配为注册登录 transport 端口。
 type userLoginTransportAdapter struct {
-	auth     *service.UserAuthService
+	auth     *userauthapp.Service
 	settings *settingsapp.Service
 }
 
@@ -295,7 +298,7 @@ func (a userLoginRecorderAdapter) Record(email string, userID uint, status, fail
 
 // user2FATOTPTransportAdapter 将用户 TOTP 服务适配为 2FA transport 端口。
 type user2FATOTPTransportAdapter struct {
-	totp *service.UserTOTPService
+	totp *usertotpapp.Service
 }
 
 func (a user2FATOTPTransportAdapter) GetStatus(userID uint) (*userauthtransport.UserTOTPStatus, error) {
@@ -364,7 +367,7 @@ func (a user2FATOTPTransportAdapter) VerifyChallengeRecoveryCode(userID uint, co
 
 // user2FAAuthTransportAdapter 将用户认证/仓储适配为 2FA 登录完成端口。
 type user2FAAuthTransportAdapter struct {
-	auth  *service.UserAuthService
+	auth  *userauthapp.Service
 	users usercontract.Store
 }
 
@@ -420,7 +423,7 @@ func (user2FAChallengeStoreAdapter) IsRevoked(ctx context.Context, jti string) b
 	if rdb == nil {
 		return false
 	}
-	v, _ := rdb.Exists(ctx, service.UserChallengeRevokedKey(jti)).Result()
+	v, _ := rdb.Exists(ctx, challenge.RevocationKey(jti)).Result()
 	return v == 1
 }
 
@@ -429,9 +432,9 @@ func (user2FAChallengeStoreAdapter) BumpFails(ctx context.Context, jti string) i
 	if rdb == nil {
 		return 0
 	}
-	cnt, err := rdb.Incr(ctx, service.UserChallengeFailKey(jti)).Result()
+	cnt, err := rdb.Incr(ctx, challenge.FailureKey(jti)).Result()
 	if err == nil && cnt == 1 {
-		_ = rdb.Expire(ctx, service.UserChallengeFailKey(jti), service.UserChallengeTTL).Err()
+		_ = rdb.Expire(ctx, challenge.FailureKey(jti), challenge.TTL).Err()
 	}
 	return cnt
 }
@@ -441,7 +444,7 @@ func (user2FAChallengeStoreAdapter) Revoke(ctx context.Context, jti string) {
 	if rdb == nil {
 		return
 	}
-	_ = rdb.Set(ctx, service.UserChallengeRevokedKey(jti), "1", service.UserChallengeTTL).Err()
+	_ = rdb.Set(ctx, challenge.RevocationKey(jti), "1", challenge.TTL).Err()
 }
 
 func mapUserAuthTransportError(err error) error {
@@ -466,22 +469,23 @@ func mapUserAuthTransportError(err error) error {
 		source error
 		target error
 	}{
-		{service.ErrProfileEmpty, userauthtransport.ErrProfileEmpty},
-		{service.ErrNotFound, userauthtransport.ErrUserNotFound},
+		{userauthapp.ErrProfileEmpty, userauthtransport.ErrProfileEmpty},
+		{userauthapp.ErrNotFound, userauthtransport.ErrUserNotFound},
 		{totpapplication.ErrSubjectNotFound, userauthtransport.ErrUserNotFound},
-		{service.ErrInvalidEmail, userauthtransport.ErrInvalidEmail},
-		{service.ErrEmailChangeInvalid, userauthtransport.ErrEmailChangeInvalid},
-		{service.ErrEmailChangeExists, userauthtransport.ErrEmailChangeExists},
-		{service.ErrVerifyCodeInvalid, userauthtransport.ErrVerifyCodeInvalid},
-		{service.ErrVerifyCodeExpired, userauthtransport.ErrVerifyCodeExpired},
-		{service.ErrVerifyCodeTooFrequent, userauthtransport.ErrVerifyCodeTooFrequent},
-		{service.ErrVerifyCodeAttemptsExceeded, userauthtransport.ErrVerifyCodeAttemptsExceeded},
+		{userauthapp.ErrInvalidEmail, userauthtransport.ErrInvalidEmail},
+		{userauthapp.ErrEmailChangeInvalid, userauthtransport.ErrEmailChangeInvalid},
+		{userauthapp.ErrEmailChangeExists, userauthtransport.ErrEmailChangeExists},
+		{userauthapp.ErrVerifyCodeInvalid, userauthtransport.ErrVerifyCodeInvalid},
+		{userauthapp.ErrVerifyCodeExpired, userauthtransport.ErrVerifyCodeExpired},
+		{userauthapp.ErrVerifyCodeTooFrequent, userauthtransport.ErrVerifyCodeTooFrequent},
+		{userauthapp.ErrVerifyCodeAttemptsExceeded, userauthtransport.ErrVerifyCodeAttemptsExceeded},
 		{service.ErrEmailServiceDisabled, userauthtransport.ErrEmailServiceDisabled},
+		{userauthapp.ErrEmailServiceNotConfigured, userauthtransport.ErrEmailServiceNotConfigured},
 		{service.ErrEmailServiceNotConfigured, userauthtransport.ErrEmailServiceNotConfigured},
 		{service.ErrEmailRecipientRejected, userauthtransport.ErrEmailRecipientRejected},
-		{service.ErrInvalidPassword, userauthtransport.ErrInvalidPassword},
-		{service.ErrInvalidVerifyPurpose, userauthtransport.ErrInvalidVerifyPurpose},
-		{service.ErrEmailExists, userauthtransport.ErrEmailExists},
+		{userauthapp.ErrInvalidPassword, userauthtransport.ErrInvalidPassword},
+		{userauthapp.ErrInvalidVerifyPurpose, userauthtransport.ErrInvalidVerifyPurpose},
+		{userauthapp.ErrEmailExists, userauthtransport.ErrEmailExists},
 		{settingsapp.ErrEmailDomainNotAllowed, userauthtransport.ErrEmailDomainNotAllowed},
 		{telegramauthapp.ErrTelegramAuthDisabled, userauthtransport.ErrTelegramAuthDisabled},
 		{telegramauthapp.ErrTelegramAuthConfigInvalid, userauthtransport.ErrTelegramAuthConfigInvalid},
@@ -492,15 +496,16 @@ func mapUserAuthTransportError(err error) error {
 		{telegramauthapp.ErrTelegramAuthSignatureInvalid, userauthtransport.ErrTelegramAuthSignatureInvalid},
 		{telegramauthapp.ErrTelegramAuthExpired, userauthtransport.ErrTelegramAuthExpired},
 		{telegramauthapp.ErrTelegramAuthReplay, userauthtransport.ErrTelegramAuthReplay},
-		{service.ErrUserOAuthIdentityExists, userauthtransport.ErrUserOAuthIdentityExists},
-		{service.ErrUserOAuthAlreadyBound, userauthtransport.ErrUserOAuthAlreadyBound},
-		{service.ErrUserOAuthNotBound, userauthtransport.ErrUserOAuthNotBound},
-		{service.ErrTelegramUnbindRequiresEmail, userauthtransport.ErrTelegramUnbindRequiresEmail},
-		{service.ErrUserDisabled, userauthtransport.ErrUserDisabled},
-		{service.ErrRegistrationDisabled, userauthtransport.ErrRegistrationDisabled},
-		{service.ErrAgreementRequired, userauthtransport.ErrAgreementRequired},
-		{service.ErrInvalidCredentials, userauthtransport.ErrInvalidCredentials},
-		{service.ErrEmailNotVerified, userauthtransport.ErrEmailNotVerified},
+		{userauthapp.ErrUserOAuthIdentityExists, userauthtransport.ErrUserOAuthIdentityExists},
+		{userauthapp.ErrUserOAuthAlreadyBound, userauthtransport.ErrUserOAuthAlreadyBound},
+		{userauthapp.ErrUserOAuthNotBound, userauthtransport.ErrUserOAuthNotBound},
+		{userauthapp.ErrTelegramUnbindRequiresEmail, userauthtransport.ErrTelegramUnbindRequiresEmail},
+		{userauthapp.ErrUserDisabled, userauthtransport.ErrUserDisabled},
+		{userauthapp.ErrRegistrationDisabled, userauthtransport.ErrRegistrationDisabled},
+		{userauthapp.ErrAgreementRequired, userauthtransport.ErrAgreementRequired},
+		{userauthapp.ErrInvalidCredentials, userauthtransport.ErrInvalidCredentials},
+		{userauthapp.ErrEmailNotVerified, userauthtransport.ErrEmailNotVerified},
+		{usertotpapp.ErrNotFound, userauthtransport.ErrUserNotFound},
 		{totpapplication.ErrAlreadyEnabled, userauthtransport.ErrTOTPAlreadyEnabled},
 		{totpapplication.ErrNotEnabled, userauthtransport.ErrTOTPNotEnabled},
 		{totpapplication.ErrPendingExpired, userauthtransport.ErrTOTPPendingExpired},

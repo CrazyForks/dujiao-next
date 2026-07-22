@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/i18n"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/service"
@@ -62,21 +63,21 @@ func ChannelIdentityError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, telegramauthapp.ErrTelegramAuthPayloadInvalid):
 		ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
-	case errors.Is(err, service.ErrInvalidEmail):
+	case errors.Is(err, userauthapp.ErrInvalidEmail):
 		ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.email_invalid", nil)
 	case errors.Is(err, service.ErrNotFound):
 		ChannelError(c, http.StatusNotFound, response.CodeNotFound, "user_not_found", "error.user_not_found", nil)
-	case errors.Is(err, service.ErrVerifyCodeInvalid):
+	case errors.Is(err, userauthapp.ErrVerifyCodeInvalid):
 		ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "verify_code_invalid", "error.verify_code_invalid", nil)
-	case errors.Is(err, service.ErrVerifyCodeExpired):
+	case errors.Is(err, userauthapp.ErrVerifyCodeExpired):
 		ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "verify_code_expired", "error.verify_code_expired", nil)
-	case errors.Is(err, service.ErrVerifyCodeAttemptsExceeded):
+	case errors.Is(err, userauthapp.ErrVerifyCodeAttemptsExceeded):
 		ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "verify_code_invalid", "error.verify_code_attempts_exceeded", nil)
-	case errors.Is(err, service.ErrUserDisabled):
+	case errors.Is(err, userauthapp.ErrUserDisabled):
 		ChannelError(c, http.StatusUnauthorized, response.CodeUnauthorized, "user_disabled", "error.user_disabled", nil)
-	case errors.Is(err, service.ErrUserOAuthIdentityExists):
+	case errors.Is(err, userauthapp.ErrUserOAuthIdentityExists):
 		ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "channel_identity_conflict", "error.telegram_bind_conflict", nil)
-	case errors.Is(err, service.ErrUserOAuthAlreadyBound):
+	case errors.Is(err, userauthapp.ErrUserOAuthAlreadyBound):
 		ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "channel_identity_conflict", "error.telegram_already_bound", nil)
 	default:
 		ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "internal_error", "error.internal_error", err)

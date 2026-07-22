@@ -8,12 +8,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dujiao-next/internal/modules/identity/jwttoken"
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	"github.com/dujiao-next/internal/modules/identity/userauth/challenge"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-
-	"github.com/dujiao-next/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -95,11 +96,11 @@ func runUserMiddleware(t *testing.T, repo usercontract.Store, token string) int 
 
 func TestUserJWTMiddlewareAcceptsAccessToken(t *testing.T) {
 	repo, user := setupUserMiddlewareTestRepo(t)
-	claims := service.UserJWTClaims{
+	claims := userauthapp.UserJWTClaims{
 		UserID:       user.ID,
 		Email:        user.Email,
 		TokenVersion: user.TokenVersion,
-		Typ:          service.TokenTypAccess,
+		Typ:          jwttoken.TypeAccess,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -115,7 +116,7 @@ func TestUserJWTMiddlewareAcceptsAccessToken(t *testing.T) {
 func TestUserJWTMiddlewareAcceptsLegacyTokenWithoutTyp(t *testing.T) {
 	// 兼容旧 token：没有 typ 字段时仍按访问 token 放行
 	repo, user := setupUserMiddlewareTestRepo(t)
-	claims := service.UserJWTClaims{
+	claims := userauthapp.UserJWTClaims{
 		UserID:       user.ID,
 		Email:        user.Email,
 		TokenVersion: user.TokenVersion,
@@ -135,11 +136,11 @@ func TestUserJWTMiddlewareAcceptsLegacyTokenWithoutTyp(t *testing.T) {
 func TestUserJWTMiddlewareRejectsChallengeToken(t *testing.T) {
 	// 关键安全测试：挑战 token 即便签名通过，也必须被中间件拒绝
 	repo, user := setupUserMiddlewareTestRepo(t)
-	claims := service.UserChallengeClaims{
+	claims := userauthapp.UserChallengeClaims{
 		UserID:  user.ID,
 		JTI:     "challenge-jti",
-		Purpose: service.UserChallengePurpose2FA,
-		Typ:     service.TokenTyp2FAChallenge,
+		Purpose: challenge.PurposeTwoFactor,
+		Typ:     jwttoken.TypeTwoFactorChallenge,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(5 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -156,7 +157,7 @@ func TestUserJWTMiddlewareRejectsChallengeToken(t *testing.T) {
 func TestUserJWTMiddlewareRejectsCustomTypValue(t *testing.T) {
 	// 任何非空非 access 的 typ 一律拒绝，防御未来引入的其它 token 类型被误用
 	repo, user := setupUserMiddlewareTestRepo(t)
-	claims := service.UserJWTClaims{
+	claims := userauthapp.UserJWTClaims{
 		UserID:       user.ID,
 		Email:        user.Email,
 		TokenVersion: user.TokenVersion,

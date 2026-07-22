@@ -26,6 +26,7 @@ import (
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	affiliatetransport "github.com/dujiao-next/internal/transport/http/affiliate"
@@ -72,11 +73,11 @@ func (a channelAffiliateServiceAdapter) ApplyWithdraw(userID uint, input affilia
 }
 
 type channelAffiliateUserAdapter struct {
-	auth *service.UserAuthService
+	auth *userauthapp.Service
 }
 
 func (a channelAffiliateUserAdapter) ProvisionUserID(identity affiliatetransport.ChannelIdentity) (uint, error) {
-	user, _, _, err := a.auth.ProvisionTelegramChannelIdentity(service.TelegramChannelIdentityInput{
+	user, _, _, err := a.auth.ProvisionTelegramChannelIdentity(userauthapp.TelegramChannelIdentityInput{
 		ChannelUserID: identity.ChannelUserID,
 		Username:      identity.Username,
 		FirstName:     identity.FirstName,
@@ -136,7 +137,7 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 	}
 
 	affiliateSvc := service.NewAffiliateService(affiliateRepo, userRepo, orderRepo, nil, settingSvc)
-	userAuthSvc := service.NewUserAuthService(&config.Config{}, userRepo, identityRepo, emailVerifyRepo, nil, nil, nil)
+	userAuthSvc := userauthapp.NewService(&config.Config{}, userRepo, identityRepo, emailVerifyRepo, nil, nil, nil)
 	handler := affiliatetransport.NewChannelHandler(
 		channelAffiliateServiceAdapter{svc: affiliateSvc},
 		channelAffiliateUserAdapter{auth: userAuthSvc},

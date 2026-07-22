@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"errors"
@@ -19,12 +19,17 @@ import (
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
-func newRegistrationDomainPolicyAuthService(t *testing.T) (*UserAuthService, *gorm.DB) {
+type verificationEmailSenderStub struct{}
+
+func (verificationEmailSenderStub) SendVerifyCode(_, _, _, _ string) error { return nil }
+
+func newRegistrationDomainPolicyAuthService(t *testing.T) (*userauthapp.Service, *settingsapp.Service, *gorm.DB) {
 	t.Helper()
 	dsn := fmt.Sprintf("file:user_auth_domain_policy_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
@@ -40,20 +45,20 @@ func newRegistrationDomainPolicyAuthService(t *testing.T) (*UserAuthService, *go
 		Email:   config.EmailConfig{Enabled: false},
 	}
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
-	return NewUserAuthService(
+	return userauthapp.NewService(
 		cfg,
 		userstore.New(db),
 		externalidentitystore.New(db),
 		emailverificationstore.New(db),
 		settingSvc,
-		NewEmailService(&cfg.Email),
+		verificationEmailSenderStub{},
 		nil,
-	), db
+	), settingSvc, db
 }
 
 func TestRegisterRejectsEmailDomainNotAllowed(t *testing.T) {
-	svc, _ := newRegistrationDomainPolicyAuthService(t)
-	if _, err := svc.settingService.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
+	svc, settings, _ := newRegistrationDomainPolicyAuthService(t)
+	if _, err := settings.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
 		constants.SettingFieldEmailDomainAllowlistEnabled: true,
 		constants.SettingFieldAllowedEmailDomains:         []interface{}{"qq.com"},
 	}); err != nil {
@@ -67,8 +72,8 @@ func TestRegisterRejectsEmailDomainNotAllowed(t *testing.T) {
 }
 
 func TestRegisterAllowsExactEmailDomain(t *testing.T) {
-	svc, _ := newRegistrationDomainPolicyAuthService(t)
-	if _, err := svc.settingService.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
+	svc, settings, _ := newRegistrationDomainPolicyAuthService(t)
+	if _, err := settings.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
 		constants.SettingFieldEmailDomainAllowlistEnabled: true,
 		constants.SettingFieldAllowedEmailDomains:         []interface{}{"qq.com"},
 	}); err != nil {
@@ -85,8 +90,8 @@ func TestRegisterAllowsExactEmailDomain(t *testing.T) {
 }
 
 func TestSendVerifyCodeRejectsEmailDomainBeforeEmailSend(t *testing.T) {
-	svc, _ := newRegistrationDomainPolicyAuthService(t)
-	if _, err := svc.settingService.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
+	svc, settings, _ := newRegistrationDomainPolicyAuthService(t)
+	if _, err := settings.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
 		constants.SettingFieldEmailDomainAllowlistEnabled: true,
 		constants.SettingFieldAllowedEmailDomains:         []interface{}{"qq.com"},
 	}); err != nil {

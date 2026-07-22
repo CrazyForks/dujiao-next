@@ -8,8 +8,7 @@ import (
 
 func TestUserAuthTelegramServiceIsSplitByFlow(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	serviceDirectory := filepath.Join(repositoryRoot, "internal", "service")
-	legacyPath := filepath.Join(serviceDirectory, "user_auth_service_oauth.go")
+	legacyPath := filepath.Join(repositoryRoot, "internal", "service", "user_auth_service_oauth.go")
 	if _, err := os.Stat(legacyPath); err == nil {
 		t.Fatalf("user_auth_service_oauth.go must be replaced by Telegram-flow-focused service files")
 	} else if !os.IsNotExist(err) {
@@ -17,54 +16,54 @@ func TestUserAuthTelegramServiceIsSplitByFlow(t *testing.T) {
 	}
 
 	expectedOwner := map[string]string{
-		"LoginWithTelegram":                     "user_auth_telegram_login.go",
-		"LoginWithTelegramMiniApp":              "user_auth_telegram_login.go",
-		"loginWithVerifiedTelegram":             "user_auth_telegram_login.go",
-		"StartTelegramOIDC":                     "user_auth_telegram_oidc.go",
-		"LoginWithTelegramOIDC":                 "user_auth_telegram_oidc.go",
-		"BindTelegramOIDC":                      "user_auth_telegram_oidc.go",
-		"BindTelegram":                          "user_auth_telegram_binding.go",
-		"BindTelegramMiniApp":                   "user_auth_telegram_binding.go",
-		"bindVerifiedTelegram":                  "user_auth_telegram_binding.go",
-		"UnbindTelegram":                        "user_auth_telegram_binding.go",
-		"GetTelegramBinding":                    "user_auth_telegram_binding.go",
-		"ResolveTelegramChannelIdentity":        "user_auth_telegram_channel.go",
-		"ProvisionTelegramChannelIdentity":      "user_auth_telegram_channel.go",
-		"BindTelegramChannelByEmailCode":        "user_auth_telegram_channel.go",
-		"resolveTelegramChannelIdentity":        "user_auth_telegram_channel.go",
-		"provisionTelegramChannelIdentity":      "user_auth_telegram_channel.go",
-		"bindTelegramIdentityToUser":            "user_auth_telegram_channel.go",
-		"normalizeTelegramChannelIdentityInput": "user_auth_telegram_channel.go",
-		"getActiveUserByID":                     "user_auth_telegram_identity.go",
-		"findOrCreateTelegramUser":              "user_auth_telegram_identity.go",
-		"getTelegramIdentityByVerifiedID":       "user_auth_telegram_identity.go",
-		"canonicalizeTelegramProviderUserID":    "user_auth_telegram_identity.go",
-		"telegramProviderUserIDMatchesVerified": "user_auth_telegram_identity.go",
-		"applyTelegramIdentity":                 "user_auth_telegram_identity.go",
+		"LoginWithTelegram":                     "telegram_login.go",
+		"LoginWithTelegramMiniApp":              "telegram_login.go",
+		"LoginVerifiedTelegram":                 "telegram_login.go",
+		"StartTelegramOIDC":                     "telegram_oidc.go",
+		"LoginWithTelegramOIDC":                 "telegram_oidc.go",
+		"BindTelegramOIDC":                      "telegram_oidc.go",
+		"BindTelegram":                          "telegram_binding.go",
+		"BindTelegramMiniApp":                   "telegram_binding.go",
+		"bindVerifiedTelegram":                  "telegram_binding.go",
+		"UnbindTelegram":                        "telegram_binding.go",
+		"GetTelegramBinding":                    "telegram_binding.go",
+		"ResolveTelegramChannelIdentity":        "telegram_channel.go",
+		"ProvisionTelegramChannelIdentity":      "telegram_channel.go",
+		"BindTelegramChannelByEmailCode":        "telegram_channel.go",
+		"resolveTelegramChannelIdentity":        "telegram_channel.go",
+		"provisionTelegramChannelIdentity":      "telegram_channel.go",
+		"bindTelegramIdentityToUser":            "telegram_channel.go",
+		"normalizeTelegramChannelIdentityInput": "telegram_channel.go",
+		"getActiveUserByID":                     "telegram_identity.go",
+		"findOrCreateTelegramUser":              "telegram_identity.go",
+		"getTelegramIdentityByVerifiedID":       "telegram_identity.go",
+		"canonicalizeTelegramProviderUserID":    "telegram_identity.go",
+		"telegramProviderUserIDMatchesVerified": "telegram_identity.go",
+		"applyTelegramIdentity":                 "telegram_identity.go",
 	}
 	expectedTypeOwner := map[string]string{
-		"LoginWithTelegramInput":              "user_auth_telegram_login.go",
-		"LoginWithTelegramMiniAppInput":       "user_auth_telegram_login.go",
-		"StartTelegramOIDCInput":              "user_auth_telegram_oidc.go",
-		"LoginWithTelegramOIDCInput":          "user_auth_telegram_oidc.go",
-		"BindTelegramOIDCInput":               "user_auth_telegram_oidc.go",
-		"BindTelegramInput":                   "user_auth_telegram_binding.go",
-		"BindTelegramMiniAppInput":            "user_auth_telegram_binding.go",
-		"TelegramChannelIdentityInput":        "user_auth_telegram_channel.go",
-		"BindTelegramChannelByEmailCodeInput": "user_auth_telegram_channel.go",
+		"LoginWithTelegramInput":              "telegram_login.go",
+		"LoginWithTelegramMiniAppInput":       "telegram_login.go",
+		"StartTelegramOIDCInput":              "telegram_oidc.go",
+		"LoginWithTelegramOIDCInput":          "telegram_oidc.go",
+		"BindTelegramOIDCInput":               "telegram_oidc.go",
+		"BindTelegramInput":                   "telegram_binding.go",
+		"BindTelegramMiniAppInput":            "telegram_binding.go",
+		"TelegramChannelIdentityInput":        "telegram_channel.go",
+		"BindTelegramChannelByEmailCodeInput": "telegram_channel.go",
 	}
 
 	files := []string{
-		"user_auth_telegram_login.go",
-		"user_auth_telegram_oidc.go",
-		"user_auth_telegram_binding.go",
-		"user_auth_telegram_channel.go",
-		"user_auth_telegram_identity.go",
+		"telegram_login.go",
+		"telegram_oidc.go",
+		"telegram_binding.go",
+		"telegram_channel.go",
+		"telegram_identity.go",
 	}
 	actualOwners := make(map[string][]string, len(expectedOwner))
 	actualTypeOwners := make(map[string][]string, len(expectedTypeOwner))
 	for _, file := range files {
-		parsed := parseProductionGoFile(t, filepath.Join(serviceDirectory, file))
+		parsed := parseProductionGoFile(t, filepath.Join(repositoryRoot, "internal", "modules", "identity", "userauth", "application", file))
 		for _, function := range declaredFunctionNames(parsed) {
 			if _, tracked := expectedOwner[function]; tracked {
 				actualOwners[function] = append(actualOwners[function], file)

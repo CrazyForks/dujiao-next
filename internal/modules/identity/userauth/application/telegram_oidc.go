@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"context"
@@ -30,7 +30,7 @@ type BindTelegramOIDCInput struct {
 }
 
 // StartTelegramOIDC 生成 Telegram OIDC 授权 URL
-func (s *UserAuthService) StartTelegramOIDC(input StartTelegramOIDCInput) (string, error) {
+func (s *Service) StartTelegramOIDC(input StartTelegramOIDCInput) (string, error) {
 	if s.telegramAuthService == nil {
 		return "", telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
@@ -46,7 +46,7 @@ func (s *UserAuthService) StartTelegramOIDC(input StartTelegramOIDCInput) (strin
 }
 
 // LoginWithTelegramOIDC 通过 Telegram OIDC 回调登录
-func (s *UserAuthService) LoginWithTelegramOIDC(input LoginWithTelegramOIDCInput) (*UserLoginResult, error) {
+func (s *Service) LoginWithTelegramOIDC(input LoginWithTelegramOIDCInput) (*UserLoginResult, error) {
 	if s.telegramAuthService == nil || s.userOAuthIdentityRepo == nil {
 		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
@@ -61,11 +61,11 @@ func (s *UserAuthService) LoginWithTelegramOIDC(input LoginWithTelegramOIDCInput
 	if intent != telegramauthapp.IntentLogin {
 		return nil, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
-	return s.loginWithVerifiedTelegram(verified)
+	return s.LoginVerifiedTelegram(verified)
 }
 
 // BindTelegramOIDC 通过 Telegram OIDC 回调绑定当前用户
-func (s *UserAuthService) BindTelegramOIDC(input BindTelegramOIDCInput) (*externalidentitydomain.Identity, error) {
+func (s *Service) BindTelegramOIDC(input BindTelegramOIDCInput) (*externalidentitydomain.Identity, error) {
 	if input.UserID == 0 {
 		return nil, ErrNotFound
 	}

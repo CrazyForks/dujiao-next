@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 )
 
 // ResetPassword 重置密码
-func (s *UserAuthService) ResetPassword(email, code, newPassword string) error {
+func (s *Service) ResetPassword(email, code, newPassword string) error {
 	normalized, err := normalizeEmail(email)
 	if err != nil {
 		return err
@@ -54,7 +54,7 @@ func (s *UserAuthService) ResetPassword(email, code, newPassword string) error {
 }
 
 // ChangePassword 登录态修改密码
-func (s *UserAuthService) ChangePassword(userID uint, oldPassword, newPassword string) error {
+func (s *Service) ChangePassword(userID uint, oldPassword, newPassword string) error {
 	if userID == 0 {
 		return ErrNotFound
 	}
@@ -99,7 +99,7 @@ func (s *UserAuthService) ChangePassword(userID uint, oldPassword, newPassword s
 }
 
 // UpdateProfile 更新用户资料
-func (s *UserAuthService) UpdateProfile(userID uint, nickname, locale *string) (*userdomain.User, error) {
+func (s *Service) UpdateProfile(userID uint, nickname, locale *string) (*userdomain.User, error) {
 	if userID == 0 {
 		return nil, ErrNotFound
 	}
@@ -141,7 +141,7 @@ func (s *UserAuthService) UpdateProfile(userID uint, nickname, locale *string) (
 }
 
 // SendChangeEmailCode 发送更换邮箱验证码
-func (s *UserAuthService) SendChangeEmailCode(userID uint, kind, newEmail, locale string) error {
+func (s *Service) SendChangeEmailCode(userID uint, kind, newEmail, locale string) error {
 	if s.emailService == nil {
 		return ErrEmailServiceNotConfigured
 	}
@@ -189,7 +189,7 @@ func (s *UserAuthService) SendChangeEmailCode(userID uint, kind, newEmail, local
 }
 
 // ChangeEmail 更换邮箱（旧邮箱/新邮箱双验证）
-func (s *UserAuthService) ChangeEmail(userID uint, newEmail, oldCode, newCode string) (*userdomain.User, error) {
+func (s *Service) ChangeEmail(userID uint, newEmail, oldCode, newCode string) (*userdomain.User, error) {
 	if userID == 0 {
 		return nil, ErrNotFound
 	}
@@ -240,7 +240,7 @@ func (s *UserAuthService) ChangeEmail(userID uint, newEmail, oldCode, newCode st
 }
 
 // GetUserByID 获取用户信息
-func (s *UserAuthService) GetUserByID(id uint) (*userdomain.User, error) {
+func (s *Service) GetUserByID(id uint) (*userdomain.User, error) {
 	if id == 0 {
 		return nil, ErrNotFound
 	}
@@ -255,7 +255,7 @@ func (s *UserAuthService) GetUserByID(id uint) (*userdomain.User, error) {
 }
 
 // ResolveEmailChangeMode 返回当前用户邮箱修改模式
-func (s *UserAuthService) ResolveEmailChangeMode(user *userdomain.User) (string, error) {
+func (s *Service) ResolveEmailChangeMode(user *userdomain.User) (string, error) {
 	if user == nil {
 		return EmailChangeModeChangeWithOldAndNew, nil
 	}
@@ -269,7 +269,7 @@ func (s *UserAuthService) ResolveEmailChangeMode(user *userdomain.User) (string,
 }
 
 // ResolvePasswordChangeMode 返回当前用户密码修改模式
-func (s *UserAuthService) ResolvePasswordChangeMode(user *userdomain.User) (string, error) {
+func (s *Service) ResolvePasswordChangeMode(user *userdomain.User) (string, error) {
 	if user == nil {
 		return PasswordChangeModeChangeWithOld, nil
 	}
@@ -282,7 +282,7 @@ func (s *UserAuthService) ResolvePasswordChangeMode(user *userdomain.User) (stri
 	return PasswordChangeModeChangeWithOld, nil
 }
 
-func (s *UserAuthService) ensureTelegramVirtualEmailState(user *userdomain.User) error {
+func (s *Service) ensureTelegramVirtualEmailState(user *userdomain.User) error {
 	if user == nil || !telegramidentity.IsPlaceholderEmail(user.Email) {
 		return nil
 	}

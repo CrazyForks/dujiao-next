@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"context"
@@ -24,29 +24,14 @@ const (
 	userTotpIssuerDefault     = "Dujiao-Next-User"
 	userTotpPendingTTL        = 10 * time.Minute
 	userTotpEnableMaxFailures = 5
-	userTotpRecoveryCodeCount = 10
+	RecoveryCodeCount         = 10
 	userTotpDigits            = 6
 	userTotpPeriod            = 30
 	userTotpSkew              = 1
 )
 
-// UserChallengePurpose2FA 用户 2FA 挑战 token purpose 常量
-const UserChallengePurpose2FA = "user_2fa_challenge"
-
-// UserChallengeTTL 用户挑战 token 有效期
-const UserChallengeTTL = 5 * time.Minute
-
-// UserChallengeMaxFailures 用户挑战最大失败次数
-const UserChallengeMaxFailures = 5
-
-// UserChallengeFailKey 失败计数 redis key
-func UserChallengeFailKey(jti string) string { return "2fa:user:challenge:" + jti + ":fails" }
-
-// UserChallengeRevokedKey 撤销标记 redis key
-func UserChallengeRevokedKey(jti string) string { return "2fa:user:challenge:" + jti + ":revoked" }
-
-// UserTOTPService 用户 TOTP 业务服务
-type UserTOTPService struct {
+// Service 用户 TOTP 业务服务
+type Service struct {
 	cfg      *config.Config
 	encKey   []byte
 	userRepo usercontract.Store
@@ -54,34 +39,50 @@ type UserTOTPService struct {
 	now      func() time.Time
 }
 
-// NewUserTOTPService 创建实例
-func NewUserTOTPService(cfg *config.Config, userRepo usercontract.Store, rds *redis.Client) *UserTOTPService {
-	return &UserTOTPService{
+type Option func(*Service)
+
+func WithClock(now func() time.Time) Option {
+	return func(service *Service) {
+		if now != nil {
+			service.now = now
+		}
+	}
+}
+
+// NewService 创建实例
+func NewService(cfg *config.Config, userRepo usercontract.Store, rds *redis.Client, options ...Option) *Service {
+	service := &Service{
 		cfg:      cfg,
 		encKey:   crypto.DeriveKey(cfg.App.SecretKey),
 		userRepo: userRepo,
 		redis:    rds,
 		now:      time.Now,
 	}
+	for _, option := range options {
+		if option != nil {
+			option(service)
+		}
+	}
+	return service
 }
 
-// UserTOTPStatus 用户 2FA 状态
-type UserTOTPStatus struct {
+// Status 用户 2FA 状态
+type Status struct {
 	Enabled                bool       `json:"enabled"`
 	EnabledAt              *time.Time `json:"enabled_at,omitempty"`
 	RecoveryCodesRemaining int        `json:"recovery_codes_remaining"`
 	RecoveryCodesTotal     int        `json:"recovery_codes_total"`
 }
 
-// UserTOTPSetupResult /me/2fa/setup 响应
-type UserTOTPSetupResult struct {
+// SetupResult /me/2fa/setup 响应
+type SetupResult struct {
 	Secret     string    `json:"secret"`
 	OtpauthURL string    `json:"otpauth_url"`
 	ExpiresAt  time.Time `json:"expires_at"`
 }
 
-// UserTOTPEnableResult /me/2fa/enable 响应
-type UserTOTPEnableResult struct {
+// EnableResult /me/2fa/enable 响应
+type EnableResult struct {
 	EnabledAt     time.Time `json:"enabled_at"`
 	RecoveryCodes []string  `json:"recovery_codes"`
 	// 启用 2FA 时同步 bump TokenVersion 强制其他设备下线，因此当前 session 也需要换发新的 JWT
@@ -90,7 +91,7 @@ type UserTOTPEnableResult struct {
 }
 
 // GetStatus 查询状态
-func (s *UserTOTPService) GetStatus(userID uint) (*UserTOTPStatus, error) {
+func (s *Service) GetStatus(userID uint) (*Status, error) {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return nil, err
@@ -98,7 +99,7 @@ func (s *UserTOTPService) GetStatus(userID uint) (*UserTOTPStatus, error) {
 	if user == nil {
 		return nil, ErrNotFound
 	}
-	st := &UserTOTPStatus{Enabled: user.TOTPEnabledAt != nil, EnabledAt: user.TOTPEnabledAt}
+	st := &Status{Enabled: user.TOTPEnabledAt != nil, EnabledAt: user.TOTPEnabledAt}
 	if user.RecoveryCodes != "" {
 		entries, err := totpapplication.DecodeRecoveryCodes(user.RecoveryCodes)
 		if err == nil {
@@ -114,7 +115,7 @@ func (s *UserTOTPService) GetStatus(userID uint) (*UserTOTPStatus, error) {
 }
 
 // Setup 生成 pending secret + otpauth URL
-func (s *UserTOTPService) Setup(userID uint) (*UserTOTPSetupResult, error) {
+func (s *Service) Setup(userID uint) (*SetupResult, error) {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return nil, err
@@ -153,7 +154,7 @@ func (s *UserTOTPService) Setup(userID uint) (*UserTOTPSetupResult, error) {
 	if s.redis != nil {
 		_ = s.redis.Del(context.Background(), userEnableFailKey(userID)).Err()
 	}
-	return &UserTOTPSetupResult{
+	return &SetupResult{
 		Secret:     key.Secret(),
 		OtpauthURL: key.URL(),
 		ExpiresAt:  expiresAt,
@@ -161,22 +162,22 @@ func (s *UserTOTPService) Setup(userID uint) (*UserTOTPSetupResult, error) {
 }
 
 // Enable 校验首次 code，启用 2FA，生成恢复码
-func (s *UserTOTPService) Enable(userID uint, code string) (*UserTOTPEnableResult, error) {
+func (s *Service) Enable(userID uint, code string) (*EnableResult, error) {
 	prepared, err := totpapplication.Enable(s, totpapplication.EnableInput{
 		AccountID:         userID,
 		EncryptionKey:     s.encKey,
 		Code:              code,
-		RecoveryCodeCount: userTotpRecoveryCodeCount,
+		RecoveryCodeCount: RecoveryCodeCount,
 		Now:               s.now,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &UserTOTPEnableResult{EnabledAt: prepared.EnabledAt, RecoveryCodes: prepared.RecoveryCodes}, nil
+	return &EnableResult{EnabledAt: prepared.EnabledAt, RecoveryCodes: prepared.RecoveryCodes}, nil
 }
 
 // Disable 关闭 2FA
-func (s *UserTOTPService) Disable(userID uint, code string, isRecoveryCode bool) error {
+func (s *Service) Disable(userID uint, code string, isRecoveryCode bool) error {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return err
@@ -208,7 +209,7 @@ func (s *UserTOTPService) Disable(userID uint, code string, isRecoveryCode bool)
 }
 
 // RegenerateRecoveryCodes 重新生成恢复码（必须当前 TOTP code）
-func (s *UserTOTPService) RegenerateRecoveryCodes(userID uint, code string) ([]string, error) {
+func (s *Service) RegenerateRecoveryCodes(userID uint, code string) ([]string, error) {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return nil, err
@@ -226,7 +227,7 @@ func (s *UserTOTPService) RegenerateRecoveryCodes(userID uint, code string) ([]s
 	if !s.verifyCode(secret, code) {
 		return nil, totpapplication.ErrCodeInvalid
 	}
-	plaintext, codesJSON, err := totpapplication.GenerateRecoveryCodes(userTotpRecoveryCodeCount)
+	plaintext, codesJSON, err := totpapplication.GenerateRecoveryCodes(RecoveryCodeCount)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +238,7 @@ func (s *UserTOTPService) RegenerateRecoveryCodes(userID uint, code string) ([]s
 }
 
 // VerifyChallengeCode 登录第二步：验证 TOTP code
-func (s *UserTOTPService) VerifyChallengeCode(userID uint, code string) error {
+func (s *Service) VerifyChallengeCode(userID uint, code string) error {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return err
@@ -259,7 +260,7 @@ func (s *UserTOTPService) VerifyChallengeCode(userID uint, code string) error {
 }
 
 // VerifyChallengeRecoveryCode 登录第二步：用恢复码（消耗一个）
-func (s *UserTOTPService) VerifyChallengeRecoveryCode(userID uint, code string) error {
+func (s *Service) VerifyChallengeRecoveryCode(userID uint, code string) error {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return err
@@ -279,7 +280,7 @@ func (s *UserTOTPService) VerifyChallengeRecoveryCode(userID uint, code string) 
 // 同步 bump TokenVersion 强制其他设备下线（由 ClearTOTP 完成）。
 // operatorID 仅用于让调用方留痕；service 内部不依赖它，但要求非零以避免来路不明的调用绕过审计。
 // 返回 (targetUser, error)：targetUser 供 handler 写审计日志（邮箱等）。
-func (s *UserTOTPService) AdminResetUser2FA(operatorID, targetID uint) (*userdomain.User, error) {
+func (s *Service) AdminResetUser2FA(operatorID, targetID uint) (*userdomain.User, error) {
 	if operatorID == 0 {
 		return nil, fmt.Errorf("operatorID is required for audit")
 	}
@@ -302,7 +303,7 @@ func (s *UserTOTPService) AdminResetUser2FA(operatorID, targetID uint) (*userdom
 
 // ---- 内部辅助 ----
 
-func (s *UserTOTPService) verifyCode(secret, code string) bool {
+func (s *Service) verifyCode(secret, code string) bool {
 	code = strings.TrimSpace(code)
 	if code == "" {
 		return false
@@ -315,7 +316,7 @@ func (s *UserTOTPService) verifyCode(secret, code string) bool {
 	return valid
 }
 
-func (s *UserTOTPService) consumeRecoveryCode(user *userdomain.User, code string) error {
+func (s *Service) consumeRecoveryCode(user *userdomain.User, code string) error {
 	js, err := totpapplication.MatchAndConsumeRecoveryCode(user.RecoveryCodes, code, s.now())
 	if err != nil {
 		return err
@@ -323,7 +324,7 @@ func (s *UserTOTPService) consumeRecoveryCode(user *userdomain.User, code string
 	return s.userRepo.UpdateRecoveryCodes(user.ID, js)
 }
 
-func (s *UserTOTPService) LoadEnableSubject(userID uint) (totpapplication.EnableSubject, error) {
+func (s *Service) LoadEnableSubject(userID uint) (totpapplication.EnableSubject, error) {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil || user == nil {
 		return totpapplication.EnableSubject{}, err
@@ -336,11 +337,11 @@ func (s *UserTOTPService) LoadEnableSubject(userID uint) (totpapplication.Enable
 	}, nil
 }
 
-func (s *UserTOTPService) SaveEnabled(userID uint, result *totpapplication.EnableResult) error {
+func (s *Service) SaveEnabled(userID uint, result *totpapplication.EnableResult) error {
 	return s.userRepo.UpdateTOTPEnabled(userID, result.EncryptedSecret, result.EnabledAt, result.RecoveryCodesJSON)
 }
 
-func (s *UserTOTPService) ClearEnableFailures(userID uint) {
+func (s *Service) ClearEnableFailures(userID uint) {
 	if s.redis != nil {
 		_ = s.redis.Del(context.Background(), userEnableFailKey(userID)).Err()
 	}
@@ -350,7 +351,7 @@ func userEnableFailKey(userID uint) string {
 	return fmt.Sprintf("2fa:user:enable:%d:fails", userID)
 }
 
-func (s *UserTOTPService) CheckEnableFailures(userID uint) error {
+func (s *Service) CheckEnableFailures(userID uint) error {
 	if s.redis == nil {
 		return nil
 	}
@@ -366,7 +367,7 @@ func (s *UserTOTPService) CheckEnableFailures(userID uint) error {
 	return nil
 }
 
-func (s *UserTOTPService) BumpEnableFailure(userID uint) {
+func (s *Service) BumpEnableFailure(userID uint) {
 	if s.redis == nil {
 		return
 	}
@@ -377,6 +378,6 @@ func (s *UserTOTPService) BumpEnableFailure(userID uint) {
 	}
 }
 
-func (s *UserTOTPService) VerifyEnableCode(secret, code string) bool {
+func (s *Service) VerifyEnableCode(secret, code string) bool {
 	return s.verifyCode(secret, code)
 }

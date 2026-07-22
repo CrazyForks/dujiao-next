@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"crypto/hmac"

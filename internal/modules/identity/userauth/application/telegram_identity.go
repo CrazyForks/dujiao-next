@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (s *UserAuthService) getActiveUserByID(userID uint) (*userdomain.User, error) {
+func (s *Service) getActiveUserByID(userID uint) (*userdomain.User, error) {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func (s *UserAuthService) getActiveUserByID(userID uint) (*userdomain.User, erro
 	return user, nil
 }
 
-func (s *UserAuthService) findOrCreateTelegramUser(verified *telegramauthapp.IdentityVerified) (*userdomain.User, error) {
+func (s *Service) findOrCreateTelegramUser(verified *telegramauthapp.IdentityVerified) (*userdomain.User, error) {
 	if verified == nil {
 		return nil, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
@@ -90,7 +90,7 @@ func (s *UserAuthService) findOrCreateTelegramUser(verified *telegramauthapp.Ide
 }
 
 // getTelegramIdentityByVerifiedID 按 Telegram 数字 ID 查询绑定，未命中时兼容历史 OIDC subject 绑定。
-func (s *UserAuthService) getTelegramIdentityByVerifiedID(verified *telegramauthapp.IdentityVerified) (*externalidentitydomain.Identity, error) {
+func (s *Service) getTelegramIdentityByVerifiedID(verified *telegramauthapp.IdentityVerified) (*externalidentitydomain.Identity, error) {
 	if verified == nil || s.userOAuthIdentityRepo == nil {
 		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
@@ -112,7 +112,7 @@ func (s *UserAuthService) getTelegramIdentityByVerifiedID(verified *telegramauth
 }
 
 // canonicalizeTelegramProviderUserID 将历史 OIDC subject 绑定迁移为 Telegram 数字用户 ID。
-func (s *UserAuthService) canonicalizeTelegramProviderUserID(verified *telegramauthapp.IdentityVerified, identity *externalidentitydomain.Identity) (bool, error) {
+func (s *Service) canonicalizeTelegramProviderUserID(verified *telegramauthapp.IdentityVerified, identity *externalidentitydomain.Identity) (bool, error) {
 	if verified == nil || identity == nil || identity.ProviderUserID == verified.ProviderUserID {
 		return false, nil
 	}

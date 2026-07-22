@@ -204,6 +204,12 @@ func TestValidateImportRules(t *testing.T) {
 			importPath:    "gorm.io/gorm",
 			wantViolation: false,
 		},
+		{
+			name:          "module integration test package can import gorm",
+			file:          "internal/modules/identity/userauth/integrationtest/auth_test.go",
+			importPath:    "gorm.io/gorm",
+			wantViolation: false,
+		},
 	}
 
 	for _, test := range tests {
@@ -318,7 +324,7 @@ func validateImport(file, importPath string) string {
 		if importMatches(importPath, "github.com/gin-gonic/gin") && !isHTTPTransport(file) {
 			return "HTTP transport belongs outside domain modules"
 		}
-		if strings.HasPrefix(importPath, "gorm.io/") && !isGormStore(file) {
+		if strings.HasPrefix(importPath, "gorm.io/") && !isGormStore(file) && !isModuleIntegrationTest(file) {
 			return "only a module's store/gormstore adapter may import GORM"
 		}
 		if isLayer(file, "domain") && importsAnyLayer(importPath, "application", "infrastructure", "store", "transport") {
@@ -432,6 +438,11 @@ func isGormStore(file string) bool {
 		}
 	}
 	return false
+}
+
+func isModuleIntegrationTest(file string) bool {
+	file = filepath.ToSlash(file)
+	return strings.HasSuffix(file, "_test.go") && isLayer(file, "integrationtest")
 }
 
 func isHTTPTransport(file string) bool {

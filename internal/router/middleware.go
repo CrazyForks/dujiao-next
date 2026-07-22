@@ -6,7 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dujiao-next/internal/modules/identity/jwttoken"
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 
 	"go.uber.org/zap"
 
@@ -191,7 +193,7 @@ func JWTAuthMiddleware(secretKey string, adminRepo admincontract.Store) gin.Hand
 			c.Abort()
 			return
 		}
-		if !service.IsAccessTokenTyp(claims.Typ) {
+		if !jwttoken.IsAccessType(claims.Typ) {
 			msg := i18n.T(i18n.ResolveLocale(c), "error.token_invalid")
 			response.Unauthorized(c, msg)
 			c.Abort()
@@ -348,7 +350,7 @@ func UserJWTAuthMiddleware(secretKey string, userRepo usercontract.Store) gin.Ha
 
 		tokenString := parts[1]
 		parser := newHS256JWTParser()
-		claims := &service.UserJWTClaims{}
+		claims := &userauthapp.UserJWTClaims{}
 		token, err := parser.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(secretKey), nil
 		})
@@ -358,7 +360,7 @@ func UserJWTAuthMiddleware(secretKey string, userRepo usercontract.Store) gin.Ha
 			c.Abort()
 			return
 		}
-		if !service.IsAccessTokenTyp(claims.Typ) {
+		if !jwttoken.IsAccessType(claims.Typ) {
 			msg := i18n.T(i18n.ResolveLocale(c), "error.token_invalid")
 			response.Unauthorized(c, msg)
 			c.Abort()

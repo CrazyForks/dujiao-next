@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -47,7 +48,7 @@ func TestLoginWithTelegramMiniAppCreatesUserIdentityAndToken(t *testing.T) {
 		return true, nil
 	}))
 
-	svc := NewUserAuthService(
+	svc := userauthapp.NewService(
 		cfg,
 		userstore.New(db),
 		externalidentitystore.New(db),
@@ -58,7 +59,7 @@ func TestLoginWithTelegramMiniAppCreatesUserIdentityAndToken(t *testing.T) {
 	)
 
 	initData := buildUserAuthTestTelegramMiniAppInitData(t, "test-bot-token", time.Now().Unix(), `{"id":987654,"first_name":"Mini","last_name":"Buyer","username":"mini_buyer"}`)
-	res, err := svc.LoginWithTelegramMiniApp(LoginWithTelegramMiniAppInput{
+	res, err := svc.LoginWithTelegramMiniApp(userauthapp.LoginWithTelegramMiniAppInput{
 		InitData: initData,
 		Context:  context.Background(),
 	})
