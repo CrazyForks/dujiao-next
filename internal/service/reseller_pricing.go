@@ -2,23 +2,22 @@ package service
 
 import (
 	"sort"
-	"strings"
-	"time"
 
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/shopspring/decimal"
 )
 
 const (
-	resellerRuleSourceSKU     = "sku"
-	resellerRuleSourceProduct = "product"
-	resellerRuleSourceProfile = "profile"
-	resellerRuleSourceInherit = "inherit"
+	resellerRuleSourceSKU     = resellermodule.RuleSourceSKU
+	resellerRuleSourceProduct = resellermodule.RuleSourceProduct
+	resellerRuleSourceProfile = resellermodule.RuleSourceProfile
+	resellerRuleSourceInherit = resellermodule.RuleSourceInherit
 
-	resellerProfitBlockOwner          = "self_dealing_owner"
-	resellerProfitBlockRelatedAccount = "self_dealing_related_account"
+	resellerProfitBlockOwner          = resellermodule.ProfitBlockOwner
+	resellerProfitBlockRelatedAccount = resellermodule.ProfitBlockRelatedAccount
 )
 
 // ResellerPricingResolver resolves reseller-facing prices before order transactions.
@@ -30,102 +29,13 @@ func NewResellerPricingResolver(repo repository.ResellerRepository) *ResellerPri
 	return &ResellerPricingResolver{repo: repo}
 }
 
-type ResellerOrderPricingContext struct {
-	ResellerID        uint
-	Domain            string
-	Currency          string
-	ResellerUserID    uint
-	BuyerUserID       uint
-	BaseAmount        decimal.Decimal
-	ResellerAmount    decimal.Decimal
-	ProfitAmount      decimal.Decimal
-	EffectiveProfit   decimal.Decimal
-	ProfitEligible    bool
-	ProfitBlockReason string
-	Items             []ResellerOrderPricingItem
-	PricingSnapshot   models.JSON
-	RiskSnapshot      models.JSON
-}
+type ResellerOrderPricingContext = resellermodule.OrderPricingContext
+type ResellerOrderPricingItem = resellermodule.OrderPricingItem
+type ResellerDisplayPriceResult = resellermodule.DisplayPriceResult
+type ResellerDisplayPricingBatch = resellermodule.DisplayPricingBatch
 
-type ResellerOrderPricingItem struct {
-	ProductID           uint
-	SKUID               uint
-	Quantity            int
-	ChildOrderID        uint
-	BaseUnitAmount      decimal.Decimal
-	ResellerUnitAmount  decimal.Decimal
-	BaseTotalAmount     decimal.Decimal
-	ResellerTotalAmount decimal.Decimal
-	ProfitAmount        decimal.Decimal
-	PricingMode         string
-	RuleSource          string
-	SettingID           *uint
-	OrderID             uint
-	OrderItemID         uint
-}
-
-func (ctx *ResellerOrderPricingContext) BindCreatedOrderItem(index int, childOrderID uint, orderItemID uint) {
-	if ctx == nil || index < 0 || index >= len(ctx.Items) {
-		return
-	}
-	ctx.Items[index].ChildOrderID = childOrderID
-	ctx.Items[index].OrderID = childOrderID
-	ctx.Items[index].OrderItemID = orderItemID
-	ctx.PricingSnapshot = ctx.buildPricingSnapshotJSON()
-}
-
-func (ctx *ResellerOrderPricingContext) BuildSnapshot(orderID uint, now time.Time) *models.ResellerOrderSnapshot {
-	if ctx == nil {
-		return nil
-	}
-	for i := range ctx.Items {
-		if ctx.Items[i].OrderID == 0 {
-			ctx.Items[i].OrderID = ctx.Items[i].ChildOrderID
-		}
-	}
-	ctx.PricingSnapshot = ctx.buildPricingSnapshotJSON()
-	return &models.ResellerOrderSnapshot{
-		OrderID:             orderID,
-		ResellerID:          ctx.ResellerID,
-		Domain:              ctx.Domain,
-		Currency:            ctx.Currency,
-		ResellerUserID:      ctx.ResellerUserID,
-		BuyerUserID:         ctx.BuyerUserID,
-		BaseAmount:          models.NewMoneyFromDecimal(ctx.BaseAmount),
-		ResellerAmount:      models.NewMoneyFromDecimal(ctx.ResellerAmount),
-		ProfitAmount:        models.NewMoneyFromDecimal(ctx.ProfitAmount),
-		ProfitEligible:      ctx.ProfitEligible,
-		ProfitBlockReason:   ctx.ProfitBlockReason,
-		PricingSnapshotJSON: ctx.PricingSnapshot,
-		RiskSnapshotJSON:    ctx.RiskSnapshot,
-		CreatedAt:           now,
-		UpdatedAt:           now,
-	}
-}
-
-type ResellerDisplayPriceResult struct {
-	Visible      bool
-	ProductID    uint
-	DisplaySKUID uint
-	DisplayPrice models.Money
-	SKUPrices    map[uint]models.Money
-	HiddenSKUIDs map[uint]bool
-}
-
-type ResellerDisplayPricingBatch struct {
-	Tenant            TenantContext
-	Profile           *models.ResellerProfile
-	SettingsByProduct map[uint][]models.ResellerProductSetting
-}
-
-type resellerPricingRule struct {
-	Mode              string
-	Source            string
-	SettingID         *uint
-	MarkupPercent     decimal.Decimal
-	FixedMarkupAmount decimal.Decimal
-	FixedPriceAmount  decimal.Decimal
-}
+type resellerPricingRule = resellermodule.PricingRule
+type resellerSettingKey = resellermodule.SettingKey
 
 func (r *ResellerPricingResolver) ApplyToOrderBuildResult(tenant TenantContext, buyerUserID uint, result *orderBuildResult) (*ResellerOrderPricingContext, error) {
 	if !isResellerOrderContext(tenant) {
@@ -161,7 +71,7 @@ func (r *ResellerPricingResolver) ApplyToOrderBuildResult(tenant TenantContext, 
 			return nil, ErrProductSKUInvalid
 		}
 		productSetting := settingsByProduct[plan.Product.ID]
-		skuSetting := settingsBySKU[resellerSettingKey{productID: plan.Product.ID, skuID: plan.SKU.ID}]
+		skuSetting := settingsBySKU[resellerSettingKey{ProductID: plan.Product.ID, SKUID: plan.SKU.ID}]
 		if productSetting != nil && !productSetting.IsListed {
 			return nil, ErrResellerProductNotListed
 		}
@@ -238,8 +148,8 @@ func (r *ResellerPricingResolver) ApplyToOrderBuildResult(tenant TenantContext, 
 	} else {
 		ctx.EffectiveProfit = decimal.Zero
 	}
-	ctx.PricingSnapshot = ctx.buildPricingSnapshotJSON()
-	ctx.RiskSnapshot = ctx.buildRiskSnapshotJSON()
+	ctx.PricingSnapshot = ctx.BuildPricingSnapshotJSON()
+	ctx.RiskSnapshot = ctx.BuildRiskSnapshotJSON()
 	return ctx, nil
 }
 
@@ -293,7 +203,7 @@ func (r *ResellerPricingResolver) ResolveDisplayPrices(tenant TenantContext, pro
 		if !sku.IsActive {
 			continue
 		}
-		skuSetting := skuSettings[resellerSettingKey{productID: product.ID, skuID: sku.ID}]
+		skuSetting := skuSettings[resellerSettingKey{ProductID: product.ID, SKUID: sku.ID}]
 		if skuSetting != nil && !skuSetting.IsListed {
 			result.HiddenSKUIDs[sku.ID] = true
 			continue
@@ -353,124 +263,28 @@ func (r *ResellerPricingResolver) applySelfDealingRisk(ctx *ResellerOrderPricing
 	if ctx == nil || profile == nil {
 		return nil
 	}
-	ownerMatch := false
 	relatedMatch := false
-	if ctx.BuyerUserID > 0 && ctx.BuyerUserID == profile.UserID {
-		ownerMatch = true
-		ctx.ProfitEligible = false
-		ctx.ProfitBlockReason = resellerProfitBlockOwner
-	} else if ctx.BuyerUserID > 0 {
+	if ctx.BuyerUserID > 0 && ctx.BuyerUserID != profile.UserID {
 		matched, err := r.repo.IsActiveRelatedAccount(ctx.ResellerID, ctx.BuyerUserID)
 		if err != nil {
 			return err
 		}
-		if matched {
-			relatedMatch = true
-			ctx.ProfitEligible = false
-			ctx.ProfitBlockReason = resellerProfitBlockRelatedAccount
-		}
+		relatedMatch = matched
 	}
-	ctx.RiskSnapshot = models.JSON{
-		"buyer_user_id":         ctx.BuyerUserID,
-		"reseller_user_id":      ctx.ResellerUserID,
-		"profit_eligible":       ctx.ProfitEligible,
-		"profit_block_reason":   ctx.ProfitBlockReason,
-		"guest_buyer":           ctx.BuyerUserID == 0,
-		"self_dealing_deferred": "same_contact_and_risk_detected_account_linking",
-		"self_dealing": models.JSON{
-			"owner_match":           ownerMatch,
-			"related_account_match": relatedMatch,
-		},
-	}
+	resellermodule.ApplySelfDealingRisk(ctx, profile, relatedMatch)
 	return nil
-}
-
-type resellerSettingKey struct {
-	productID uint
-	skuID     uint
 }
 
 func buildSettingIndexes(settings []models.ResellerProductSetting) (map[uint]*models.ResellerProductSetting, map[resellerSettingKey]*models.ResellerProductSetting) {
-	byProduct := make(map[uint]*models.ResellerProductSetting)
-	bySKU := make(map[resellerSettingKey]*models.ResellerProductSetting)
-	for i := range settings {
-		setting := settings[i]
-		if setting.ProductID == 0 {
-			continue
-		}
-		row := setting
-		if setting.SKUID == 0 {
-			byProduct[setting.ProductID] = &row
-			continue
-		}
-		bySKU[resellerSettingKey{productID: setting.ProductID, skuID: setting.SKUID}] = &row
-	}
-	return byProduct, bySKU
+	return resellermodule.BuildSettingIndexes(settings)
 }
 
 func resolveResellerUnitAmount(profile *models.ResellerProfile, productSetting *models.ResellerProductSetting, skuSetting *models.ResellerProductSetting, baseUnit decimal.Decimal) (decimal.Decimal, resellerPricingRule, error) {
-	if skuSetting != nil && strings.TrimSpace(skuSetting.PricingMode) != models.ResellerPricingModeInherit {
-		return applyResellerPricingRule(*skuSetting, resellerRuleSourceSKU, baseUnit)
-	}
-	if productSetting != nil && strings.TrimSpace(productSetting.PricingMode) != models.ResellerPricingModeInherit {
-		return applyResellerPricingRule(*productSetting, resellerRuleSourceProduct, baseUnit)
-	}
-	if profile != nil && profile.DefaultMarkupPercent.Decimal.GreaterThan(decimal.Zero) {
-		rule := resellerPricingRule{
-			Mode:          models.ResellerPricingModeMarkupPercent,
-			Source:        resellerRuleSourceProfile,
-			MarkupPercent: profile.DefaultMarkupPercent.Decimal.Round(2),
-		}
-		unit := applyMarkupPercent(baseUnit, rule.MarkupPercent)
-		return unit, rule, nil
-	}
-	return baseUnit.Round(2), resellerPricingRule{Mode: models.ResellerPricingModeInherit, Source: resellerRuleSourceInherit}, nil
-}
-
-func applyResellerPricingRule(setting models.ResellerProductSetting, source string, baseUnit decimal.Decimal) (decimal.Decimal, resellerPricingRule, error) {
-	settingID := setting.ID
-	rule := resellerPricingRule{
-		Mode:              strings.TrimSpace(setting.PricingMode),
-		Source:            source,
-		SettingID:         &settingID,
-		MarkupPercent:     setting.MarkupPercent.Decimal.Round(2),
-		FixedMarkupAmount: setting.FixedMarkupAmount.Decimal.Round(2),
-		FixedPriceAmount:  setting.FixedPriceAmount.Decimal.Round(2),
-	}
-	switch rule.Mode {
-	case models.ResellerPricingModeMarkupPercent:
-		return applyMarkupPercent(baseUnit, rule.MarkupPercent), rule, nil
-	case models.ResellerPricingModeFixedMarkup:
-		return baseUnit.Add(rule.FixedMarkupAmount).Round(2), rule, nil
-	case models.ResellerPricingModeFixedPrice:
-		return rule.FixedPriceAmount.Round(2), rule, nil
-	case models.ResellerPricingModeInherit:
-		return baseUnit.Round(2), rule, nil
-	default:
-		return decimal.Zero, rule, ErrResellerPricingModeInvalid
-	}
-}
-
-func applyMarkupPercent(baseUnit decimal.Decimal, percent decimal.Decimal) decimal.Decimal {
-	return baseUnit.Mul(decimal.NewFromInt(100).Add(percent)).Div(decimal.NewFromInt(100)).Round(2)
+	return resellermodule.ResolveUnitAmount(profile, productSetting, skuSetting, baseUnit)
 }
 
 func validateResellerUnitAmount(profile *models.ResellerProfile, sku *models.ProductSKU, baseUnit decimal.Decimal, resellerUnit decimal.Decimal) error {
-	baseUnit = baseUnit.Round(2)
-	resellerUnit = resellerUnit.Round(2)
-	if resellerUnit.LessThanOrEqual(decimal.Zero) || resellerUnit.LessThan(baseUnit) {
-		return ErrResellerPriceBelowBase
-	}
-	if sku != nil && sku.CostPriceAmount.Decimal.GreaterThan(decimal.Zero) && resellerUnit.LessThan(sku.CostPriceAmount.Decimal.Round(2)) {
-		return ErrResellerPriceBelowBase
-	}
-	if profile != nil && profile.MaxMarkupPercent.Decimal.GreaterThan(decimal.Zero) && baseUnit.GreaterThan(decimal.Zero) {
-		implicit := resellerUnit.Sub(baseUnit).Div(baseUnit).Mul(decimal.NewFromInt(100)).Round(4)
-		if implicit.GreaterThan(profile.MaxMarkupPercent.Decimal.Round(4)) {
-			return ErrResellerMarkupExceeded
-		}
-	}
-	return nil
+	return resellermodule.ValidateUnitAmount(profile, sku, baseUnit, resellerUnit)
 }
 
 func collectOrderPlanIDs(plans []childOrderPlan) ([]uint, []uint) {
@@ -528,62 +342,9 @@ func uniqueServiceUintSlice(values []uint) []uint {
 }
 
 func isResellerOrderContext(tenant TenantContext) bool {
-	return tenant.ResellerID != nil && !tenant.IsMain && !tenant.Unavailable
+	return tenant.IsReseller()
 }
 
 func resellerSnapshotDomain(tenant TenantContext) string {
-	if host := strings.TrimSpace(tenant.PrimaryDomain); host != "" {
-		return NormalizeResellerHost(host)
-	}
-	return NormalizeResellerHost(tenant.Host)
-}
-
-func (ctx *ResellerOrderPricingContext) buildPricingSnapshotJSON() models.JSON {
-	items := make([]interface{}, 0, len(ctx.Items))
-	for _, item := range ctx.Items {
-		entry := models.JSON{
-			"product_id":            item.ProductID,
-			"sku_id":                item.SKUID,
-			"quantity":              item.Quantity,
-			"child_order_id":        item.ChildOrderID,
-			"base_unit_amount":      moneyString(item.BaseUnitAmount),
-			"reseller_unit_amount":  moneyString(item.ResellerUnitAmount),
-			"base_total_amount":     moneyString(item.BaseTotalAmount),
-			"reseller_total_amount": moneyString(item.ResellerTotalAmount),
-			"profit_amount":         moneyString(item.ProfitAmount),
-			"pricing_mode":          item.PricingMode,
-			"rule_source":           item.RuleSource,
-			"order_id":              item.OrderID,
-			"order_item_id":         item.OrderItemID,
-		}
-		if item.SettingID != nil {
-			entry["setting_id"] = *item.SettingID
-		} else {
-			entry["setting_id"] = nil
-		}
-		items = append(items, entry)
-	}
-	return models.JSON{
-		"currency":        ctx.Currency,
-		"base_amount":     moneyString(ctx.BaseAmount),
-		"reseller_amount": moneyString(ctx.ResellerAmount),
-		"profit_amount":   moneyString(ctx.ProfitAmount),
-		"items":           items,
-	}
-}
-
-func (ctx *ResellerOrderPricingContext) buildRiskSnapshotJSON() models.JSON {
-	if ctx.RiskSnapshot != nil {
-		return ctx.RiskSnapshot
-	}
-	return models.JSON{
-		"buyer_user_id":       ctx.BuyerUserID,
-		"reseller_user_id":    ctx.ResellerUserID,
-		"profit_eligible":     ctx.ProfitEligible,
-		"profit_block_reason": ctx.ProfitBlockReason,
-	}
-}
-
-func moneyString(value decimal.Decimal) string {
-	return value.Round(2).StringFixed(2)
+	return resellermodule.SnapshotDomain(tenant)
 }

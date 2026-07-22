@@ -18,6 +18,7 @@ import (
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/telegramidentity"
 )
 
@@ -95,7 +96,7 @@ func (s *EmailService) SendOrderStatusEmail(toEmail string, input OrderStatusEma
 }
 
 // SendOrderStatusEmailWithTemplate 使用可配置模板发送订单状态通知
-func (s *EmailService) SendOrderStatusEmailWithTemplate(toEmail string, input OrderStatusEmailInput, locale string, tmplSetting *OrderEmailTemplateSetting) error {
+func (s *EmailService) SendOrderStatusEmailWithTemplate(toEmail string, input OrderStatusEmailInput, locale string, tmplSetting *settingsmodule.OrderEmailTemplateSetting) error {
 	if tmplSetting == nil {
 		return s.SendOrderStatusEmail(toEmail, input, locale)
 	}
@@ -106,11 +107,11 @@ func (s *EmailService) SendOrderStatusEmailWithTemplate(toEmail string, input Or
 	return s.sendTextEmail(toEmail, subject, body)
 }
 
-func buildOrderStatusContentFromTemplate(input OrderStatusEmailInput, locale string, tmplSetting OrderEmailTemplateSetting) (string, string) {
+func buildOrderStatusContentFromTemplate(input OrderStatusEmailInput, locale string, tmplSetting settingsmodule.OrderEmailTemplateSetting) (string, string) {
 	normalized := normalizeLocale(locale)
 
 	// 根据订单状态选择场景模板
-	var sceneTmpl OrderEmailSceneTemplate
+	var sceneTmpl settingsmodule.OrderEmailSceneTemplate
 	status := strings.ToLower(strings.TrimSpace(input.Status))
 	switch status {
 	case constants.OrderStatusPaid:
@@ -131,7 +132,7 @@ func buildOrderStatusContentFromTemplate(input OrderStatusEmailInput, locale str
 		sceneTmpl = tmplSetting.Templates.Default
 	}
 
-	localeTmpl := ResolveOrderEmailLocaleTemplate(sceneTmpl, normalized)
+	localeTmpl := settingsmodule.ResolveOrderEmailLocaleTemplate(sceneTmpl, normalized)
 
 	// 翻译状态标签
 	statusKey := "order.status." + status
@@ -168,7 +169,7 @@ func buildOrderStatusContentFromTemplate(input OrderStatusEmailInput, locale str
 
 	// 交付内容以附件形式发送时追加提示
 	if input.AttachmentName != "" {
-		tip := strings.TrimSpace(ResolveOrderEmailFulfillmentAttachmentTip(tmplSetting.FulfillmentAttachmentTip, normalized))
+		tip := strings.TrimSpace(settingsmodule.ResolveOrderEmailFulfillmentAttachmentTip(tmplSetting.FulfillmentAttachmentTip, normalized))
 		if tip != "" {
 			body = body + "\n\n" + tip
 		}
@@ -176,7 +177,7 @@ func buildOrderStatusContentFromTemplate(input OrderStatusEmailInput, locale str
 
 	// 游客订单追加提示
 	if input.IsGuest {
-		tip := strings.TrimSpace(ResolveOrderEmailGuestTip(tmplSetting.GuestTip, normalized))
+		tip := strings.TrimSpace(settingsmodule.ResolveOrderEmailGuestTip(tmplSetting.GuestTip, normalized))
 		if tip != "" {
 			body = body + "\n\n" + tip
 		}

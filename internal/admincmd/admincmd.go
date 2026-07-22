@@ -17,6 +17,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 
 	"github.com/google/uuid"
@@ -117,7 +118,7 @@ func listAdmins() {
 
 func resetTOTP(username string) {
 	repo := repository.NewAdminRepository(models.DB)
-	logRepo := repository.NewAdminLoginLogRepository(models.DB)
+	logRepo := auditloggormstore.NewAdminLoginStore(models.DB)
 
 	admin, err := repo.GetByUsername(username)
 	if err != nil {
@@ -147,7 +148,7 @@ func resetTOTP(username string) {
 
 func resetPassword(username, providedPassword string) {
 	repo := repository.NewAdminRepository(models.DB)
-	logRepo := repository.NewAdminLoginLogRepository(models.DB)
+	logRepo := auditloggormstore.NewAdminLoginStore(models.DB)
 
 	admin, err := repo.GetByUsername(username)
 	if err != nil {

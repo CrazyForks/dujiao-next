@@ -8,6 +8,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 
 	"github.com/glebarez/sqlite"
@@ -41,7 +42,7 @@ func setupGiftCardServiceTest(t *testing.T) (*GiftCardService, *WalletService, *
 	settingRepo := repository.NewSettingRepository(db)
 	settingSvc := NewSettingService(settingRepo)
 	walletSvc := NewWalletService(repository.NewWalletRepository(db), repository.NewOrderRepository(db), repository.NewOrderRefundRecordRepository(db), userRepo, nil, settingSvc)
-	giftSvc := NewGiftCardService(repository.NewGiftCardRepository(db), userRepo, walletSvc, settingSvc)
+	giftSvc := NewGiftCardService(giftcardgormstore.New(db), userRepo, walletSvc, settingSvc)
 	return giftSvc, walletSvc, db
 }
 

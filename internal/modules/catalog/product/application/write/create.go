@@ -1,0 +1,168 @@
+package productwrite
+
+import (
+	"strconv"
+
+	"github.com/dujiao-next/internal/constants"
+	"github.com/dujiao-next/internal/models"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
+
+	"github.com/shopspring/decimal"
+)
+
+// Create 创建商品
+func (s *WriteService) Create(input CreateProductInput) (*models.Product, error) {
+	if err := productdomain.ValidateCategoryAssignment(s.categories, input.CategoryID, 0, s.errors.ProductCategoryInvalid); err != nil {
+		return nil, err
+	}
+
+	count, err := s.products.CountBySlug(input.Slug, nil)
+	if err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		return nil, s.errors.SlugExists
+	}
+
+	isActive := true
+	if input.IsActive != nil {
+		isActive = *input.IsActive
+	}
+	isAffiliateEnabled := false
+	if input.IsAffiliateEnabled != nil {
+		isAffiliateEnabled = *input.IsAffiliateEnabled
+	}
+	purchaseType := productdomain.NormalizePurchaseType(input.PurchaseType)
+	if purchaseType == "" {
+		return nil, s.errors.ProductPurchaseInvalid
+	}
+	fulfillmentType := productdomain.NormalizeFulfillmentType(input.FulfillmentType)
+	if fulfillmentType == "" {
+		return nil, s.errors.FulfillmentInvalid
+	}
+
+	priceAmount := input.PriceAmount.Round(2)
+	if len(input.SKUs) == 0 && priceAmount.LessThanOrEqual(decimal.Zero) {
+		return nil, s.errors.ProductPriceInvalid
+	}
+
+	manualStockTotal := 0
+	if input.ManualStockTotal != nil {
+		manualStockTotal = *input.ManualStockTotal
+	}
+	if manualStockTotal < constants.ManualStockUnlimited {
+		return nil, s.errors.ManualStockInvalid
+	}
+	maxPurchaseQuantity := 0
+	if input.MaxPurchaseQuantity != nil {
+		maxPurchaseQuantity = productdomain.NormalizePurchaseQuantityLimit(*input.MaxPurchaseQuantity)
+	}
+	minPurchaseQuantity := 0
+	if input.MinPurchaseQuantity != nil {
+		minPurchaseQuantity = productdomain.NormalizePurchaseQuantityLimit(*input.MinPurchaseQuantity)
+	}
+	if minPurchaseQuantity > 0 && maxPurchaseQuantity > 0 && minPurchaseQuantity > maxPurchaseQuantity {
+		return nil, s.errors.ProductPurchaseLimitInvalid
+	}
+	stockDisplayMode := productdomain.NormalizeStockDisplayMode(input.StockDisplayMode)
+	if stockDisplayMode == "" {
+		return nil, s.errors.ProductStockDisplayInvalid
+	}
+
+	costPriceAmount := input.CostPriceAmount.Round(2)
+	var wholesaleInputs []WholesalePriceInput
+	if input.WholesalePrices != nil {
+		wholesaleInputs = *input.WholesalePrices
+	}
+
+	var normalizedSKUs []normalizedProductSKU
+	if len(input.SKUs) > 0 {
+		if s.skus == nil {
+			return nil, s.errors.ProductSKUInvalid
+		}
+		var normalizeErr error
+		normalizedSKUs, priceAmount, manualStockTotal, normalizeErr = s.normalizeProductSKUInputs(input.SKUs, fulfillmentType, nil)
+		if normalizeErr != nil {
+			return nil, normalizeErr
+		}
+		costPriceAmount = minActiveCostPrice(normalizedSKUs)
+	}
+	paymentChannelIDs, err := s.filterAvailablePaymentChannelIDs(input.PaymentChannelIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	product := models.Product{
+		CategoryID:           input.CategoryID,
+		Slug:                 input.Slug,
+		SeoMetaJSON:          models.JSON(input.SeoMetaJSON),
+		TitleJSON:            models.JSON(input.TitleJSON),
+		DescriptionJSON:      models.JSON(input.DescriptionJSON),
+		ContentJSON:          models.JSON(input.ContentJSON),
+		InstructionsJSON:     models.JSON(input.InstructionsJSON),
+		ManualFormSchemaJSON: models.JSON{},
+		PriceAmount:          models.NewMoneyFromDecimal(priceAmount),
+		CostPriceAmount:      models.NewMoneyFromDecimal(costPriceAmount),
+		WholesalePrices:      models.WholesalePriceTiers{},
+		Images:               models.StringArray(input.Images),
+		Tags:                 models.StringArray(input.Tags),
+		PurchaseType:         purchaseType,
+		MinPurchaseQuantity:  minPurchaseQuantity,
+		MaxPurchaseQuantity:  maxPurchaseQuantity,
+		StockDisplayMode:     stockDisplayMode,
+		FulfillmentType:      fulfillmentType,
+		ManualStockTotal:     manualStockTotal,
+		ManualStockLocked:    0,
+		ManualStockSold:      0,
+		PaymentChannelIDs:    encodeChannelIDs(paymentChannelIDs),
+		IsAffiliateEnabled:   isAffiliateEnabled,
+		IsActive:             isActive,
+		SortOrder:            input.SortOrder,
+	}
+	if fulfillmentType == constants.FulfillmentTypeManual {
+		normalizedSchemaJSON, err := manualform.NormalizeSchema(models.JSON(input.ManualFormSchemaJSON))
+		if err != nil {
+			return nil, err
+		}
+		product.ManualFormSchemaJSON = normalizedSchemaJSON
+	}
+
+	if err := s.transactions.WithinTransaction(func(repositories TransactionRepositories) error {
+		productRepo := repositories.Products
+		skuRepo := repositories.SKUs
+		cardSecretRepo := repositories.CardSecrets
+		if err := productRepo.Create(&product); err != nil {
+			return err
+		}
+		if len(normalizedSKUs) > 0 {
+			if err := s.applyProductSKUsWithStockGuard(skuRepo, cardSecretRepo, product.ID, fulfillmentType, normalizedSKUs); err != nil {
+				return err
+			}
+		} else if err := s.syncSingleProductSKU(skuRepo, product.ID, priceAmount, costPriceAmount, manualStockTotal, true); err != nil {
+			return err
+		}
+		if input.WholesalePrices != nil {
+			var skus []models.ProductSKU
+			if skuRepo != nil {
+				var err error
+				skus, err = skuRepo.ListByProduct(product.ID, false)
+				if err != nil {
+					return err
+				}
+			}
+			wholesalePrices, err := productdomain.NormalizeWholesalePricesForSKUs(wholesaleInputs, skus)
+			if err != nil {
+				return err
+			}
+			product.WholesalePrices = wholesalePrices
+			if err := productRepo.QuickUpdate(strconv.FormatUint(uint64(product.ID), 10), map[string]interface{}{"wholesale_prices": wholesalePrices}); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return s.products.GetByID(strconv.FormatUint(uint64(product.ID), 10))
+}

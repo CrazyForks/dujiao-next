@@ -1,0 +1,91 @@
+package gormstore
+
+import (
+	"fmt"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/dujiao-next/internal/constants"
+	"github.com/dujiao-next/internal/models"
+
+	"github.com/glebarez/sqlite"
+	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
+)
+
+func setupDashboardRepositoryTest(t *testing.T) (*Store, *gorm.DB) {
+	t.Helper()
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", strings.ReplaceAll(t.Name(), "/", "_"))
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite failed: %v", err)
+	}
+	if err := db.AutoMigrate(&models.User{}, &models.Category{}, &models.Product{}, &models.Order{}, &models.OrderItem{}); err != nil {
+		t.Fatalf("migrate dashboard models failed: %v", err)
+	}
+	if err := db.AutoMigrate(&models.ProductSKU{}); err != nil {
+		t.Fatalf("migrate dashboard sku models failed: %v", err)
+	}
+	if err := db.AutoMigrate(&models.PaymentChannel{}, &models.Payment{}, &models.OrderRefundRecord{}); err != nil {
+		t.Fatalf("migrate dashboard models failed: %v", err)
+	}
+	return New(db), db
+}
+
+func createDashboardCategory(t *testing.T, db *gorm.DB, slug string) *models.Category {
+	t.Helper()
+	category := &models.Category{
+		Slug:     slug,
+		NameJSON: models.JSON{"zh-CN": "测试分类"},
+	}
+	if err := db.Create(category).Error; err != nil {
+		t.Fatalf("create category failed: %v", err)
+	}
+	return category
+}
+
+func createDashboardProfitOrderWithItem(
+	t *testing.T,
+	db *gorm.DB,
+	product *models.Product,
+	orderNo string,
+	status string,
+	amount int64,
+	cost int64,
+	title string,
+	createdAt time.Time,
+) *models.Order {
+	t.Helper()
+	order := &models.Order{
+		OrderNo:        orderNo,
+		UserID:         1,
+		Status:         status,
+		Currency:       "CNY",
+		OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+		DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+		CreatedAt:      createdAt,
+		UpdatedAt:      createdAt,
+	}
+	if err := db.Create(order).Error; err != nil {
+		t.Fatalf("create order failed: %v", err)
+	}
+	item := &models.OrderItem{
+		OrderID:         order.ID,
+		ProductID:       product.ID,
+		TitleJSON:       models.JSON{"zh-CN": title},
+		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+		CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(cost)),
+		Quantity:        1,
+		TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+		CouponDiscount:  models.NewMoneyFromDecimal(decimal.Zero),
+		FulfillmentType: constants.FulfillmentTypeManual,
+		CreatedAt:       createdAt,
+		UpdatedAt:       createdAt,
+	}
+	if err := db.Create(item).Error; err != nil {
+		t.Fatalf("create order item failed: %v", err)
+	}
+	return order
+}

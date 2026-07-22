@@ -1,0 +1,145 @@
+package resellerhttp
+
+import (
+	"errors"
+
+	"github.com/dujiao-next/internal/dto"
+	"github.com/dujiao-next/internal/http/handlers/shared"
+	"github.com/dujiao-next/internal/http/response"
+	"github.com/dujiao-next/internal/models"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+
+	"github.com/gin-gonic/gin"
+)
+
+// ProfileDetailDirectory 是管理端分销商运营详情所需的只读目录端口。
+type ProfileDetailDirectory interface {
+	GetProfileByID(id uint) (*models.ResellerProfile, error)
+	ListDomainsByResellerID(resellerID uint) ([]models.ResellerDomain, error)
+	GetSiteConfigByResellerID(resellerID uint) (*models.ResellerSiteConfig, error)
+}
+
+// ProductSettingSummarizer 是管理端商品配置汇总端口。
+type ProductSettingSummarizer interface {
+	SummarizeAdminSettings(resellerID uint) (resellermodule.ProductSettingSummary, error)
+}
+
+// OrderAdminLister 是管理端分销订单只读列表端口。
+type OrderAdminLister interface {
+	ListAdminOrders(resellerID uint, input resellermodule.OrderListInput) ([]resellermodule.OrderListItem, int64, error)
+}
+
+// AdminProfileDetailHandler 处理后台分销商运营详情聚合。
+type AdminProfileDetailHandler struct {
+	directory ProfileDetailDirectory
+	products  ProductSettingSummarizer
+	finance   AdminFinanceService
+	orders    OrderAdminLister
+}
+
+func NewAdminProfileDetailHandler(
+	directory ProfileDetailDirectory,
+	products ProductSettingSummarizer,
+	finance AdminFinanceService,
+	orders OrderAdminLister,
+) *AdminProfileDetailHandler {
+	if directory == nil {
+		panic("reseller admin profile detail handler: directory is nil")
+	}
+	return &AdminProfileDetailHandler{
+		directory: directory,
+		products:  products,
+		finance:   finance,
+		orders:    orders,
+	}
+}
+
+// GetProfileDetail 管理端分销商运营详情。
+func (h *AdminProfileDetailHandler) GetProfileDetail(c *gin.Context) {
+	id, err := shared.ParseParamUint(c, "id")
+	if err != nil {
+		shared.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		return
+	}
+	profile, err := h.directory.GetProfileByID(id)
+	if err != nil {
+		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		return
+	}
+	if profile == nil {
+		shared.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
+		return
+	}
+	domains, err := h.directory.ListDomainsByResellerID(id)
+	if err != nil {
+		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		return
+	}
+	siteConfig, err := h.directory.GetSiteConfigByResellerID(id)
+	if err != nil {
+		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+		return
+	}
+	productSummary := resellermodule.ProductSettingSummary{}
+	if h.products != nil {
+		productSummary, err = h.products.SummarizeAdminSettings(id)
+		if err != nil {
+			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+			return
+		}
+	}
+	balances := make([]models.ResellerBalanceAccount, 0)
+	recentLedgerEntries := make([]models.ResellerLedgerEntry, 0)
+	recentWithdraws := make([]models.ResellerWithdrawRequest, 0)
+	if h.finance != nil {
+		balances, _, err = h.finance.ListAdminBalanceAccounts(resellermodule.AdminBalanceAccountListFilter{
+			Page:       1,
+			PageSize:   20,
+			ResellerID: id,
+		})
+		if err != nil {
+			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+			return
+		}
+		recentLedgerEntries, _, err = h.finance.ListAdminLedgerEntries(resellermodule.AdminLedgerListFilter{
+			Page:       1,
+			PageSize:   10,
+			ResellerID: id,
+		})
+		if err != nil {
+			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+			return
+		}
+		recentWithdraws, _, err = h.finance.ListAdminWithdrawRequests(resellermodule.AdminWithdrawListFilter{
+			Page:       1,
+			PageSize:   10,
+			ResellerID: id,
+		})
+		if err != nil {
+			shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+			return
+		}
+	}
+	recentOrders := make([]resellermodule.OrderListItem, 0)
+	if h.orders != nil {
+		recentOrders, _, err = h.orders.ListAdminOrders(id, resellermodule.OrderListInput{
+			Page:     1,
+			PageSize: 10,
+		})
+		if err != nil {
+			respondAdminProfileDetailError(c, err)
+			return
+		}
+	}
+	response.Success(c, dto.NewAdminResellerProfileDetailResp(profile, domains, siteConfig, productSummary, balances, recentOrders, recentLedgerEntries, recentWithdraws))
+}
+
+func respondAdminProfileDetailError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, catalogproduct.ErrNotFound):
+		shared.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
+	default:
+		shared.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
+	}
+}

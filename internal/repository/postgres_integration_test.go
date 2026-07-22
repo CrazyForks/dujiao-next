@@ -4,6 +4,8 @@
 package repository
 
 import (
+	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -11,6 +13,9 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/content"
+	contentgormstore "github.com/dujiao-next/internal/modules/content/store/gormstore"
+	dashboardgormstore "github.com/dujiao-next/internal/modules/dashboard/store/gormstore"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/driver/postgres"
@@ -35,6 +40,7 @@ func setupPostgresIntegrationDB(t *testing.T) *gorm.DB {
 		&models.OrderItem{},
 		&models.Payment{},
 		&models.Order{},
+		&models.PostProduct{},
 		&models.Product{},
 		&models.Category{},
 		&models.Banner{},
@@ -46,6 +52,7 @@ func setupPostgresIntegrationDB(t *testing.T) *gorm.DB {
 		&models.Category{},
 		&models.Product{},
 		&models.Post{},
+		&models.PostProduct{},
 		&models.Banner{},
 		&models.Order{},
 		&models.OrderItem{},
@@ -67,6 +74,7 @@ func setupPostgresIntegrationDB(t *testing.T) *gorm.DB {
 
 func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 	db := setupPostgresIntegrationDB(t)
+	ctx := context.Background()
 
 	category := &models.Category{
 		Slug:     "pg-category",
@@ -114,20 +122,21 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 		t.Fatalf("product list search en-US want 1 got total=%d len=%d", productTotal, len(productRows))
 	}
 
-	postRepo := NewPostRepository(db)
+	postStore := contentgormstore.NewPostStore(db)
 	post := &models.Post{
 		Slug:        "pg-post-release",
 		Type:        "notice",
 		TitleJSON:   models.JSON{"en-US": "Release Notes"},
 		IsPublished: true,
 	}
-	if err := postRepo.Create(post); err != nil {
+	if err := postStore.Create(ctx, post); err != nil {
 		t.Fatalf("create post failed: %v", err)
 	}
 
-	postRows, postTotal, err := postRepo.List(PostListFilter{
+	postRows, postTotal, err := postStore.List(ctx, content.PostQuery{
 		Page:   1,
 		Search: "Release",
+		Order:  content.PostOrderCreatedDesc,
 	})
 	if err != nil {
 		t.Fatalf("post list search failed: %v", err)
@@ -136,7 +145,7 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 		t.Fatalf("post list search want 1 got total=%d len=%d", postTotal, len(postRows))
 	}
 
-	bannerRepo := NewBannerRepository(db)
+	bannerStore := contentgormstore.NewBannerStore(db)
 	banner := &models.Banner{
 		Name:      "pg-home-banner",
 		Position:  "home",
@@ -145,11 +154,11 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 		LinkType:  "none",
 		IsActive:  true,
 	}
-	if err := bannerRepo.Create(banner); err != nil {
+	if err := bannerStore.Create(ctx, banner); err != nil {
 		t.Fatalf("create banner failed: %v", err)
 	}
 
-	bannerRows, bannerTotal, err := bannerRepo.List(BannerListFilter{
+	bannerRows, bannerTotal, err := bannerStore.List(ctx, content.BannerQuery{
 		Page:   1,
 		Search: "春季",
 	})
@@ -161,9 +170,111 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 	}
 }
 
+func TestPostgresContentGormStoresPreserveQuerySemantics(t *testing.T) {
+	db := setupPostgresIntegrationDB(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+	older := now.Add(-2 * time.Hour)
+	newer := now.Add(-time.Hour)
+
+	posts := []models.Post{
+		{Slug: "pg-content-older", Type: constants.PostTypeBlog, TitleJSON: models.JSON{"zh-CN": "模块化指南"}, IsPublished: true, PublishedAt: &older},
+		{Slug: "pg-content-newer", Type: constants.PostTypeBlog, TitleJSON: models.JSON{"zh-CN": "模块化指南新版"}, IsPublished: true, PublishedAt: &newer},
+		{Slug: "pg-content-draft", Type: constants.PostTypeBlog, TitleJSON: models.JSON{"zh-CN": "模块化指南草稿"}, IsPublished: false},
+	}
+	for index := range posts {
+		if err := db.Create(&posts[index]).Error; err != nil {
+			t.Fatalf("create postgres content post %q: %v", posts[index].Slug, err)
+		}
+	}
+
+	postStore := contentgormstore.NewPostStore(db)
+	modularPosts, modularTotal, err := postStore.List(ctx, content.PostQuery{
+		Page:          1,
+		PageSize:      20,
+		Type:          constants.PostTypeBlog,
+		Search:        "模块化",
+		OnlyPublished: true,
+		Order:         content.PostOrderPublishedDesc,
+	})
+	if err != nil {
+		t.Fatalf("modular postgres post query: %v", err)
+	}
+	if modularTotal != 2 || len(modularPosts) != 2 {
+		t.Fatalf("postgres post query should return two published rows, total=%d rows=%#v", modularTotal, modularPosts)
+	}
+	if modularPosts[0].Slug != "pg-content-newer" || modularPosts[1].Slug != "pg-content-older" {
+		t.Fatalf("postgres post publication order mismatch: %#v", modularPosts)
+	}
+
+	rollbackPost := &models.Post{
+		Slug:      "pg-content-rollback",
+		Type:      constants.PostTypeBlog,
+		TitleJSON: models.JSON{"zh-CN": "事务回滚"},
+	}
+	forcedRollback := errors.New("forced content transaction rollback")
+	err = postStore.WithinPostWriteTransaction(ctx, func(posts content.PostStore, relations content.PostProductRelationStore) error {
+		if createErr := posts.Create(ctx, rollbackPost); createErr != nil {
+			return createErr
+		}
+		if relationErr := relations.SetRelatedProductIDs(ctx, rollbackPost.ID, []uint{42}); relationErr != nil {
+			return relationErr
+		}
+		return forcedRollback
+	})
+	if !errors.Is(err, forcedRollback) {
+		t.Fatalf("postgres content transaction should return callback error, got %v", err)
+	}
+	var rollbackPostCount int64
+	if err := db.Model(&models.Post{}).Where("slug = ?", rollbackPost.Slug).Count(&rollbackPostCount).Error; err != nil {
+		t.Fatalf("count rolled back postgres content post: %v", err)
+	}
+	if rollbackPostCount != 0 {
+		t.Fatalf("postgres content transaction should roll back post, count=%d", rollbackPostCount)
+	}
+
+	banner := models.Banner{
+		Name:      "pg-content-banner",
+		Position:  constants.BannerPositionHomeHero,
+		TitleJSON: models.JSON{"en-US": "Modular launch"},
+		Image:     "/pg-content.png",
+		LinkType:  constants.BannerLinkTypeNone,
+		IsActive:  true,
+	}
+	if err := db.Create(&banner).Error; err != nil {
+		t.Fatalf("create postgres content banner: %v", err)
+	}
+	bannerStore := contentgormstore.NewBannerStore(db)
+	modularBanners, modularBannerTotal, err := bannerStore.List(ctx, content.BannerQuery{Page: 1, PageSize: 20, Search: "Modular"})
+	if err != nil {
+		t.Fatalf("modular postgres banner query: %v", err)
+	}
+	if modularBannerTotal != 1 || len(modularBanners) != 1 || modularBanners[0].ID != banner.ID {
+		t.Fatalf("postgres banner localized search mismatch total=%d rows=%#v", modularBannerTotal, modularBanners)
+	}
+
+	inactiveBanner := &models.Banner{
+		Name:     "pg-content-inactive-banner",
+		Position: constants.BannerPositionHomeHero,
+		Image:    "/pg-content-inactive.png",
+		LinkType: constants.BannerLinkTypeNone,
+		IsActive: false,
+	}
+	if err := bannerStore.Create(ctx, inactiveBanner); err != nil {
+		t.Fatalf("create inactive postgres content banner: %v", err)
+	}
+	var reloadedInactiveBanner models.Banner
+	if err := db.First(&reloadedInactiveBanner, inactiveBanner.ID).Error; err != nil {
+		t.Fatalf("reload inactive postgres content banner: %v", err)
+	}
+	if inactiveBanner.IsActive || reloadedInactiveBanner.IsActive {
+		t.Fatalf("explicit inactive postgres banner should stay inactive, returned=%t stored=%t", inactiveBanner.IsActive, reloadedInactiveBanner.IsActive)
+	}
+}
+
 func TestPostgresDashboardQueries(t *testing.T) {
 	db := setupPostgresIntegrationDB(t)
-	repo := NewDashboardRepository(db)
+	repo := dashboardgormstore.New(db)
 	now := time.Now().UTC().Truncate(time.Second)
 
 	category := &models.Category{

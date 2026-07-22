@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/compliance"
 	"github.com/dujiao-next/internal/repository"
-	"github.com/dujiao-next/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -16,13 +16,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func setupComplianceMW(t *testing.T) (*gin.Engine, *service.ComplianceService) {
+func setupComplianceMW(t *testing.T) (*gin.Engine, *compliance.Service) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(&models.Setting{}))
-	cs := service.NewComplianceService(repository.NewSettingRepository(db))
+	cs := compliance.NewService(repository.NewSettingRepository(db))
 
 	r := gin.New()
 	r.GET("/proto",
@@ -40,7 +40,7 @@ func setupComplianceMW(t *testing.T) (*gin.Engine, *service.ComplianceService) {
 
 func TestPaymentComplianceRequired_PassWhenAcked(t *testing.T) {
 	r, cs := setupComplianceMW(t)
-	require.NoError(t, cs.Acknowledge(service.AcknowledgeRequest{
+	require.NoError(t, cs.Acknowledge(compliance.AcknowledgeRequest{
 		Segment1: "我已阅读并理解上述合规声明提醒",
 		Segment2: "知悉相关法律风险",
 		Segment3: "并确认自行承担部署运营和收费行为产生的法律责任",

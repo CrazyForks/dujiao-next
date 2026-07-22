@@ -1,15 +1,17 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
+	"github.com/dujiao-next/internal/modules/siteconnection"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/upstream"
 	"github.com/glebarez/sqlite"
@@ -17,19 +19,21 @@ import (
 	"gorm.io/gorm"
 )
 
+type noopLocalMediaRecorder struct{}
+
+func (noopLocalMediaRecorder) RecordLocalFile(context.Context, string, string) {}
+
+func TestNewProductMappingServiceRejectsNilMediaRecorder(t *testing.T) {
+	if _, err := NewProductMappingService(nil, nil, nil, nil, nil, nil, nil); !errors.Is(err, ErrMediaRecorderRequired) {
+		t.Fatalf("error = %v, want ErrMediaRecorderRequired", err)
+	}
+}
+
 type failingSKUMappingRepo struct {
 	err error
 }
 
-func (r *failingSKUMappingRepo) GetByID(id uint) (*models.SKUMapping, error) {
-	return nil, nil
-}
-
 func (r *failingSKUMappingRepo) GetByLocalSKUID(skuID uint) (*models.SKUMapping, error) {
-	return nil, nil
-}
-
-func (r *failingSKUMappingRepo) GetByMappingAndUpstreamSKUID(productMappingID, upstreamSKUID uint) (*models.SKUMapping, error) {
 	return nil, nil
 }
 
@@ -53,16 +57,8 @@ func (r *failingSKUMappingRepo) Update(mapping *models.SKUMapping) error {
 	return nil
 }
 
-func (r *failingSKUMappingRepo) Delete(id uint) error {
-	return nil
-}
-
 func (r *failingSKUMappingRepo) DeleteByProductMapping(productMappingID uint) error {
 	return nil
-}
-
-func (r *failingSKUMappingRepo) BatchUpsert(mappings []models.SKUMapping) error {
-	return r.err
 }
 
 func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
@@ -81,7 +77,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	categoryRepo := repository.NewCategoryRepository(db)
+	categoryRepo := cataloggormstore.NewCategoryStore(db)
 	if err := categoryRepo.Create(&models.Category{
 		ParentID: 0,
 		Slug:     "test-category",
@@ -123,8 +119,8 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 	}))
 	defer server.Close()
 
-	connService := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-secret-key", t.TempDir())
-	conn, err := connService.Create(CreateConnectionInput{
+	connService := siteconnection.NewService(repository.NewSiteConnectionRepository(db), "test-secret-key", t.TempDir())
+	conn, err := connService.Create(siteconnection.CreateInput{
 		Name:      "upstream-a",
 		BaseURL:   server.URL,
 		ApiKey:    "test-key",
@@ -135,14 +131,18 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 		t.Fatalf("create connection failed: %v", err)
 	}
 
-	svc := NewProductMappingService(
+	svc, err := NewProductMappingService(
 		repository.NewProductMappingRepository(db),
 		&failingSKUMappingRepo{err: errors.New("inject sku mapping failure")},
 		repository.NewProductRepository(db),
 		repository.NewProductSKURepository(db),
 		categoryRepo,
 		connService,
+		noopLocalMediaRecorder{},
 	)
+	if err != nil {
+		t.Fatalf("create product mapping service: %v", err)
+	}
 
 	if _, err := svc.ImportUpstreamProduct(conn.ID, 101, 1, "rollback-slug"); err == nil {
 		t.Fatalf("expected import upstream product to fail")
@@ -193,7 +193,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 
 	server := httptest.NewServer(handler)
 
-	categoryRepo := repository.NewCategoryRepository(db)
+	categoryRepo := cataloggormstore.NewCategoryStore(db)
 	if err := categoryRepo.Create(&models.Category{Slug: "c", NameJSON: models.JSON{"zh-CN": "C"}}); err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
@@ -217,8 +217,8 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 		t.Fatalf("create sku failed: %v", err)
 	}
 
-	connService := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-secret-key", t.TempDir())
-	conn, err := connService.Create(CreateConnectionInput{
+	connService := siteconnection.NewService(repository.NewSiteConnectionRepository(db), "test-secret-key", t.TempDir())
+	conn, err := connService.Create(siteconnection.CreateInput{
 		Name:      "upstream",
 		BaseURL:   server.URL,
 		ApiKey:    "k",
@@ -251,7 +251,10 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 		t.Fatalf("create sku mapping failed: %v", err)
 	}
 
-	svc := NewProductMappingService(mappingRepo, skuMappingRepo, productRepo, skuRepo, categoryRepo, connService)
+	svc, err := NewProductMappingService(mappingRepo, skuMappingRepo, productRepo, skuRepo, categoryRepo, connService, noopLocalMediaRecorder{})
+	if err != nil {
+		t.Fatalf("create product mapping service: %v", err)
+	}
 	return svc, db, mapping, server.Close
 }
 
@@ -467,7 +470,7 @@ func TestSyncConnectionStockMarksDeletedWhenFullSyncMissing(t *testing.T) {
 	)
 	defer cleanup()
 
-	if err := svc.syncConnectionStock(mapping.ConnectionID, []models.ProductMapping{*mapping}, 50, 200); err != nil {
+	if err := svc.SyncConnectionStock(mapping.ConnectionID, []models.ProductMapping{*mapping}, 50, 200); err != nil {
 		t.Fatalf("syncConnectionStock returned error: %v", err)
 	}
 
@@ -500,7 +503,7 @@ func TestSyncConnectionStockKeepsLegacyUpstreamMissing(t *testing.T) {
 	)
 	defer cleanup()
 
-	if err := svc.syncConnectionStock(mapping.ConnectionID, []models.ProductMapping{*mapping}, 50, 200); err != nil {
+	if err := svc.SyncConnectionStock(mapping.ConnectionID, []models.ProductMapping{*mapping}, 50, 200); err != nil {
 		t.Fatalf("syncConnectionStock returned error: %v", err)
 	}
 
@@ -562,7 +565,7 @@ func TestSyncConnectionStockKeepsMappingWhenFullSyncIncomplete(t *testing.T) {
 	)
 	defer cleanup()
 
-	if err := svc.syncConnectionStock(mapping.ConnectionID, []models.ProductMapping{*mapping}, 50, 200); err != nil {
+	if err := svc.SyncConnectionStock(mapping.ConnectionID, []models.ProductMapping{*mapping}, 50, 200); err != nil {
 		t.Fatalf("syncConnectionStock returned error: %v", err)
 	}
 
@@ -752,7 +755,7 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	categoryRepo := repository.NewCategoryRepository(db)
+	categoryRepo := cataloggormstore.NewCategoryStore(db)
 	if err := categoryRepo.Create(&models.Category{Slug: "c", NameJSON: models.JSON{"zh-CN": "C"}}); err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
@@ -771,8 +774,8 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 	}))
 	defer server.Close()
 
-	connService := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-secret-key", t.TempDir())
-	conn, err := connService.Create(CreateConnectionInput{
+	connService := siteconnection.NewService(repository.NewSiteConnectionRepository(db), "test-secret-key", t.TempDir())
+	conn, err := connService.Create(siteconnection.CreateInput{
 		Name: "u", BaseURL: server.URL, ApiKey: "k", ApiSecret: "s",
 		Protocol: constants.ConnectionProtocolDujiaoNext,
 	})
@@ -780,14 +783,18 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 		t.Fatalf("create connection failed: %v", err)
 	}
 
-	svc := NewProductMappingService(
+	svc, err := NewProductMappingService(
 		repository.NewProductMappingRepository(db),
 		repository.NewSKUMappingRepository(db),
 		repository.NewProductRepository(db),
 		repository.NewProductSKURepository(db),
 		categoryRepo,
 		connService,
+		noopLocalMediaRecorder{},
 	)
+	if err != nil {
+		t.Fatalf("create product mapping service: %v", err)
+	}
 
 	_, importErr := svc.ImportUpstreamProduct(conn.ID, 202, 1, "")
 	if !errors.Is(importErr, ErrUpstreamProductNotFound) {
@@ -800,75 +807,5 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 	}
 	if productCount != 0 {
 		t.Fatalf("expected no local product created when import rejected, got %d", productCount)
-	}
-}
-
-// TestFindOrCreateLocalCategoryRestoresSoftDeleted 验证当存在同 slug 的软删除分类时，
-// 自动创建路径会复活该分类而非触发 UNIQUE 约束失败。
-func TestFindOrCreateLocalCategoryRestoresSoftDeleted(t *testing.T) {
-	dsn := "file:product_mapping_restore_soft_deleted?mode=memory&cache=shared"
-	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("open sqlite failed: %v", err)
-	}
-	if err := db.AutoMigrate(&models.Category{}); err != nil {
-		t.Fatalf("auto migrate failed: %v", err)
-	}
-
-	categoryRepo := repository.NewCategoryRepository(db)
-	categoryService := NewCategoryService(categoryRepo)
-
-	// 创建一个分类后软删除
-	existing := &models.Category{
-		ParentID: 0,
-		Slug:     "softdel-streaming",
-		NameJSON: models.JSON{"zh-CN": "旧名"},
-		IsActive: true,
-	}
-	if err := categoryRepo.Create(existing); err != nil {
-		t.Fatalf("create category failed: %v", err)
-	}
-	if err := categoryRepo.Delete(strconv.FormatUint(uint64(existing.ID), 10)); err != nil {
-		t.Fatalf("soft delete category failed: %v", err)
-	}
-
-	// 确认软删除后 GetBySlug 找不到，但 Unscoped 能找到
-	if got, err := categoryRepo.GetBySlug("softdel-streaming"); err != nil || got != nil {
-		t.Fatalf("expected slug to be invisible after soft delete, got=%v err=%v", got, err)
-	}
-
-	svc := &ProductMappingService{categoryRepo: categoryRepo}
-	svc.SetCategoryService(categoryService)
-
-	restored, err := svc.findOrCreateLocalCategory("softdel-streaming", models.JSON{"zh-CN": "新名"}, 0)
-	if err != nil {
-		t.Fatalf("findOrCreateLocalCategory failed: %v", err)
-	}
-	if restored == nil || restored.ID != existing.ID {
-		t.Fatalf("expected restored category id=%d, got=%+v", existing.ID, restored)
-	}
-
-	// 复活后应再次可见，且 NameJSON 已刷新
-	visible, err := categoryRepo.GetBySlug("softdel-streaming")
-	if err != nil {
-		t.Fatalf("GetBySlug after restore failed: %v", err)
-	}
-	if visible == nil {
-		t.Fatalf("expected category to be visible after restore")
-	}
-	if name, _ := visible.NameJSON["zh-CN"].(string); name != "新名" {
-		t.Fatalf("expected NameJSON refreshed to 新名, got %q", name)
-	}
-	if !visible.IsActive {
-		t.Fatalf("expected restored category to be active")
-	}
-
-	// 数据库中应该只有一行（且未被软删除）
-	var total int64
-	if err := db.Unscoped().Model(&models.Category{}).Where("slug = ?", "softdel-streaming").Count(&total).Error; err != nil {
-		t.Fatalf("count categories failed: %v", err)
-	}
-	if total != 1 {
-		t.Fatalf("expected 1 row for slug after restore, got %d", total)
 	}
 }

@@ -7,6 +7,8 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
+	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -46,8 +48,8 @@ func newProductServiceForResellerPublicTest(t *testing.T) (*ProductService, repo
 		repository.NewProductSKURepository(db),
 		repository.NewCardSecretRepository(db),
 		repository.NewCardSecretBatchRepository(db),
-		repository.NewCategoryRepository(db),
-		repository.NewMemberLevelPriceRepository(db),
+		cataloggormstore.NewCategoryStore(db),
+		memberlevelgormstore.NewPriceStore(db),
 		repository.NewCartRepository(db),
 		repository.NewProductMappingRepository(db),
 		repository.NewOrderRepository(db),

@@ -9,6 +9,10 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	"github.com/dujiao-next/internal/modules/coupon"
+	"github.com/dujiao-next/internal/modules/orderrisk"
+	"github.com/dujiao-next/internal/modules/promotion"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 
@@ -27,20 +31,35 @@ type OrderService struct {
 	productSKURepo          repository.ProductSKURepository
 	cardSecretRepo          repository.CardSecretRepository
 	resellerRepo            repository.ResellerRepository
-	couponRepo              repository.CouponRepository
-	couponUsageRepo         repository.CouponUsageRepository
-	promotionRepo           repository.PromotionRepository
+	couponRepo              orderCouponRepository
+	couponUsageRepo         orderCouponUsageRepository
+	promotionRepo           promotion.Repository
 	queueClient             orderQueueClient
 	settingService          *SettingService
 	defaultEmailConfig      config.EmailConfig
 	walletService           *WalletService
 	affiliateSvc            *AffiliateService
-	memberLevelService      *MemberLevelService
+	memberLevelService      OrderMemberLevelService
 	resellerPricingResolver *ResellerPricingResolver
 	resellerAccountingSvc   *ResellerAccountingService
-	riskControlSvc          *OrderRiskControlService
+	riskControlSvc          *orderrisk.Service
 	productMappingService   *ProductMappingService
 	expireMinutes           int
+}
+
+type OrderMemberLevelService interface {
+	ResolveMemberPrice(levelID, productID, skuID uint, basePrice decimal.Decimal) (decimal.Decimal, decimal.Decimal)
+	OnOrderPaid(userID uint, amount decimal.Decimal) error
+}
+
+type orderCouponRepository interface {
+	coupon.Repository
+	WithTx(tx *gorm.DB) coupon.Repository
+}
+
+type orderCouponUsageRepository interface {
+	coupon.UsageRepository
+	WithTx(tx *gorm.DB) coupon.UsageRepository
 }
 
 type orderQueueClient interface {
@@ -59,18 +78,18 @@ type OrderServiceOptions struct {
 	ProductSKURepo            repository.ProductSKURepository
 	CardSecretRepo            repository.CardSecretRepository
 	ResellerRepo              repository.ResellerRepository
-	CouponRepo                repository.CouponRepository
-	CouponUsageRepo           repository.CouponUsageRepository
-	PromotionRepo             repository.PromotionRepository
+	CouponRepo                orderCouponRepository
+	CouponUsageRepo           orderCouponUsageRepository
+	PromotionRepo             promotion.Repository
 	QueueClient               *queue.Client
 	SettingService            *SettingService
 	DefaultEmailConfig        config.EmailConfig
 	WalletService             *WalletService
 	AffiliateService          *AffiliateService
-	MemberLevelService        *MemberLevelService
+	MemberLevelService        OrderMemberLevelService
 	ResellerPricingResolver   *ResellerPricingResolver
 	ResellerAccountingService *ResellerAccountingService
-	RiskControlService        *OrderRiskControlService
+	RiskControlService        *orderrisk.Service
 	ProductMappingService     *ProductMappingService
 	ExpireMinutes             int
 }
@@ -397,7 +416,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 
 	// 风控检查（在锁库存之前）
 	if s.riskControlSvc != nil && !input.SkipRiskControl {
-		if err := s.riskControlSvc.CheckOrderAllowed(RiskCheckInput{
+		if err := s.riskControlSvc.CheckOrderAllowed(orderrisk.CheckInput{
 			UserID:      input.UserID,
 			GuestEmail:  input.GuestEmail,
 			ClientIP:    input.ClientIP,
@@ -599,7 +618,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 			}
 			if strings.TrimSpace(plan.Item.FulfillmentType) == constants.FulfillmentTypeManual &&
 				plan.SKU != nil &&
-				shouldEnforceManualSKUStock(plan.Product, plan.SKU) {
+				productdomain.ShouldEnforceManualSKUStock(plan.Product, plan.SKU) {
 				affected, err := productSKURepo.ReserveManualStock(plan.Item.SKUID, plan.Item.Quantity)
 				if err != nil {
 					return err

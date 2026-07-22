@@ -2,134 +2,155 @@ package service
 
 import (
 	"errors"
-	"strconv"
 
-	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/catalog"
+	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
+	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
+	"github.com/dujiao-next/internal/modules/siteconnection"
 	"github.com/dujiao-next/internal/repository"
+
+	"gorm.io/gorm"
 )
 
-// 文件组织约定:
-//   product_mapping_service.go        — 核心:struct/ctor/setters + 基础查询/CRUD + 错误定义
-//   product_mapping_import.go         — 单品导入 + 上游元数据列表 + 图片下载
-//   product_mapping_sync.go           — 同步流程(单品 / 全量库存)
-//   product_mapping_markup.go         — 加价重算
-//   product_mapping_batch_import.go   — 按上游分类批量导入
+// 商品映射实现已迁入 Catalog 上游映射上下文（internal/modules/catalog/mapping），
+// 持久化在 internal/modules/catalog/mapping/store/gormstore。
+// 本文件仅保留兼容门面：装配模块服务与导入事务工作单元。
 
+// 错误别名指向模块哨兵，保留现有调用方的 errors.Is 语义。
 var (
-	ErrMappingNotFound         = errors.New("product mapping not found")
-	ErrMappingAlreadyExists    = errors.New("product mapping already exists for this upstream product")
-	ErrUpstreamProductNotFound = errors.New("upstream product not found")
-	ErrMappingInactive         = errors.New("product mapping is inactive")
+	ErrMappingNotFound         = catalogmapping.ErrMappingNotFound
+	ErrMappingAlreadyExists    = catalogmapping.ErrMappingAlreadyExists
+	ErrUpstreamProductNotFound = catalogmapping.ErrUpstreamProductNotFound
+	ErrMappingInactive         = catalogmapping.ErrMappingInactive
+	ErrMediaRecorderRequired   = catalogmapping.ErrMediaRecorderRequired
 )
 
-// ProductMappingService 商品映射业务服务
+// LocalMediaRecorder 是 ProductMapping 下载图片后所需的最小 Content 写入接口。
+type LocalMediaRecorder = catalogmapping.MediaRecorder
+
+type BatchUpstreamProductImportOutcome = catalogmapping.BatchUpstreamProductImportOutcome
+type BatchImportByCategoryResult = catalogmapping.BatchImportByCategoryResult
+
+// ProductMappingService 商品映射业务服务（兼容门面）
 type ProductMappingService struct {
-	mappingRepo     repository.ProductMappingRepository
-	skuMappingRepo  repository.SKUMappingRepository
-	productRepo     repository.ProductRepository
-	productSKURepo  repository.ProductSKURepository
-	categoryRepo    repository.CategoryRepository
-	connService     *SiteConnectionService
-	categoryService *CategoryService
-	mediaService    *MediaService
-	settingService  *SettingService
+	*catalogmapping.Service
 }
 
 // NewProductMappingService 创建商品映射服务
 func NewProductMappingService(
-	mappingRepo repository.ProductMappingRepository,
-	skuMappingRepo repository.SKUMappingRepository,
+	mappingRepo catalogmapping.MappingRepository,
+	skuMappingRepo catalogmapping.SKUMappingRepository,
 	productRepo repository.ProductRepository,
 	productSKURepo repository.ProductSKURepository,
-	categoryRepo repository.CategoryRepository,
-	connService *SiteConnectionService,
-) *ProductMappingService {
-	return &ProductMappingService{
-		mappingRepo:    mappingRepo,
-		skuMappingRepo: skuMappingRepo,
-		productRepo:    productRepo,
-		productSKURepo: productSKURepo,
-		categoryRepo:   categoryRepo,
-		connService:    connService,
+	categoryRepo catalog.CategoryRepository,
+	connService *siteconnection.Service,
+	mediaRecorder LocalMediaRecorder,
+) (*ProductMappingService, error) {
+	core, err := catalogmapping.NewService(catalogmapping.Options{
+		Mappings:     mappingRepo,
+		SKUMappings:  skuMappingRepo,
+		Products:     productRepo,
+		SKUs:         productSKURepo,
+		Categories:   categoryRepo,
+		Connections:  connService,
+		Media:        mediaRecorder,
+		Transactions: newProductMappingUnitOfWork(productRepo, productSKURepo, mappingRepo, skuMappingRepo),
+		Errors: catalogmapping.ErrorSet{
+			ConnectionNotFound:     siteconnection.ErrNotFound,
+			ProductCategoryInvalid: ErrProductCategoryInvalid,
+		},
+	})
+	if err != nil {
+		return nil, err
 	}
+	return &ProductMappingService{Service: core}, nil
 }
 
 // SetCategoryService 设置分类服务（避免循环依赖）
-func (s *ProductMappingService) SetCategoryService(cs *CategoryService) {
-	s.categoryService = cs
-}
-
-// SetMediaService 设置素材服务（避免循环依赖）
-func (s *ProductMappingService) SetMediaService(ms *MediaService) {
-	s.mediaService = ms
+func (s *ProductMappingService) SetCategoryService(cs *catalog.CategoryService) {
+	if cs == nil {
+		return
+	}
+	s.Service.SetCategoryCreator(cs)
 }
 
 // SetSettingService 注入设置服务（用于读取上游同步动态配置）
 func (s *ProductMappingService) SetSettingService(ss *SettingService) {
-	s.settingService = ss
+	if ss == nil {
+		return
+	}
+	s.Service.SetSettings(ss)
 }
 
-// GetByID 获取映射详情
-func (s *ProductMappingService) GetByID(id uint) (*models.ProductMapping, error) {
-	return s.mappingRepo.GetByID(id)
+// productMappingUnitOfWork 把商品事务与映射端口绑定收口在兼容边界内。
+type productMappingUnitOfWork struct {
+	products    repository.ProductRepository
+	skus        repository.ProductSKURepository
+	mappings    catalogmapping.MappingRepository
+	skuMappings catalogmapping.SKUMappingRepository
 }
 
-// List 列表查询映射
-func (s *ProductMappingService) List(filter repository.ProductMappingListFilter) ([]models.ProductMapping, int64, error) {
-	return s.mappingRepo.List(filter)
+func newProductMappingUnitOfWork(
+	products repository.ProductRepository,
+	skus repository.ProductSKURepository,
+	mappings catalogmapping.MappingRepository,
+	skuMappings catalogmapping.SKUMappingRepository,
+) catalogmapping.UnitOfWork {
+	return &productMappingUnitOfWork{
+		products:    products,
+		skus:        skus,
+		mappings:    mappings,
+		skuMappings: skuMappings,
+	}
 }
 
-// SetActive 启用/禁用映射
-func (s *ProductMappingService) SetActive(id uint, active bool) error {
-	mapping, err := s.mappingRepo.GetByID(id)
-	if err != nil {
-		return err
+func (unit *productMappingUnitOfWork) WithinTransaction(fn func(catalogmapping.ImportRepositories) error) error {
+	if fn == nil {
+		return nil
 	}
-	if mapping == nil {
-		return ErrMappingNotFound
+	if unit == nil || unit.products == nil {
+		return errors.New("product transaction repository is nil")
 	}
-	mapping.IsActive = active
-	return s.mappingRepo.Update(mapping)
-}
-
-// Delete 删除映射（不删除本地商品）
-func (s *ProductMappingService) Delete(id uint) error {
-	mapping, err := s.mappingRepo.GetByID(id)
-	if err != nil {
-		return err
-	}
-	if mapping == nil {
-		return ErrMappingNotFound
-	}
-
-	// 删除 SKU 映射
-	if err := s.skuMappingRepo.DeleteByProductMapping(id); err != nil {
-		return err
-	}
-
-	// 还原本地商品状态：取消映射标记、交付类型改回 manual、自动下架
-	if mapping.LocalProductID > 0 {
-		localProduct, err := s.productRepo.GetByID(strconv.FormatUint(uint64(mapping.LocalProductID), 10))
-		if err == nil && localProduct != nil {
-			localProduct.IsMapped = false
-			if localProduct.FulfillmentType == constants.FulfillmentTypeUpstream {
-				localProduct.FulfillmentType = constants.FulfillmentTypeManual
-				localProduct.IsActive = false // 下架，防止用户下单后无法交付
-			}
-			_ = s.productRepo.Update(localProduct)
+	return unit.products.Transaction(func(tx *gorm.DB) error {
+		var skus catalogmapping.ImportTxSKURepository
+		if unit.skus != nil {
+			skus = unit.skus.WithTx(tx)
 		}
+		return fn(catalogmapping.ImportRepositories{
+			Products:    unit.products.WithTx(tx),
+			SKUs:        skus,
+			Mappings:    bindMappingImportTx(unit.mappings, tx),
+			SKUMappings: bindSKUMappingImportTx(unit.skuMappings, tx),
+		})
+	})
+}
+
+func bindMappingImportTx(repo catalogmapping.MappingRepository, tx *gorm.DB) catalogmapping.ImportTxMappingRepository {
+	switch binder := repo.(type) {
+	case interface {
+		WithTx(tx *gorm.DB) *mappinggormstore.MappingStore
+	}:
+		return binder.WithTx(tx)
+	case interface {
+		WithTx(tx *gorm.DB) repository.ProductMappingRepository
+	}:
+		return binder.WithTx(tx)
+	default:
+		return repo
 	}
-
-	return s.mappingRepo.Delete(id)
 }
 
-// GetSKUMappings 获取映射的 SKU 映射列表
-func (s *ProductMappingService) GetSKUMappings(mappingID uint) ([]models.SKUMapping, error) {
-	return s.skuMappingRepo.ListByProductMapping(mappingID)
-}
-
-// GetMappedUpstreamIDs 获取指定连接下所有已映射的上游商品 ID
-func (s *ProductMappingService) GetMappedUpstreamIDs(connectionID uint) ([]uint, error) {
-	return s.mappingRepo.ListUpstreamIDsByConnection(connectionID)
+func bindSKUMappingImportTx(repo catalogmapping.SKUMappingRepository, tx *gorm.DB) catalogmapping.ImportTxSKUMappingRepository {
+	switch binder := repo.(type) {
+	case interface {
+		WithTx(tx *gorm.DB) *mappinggormstore.SKUMappingStore
+	}:
+		return binder.WithTx(tx)
+	case interface {
+		WithTx(tx *gorm.DB) repository.SKUMappingRepository
+	}:
+		return binder.WithTx(tx)
+	default:
+		return repo
+	}
 }

@@ -8,87 +8,21 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
 // ResellerOperationsRepository provides read-only reseller operations aggregates.
-type ResellerOperationsRepository interface {
-	GetOverview(startAt, endAt time.Time) (ResellerOperationsOverviewRow, error)
-	GetFinance(startAt, endAt time.Time) (ResellerOperationsFinanceRowSet, error)
-}
+type ResellerOperationsRepository = resellermodule.OperationsStore
 
-type ResellerOperationsLifecycleRow struct {
-	ProfilesTotal                   int64
-	ProfilesPendingReview           int64
-	ProfilesActive                  int64
-	ProfilesRejected                int64
-	ProfilesDisabled                int64
-	ProfilesSettlementFrozen        int64
-	DomainsTotal                    int64
-	DomainsPendingReview            int64
-	DomainsActive                   int64
-	DomainsDisabled                 int64
-	DomainsPendingVerification      int64
-	DomainsVerified                 int64
-	CustomDomains                   int64
-	Subdomains                      int64
-	SiteConfigsTotal                int64
-	ActiveProfilesWithoutSiteConfig int64
-}
-
-type ResellerOperationsOrdersRow struct {
-	OrdersTotal               int64
-	PaidOrders                int64
-	CompletedOrders           int64
-	RefundedOrders            int64
-	SelfDealingBlockedOrders  int64
-	ActiveResellersWithOrders int64
-}
-
-type ResellerOperationsTopResellerRow struct {
-	ResellerID     uint
-	UserID         uint
-	Email          string
-	DisplayName    string
-	OrdersTotal    int64
-	PaidOrders     int64
-	ActiveDomains  int64
-	SiteConfigured bool
-	LastOrderAt    *time.Time
-}
-
-type ResellerOperationsOverviewRow struct {
-	Lifecycle    ResellerOperationsLifecycleRow
-	Orders       ResellerOperationsOrdersRow
-	TopResellers []ResellerOperationsTopResellerRow
-}
-
-type ResellerOperationsPeriodCurrencyRow struct {
-	Currency       string
-	OrdersTotal    int64
-	PaidOrders     int64
-	GMVPaid        decimal.Decimal
-	ProfitEarned   decimal.Decimal
-	RefundDeducted decimal.Decimal
-	WithdrawPaid   decimal.Decimal
-}
-
-type ResellerOperationsCurrentCurrencyRow struct {
-	Currency                string
-	AvailableBalance        decimal.Decimal
-	LockedBalance           decimal.Decimal
-	NegativeBalance         decimal.Decimal
-	PendingWithdrawCount    int64
-	PendingWithdrawAmount   decimal.Decimal
-	NegativeBalanceAccounts int64
-	FrozenBalanceAccounts   int64
-}
-
-type ResellerOperationsFinanceRowSet struct {
-	PeriodCurrencyRows  []ResellerOperationsPeriodCurrencyRow
-	CurrentCurrencyRows []ResellerOperationsCurrentCurrencyRow
-}
+type ResellerOperationsLifecycleRow = resellermodule.OperationsLifecycleRow
+type ResellerOperationsOrdersRow = resellermodule.OperationsOrdersRow
+type ResellerOperationsTopResellerRow = resellermodule.OperationsTopResellerRow
+type ResellerOperationsOverviewRow = resellermodule.OperationsOverviewRow
+type ResellerOperationsPeriodCurrencyRow = resellermodule.OperationsPeriodCurrencyRow
+type ResellerOperationsCurrentCurrencyRow = resellermodule.OperationsCurrentCurrencyRow
+type ResellerOperationsFinanceRowSet = resellermodule.OperationsFinanceRowSet
 
 type GormResellerOperationsRepository struct {
 	db *gorm.DB

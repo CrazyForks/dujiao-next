@@ -3,13 +3,15 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"log"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/glebarez/sqlite" // 纯 Go SQLite 驱动（基于 modernc.org/sqlite）
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
@@ -33,7 +35,7 @@ type DBPoolConfig struct {
 }
 
 // InitDB 初始化数据库连接
-func InitDB(driver, dsn string, pool DBPoolConfig) error {
+func InitDB(driver, dsn string, pool DBPoolConfig, mode string) error {
 	var err error
 	normalized := strings.ToLower(strings.TrimSpace(driver))
 	var dialector gorm.Dialector
@@ -48,7 +50,7 @@ func InitDB(driver, dsn string, pool DBPoolConfig) error {
 		return fmt.Errorf("unsupported database driver: %s", driver)
 	}
 	DB, err = gorm.Open(dialector, &gorm.Config{
-		Logger:  logger.Default.LogMode(logger.Info),
+		Logger:  newGORMLogger(mode, nil),
 		NowFunc: func() time.Time { return time.Now().UTC() },
 	})
 	if err != nil {
@@ -68,6 +70,22 @@ func InitDB(driver, dsn string, pool DBPoolConfig) error {
 		DB.Exec("PRAGMA synchronous=NORMAL")
 	}
 	return nil
+}
+
+func newGORMLogger(mode string, writer gormlogger.Writer) gormlogger.Interface {
+	if !strings.EqualFold(strings.TrimSpace(mode), "release") {
+		return gormlogger.Default.LogMode(gormlogger.Info)
+	}
+	if writer == nil {
+		writer = log.New(os.Stdout, "\r\n", log.LstdFlags)
+	}
+	return gormlogger.New(writer, gormlogger.Config{
+		SlowThreshold:             2 * time.Second,
+		LogLevel:                  gormlogger.Warn,
+		IgnoreRecordNotFoundError: true,
+		ParameterizedQueries:      true,
+		Colorful:                  false,
+	})
 }
 
 // appendSQLitePragmas 在 SQLite DSN 中追加关键 PRAGMA 参数

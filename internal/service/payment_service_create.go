@@ -1,0 +1,340 @@
+package service
+
+import (
+	"context"
+	"strings"
+	"time"
+
+	"github.com/dujiao-next/internal/constants"
+	"github.com/dujiao-next/internal/models"
+
+	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
+)
+
+// CreatePaymentInput 创建支付请求
+type CreatePaymentInput struct {
+	OrderID          uint
+	ChannelID        uint
+	UseBalance       bool
+	ClientIP         string
+	Context          context.Context
+	ReturnBizType    string
+	ReturnBusinessNo string
+	ReturnGuest      bool
+	// RequestScheme 当前请求的 scheme（http/https），用于分销站动态生成 return_url；空值默认 https。
+	RequestScheme string
+}
+
+// CreatePaymentResult 创建支付结果
+type CreatePaymentResult struct {
+	Payment          *models.Payment
+	Channel          *models.PaymentChannel
+	OrderPaid        bool
+	WalletPaidAmount models.Money
+	OnlinePayAmount  models.Money
+}
+
+func hasProviderResult(payment *models.Payment) bool {
+	if payment == nil {
+		return false
+	}
+	return strings.TrimSpace(payment.PayURL) != "" || strings.TrimSpace(payment.QRCode) != ""
+}
+
+// CreatePayment 创建支付单
+func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePaymentResult, error) {
+	if input.OrderID == 0 {
+		return nil, ErrPaymentInvalid
+	}
+
+	log := paymentLogger(
+		"order_id", input.OrderID,
+		"channel_id", input.ChannelID,
+	)
+
+	var payment *models.Payment
+	var order *models.Order
+	var channel *models.PaymentChannel
+	feeRate := decimal.Zero
+	reusedPending := false
+	orderPaidByWallet := false
+	now := time.Now()
+
+	// 在事务外查询设置，避免 SQLite 单连接池下自锁
+	walletOnly := s.settingService != nil && s.settingService.GetWalletOnlyPayment()
+	if walletOnly {
+		input.UseBalance = true
+		if input.ChannelID != 0 {
+			return nil, ErrWalletOnlyPaymentRequired
+		}
+	}
+
+	err := s.paymentRepo.Transaction(func(tx *gorm.DB) error {
+		preloaded, err := s.orderRepo.WithTx(tx).GetByIDForUpdateWithChildren(input.OrderID)
+		if err != nil {
+			return ErrOrderFetchFailed
+		}
+		if preloaded == nil {
+			return ErrOrderNotFound
+		}
+		lockedOrder := *preloaded
+		if lockedOrder.ParentID != nil {
+			return ErrPaymentInvalid
+		}
+		if lockedOrder.Status != constants.OrderStatusPendingPayment {
+			return ErrOrderStatusInvalid
+		}
+		if lockedOrder.ExpiresAt != nil && !lockedOrder.ExpiresAt.After(time.Now()) {
+			return ErrOrderStatusInvalid
+		}
+
+		paymentRepo := s.paymentRepo.WithTx(tx)
+		channelRepo := s.channelRepo.WithTx(tx)
+		if input.ChannelID != 0 {
+			if channel == nil {
+				// 事务内必须使用 tx 绑定仓储，避免在单连接池下发生自锁等待。
+				resolvedChannel, err := channelRepo.GetByID(input.ChannelID)
+				if err != nil {
+					return err
+				}
+				if resolvedChannel == nil {
+					return ErrPaymentChannelNotFound
+				}
+				if !resolvedChannel.IsActive {
+					return ErrPaymentChannelInactive
+				}
+				resolvedFeeRate := resolvedChannel.FeeRate.Decimal.Round(2)
+				if resolvedFeeRate.LessThan(decimal.Zero) || resolvedFeeRate.GreaterThan(decimal.NewFromInt(100)) {
+					return ErrPaymentChannelConfigInvalid
+				}
+				channel = resolvedChannel
+				feeRate = resolvedFeeRate
+			}
+
+			// 校验商品是否允许该支付渠道（传入 tx 避免 SQLite 自锁）
+			allItems := lockedOrder.Items
+			for _, child := range lockedOrder.Children {
+				allItems = append(allItems, child.Items...)
+			}
+			if err := s.validateProductPaymentChannel(allItems, channel.ID, tx); err != nil {
+				return err
+			}
+
+			existing, err := paymentRepo.GetLatestPendingByOrderChannel(lockedOrder.ID, channel.ID, time.Now())
+			if err != nil {
+				return ErrPaymentCreateFailed
+			}
+			if existing != nil && hasProviderResult(existing) {
+				reusedPending = true
+				payment = existing
+				order = &lockedOrder
+				return nil
+			}
+		}
+
+		if s.walletSvc != nil {
+			if input.UseBalance {
+				if _, err := s.walletSvc.ApplyOrderBalance(tx, &lockedOrder, true); err != nil {
+					return err
+				}
+			} else if lockedOrder.WalletPaidAmount.Decimal.GreaterThan(decimal.Zero) {
+				if _, err := s.walletSvc.ReleaseOrderBalance(tx, &lockedOrder, constants.WalletTxnTypeOrderRefund, "用户改为在线支付，退回余额"); err != nil {
+					return err
+				}
+			}
+		}
+
+		onlineAmount := normalizeOrderAmount(lockedOrder.TotalAmount.Decimal.Sub(lockedOrder.WalletPaidAmount.Decimal))
+		if onlineAmount.LessThanOrEqual(decimal.Zero) {
+			walletPaidAmount := normalizeOrderAmount(lockedOrder.WalletPaidAmount.Decimal)
+			paidAt := time.Now()
+			payment = &models.Payment{
+				OrderID:         lockedOrder.ID,
+				ChannelID:       0,
+				ProviderType:    constants.PaymentProviderWallet,
+				ChannelType:     constants.PaymentChannelTypeBalance,
+				InteractionMode: constants.PaymentInteractionBalance,
+				Amount:          models.NewMoneyFromDecimal(walletPaidAmount),
+				FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
+				FixedFee:        models.NewMoneyFromDecimal(decimal.Zero),
+				FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+				Currency:        lockedOrder.Currency,
+				Status:          constants.PaymentStatusSuccess,
+				CreatedAt:       paidAt,
+				UpdatedAt:       paidAt,
+				PaidAt:          &paidAt,
+			}
+			if err := paymentRepo.Create(payment); err != nil {
+				return ErrPaymentCreateFailed
+			}
+			if err := s.markOrderPaid(tx, &lockedOrder, paidAt); err != nil {
+				return err
+			}
+			orderPaidByWallet = true
+			order = &lockedOrder
+			return nil
+		}
+		if channel == nil {
+			if walletOnly {
+				return ErrWalletOnlyPaymentRequired
+			}
+			return ErrPaymentInvalid
+		}
+		if err := validatePaymentCurrencyForChannel(lockedOrder.Currency, channel); err != nil {
+			return err
+		}
+		if err := validatePaymentAmountForChannel(onlineAmount, channel); err != nil {
+			return err
+		}
+
+		fixedFee := decimal.Zero
+		if channel.FixedFee.Decimal.GreaterThan(decimal.Zero) {
+			fixedFee = channel.FixedFee.Decimal.Round(2)
+		}
+
+		feeAmount := fixedFee
+		if feeRate.GreaterThan(decimal.Zero) {
+			feeAmount = feeAmount.Add(onlineAmount.Mul(feeRate).Div(decimal.NewFromInt(100))).Round(2)
+		}
+		payableAmount := onlineAmount.Add(feeAmount).Round(2)
+		payment = &models.Payment{
+			OrderID:         lockedOrder.ID,
+			ChannelID:       channel.ID,
+			ProviderType:    channel.ProviderType,
+			ChannelType:     channel.ChannelType,
+			InteractionMode: channel.InteractionMode,
+			Amount:          models.NewMoneyFromDecimal(payableAmount),
+			FeeRate:         models.NewMoneyFromDecimal(feeRate),
+			FixedFee:        models.NewMoneyFromDecimal(fixedFee),
+			FeeAmount:       models.NewMoneyFromDecimal(feeAmount),
+			Currency:        lockedOrder.Currency,
+			Status:          constants.PaymentStatusInitiated,
+			CreatedAt:       now,
+			UpdatedAt:       now,
+		}
+		if shouldUseCNYPaymentCurrency(channel) {
+			payment.Currency = "CNY"
+		}
+
+		if err := paymentRepo.Create(payment); err != nil {
+			return ErrPaymentCreateFailed
+		}
+		if err := s.orderRepo.WithTx(tx).UpdateFields(lockedOrder.ID, map[string]interface{}{
+			"online_paid_amount": models.NewMoneyFromDecimal(onlineAmount),
+			"updated_at":         time.Now(),
+		}); err != nil {
+			return ErrOrderUpdateFailed
+		}
+		lockedOrder.OnlinePaidAmount = models.NewMoneyFromDecimal(onlineAmount)
+		lockedOrder.UpdatedAt = time.Now()
+		order = &lockedOrder
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if order == nil {
+		return nil, ErrOrderFetchFailed
+	}
+
+	if reusedPending {
+		log.Infow("payment_create_reuse_pending",
+			"payment_id", payment.ID,
+			"provider_type", payment.ProviderType,
+			"channel_type", payment.ChannelType,
+		)
+		return &CreatePaymentResult{
+			Payment:          payment,
+			Channel:          channel,
+			WalletPaidAmount: order.WalletPaidAmount,
+			OnlinePayAmount:  order.OnlinePaidAmount,
+		}, nil
+	}
+
+	if orderPaidByWallet {
+		log.Infow("payment_create_wallet_success",
+			"payment_id", payment.ID,
+			"provider_type", payment.ProviderType,
+			"channel_type", payment.ChannelType,
+			"interaction_mode", payment.InteractionMode,
+			"currency", payment.Currency,
+			"amount", payment.Amount.String(),
+			"wallet_paid_amount", order.WalletPaidAmount.String(),
+			"online_pay_amount", order.OnlinePaidAmount.String(),
+		)
+		s.enqueueOrderPaidAsync(order, payment, log)
+		return &CreatePaymentResult{
+			Payment:          nil,
+			Channel:          nil,
+			OrderPaid:        true,
+			WalletPaidAmount: order.WalletPaidAmount,
+			OnlinePayAmount:  models.NewMoneyFromDecimal(decimal.Zero),
+		}, nil
+	}
+
+	if payment == nil {
+		return nil, ErrPaymentCreateFailed
+	}
+
+	if err := s.applyProviderPayment(input, order, channel, payment); err != nil {
+		rollbackErr := s.paymentRepo.Transaction(func(tx *gorm.DB) error {
+			paymentRepo := s.paymentRepo.WithTx(tx)
+			payment.Status = constants.PaymentStatusFailed
+			payment.UpdatedAt = time.Now()
+			if updateErr := paymentRepo.Update(payment); updateErr != nil {
+				return updateErr
+			}
+			if s.walletSvc == nil {
+				return nil
+			}
+			preloaded, findErr := s.orderRepo.WithTx(tx).GetByIDForUpdate(order.ID)
+			if findErr != nil {
+				return findErr
+			}
+			if preloaded == nil {
+				return ErrOrderNotFound
+			}
+			lockedOrder := *preloaded
+			_, refundErr := s.walletSvc.ReleaseOrderBalance(tx, &lockedOrder, constants.WalletTxnTypeOrderRefund, "在线支付创建失败，退回余额")
+			return refundErr
+		})
+		if rollbackErr != nil {
+			log.Errorw("payment_create_provider_failed_with_rollback_error",
+				"payment_id", payment.ID,
+				"order_id", order.ID,
+				"provider_type", payment.ProviderType,
+				"channel_type", payment.ChannelType,
+				"provider_error", err,
+				"rollback_error", rollbackErr,
+			)
+		} else {
+			log.Errorw("payment_create_provider_failed",
+				"payment_id", payment.ID,
+				"provider_type", payment.ProviderType,
+				"channel_type", payment.ChannelType,
+				"error", err,
+			)
+		}
+		return nil, err
+	}
+
+	log.Infow("payment_create_success",
+		"payment_id", payment.ID,
+		"provider_type", payment.ProviderType,
+		"channel_type", payment.ChannelType,
+		"interaction_mode", payment.InteractionMode,
+		"currency", payment.Currency,
+		"amount", payment.Amount.String(),
+		"wallet_paid_amount", order.WalletPaidAmount.String(),
+		"online_pay_amount", order.OnlinePaidAmount.String(),
+	)
+
+	return &CreatePaymentResult{
+		Payment:          payment,
+		Channel:          channel,
+		WalletPaidAmount: order.WalletPaidAmount,
+		OnlinePayAmount:  order.OnlinePaidAmount,
+	}, nil
+}

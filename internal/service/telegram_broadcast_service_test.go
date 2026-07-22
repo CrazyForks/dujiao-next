@@ -8,6 +8,8 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	cryptoutil "github.com/dujiao-next/internal/crypto"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/channelclient"
+	telegrammodule "github.com/dujiao-next/internal/modules/telegram"
 	"github.com/dujiao-next/internal/repository"
 	"gorm.io/gorm"
 )
@@ -153,10 +155,10 @@ func (r *channelClientRepoStub) Delete(client *models.ChannelClient) error {
 
 type telegramSenderStub struct {
 	failures map[string]error
-	calls    []TelegramSendOptions
+	calls    []telegrammodule.SendOptions
 }
 
-func (s *telegramSenderStub) SendWithBotToken(ctx context.Context, botToken string, options TelegramSendOptions) error {
+func (s *telegramSenderStub) SendWithBotToken(ctx context.Context, botToken string, options telegrammodule.SendOptions) error {
 	s.calls = append(s.calls, options)
 	if err, ok := s.failures[options.ChatID]; ok {
 		return err
@@ -169,7 +171,7 @@ func TestTelegramBroadcastServiceCreateBroadcastValidation(t *testing.T) {
 		repo:                  &telegramBroadcastRepoStub{},
 		userOAuthIdentityRepo: &telegramUserRepoStub{},
 		channelClientRepo:     &channelClientRepoStub{},
-		channelClientService:  NewChannelClientService(&channelClientRepoStub{}, "test-secret"),
+		channelClientService:  channelclient.NewService(&channelClientRepoStub{}, "test-secret"),
 		telegramSender:        &telegramSenderStub{},
 	}
 
@@ -228,7 +230,7 @@ func TestTelegramBroadcastServiceProcessBroadcastUpdatesStats(t *testing.T) {
 		repo:                  repo,
 		userOAuthIdentityRepo: &telegramUserRepoStub{},
 		channelClientRepo:     channelRepo,
-		channelClientService:  NewChannelClientService(channelRepo, "test-secret"),
+		channelClientService:  channelclient.NewService(channelRepo, "test-secret"),
 		telegramSender:        sender,
 	}
 

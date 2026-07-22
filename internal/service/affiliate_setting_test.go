@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
+	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 )
 
 func TestGetAffiliateSettingFallback(t *testing.T) {
@@ -35,7 +36,7 @@ func TestUpdateAffiliateSettingNormalize(t *testing.T) {
 	repo := newMockSettingRepo()
 	svc := NewSettingService(repo)
 
-	setting, err := svc.UpdateAffiliateSetting(AffiliateSetting{
+	setting, err := svc.UpdateAffiliateSetting(settingsmodule.AffiliateSetting{
 		Enabled:           true,
 		CommissionRate:    123.456,
 		ConfirmDays:       -10,

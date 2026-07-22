@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"time"
@@ -12,6 +13,14 @@ import (
 
 	"go.uber.org/zap"
 )
+
+// WebhookCallbackInput Webhook 回调输入。
+type WebhookCallbackInput struct {
+	ChannelID uint
+	Headers   map[string]string
+	Body      []byte
+	Context   context.Context
+}
 
 // HandleSyncCallback 处理同步 form callback（alipay/epay/epusdt/bepusdt/tokenpay/okpay）。
 // 通过 Registry 找到 adapter 的 CallbackVerifier 能力解析并验签 form/body，然后调 HandleCallback。

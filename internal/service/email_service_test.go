@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
+	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 
 	"github.com/shopspring/decimal"
 )
@@ -239,7 +240,7 @@ func TestSendTextEmailSkipTelegramPlaceholder(t *testing.T) {
 }
 
 func TestBuildOrderStatusContentFromTemplateIncludesSiteBrand(t *testing.T) {
-	tmpl := OrderEmailTemplateDefaultSetting()
+	tmpl := settingsmodule.DefaultOrderEmailTemplateSetting()
 	tmpl.Templates.Paid.ZHCN.Subject = "订单通知 {{site_name}}"
 	tmpl.Templates.Paid.ZHCN.Body = "订单号：{{order_no}}\n站点：{{site_name}} {{site_url}}"
 

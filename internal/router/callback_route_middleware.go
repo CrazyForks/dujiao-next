@@ -5,9 +5,10 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	publichandlers "github.com/dujiao-next/internal/http/handlers/public"
-	upstreamhandlers "github.com/dujiao-next/internal/http/handlers/upstream"
 	"github.com/dujiao-next/internal/service"
+	paymenttransport "github.com/dujiao-next/internal/transport/http/payment"
+	paymentcallbacktransport "github.com/dujiao-next/internal/transport/http/payment/callback"
+	upstreamtransport "github.com/dujiao-next/internal/transport/http/upstream"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,8 +29,9 @@ var defaultCallbackPaths = map[string]bool{
 //   - 未配置自定义路由 → 放行，默认路由正常工作
 func CallbackRouteMiddleware(
 	settingService *service.SettingService,
-	publicHandler *publichandlers.Handler,
-	upstreamHandler *upstreamhandlers.Handler,
+	callbackHandler *paymentcallbacktransport.Handler,
+	webhookHandler *paymenttransport.WebhookHandler,
+	upstreamHandler *upstreamtransport.Handler,
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		path := strings.TrimRight(c.Request.URL.Path, "/")
@@ -58,25 +60,25 @@ func CallbackRouteMiddleware(
 		switch path {
 		case routes.PaymentCallback:
 			if routes.PaymentCallback != "" && (method == http.MethodPost || method == http.MethodGet) {
-				publicHandler.PaymentCallback(c)
+				callbackHandler.PaymentCallback(c)
 				c.Abort()
 				return
 			}
 		case routes.DujiaoPayWebhook:
-			if routes.DujiaoPayWebhook != "" && method == http.MethodPost {
-				publicHandler.DujiaoPayWebhook(c)
+			if routes.DujiaoPayWebhook != "" && method == http.MethodPost && webhookHandler != nil {
+				webhookHandler.DujiaoPayWebhook(c)
 				c.Abort()
 				return
 			}
 		case routes.PaypalWebhook:
-			if routes.PaypalWebhook != "" && method == http.MethodPost {
-				publicHandler.PaypalWebhook(c)
+			if routes.PaypalWebhook != "" && method == http.MethodPost && webhookHandler != nil {
+				webhookHandler.PaypalWebhook(c)
 				c.Abort()
 				return
 			}
 		case routes.StripeWebhook:
-			if routes.StripeWebhook != "" && method == http.MethodPost {
-				publicHandler.StripeWebhook(c)
+			if routes.StripeWebhook != "" && method == http.MethodPost && webhookHandler != nil {
+				webhookHandler.StripeWebhook(c)
 				c.Abort()
 				return
 			}

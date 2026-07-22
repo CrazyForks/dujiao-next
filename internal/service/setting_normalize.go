@@ -4,7 +4,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 )
@@ -28,46 +27,6 @@ const (
 	settingRegistrationEmailDomainMaxCount  = 100
 	settingRegistrationEmailDomainMaxLength = 253
 )
-
-// normalizeSettingValueByKey 按设置键执行归一化，避免非法值入库。
-func normalizeSettingValueByKey(key string, value map[string]interface{}) models.JSON {
-	switch key {
-	case constants.SettingKeyDashboardConfig:
-		setting := dashboardSettingFromJSON(models.JSON(value), DashboardDefaultSetting())
-		return DashboardSettingToMap(setting)
-	case constants.SettingKeyOrderConfig:
-		cfg := orderConfigFromJSON(models.JSON(value), DefaultOrderConfig())
-		return OrderConfigToMap(cfg)
-	case constants.SettingKeySiteConfig:
-		return normalizeSiteSetting(value)
-	case constants.SettingKeyTelegramAuthConfig:
-		setting := telegramAuthSettingFromJSON(models.JSON(value), TelegramAuthDefaultSetting(config.TelegramAuthConfig{}))
-		return TelegramAuthSettingToMap(setting)
-	case constants.SettingKeyNotificationCenterConfig:
-		setting := notificationCenterSettingFromJSON(models.JSON(value), NotificationCenterDefaultSetting())
-		return NotificationCenterSettingToMap(setting)
-	case constants.SettingKeyAffiliateConfig:
-		return normalizeAffiliateSettingMap(value)
-	case constants.SettingKeyTelegramBotConfig:
-		return normalizeTelegramBotConfig(models.JSON(value))
-	case constants.SettingKeyNavConfig:
-		return normalizeNavConfig(value)
-	case constants.SettingKeyRegistrationConfig:
-		return normalizeRegistrationSetting(value)
-	case constants.SettingKeyOrderRiskControlConfig:
-		cfg := orderRiskControlConfigFromJSON(models.JSON(value), DefaultOrderRiskControlConfig())
-		return OrderRiskControlConfigToMap(cfg)
-	case constants.SettingKeyUpstreamSyncConfig:
-		cfg := upstreamSyncConfigFromJSON(models.JSON(value), DefaultUpstreamSyncConfig())
-		return UpstreamSyncConfigToMap(cfg)
-	case constants.SettingKeyCallbackRoutesConfig:
-		return normalizeCallbackRoutesSetting(value)
-	case constants.SettingKeyHomeAnnouncement:
-		return normalizeHomeAnnouncement(value)
-	default:
-		return models.JSON(value)
-	}
-}
 
 // normalizeSiteSetting 归一化站点配置结构。
 func normalizeSiteSetting(value map[string]interface{}) models.JSON {

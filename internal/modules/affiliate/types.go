@@ -1,0 +1,82 @@
+package affiliate
+
+import (
+	"github.com/dujiao-next/internal/models"
+
+	"github.com/shopspring/decimal"
+)
+
+// TrackClickInput 推广点击记录输入。
+type TrackClickInput struct {
+	AffiliateCode string
+	VisitorKey    string
+	LandingPath   string
+	Referrer      string
+	ClientIP      string
+	UserAgent     string
+}
+
+// WithdrawApplyInput 提现申请输入。
+type WithdrawApplyInput struct {
+	Amount  decimal.Decimal
+	Channel string
+	Account string
+}
+
+// Dashboard 推广用户中心数据。
+type Dashboard struct {
+	Opened              bool         `json:"opened"`
+	AffiliateCode       string       `json:"affiliate_code"`
+	PromotionPath       string       `json:"promotion_path"`
+	ClickCount          int64        `json:"click_count"`
+	ValidOrderCount     int64        `json:"valid_order_count"`
+	ConversionRate      float64      `json:"conversion_rate"`
+	PendingCommission   models.Money `json:"pending_commission"`
+	AvailableCommission models.Money `json:"available_commission"`
+	WithdrawnCommission models.Money `json:"withdrawn_commission"`
+}
+
+// Stats 推广统计数据。
+type Stats struct {
+	ClickCount          int64
+	ValidOrderCount     int64
+	ConversionRate      float64
+	PendingCommission   models.Money
+	AvailableCommission models.Money
+	WithdrawnCommission models.Money
+}
+
+// AdminUserItem 后台推广用户列表项。
+type AdminUserItem struct {
+	Profile models.AffiliateProfile `json:"profile"`
+	Stats   Stats                   `json:"stats"`
+}
+
+// AdminProfileListFilter 后台推广用户列表过滤。
+type AdminProfileListFilter struct {
+	Page     int
+	PageSize int
+	UserID   uint
+	Status   string
+	Code     string
+	Keyword  string
+}
+
+// AdminCommissionListFilter 后台佣金列表过滤。
+type AdminCommissionListFilter struct {
+	Page               int
+	PageSize           int
+	AffiliateProfileID uint
+	OrderNo            string
+	Status             string
+	Keyword            string
+}
+
+// AdminWithdrawListFilter 后台提现列表过滤。
+type AdminWithdrawListFilter struct {
+	Page               int
+	PageSize           int
+	AffiliateProfileID uint
+	Status             string
+	Keyword            string
+}

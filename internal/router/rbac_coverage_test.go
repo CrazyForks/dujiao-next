@@ -13,13 +13,13 @@ import (
 	"github.com/casbin/casbin/v3/util"
 )
 
-// TestAllAdminRoutesCoveredByBuiltinRoles 校验 router.go 里每条 admin 路由
+// TestAllAdminRoutesCoveredByBuiltinRoles 校验 admin 路由文件里的每条路由
 // 都被 authz.BuiltinRoleSeeds() 中至少一条角色策略覆盖。
 //
 // 目的：避免新增 admin 接口时忘记同步 RBAC 预置角色，导致非超管角色无法通过
 // 角色分配获得该权限（catalog UI 上能看到，但任何角色都拿不到）。
 //
-// 实现：静态扫描 router.go 提取 authorized.METHOD("/path", ...) 与
+// 实现：静态扫描 routes_admin*.go 提取 authorized.METHOD("/path", ...) 与
 // paymentProtected.METHOD("/path", ...) 调用，与
 // builtin role seeds 用 keyMatch2 比对（与运行时 Casbin 模型一致）。
 func TestAllAdminRoutesCoveredByBuiltinRoles(t *testing.T) {
@@ -82,30 +82,89 @@ type adminRoute struct {
 	object string // 例如 "/admin/users/:id"
 }
 
-// extractAdminRoutesFromSource 从 router.go 抽取 authorized/paymentProtected admin 路由调用。
+// extractAdminRoutesFromSource 从 admin 路由文件和已抽取的模块路由文件中读取调用。
 // 方法范围：GET / POST / PUT / PATCH / DELETE。HEAD/OPTIONS 不参与 RBAC。
 func extractAdminRoutesFromSource() ([]adminRoute, error) {
 	_, thisFile, _, _ := runtime.Caller(0)
-	routerSrc := filepath.Join(filepath.Dir(thisFile), "router.go")
-	raw, err := os.ReadFile(routerSrc)
+	routerDirectory := filepath.Dir(thisFile)
+	type routeSource struct {
+		path       string
+		expression *regexp.Regexp
+	}
+
+	adminSources, err := filepath.Glob(filepath.Join(routerDirectory, "routes_admin*.go"))
 	if err != nil {
 		return nil, err
 	}
-	re := regexp.MustCompile(`(?:authorized|paymentProtected)\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`)
-	matches := re.FindAllStringSubmatch(string(raw), -1)
+	if len(adminSources) == 0 {
+		return nil, os.ErrNotExist
+	}
 
-	seen := make(map[string]struct{}, len(matches))
-	out := make([]adminRoute, 0, len(matches))
-	for _, m := range matches {
-		method := m[1]
-		path := m[2]
-		object := authz.NormalizeObject("/admin" + path)
-		key := method + " " + object
-		if _, dup := seen[key]; dup {
+	sources := make([]routeSource, 0, len(adminSources)+8)
+	for _, path := range adminSources {
+		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		seen[key] = struct{}{}
-		out = append(out, adminRoute{method: method, object: object})
+		sources = append(sources, routeSource{
+			path:       path,
+			expression: regexp.MustCompile(`(?:authorized|paymentProtected)\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
+		})
+	}
+	if len(sources) == 0 {
+		return nil, os.ErrNotExist
+	}
+	sources = append(sources,
+		routeSource{
+			path:       filepath.Join(routerDirectory, "..", "transport", "http", "content", "routes.go"),
+			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
+		},
+		routeSource{
+			path:       filepath.Join(routerDirectory, "..", "transport", "http", "dashboard", "routes.go"),
+			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
+		},
+		routeSource{
+			path:       filepath.Join(routerDirectory, "..", "transport", "http", "memberlevel", "routes.go"),
+			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
+		},
+		routeSource{
+			path:       filepath.Join(routerDirectory, "..", "transport", "http", "apicredential", "routes.go"),
+			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
+		},
+		routeSource{
+			path:       filepath.Join(routerDirectory, "..", "transport", "http", "auditlog", "routes.go"),
+			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
+		},
+		routeSource{
+			path:       filepath.Join(routerDirectory, "..", "transport", "http", "coupon", "routes.go"),
+			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
+		},
+		routeSource{
+			path:       filepath.Join(routerDirectory, "..", "transport", "http", "promotion", "routes.go"),
+			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
+		},
+		routeSource{
+			path:       filepath.Join(routerDirectory, "..", "transport", "http", "notification", "routes.go"),
+			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
+		},
+	)
+
+	seen := make(map[string]struct{})
+	var out []adminRoute
+	for _, source := range sources {
+		raw, err := os.ReadFile(source.path)
+		if err != nil {
+			return nil, err
+		}
+		for _, match := range source.expression.FindAllStringSubmatch(string(raw), -1) {
+			method := match[1]
+			object := authz.NormalizeObject("/admin" + match[2])
+			key := method + " " + object
+			if _, duplicate := seen[key]; duplicate {
+				continue
+			}
+			seen[key] = struct{}{}
+			out = append(out, adminRoute{method: method, object: object})
+		}
 	}
 	return out, nil
 }

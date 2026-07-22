@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/service"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 )
 
 type ResellerOrderResp struct {
@@ -46,7 +46,7 @@ type ResellerOrderStatsResp struct {
 	ByCurrency map[string]int64 `json:"by_currency"`
 }
 
-func NewResellerOrderResp(row service.ResellerOrderListItem) ResellerOrderResp {
+func NewResellerOrderResp(row resellermodule.OrderListItem) ResellerOrderResp {
 	return ResellerOrderResp{
 		OrderNo:      row.OrderNo,
 		Status:       row.Status,
@@ -63,7 +63,7 @@ func NewResellerOrderResp(row service.ResellerOrderListItem) ResellerOrderResp {
 	}
 }
 
-func NewResellerOrderRespList(rows []service.ResellerOrderListItem) []ResellerOrderResp {
+func NewResellerOrderRespList(rows []resellermodule.OrderListItem) []ResellerOrderResp {
 	out := make([]ResellerOrderResp, 0, len(rows))
 	for i := range rows {
 		out = append(out, NewResellerOrderResp(rows[i]))
@@ -71,11 +71,11 @@ func NewResellerOrderRespList(rows []service.ResellerOrderListItem) []ResellerOr
 	return out
 }
 
-func NewResellerOrderDetailResp(row *service.ResellerOrderDetail) ResellerOrderDetailResp {
+func NewResellerOrderDetailResp(row *resellermodule.OrderDetail) ResellerOrderDetailResp {
 	if row == nil {
 		return ResellerOrderDetailResp{}
 	}
-	resp := ResellerOrderDetailResp{ResellerOrderResp: NewResellerOrderResp(row.ResellerOrderListItem)}
+	resp := ResellerOrderDetailResp{ResellerOrderResp: NewResellerOrderResp(row.OrderListItem)}
 	for i := range row.Items {
 		item := row.Items[i]
 		resp.Items = append(resp.Items, ResellerOrderItemResp{
@@ -94,7 +94,7 @@ func NewResellerOrderDetailResp(row *service.ResellerOrderDetail) ResellerOrderD
 	return resp
 }
 
-func NewResellerOrderStatsResp(stats service.ResellerOrderStats) ResellerOrderStatsResp {
+func NewResellerOrderStatsResp(stats resellermodule.OrderStats) ResellerOrderStatsResp {
 	return ResellerOrderStatsResp{
 		Total:      stats.Total,
 		ByStatus:   stats.ByStatus,

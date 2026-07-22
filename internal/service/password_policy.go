@@ -27,7 +27,8 @@ func (e passwordPolicyError) Args() []interface{} {
 	return e.args
 }
 
-func validatePassword(policy config.PasswordPolicyConfig, password string) error {
+// ValidatePasswordPolicy 校验密码是否满足统一安全策略。
+func ValidatePasswordPolicy(policy config.PasswordPolicyConfig, password string) error {
 	if policy.MinLength <= 0 &&
 		!policy.RequireUpper &&
 		!policy.RequireLower &&

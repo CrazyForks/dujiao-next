@@ -10,6 +10,8 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/memberlevel"
+	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/telegramidentity"
 
@@ -265,8 +267,8 @@ func TestLoginWithTelegramAssignsDefaultMemberLevel(t *testing.T) {
 		t.Fatalf("create default level failed: %v", err)
 	}
 
-	svc.SetMemberLevelService(NewMemberLevelService(
-		repository.NewMemberLevelRepository(db),
+	svc.SetMemberLevelService(memberlevel.NewService(
+		memberlevelgormstore.NewLevelStore(db),
 		nil,
 		repository.NewUserRepository(db),
 	))

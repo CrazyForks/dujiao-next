@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/version"
 	"github.com/dujiao-next/internal/web"
 
@@ -44,12 +45,19 @@ func main() {
 	logger.Init(cfg.Server.Mode, cfg.Log.ToLoggerOptions())
 	stdLog := logger.StdLogger()
 
-	if cfg.Server.Mode == "release" {
-		if isWeakSecret(cfg.JWT.SecretKey) {
-			stdLog.Fatalf("JWT secret 过弱或仍为默认值，请在生产环境中配置强随机密钥")
+	weakSecrets := weakRuntimeSecretNames(cfg)
+	if len(weakSecrets) > 0 {
+		if cfg.Server.Mode == "release" {
+			stdLog.Fatalf("以下运行时密钥过弱或仍为默认值，请在生产环境中配置强随机密钥: %s", strings.Join(weakSecrets, ", "))
 		}
-	} else if isWeakSecret(cfg.JWT.SecretKey) {
-		stdLog.Printf("警告: JWT secret 过弱或仍为默认值，建议在生产环境中更换")
+		stdLog.Printf("警告: 以下运行时密钥过弱或仍为默认值，建议在生产环境中更换: %s", strings.Join(weakSecrets, ", "))
+	}
+	defaultAdminUser, defaultAdminPass := resolveDefaultAdminCredentials(cfg)
+	if unsafeBootstrapAdminPassword(cfg, defaultAdminPass) {
+		if cfg.Server.Mode == "release" {
+			stdLog.Fatalf("bootstrap.default_admin_password 为已知默认值或不符合密码策略；请配置强密码，或留空以跳过默认管理员初始化")
+		}
+		stdLog.Printf("警告: bootstrap.default_admin_password 为已知默认值或不符合密码策略")
 	}
 
 	// fullstack 模式下打印内嵌 SPA 信息
@@ -75,7 +83,7 @@ func main() {
 		MaxIdleConns:           cfg.Database.Pool.MaxIdleConns,
 		ConnMaxLifetimeSeconds: cfg.Database.Pool.ConnMaxLifetimeSeconds,
 		ConnMaxIdleTimeSeconds: cfg.Database.Pool.ConnMaxIdleTimeSeconds,
-	}); err != nil {
+	}, cfg.Server.Mode); err != nil {
 		stdLog.Fatalf("数据库初始化失败: %v", err)
 	}
 
@@ -85,7 +93,6 @@ func main() {
 	}
 
 	// 初始化默认管理员账号
-	defaultAdminUser, defaultAdminPass := resolveDefaultAdminCredentials(cfg)
 	if cfg.Server.Mode == "release" && defaultAdminPass == "" {
 		stdLog.Printf("警告: 未设置 DJ_DEFAULT_ADMIN_PASSWORD 且 bootstrap.default_admin_password 为空，已跳过默认管理员初始化")
 	} else if err := models.InitDefaultAdmin(defaultAdminUser, defaultAdminPass); err != nil {
@@ -145,6 +152,40 @@ func isWeakSecret(secret string) bool {
 	return false
 }
 
+func weakRuntimeSecretNames(cfg *config.Config) []string {
+	if cfg == nil {
+		return nil
+	}
+	candidates := []struct {
+		name   string
+		secret string
+	}{
+		{name: "app.secret_key", secret: cfg.App.SecretKey},
+		{name: "jwt.secret", secret: cfg.JWT.SecretKey},
+		{name: "user_jwt.secret", secret: cfg.UserJWT.SecretKey},
+	}
+
+	weak := make([]string, 0, len(candidates))
+	for _, candidate := range candidates {
+		if isWeakSecret(candidate.secret) {
+			weak = append(weak, candidate.name)
+		}
+	}
+	return weak
+}
+
+func unsafeBootstrapAdminPassword(cfg *config.Config, password string) bool {
+	password = strings.TrimSpace(password)
+	if password == "" {
+		return false
+	}
+	switch strings.ToLower(password) {
+	case "admin", "admin123", "password", "password123", "change-me", "changeme":
+		return true
+	}
+	return cfg == nil || service.ValidatePasswordPolicy(cfg.Security.PasswordPolicy, password) != nil
+}
+
 // runAdminSubcommand 处理 ./dujiao-api admin <subcommand>，仅初始化 DB
 // 后委托给 internal/admincmd 包，不启动 HTTP / worker / web 等服务。
 func runAdminSubcommand(args []string) {
@@ -154,7 +195,7 @@ func runAdminSubcommand(args []string) {
 		MaxIdleConns:           cfg.Database.Pool.MaxIdleConns,
 		ConnMaxLifetimeSeconds: cfg.Database.Pool.ConnMaxLifetimeSeconds,
 		ConnMaxIdleTimeSeconds: cfg.Database.Pool.ConnMaxIdleTimeSeconds,
-	}); err != nil {
+	}, cfg.Server.Mode); err != nil {
 		fmt.Fprintf(os.Stderr, "init db: %v\n", err)
 		os.Exit(1)
 	}

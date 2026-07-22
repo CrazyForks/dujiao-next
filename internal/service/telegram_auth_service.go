@@ -19,6 +19,7 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
+	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 )
 
 // TelegramLoginPayload Telegram 登录载荷
@@ -98,7 +99,7 @@ func (s *TelegramAuthService) PublicConfig() map[string]interface{} {
 		}
 	}
 	cfg := normalizeTelegramAuthConfig(s.cfg)
-	mode := ResolveTelegramLoginMode(TelegramAuthSetting{
+	mode := settingsmodule.ResolveTelegramLoginMode(settingsmodule.TelegramAuthSetting{
 		Enabled: cfg.Enabled, BotUsername: cfg.BotUsername, BotToken: cfg.BotToken,
 		ClientSecret: cfg.ClientSecret, OIDCRedirectURI: cfg.OIDCRedirectURI,
 	})
@@ -110,9 +111,9 @@ func (s *TelegramAuthService) PublicConfig() map[string]interface{} {
 	}
 }
 
-func (s *TelegramAuthService) currentLoginMode() (config.TelegramAuthConfig, TelegramLoginMode) {
+func (s *TelegramAuthService) currentLoginMode() (config.TelegramAuthConfig, settingsmodule.TelegramLoginMode) {
 	cfg := normalizeTelegramAuthConfig(s.cfg)
-	mode := ResolveTelegramLoginMode(TelegramAuthSetting{
+	mode := settingsmodule.ResolveTelegramLoginMode(settingsmodule.TelegramAuthSetting{
 		Enabled: cfg.Enabled, BotUsername: cfg.BotUsername, BotToken: cfg.BotToken,
 		ClientSecret: cfg.ClientSecret, OIDCRedirectURI: cfg.OIDCRedirectURI,
 	})

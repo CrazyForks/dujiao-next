@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -10,6 +11,12 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
 )
+
+// CapturePaymentInput 捕获支付输入。
+type CapturePaymentInput struct {
+	PaymentID uint
+	Context   context.Context
+}
 
 func (s *PaymentService) CapturePayment(input CapturePaymentInput) (*models.Payment, error) {
 	if input.PaymentID == 0 {

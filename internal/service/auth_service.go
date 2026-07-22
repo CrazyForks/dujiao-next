@@ -48,7 +48,7 @@ func (s *AuthService) ValidatePassword(password string) error {
 	if s == nil || s.cfg == nil {
 		return nil
 	}
-	return validatePassword(s.cfg.Security.PasswordPolicy, password)
+	return ValidatePasswordPolicy(s.cfg.Security.PasswordPolicy, password)
 }
 
 // JWT typ 常量

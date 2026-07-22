@@ -56,10 +56,10 @@ func TestValidateAdminPath(t *testing.T) {
 
 func newAdminFS(indexHTML string) fstest.MapFS {
 	return fstest.MapFS{
-		"index.html":      &fstest.MapFile{Data: []byte(indexHTML)},
-		"assets/app.js":   &fstest.MapFile{Data: []byte("console.log('app');")},
-		"assets/app.css":  &fstest.MapFile{Data: []byte("body{}")},
-		"favicon.ico":     &fstest.MapFile{Data: []byte("\x00\x00")},
+		"index.html":     &fstest.MapFile{Data: []byte(indexHTML)},
+		"assets/app.js":  &fstest.MapFile{Data: []byte("console.log('app');")},
+		"assets/app.css": &fstest.MapFile{Data: []byte("body{}")},
+		"favicon.ico":    &fstest.MapFile{Data: []byte("\x00\x00")},
 	}
 }
 
@@ -185,9 +185,9 @@ func TestRegisterAdmin_MissingIndex(t *testing.T) {
 
 func newUserFS() fstest.MapFS {
 	return fstest.MapFS{
-		"index.html":     &fstest.MapFile{Data: []byte("<html>user-spa</html>")},
-		"assets/u.js":    &fstest.MapFile{Data: []byte("console.log('u');")},
-		"robots.txt":     &fstest.MapFile{Data: []byte("User-agent: *\n")},
+		"index.html":  &fstest.MapFile{Data: []byte("<html>user-spa</html>")},
+		"assets/u.js": &fstest.MapFile{Data: []byte("console.log('u');")},
+		"robots.txt":  &fstest.MapFile{Data: []byte("User-agent: *\n")},
 	}
 }
 

@@ -30,11 +30,15 @@ type UserAuthService struct {
 	settingService        *SettingService
 	emailService          *EmailService
 	telegramAuthService   *TelegramAuthService
-	memberLevelSvc        *MemberLevelService
+	memberLevelSvc        MemberLevelAssigner
+}
+
+type MemberLevelAssigner interface {
+	AssignDefaultLevel(userID uint) error
 }
 
 // SetMemberLevelService 设置会员等级服务
-func (s *UserAuthService) SetMemberLevelService(svc *MemberLevelService) {
+func (s *UserAuthService) SetMemberLevelService(svc MemberLevelAssigner) {
 	s.memberLevelSvc = svc
 }
 
@@ -225,7 +229,7 @@ func (s *UserAuthService) Register(email, password, code string, agreementAccept
 	if err := s.checkRegistrationEmailDomain(normalized); err != nil {
 		return nil, "", time.Time{}, err
 	}
-	if err := validatePassword(s.cfg.Security.PasswordPolicy, password); err != nil {
+	if err := ValidatePasswordPolicy(s.cfg.Security.PasswordPolicy, password); err != nil {
 		return nil, "", time.Time{}, err
 	}
 

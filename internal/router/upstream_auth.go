@@ -7,7 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/gin-gonic/gin"
@@ -16,8 +16,14 @@ import (
 const upstreamUserIDKey = "upstream_user_id"
 const upstreamCredentialIDKey = "upstream_credential_id"
 
+// UpstreamCredentialStore 只暴露签名鉴权链路所需的凭证能力。
+type UpstreamCredentialStore interface {
+	GetByApiKey(apiKey string) (*models.ApiCredential, error)
+	Update(credential *models.ApiCredential) error
+}
+
 // UpstreamAPIAuthMiddleware 上游 API 签名鉴权中间件
-func UpstreamAPIAuthMiddleware(credRepo repository.ApiCredentialRepository) gin.HandlerFunc {
+func UpstreamAPIAuthMiddleware(credRepo UpstreamCredentialStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		apiKey := c.GetHeader(upstream.HeaderApiKey)
 		timestampStr := c.GetHeader(upstream.HeaderTimestamp)

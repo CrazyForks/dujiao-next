@@ -122,19 +122,3 @@ func readUintList(source map[string]interface{}, key string, fallback []uint) []
 		return cloneUintSlice(fallback)
 	}
 }
-
-// normalizeSettingStringList 统一归一化字符串列表设置值。
-func normalizeSettingStringList(raw interface{}) []string {
-	switch value := raw.(type) {
-	case []string:
-		return append([]string(nil), value...)
-	case []interface{}:
-		items := make([]string, 0, len(value))
-		for _, item := range value {
-			items = append(items, normalizeSettingText(item))
-		}
-		return items
-	default:
-		return nil
-	}
-}

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/service"
 )
 
 // CreatePaymentResp 创建支付响应
@@ -27,8 +26,17 @@ type CreatePaymentResp struct {
 	ChannelName      string       `json:"channel_name,omitempty"`
 }
 
-// NewCreatePaymentResp 从 service.CreatePaymentResult 构造响应
-func NewCreatePaymentResp(result *service.CreatePaymentResult) CreatePaymentResp {
+// CreatePaymentResultView 创建支付结果视图（供 HTTP 层构造响应，避免依赖 service）。
+type CreatePaymentResultView struct {
+	Payment          *models.Payment
+	Channel          *models.PaymentChannel
+	OrderPaid        bool
+	WalletPaidAmount models.Money
+	OnlinePayAmount  models.Money
+}
+
+// NewCreatePaymentResp 从创建支付结果视图构造响应
+func NewCreatePaymentResp(result *CreatePaymentResultView) CreatePaymentResp {
 	resp := CreatePaymentResp{
 		OrderPaid:        result.OrderPaid,
 		WalletPaidAmount: result.WalletPaidAmount,

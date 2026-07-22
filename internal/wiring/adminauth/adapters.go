@@ -1,0 +1,258 @@
+package adminauthwiring
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/dujiao-next/internal/cache"
+	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/auditlog"
+	"github.com/dujiao-next/internal/service"
+	adminauthtransport "github.com/dujiao-next/internal/transport/http/adminauth"
+)
+
+type admin2FATOTPTransportAdapter struct {
+	totp *service.TOTPService
+}
+
+func (a admin2FATOTPTransportAdapter) GetStatus(adminID uint) (*adminauthtransport.TOTPStatus, error) {
+	st, err := a.totp.GetStatus(adminID)
+	if err != nil {
+		return nil, mapAdminAuthTransportError(err)
+	}
+	if st == nil {
+		return nil, nil
+	}
+	return &adminauthtransport.TOTPStatus{
+		Enabled:                st.Enabled,
+		EnabledAt:              st.EnabledAt,
+		RecoveryCodesRemaining: st.RecoveryCodesRemaining,
+		RecoveryCodesTotal:     st.RecoveryCodesTotal,
+	}, nil
+}
+
+func (a admin2FATOTPTransportAdapter) Setup(adminID uint) (*adminauthtransport.TOTPSetupResult, error) {
+	res, err := a.totp.Setup(adminID)
+	if err != nil {
+		return nil, mapAdminAuthTransportError(err)
+	}
+	if res == nil {
+		return nil, nil
+	}
+	return &adminauthtransport.TOTPSetupResult{
+		Secret:     res.Secret,
+		OtpauthURL: res.OtpauthURL,
+		ExpiresAt:  res.ExpiresAt,
+	}, nil
+}
+
+func (a admin2FATOTPTransportAdapter) Enable(adminID uint, code string) (*adminauthtransport.TOTPEnableResult, error) {
+	res, err := a.totp.Enable(adminID, code)
+	if err != nil {
+		return nil, mapAdminAuthTransportError(err)
+	}
+	if res == nil {
+		return nil, nil
+	}
+	return &adminauthtransport.TOTPEnableResult{
+		EnabledAt:     res.EnabledAt,
+		RecoveryCodes: res.RecoveryCodes,
+	}, nil
+}
+
+func (a admin2FATOTPTransportAdapter) Disable(adminID uint, code string, isRecoveryCode bool) error {
+	return mapAdminAuthTransportError(a.totp.Disable(adminID, code, isRecoveryCode))
+}
+
+func (a admin2FATOTPTransportAdapter) RegenerateRecoveryCodes(adminID uint, code string) ([]string, error) {
+	codes, err := a.totp.RegenerateRecoveryCodes(adminID, code)
+	return codes, mapAdminAuthTransportError(err)
+}
+
+func (a admin2FATOTPTransportAdapter) VerifyChallengeCode(adminID uint, code string) error {
+	return mapAdminAuthTransportError(a.totp.VerifyChallengeCode(adminID, code))
+}
+
+func (a admin2FATOTPTransportAdapter) VerifyChallengeRecoveryCode(adminID uint, code string) error {
+	return mapAdminAuthTransportError(a.totp.VerifyChallengeRecoveryCode(adminID, code))
+}
+
+func (a admin2FATOTPTransportAdapter) AdminReset(operatorID, targetID uint) error {
+	return mapAdminAuthTransportError(a.totp.AdminReset(operatorID, targetID))
+}
+
+type adminLoginAuthTransportAdapter struct {
+	auth *service.AuthService
+}
+
+func (a adminLoginAuthTransportAdapter) Login(username, password string) (*adminauthtransport.AuthLoginResult, error) {
+	res, err := a.auth.Login(username, password)
+	if err != nil {
+		return nil, mapAdminAuthTransportError(err)
+	}
+	if res == nil {
+		return nil, nil
+	}
+	return &adminauthtransport.AuthLoginResult{
+		RequiresTOTP:       res.RequiresTOTP,
+		Admin:              res.Admin,
+		Token:              res.Token,
+		ExpiresAt:          res.ExpiresAt,
+		ChallengeToken:     res.ChallengeToken,
+		ChallengeExpiresAt: res.ChallengeExpiresAt,
+	}, nil
+}
+
+func (a adminLoginAuthTransportAdapter) ChangePassword(adminID uint, oldPassword, newPassword string) error {
+	return mapAdminAuthTransportError(a.auth.ChangePassword(adminID, oldPassword, newPassword))
+}
+
+type admin2FAAuthTransportAdapter struct {
+	auth *service.AuthService
+}
+
+func (a admin2FAAuthTransportAdapter) ParseChallengeToken(tokenString string) (*adminauthtransport.ChallengeClaims, error) {
+	claims, err := a.auth.ParseChallengeToken(tokenString)
+	if err != nil {
+		return nil, mapAdminAuthTransportError(err)
+	}
+	if claims == nil {
+		return nil, nil
+	}
+	return &adminauthtransport.ChallengeClaims{
+		AdminID: claims.AdminID,
+		JTI:     claims.JTI,
+	}, nil
+}
+
+func (a admin2FAAuthTransportAdapter) CompleteLoginAfter2FA(adminID uint) (*adminauthtransport.AuthLoginResult, error) {
+	res, err := a.auth.CompleteLoginAfter2FA(adminID)
+	if err != nil {
+		return nil, mapAdminAuthTransportError(err)
+	}
+	if res == nil {
+		return nil, nil
+	}
+	return &adminauthtransport.AuthLoginResult{
+		RequiresTOTP:       res.RequiresTOTP,
+		Admin:              res.Admin,
+		Token:              res.Token,
+		ExpiresAt:          res.ExpiresAt,
+		ChallengeToken:     res.ChallengeToken,
+		ChallengeExpiresAt: res.ChallengeExpiresAt,
+	}, nil
+}
+
+func (a admin2FAAuthTransportAdapter) GetAdminUsername(adminID uint) (string, error) {
+	admin, err := a.auth.AdminRepo().GetByID(adminID)
+	if err != nil {
+		return "", mapAdminAuthTransportError(err)
+	}
+	if admin == nil {
+		return "", nil
+	}
+	return admin.Username, nil
+}
+
+type admin2FAChallengeStoreAdapter struct{}
+
+func (admin2FAChallengeStoreAdapter) IsRevoked(ctx context.Context, jti string) bool {
+	rdb := cache.Client()
+	if rdb == nil {
+		return false
+	}
+	v, _ := rdb.Exists(ctx, service.ChallengeRevokedKey(jti)).Result()
+	return v == 1
+}
+
+func (admin2FAChallengeStoreAdapter) BumpFails(ctx context.Context, jti string) int64 {
+	rdb := cache.Client()
+	if rdb == nil {
+		return 0
+	}
+	cnt, err := rdb.Incr(ctx, service.ChallengeFailKey(jti)).Result()
+	if err == nil && cnt == 1 {
+		_ = rdb.Expire(ctx, service.ChallengeFailKey(jti), service.ChallengeTTL).Err()
+	}
+	return cnt
+}
+
+func (admin2FAChallengeStoreAdapter) Revoke(ctx context.Context, jti string) {
+	rdb := cache.Client()
+	if rdb == nil {
+		return
+	}
+	_ = rdb.Set(ctx, service.ChallengeRevokedKey(jti), "1", service.ChallengeTTL).Err()
+}
+
+type adminLoginRecorderAdapter struct {
+	logs auditlog.AdminLoginRepository
+}
+
+func (a adminLoginRecorderAdapter) Record(adminID uint, username, eventType, status, failReason, clientIP, userAgent, requestID string, operatorID *uint) {
+	if a.logs == nil {
+		return
+	}
+	_ = a.logs.Create(&models.AdminLoginLog{
+		AdminID:    adminID,
+		Username:   username,
+		EventType:  eventType,
+		Status:     status,
+		FailReason: failReason,
+		ClientIP:   clientIP,
+		UserAgent:  userAgent,
+		RequestID:  strings.TrimSpace(requestID),
+		OperatorID: operatorID,
+	})
+}
+
+type adminUser2FATransportAdapter struct {
+	totp *service.UserTOTPService
+}
+
+func (a adminUser2FATransportAdapter) AdminResetUser2FA(operatorID, userID uint) (*models.User, error) {
+	user, err := a.totp.AdminResetUser2FA(operatorID, userID)
+	return user, mapAdminAuthTransportError(err)
+}
+
+func mapAdminAuthTransportError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, service.ErrWeakPassword) {
+		type keyed interface {
+			Key() string
+			Args() []interface{}
+		}
+		var k keyed
+		if errors.As(err, &k) {
+			return adminauthtransport.NewWeakPasswordError(k.Key(), k.Args()...)
+		}
+		if perr, ok := err.(keyed); ok {
+			return adminauthtransport.NewWeakPasswordError(perr.Key(), perr.Args()...)
+		}
+		return fmt.Errorf("%w: %v", adminauthtransport.ErrWeakPassword, err)
+	}
+	for _, mapping := range []struct {
+		source error
+		target error
+	}{
+		{service.ErrNotFound, adminauthtransport.ErrNotFound},
+		{service.ErrInvalidCredentials, adminauthtransport.ErrInvalidCredentials},
+		{service.ErrInvalidPassword, adminauthtransport.ErrInvalidPassword},
+		{service.ErrTOTPAlreadyEnabled, adminauthtransport.ErrTOTPAlreadyEnabled},
+		{service.ErrTOTPNotEnabled, adminauthtransport.ErrTOTPNotEnabled},
+		{service.ErrTOTPPendingExpired, adminauthtransport.ErrTOTPPendingExpired},
+		{service.ErrTOTPCodeInvalid, adminauthtransport.ErrTOTPCodeInvalid},
+		{service.ErrTOTPRecoveryInvalid, adminauthtransport.ErrTOTPRecoveryInvalid},
+		{service.ErrTOTPTooManyAttempts, adminauthtransport.ErrTOTPTooManyAttempts},
+		{service.ErrTOTPCannotResetSelf, adminauthtransport.ErrTOTPCannotResetSelf},
+	} {
+		if errors.Is(err, mapping.source) {
+			return fmt.Errorf("%w: %v", mapping.target, err)
+		}
+	}
+	return err
+}

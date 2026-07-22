@@ -17,6 +17,7 @@ func TestResolveTenantReturnURLMainTenantKeepsConfigFallback(t *testing.T) {
 	if got := resolveTenantReturnURL(context.Background(), "https", channel); got != "" {
 		t.Fatalf("no tenant want empty got %q", got)
 	}
+	//lint:ignore SA1012 This assertion deliberately verifies the nil-context fallback.
 	if got := resolveTenantReturnURL(nil, "https", channel); got != "" {
 		t.Fatalf("nil ctx want empty got %q", got)
 	}

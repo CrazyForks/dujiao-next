@@ -49,27 +49,3 @@ func normalizeSiteCurrency(raw interface{}) string {
 	}
 	return currency
 }
-
-// parseSettingFloat 解析设置中的浮点值。
-func parseSettingFloat(value interface{}) (float64, error) {
-	switch v := value.(type) {
-	case float32:
-		return float64(v), nil
-	case float64:
-		return v, nil
-	case int:
-		return float64(v), nil
-	case int64:
-		return float64(v), nil
-	case json.Number:
-		return v.Float64()
-	case string:
-		trimmed := strings.TrimSpace(v)
-		if trimmed == "" {
-			return 0, fmt.Errorf("empty string")
-		}
-		return strconv.ParseFloat(trimmed, 64)
-	default:
-		return 0, fmt.Errorf("unsupported value type")
-	}
-}

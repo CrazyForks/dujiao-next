@@ -20,6 +20,7 @@ import (
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/constants"
+	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -89,13 +90,13 @@ func (s *TelegramAuthService) StartOIDCLogin(ctx context.Context, intent string,
 		ctx = context.Background()
 	}
 	cfg, mode := s.currentLoginMode()
-	if mode == TelegramLoginModeDisabled {
+	if mode == settingsmodule.TelegramLoginModeDisabled {
 		return "", ErrTelegramAuthDisabled
 	}
-	if mode != TelegramLoginModeOIDC {
+	if mode != settingsmodule.TelegramLoginModeOIDC {
 		return "", ErrTelegramAuthConfigInvalid
 	}
-	clientID := TelegramBotIDFromToken(cfg.BotToken)
+	clientID := settingsmodule.TelegramBotIDFromToken(cfg.BotToken)
 	if clientID == "" {
 		return "", ErrTelegramAuthConfigInvalid
 	}
@@ -253,13 +254,13 @@ func (s *TelegramAuthService) CompleteOIDCLogin(ctx context.Context, code, state
 		return nil, "", 0, ErrTelegramAuthPayloadInvalid
 	}
 	cfg, mode := s.currentLoginMode()
-	if mode == TelegramLoginModeDisabled {
+	if mode == settingsmodule.TelegramLoginModeDisabled {
 		return nil, "", 0, ErrTelegramAuthDisabled
 	}
-	if mode != TelegramLoginModeOIDC {
+	if mode != settingsmodule.TelegramLoginModeOIDC {
 		return nil, "", 0, ErrTelegramAuthConfigInvalid
 	}
-	clientID := TelegramBotIDFromToken(cfg.BotToken)
+	clientID := settingsmodule.TelegramBotIDFromToken(cfg.BotToken)
 	if clientID == "" {
 		return nil, "", 0, ErrTelegramAuthConfigInvalid
 	}

@@ -8,6 +8,9 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/dashboard"
+	"github.com/dujiao-next/internal/modules/notification"
+	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 
@@ -343,7 +346,7 @@ func TestBuildManualFulfillmentNotificationPayloadUsesGuestEmailAndPendingItems(
 }
 
 func TestNotificationCenterDefaultSettingIncludesRichOrderVariables(t *testing.T) {
-	setting := NotificationCenterDefaultSetting()
+	setting := settingsmodule.NotificationCenterDefaultSetting()
 
 	orderBody := setting.Templates.OrderPaidSuccess.ZHCN.Body
 	if !strings.Contains(orderBody, "{{customer_email}}") || !strings.Contains(orderBody, "{{items_summary}}") {
@@ -367,7 +370,7 @@ func TestPatchNotificationCenterSettingPersistsInventoryAlertConfig(t *testing.T
 	interval := 600
 	ignored := []uint{9, 2, 9, 0}
 
-	setting, err := svc.PatchNotificationCenterSetting(NotificationCenterSettingPatch{
+	setting, err := svc.PatchNotificationCenterSetting(settingsmodule.NotificationCenterSettingPatch{
 		InventoryAlertIntervalSeconds: &interval,
 		IgnoredProductIDs:             &ignored,
 	})
@@ -400,7 +403,7 @@ func TestPatchNotificationCenterSettingPersistsPaymentOrderAlertConfig(t *testin
 	interval := 900
 	checkInterval := 7200
 
-	setting, err := svc.PatchNotificationCenterSetting(NotificationCenterSettingPatch{
+	setting, err := svc.PatchNotificationCenterSetting(settingsmodule.NotificationCenterSettingPatch{
 		PaymentOrderAlertIntervalSeconds: &interval,
 		PaymentOrderAlertCheckSeconds:    &checkInterval,
 	})
@@ -428,14 +431,14 @@ func TestPatchNotificationCenterSettingPersistsPaymentOrderAlertConfig(t *testin
 }
 
 func TestBuildPaymentOrderAlertDispatchPayloadsUseDashboardThresholds(t *testing.T) {
-	setting := NotificationCenterDefaultSetting()
+	setting := settingsmodule.NotificationCenterDefaultSetting()
 	setting.DefaultLocale = constants.LocaleZhCN
 	setting.PaymentOrderAlertIntervalSeconds = 600
 
-	payloads := buildPaymentOrderAlertDispatchPayloads(
+	payloads := notification.BuildPaymentOrderAlertDispatchPayloads(
 		setting,
-		DashboardSetting{
-			Alert: DashboardAlertSetting{
+		settingsmodule.DashboardSetting{
+			Alert: settingsmodule.DashboardAlertSetting{
 				PendingPaymentOrdersThreshold: 5,
 				PaymentsFailedThreshold:       3,
 			},
@@ -447,7 +450,7 @@ func TestBuildPaymentOrderAlertDispatchPayloadsUseDashboardThresholds(t *testing
 				"source": "scheduler",
 			},
 		},
-		repository.DashboardPaymentOrderAlertCountsRow{
+		dashboard.PaymentOrderAlertCountsRow{
 			PendingPaymentOrders: 6,
 			PaymentsFailed:       4,
 		},
@@ -488,16 +491,16 @@ func TestBuildPaymentOrderAlertDispatchPayloadsUseDashboardThresholds(t *testing
 		t.Fatalf("unexpected payment failed message: %s", failedMessage)
 	}
 
-	payloads = buildPaymentOrderAlertDispatchPayloads(
+	payloads = notification.BuildPaymentOrderAlertDispatchPayloads(
 		setting,
-		DashboardSetting{
-			Alert: DashboardAlertSetting{
+		settingsmodule.DashboardSetting{
+			Alert: settingsmodule.DashboardAlertSetting{
 				PendingPaymentOrdersThreshold: 5,
 				PaymentsFailedThreshold:       3,
 			},
 		},
 		queue.NotificationDispatchPayload{EventType: constants.NotificationEventExceptionAlertCheck},
-		repository.DashboardPaymentOrderAlertCountsRow{PendingPaymentOrders: 4, PaymentsFailed: 2},
+		dashboard.PaymentOrderAlertCountsRow{PendingPaymentOrders: 4, PaymentsFailed: 2},
 	)
 	if len(payloads) != 0 {
 		t.Fatalf("expected no payload below dashboard thresholds, got %d", len(payloads))
@@ -505,19 +508,19 @@ func TestBuildPaymentOrderAlertDispatchPayloadsUseDashboardThresholds(t *testing
 }
 
 func TestBuildInventoryAlertDispatchPayloadsIncludesSummaryAndIgnoreRules(t *testing.T) {
-	setting := NotificationCenterDefaultSetting()
+	setting := settingsmodule.NotificationCenterDefaultSetting()
 	setting.DefaultLocale = constants.LocaleEnUS
 	setting.InventoryAlertIntervalSeconds = 900
 	setting.IgnoredProductIDs = []uint{2}
 
-	dashboardSetting := DashboardSetting{
-		Alert: DashboardAlertSetting{
+	dashboardSetting := settingsmodule.DashboardSetting{
+		Alert: settingsmodule.DashboardAlertSetting{
 			LowStockThreshold:           5,
 			OutOfStockProductsThreshold: 1,
 		},
 	}
 
-	payloads := buildInventoryAlertDispatchPayloads(
+	payloads := notification.BuildInventoryAlertDispatchPayloads(
 		setting,
 		dashboardSetting,
 		queue.NotificationDispatchPayload{
@@ -527,7 +530,7 @@ func TestBuildInventoryAlertDispatchPayloadsIncludesSummaryAndIgnoreRules(t *tes
 				"source": "scheduler",
 			},
 		},
-		[]repository.DashboardInventoryAlertRow{
+		[]dashboard.InventoryAlertRow{
 			{
 				ProductID:         1,
 				SKUID:             11,
@@ -600,7 +603,7 @@ func TestBuildInventoryAlertDispatchPayloadsIncludesSummaryAndIgnoreRules(t *tes
 }
 
 func TestBuildNotificationTestVariablesIncludesSceneSpecificSamples(t *testing.T) {
-	orderVars := buildNotificationTestVariables(constants.NotificationEventOrderPaidSuccess, constants.LocaleEnUS)
+	orderVars := notification.BuildTestVariables(constants.NotificationEventOrderPaidSuccess, constants.LocaleEnUS)
 	if !strings.Contains(fmt.Sprintf("%v", orderVars["items_summary"]), "Netflix Annual") {
 		t.Fatalf("order test variables should include order item summary, got: %v", orderVars["items_summary"])
 	}
@@ -608,7 +611,7 @@ func TestBuildNotificationTestVariablesIncludesSceneSpecificSamples(t *testing.T
 		t.Fatalf("payment_channel want epay/alipay got %s", got)
 	}
 
-	alertVars := buildNotificationTestVariables(constants.NotificationEventExceptionAlert, constants.LocaleEnUS)
+	alertVars := notification.BuildTestVariables(constants.NotificationEventExceptionAlert, constants.LocaleEnUS)
 	if !strings.Contains(fmt.Sprintf("%v", alertVars["affected_items_summary"]), "Remaining 1") {
 		t.Fatalf("exception test variables should include inventory summary, got: %v", alertVars["affected_items_summary"])
 	}
@@ -663,7 +666,7 @@ func TestResolveInventoryAlertTypeKey(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := resolveInventoryAlertTypeKey(tc.data)
+			got := notification.ResolveInventoryAlertTypeKey(tc.data)
 			if got != tc.want {
 				t.Fatalf("resolveInventoryAlertTypeKey want %q got %q", tc.want, got)
 			}

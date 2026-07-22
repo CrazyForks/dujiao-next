@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 
@@ -25,12 +26,12 @@ type FulfillmentService struct {
 	queueClient           *queue.Client
 	settingService        *SettingService
 	defaultEmailConfig    config.EmailConfig
-	downstreamCallbackSvc *DownstreamCallbackService
+	downstreamCallbackSvc *downstreamcallback.Service
 	userOAuthIdentityRepo repository.UserOAuthIdentityRepository
 }
 
 // SetDownstreamCallbackService 设置下游回调服务（解决循环依赖）
-func (s *FulfillmentService) SetDownstreamCallbackService(svc *DownstreamCallbackService) {
+func (s *FulfillmentService) SetDownstreamCallbackService(svc *downstreamcallback.Service) {
 	s.downstreamCallbackSvc = svc
 }
 

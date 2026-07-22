@@ -9,6 +9,10 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
+	couponmodule "github.com/dujiao-next/internal/modules/coupon"
+	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
 
 	"github.com/shopspring/decimal"
 )
@@ -68,9 +72,9 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 		}
 	}
 
-	var promotionService *PromotionService
+	var promotionService *promotionmodule.Service
 	if !resellerOrder {
-		promotionService = NewPromotionService(s.promotionRepo)
+		promotionService = promotionmodule.NewService(s.promotionRepo)
 	}
 	manualFormData := input.ManualFormData
 	if manualFormData == nil {
@@ -87,7 +91,7 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 		if product == nil || !product.IsActive {
 			return nil, ErrProductNotAvailable
 		}
-		if err := validateProductPurchaseQuantity(product, item.Quantity); err != nil {
+		if err := productdomain.ValidatePurchaseQuantity(product, item.Quantity); err != nil {
 			return nil, err
 		}
 		purchaseType := strings.TrimSpace(product.PurchaseType)
@@ -136,7 +140,7 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 		wholesaleDiscount := decimal.Zero
 		wholesaleMatched := false
 		if !resellerOrder {
-			wholesaleUnitPrice, wholesaleDiscount, wholesaleMatched = ResolveWholesaleUnitPriceForSKU(product, basePrice, sku.ID, sku.SKUCode, wholesaleMatchQuantity, item.Quantity)
+			wholesaleUnitPrice, wholesaleDiscount, wholesaleMatched = productdomain.ResolveWholesaleUnitPriceForSKU(product, basePrice, sku.ID, sku.SKUCode, wholesaleMatchQuantity, item.Quantity)
 		}
 		if wholesaleMatched && wholesaleUnitPrice.LessThan(unitPriceAmount) {
 			unitPriceAmount = wholesaleUnitPrice
@@ -183,8 +187,8 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 			return nil, ErrFulfillmentInvalid
 		}
 		if fulfillmentType == constants.FulfillmentTypeManual &&
-			shouldEnforceManualSKUStock(product, sku) &&
-			manualSKUAvailable(sku) < item.Quantity {
+			productdomain.ShouldEnforceManualSKUStock(product, sku) &&
+			productdomain.ManualSKUAvailable(sku) < item.Quantity {
 			return nil, ErrManualStockInsufficient
 		}
 		if fulfillmentType == constants.FulfillmentTypeUpstream && s.productMappingService != nil {
@@ -198,7 +202,7 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 		if !input.SkipManualFormCheck && (fulfillmentType == constants.FulfillmentTypeManual ||
 			(fulfillmentType == constants.FulfillmentTypeUpstream && len(product.ManualFormSchemaJSON) > 0)) {
 			submission := resolveManualFormSubmission(manualFormData, product.ID, sku.ID)
-			normalizedSchema, normalizedSubmission, err := validateAndNormalizeManualForm(product.ManualFormSchemaJSON, submission)
+			normalizedSchema, normalizedSubmission, err := manualform.ValidateAndNormalize(product.ManualFormSchemaJSON, submission)
 			if err != nil {
 				return nil, err
 			}
@@ -274,7 +278,7 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 	var appliedCoupon *models.Coupon
 	couponCode := strings.TrimSpace(input.CouponCode)
 	if !resellerOrder && couponCode != "" {
-		couponService := NewCouponService(s.couponRepo, s.couponUsageRepo)
+		couponService := couponmodule.NewService(s.couponRepo, s.couponUsageRepo)
 		discount, coupon, err := couponService.ApplyCoupon(
 			models.NewMoneyFromDecimal(originalAmount),
 			couponCode,
@@ -416,11 +420,11 @@ func applyCouponDiscountToItems(plans []childOrderPlan, coupon *models.Coupon, d
 	}
 	scopeType := strings.ToLower(strings.TrimSpace(coupon.ScopeType))
 	if scopeType != constants.ScopeTypeProduct {
-		return ErrCouponScopeInvalid
+		return couponmodule.ErrScopeInvalid
 	}
-	ids, err := decodeScopeIDs(coupon.ScopeRefIDs)
+	ids, err := couponmodule.DecodeScopeIDs(coupon.ScopeRefIDs)
 	if err != nil {
-		return ErrCouponScopeInvalid
+		return couponmodule.ErrScopeInvalid
 	}
 	eligibleIndexes := make([]int, 0, len(plans))
 	eligibleTotal := decimal.Zero
@@ -440,9 +444,9 @@ func applyCouponDiscountToItems(plans []childOrderPlan, coupon *models.Coupon, d
 	}
 	if len(eligibleIndexes) == 0 || eligibleTotal.LessThanOrEqual(decimal.Zero) {
 		if scopeMatched > 0 && wholesaleExcluded == scopeMatched {
-			return ErrCouponWholesaleDisabled
+			return couponmodule.ErrWholesaleDisabled
 		}
-		return ErrCouponScopeInvalid
+		return couponmodule.ErrScopeInvalid
 	}
 
 	remaining := discountAmount

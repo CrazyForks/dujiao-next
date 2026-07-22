@@ -1,0 +1,171 @@
+package cataloghttp
+
+import (
+	"errors"
+
+	"github.com/dujiao-next/internal/http/handlers/shared"
+	"github.com/dujiao-next/internal/http/response"
+	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/catalog"
+
+	"github.com/gin-gonic/gin"
+)
+
+// CategoryService 是后台分类 HTTP 端点所需的最小用例接口。
+type CategoryService interface {
+	List() ([]models.Category, error)
+	Create(input catalog.CreateCategoryInput) (*models.Category, error)
+	Update(id string, input catalog.CreateCategoryInput) (*models.Category, error)
+	SetActive(id string, active bool) (*models.Category, error)
+	Delete(id string) error
+}
+
+// AdminCategoryHandler 处理后台商品分类管理请求。
+type AdminCategoryHandler struct {
+	service CategoryService
+}
+
+func NewAdminCategoryHandler(service CategoryService) *AdminCategoryHandler {
+	if service == nil {
+		panic("catalog admin category handler: service is nil")
+	}
+	return &AdminCategoryHandler{service: service}
+}
+
+// GetAdminCategories 获取分类列表 (Admin)
+func (h *AdminCategoryHandler) GetAdminCategories(c *gin.Context) {
+	categories, err := h.service.List()
+	if err != nil {
+		shared.RespondError(c, response.CodeInternal, "error.category_fetch_failed", err)
+		return
+	}
+
+	response.Success(c, categories)
+}
+
+// ====================  分类管理  ====================
+
+// CreateCategoryRequest 创建分类请求
+type CreateCategoryRequest struct {
+	ParentID  uint                   `json:"parent_id"`
+	Slug      string                 `json:"slug" binding:"required"`
+	NameJSON  map[string]interface{} `json:"name" binding:"required"`
+	Icon      string                 `json:"icon"`
+	SortOrder int                    `json:"sort_order"`
+}
+
+// CreateCategory 创建分类
+func (h *AdminCategoryHandler) CreateCategory(c *gin.Context) {
+	var req CreateCategoryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		shared.RespondBindError(c, err)
+		return
+	}
+
+	category, err := h.service.Create(catalog.CreateCategoryInput{
+		ParentID:  req.ParentID,
+		Slug:      req.Slug,
+		NameJSON:  req.NameJSON,
+		Icon:      req.Icon,
+		SortOrder: req.SortOrder,
+	})
+	if err != nil {
+		if errors.Is(err, catalog.ErrCategorySlugExists) {
+			shared.RespondError(c, response.CodeBadRequest, "error.slug_exists", nil)
+			return
+		}
+		if errors.Is(err, catalog.ErrCategoryParentInvalid) {
+			shared.RespondError(c, response.CodeBadRequest, "error.category_parent_invalid", nil)
+			return
+		}
+		shared.RespondError(c, response.CodeInternal, "error.category_create_failed", err)
+		return
+	}
+
+	response.Success(c, category)
+}
+
+// UpdateCategory 更新分类
+func (h *AdminCategoryHandler) UpdateCategory(c *gin.Context) {
+	id := c.Param("id")
+
+	var req CreateCategoryRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		shared.RespondBindError(c, err)
+		return
+	}
+
+	category, err := h.service.Update(id, catalog.CreateCategoryInput{
+		ParentID:  req.ParentID,
+		Slug:      req.Slug,
+		NameJSON:  req.NameJSON,
+		Icon:      req.Icon,
+		SortOrder: req.SortOrder,
+	})
+	if err != nil {
+		if errors.Is(err, catalog.ErrCategoryNotFound) {
+			shared.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
+			return
+		}
+		if errors.Is(err, catalog.ErrCategorySlugExists) {
+			shared.RespondError(c, response.CodeBadRequest, "error.slug_used", nil)
+			return
+		}
+		if errors.Is(err, catalog.ErrCategoryParentInvalid) {
+			shared.RespondError(c, response.CodeBadRequest, "error.category_parent_invalid", nil)
+			return
+		}
+		shared.RespondError(c, response.CodeInternal, "error.category_update_failed", err)
+		return
+	}
+
+	response.Success(c, category)
+}
+
+// PatchCategoryActiveRequest 切换启用状态请求
+type PatchCategoryActiveRequest struct {
+	IsActive bool `json:"is_active"`
+}
+
+// PatchCategoryActive 切换分类启用状态
+func (h *AdminCategoryHandler) PatchCategoryActive(c *gin.Context) {
+	id := c.Param("id")
+
+	var req PatchCategoryActiveRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		shared.RespondBindError(c, err)
+		return
+	}
+
+	category, err := h.service.SetActive(id, req.IsActive)
+	if err != nil {
+		if errors.Is(err, catalog.ErrCategoryNotFound) {
+			shared.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
+			return
+		}
+		shared.RespondError(c, response.CodeInternal, "error.category_update_failed", err)
+		return
+	}
+
+	response.Success(c, category)
+}
+
+// DeleteCategory 删除分类（软删除）
+func (h *AdminCategoryHandler) DeleteCategory(c *gin.Context) {
+	id := c.Param("id")
+
+	if err := h.service.Delete(id); err != nil {
+		if errors.Is(err, catalog.ErrCategoryInUse) {
+			shared.RespondError(c, response.CodeBadRequest, "error.category_in_use", nil)
+			return
+		}
+		if errors.Is(err, catalog.ErrCategoryNotFound) {
+			shared.RespondError(c, response.CodeNotFound, "error.category_not_found", nil)
+			return
+		}
+		shared.RespondError(c, response.CodeInternal, "error.category_delete_failed", err)
+		return
+	}
+
+	response.Success(c, nil)
+}

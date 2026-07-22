@@ -2,9 +2,9 @@ package service
 
 import (
 	"testing"
-	"time"
 
 	"github.com/dujiao-next/internal/constants"
+	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 )
 
 func TestGetUpstreamSyncConfigFallbackToYaml(t *testing.T) {
@@ -57,45 +57,7 @@ func TestUpdateUpstreamSyncConfigNormalizesBelowMinimum(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update failed: %v", err)
 	}
-	assertSettingIntValue(t, result, "interval_minutes", upstreamSyncIntervalMinDefault)
-}
-
-func TestComputeFullSyncIntervalFloorsAt24h(t *testing.T) {
-	repo := newMockSettingRepo()
-	settingSvc := NewSettingService(repo)
-	svc := &ProductMappingService{settingService: settingSvc}
-
-	// 默认 5m 同步间隔 × 3 = 15m < 24h，期望落到 24h floor
-	got := svc.computeFullSyncInterval()
-	if got != fullSyncIntervalFloor {
-		t.Fatalf("expected floor=24h, got %v", got)
-	}
-}
-
-func TestComputeFullSyncIntervalScalesWithLongInterval(t *testing.T) {
-	repo := newMockSettingRepo()
-	settingSvc := NewSettingService(repo)
-	if _, err := settingSvc.Update(constants.SettingKeyUpstreamSyncConfig, map[string]interface{}{
-		"interval_minutes": 720, // 12h
-	}); err != nil {
-		t.Fatalf("update failed: %v", err)
-	}
-	svc := &ProductMappingService{settingService: settingSvc}
-
-	// 12h * 3 = 36h，应使用 scaled 值
-	got := svc.computeFullSyncInterval()
-	want := 36 * time.Hour
-	if got != want {
-		t.Fatalf("expected %v, got %v", want, got)
-	}
-}
-
-func TestComputeFullSyncIntervalWithoutSettingService(t *testing.T) {
-	svc := &ProductMappingService{}
-	got := svc.computeFullSyncInterval()
-	if got != fullSyncIntervalFloor {
-		t.Fatalf("expected floor when settingService=nil, got %v", got)
-	}
+	assertSettingIntValue(t, result, "interval_minutes", settingsmodule.DefaultUpstreamSyncConfig().IntervalMinutes)
 }
 
 func TestUpdateUpstreamSyncConfigClampsAboveMaximum(t *testing.T) {
@@ -108,5 +70,6 @@ func TestUpdateUpstreamSyncConfigClampsAboveMaximum(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update failed: %v", err)
 	}
-	assertSettingIntValue(t, result, "interval_minutes", upstreamSyncIntervalMinMax)
+	maximum := settingsmodule.NormalizeUpstreamSyncConfig(settingsmodule.UpstreamSyncConfig{IntervalMinutes: 99999}).IntervalMinutes
+	assertSettingIntValue(t, result, "interval_minutes", maximum)
 }

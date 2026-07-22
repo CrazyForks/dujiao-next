@@ -8,8 +8,8 @@ import (
 	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/logger"
+	"github.com/dujiao-next/internal/modules/channelclient"
 	"github.com/dujiao-next/internal/provider"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/gin-gonic/gin"
@@ -67,13 +67,13 @@ func ChannelAPIAuthMiddleware(container *provider.Container) gin.HandlerFunc {
 		)
 		if err != nil {
 			switch err {
-			case service.ErrChannelTimestampExpired:
+			case channelclient.ErrTimestampExpired:
 				response.ChannelError(c, http.StatusUnauthorized, response.CodeUnauthorized, i18n.T(i18n.ResolveLocale(c), "error.unauthorized"), "channel_client_unauthorized")
-			case service.ErrChannelClientNotFound:
+			case channelclient.ErrNotFound:
 				response.ChannelError(c, http.StatusUnauthorized, response.CodeUnauthorized, i18n.T(i18n.ResolveLocale(c), "error.unauthorized"), "channel_client_unauthorized")
-			case service.ErrChannelClientDisabled:
+			case channelclient.ErrDisabled:
 				response.ChannelError(c, http.StatusForbidden, response.CodeForbidden, i18n.T(i18n.ResolveLocale(c), "error.forbidden"), "channel_client_disabled")
-			case service.ErrChannelSignatureInvalid:
+			case channelclient.ErrSignatureInvalid:
 				response.ChannelError(c, http.StatusUnauthorized, response.CodeUnauthorized, i18n.T(i18n.ResolveLocale(c), "error.unauthorized"), "channel_client_unauthorized")
 			default:
 				logger.Errorw("channel_auth_error", "error", err)

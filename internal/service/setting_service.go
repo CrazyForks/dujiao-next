@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/repository"
 )
 
@@ -36,12 +37,16 @@ type OrderRefundConfig struct {
 	MaxRefundDays int `json:"max_refund_days"`
 }
 
-// SettingService 设置业务服务
+// SettingService 设置业务服务兼容门面。
+// 核心读写与已迁移 typed I/O 由 modules/settings.Service 拥有；本类型仅保留尚未下沉的领域 API。
 type SettingService struct {
-	repo                  repository.SettingRepository
+	*settingsmodule.Service
 	defaultOrderConfig    config.OrderConfig
 	hasDefaultOrderConfig bool
 }
+
+// SettingUpdateResult 是 modules/settings.UpdateResult 的兼容别名。
+type SettingUpdateResult = settingsmodule.UpdateResult
 
 // SiteBrand 站点品牌信息
 type SiteBrand struct {
@@ -58,7 +63,9 @@ type RegistrationEmailDomainPolicy struct {
 // NewSettingService 创建设置服务。
 // 可选传入 order 默认配置，用于在 settings 未配置时回落到 config 的 order 配置。
 func NewSettingService(repo repository.SettingRepository, defaultOrderCfg ...config.OrderConfig) *SettingService {
-	svc := &SettingService{repo: repo}
+	svc := &SettingService{
+		Service: settingsmodule.NewService(repo, defaultSettingRegistry),
+	}
 	if len(defaultOrderCfg) > 0 {
 		svc.defaultOrderConfig = defaultOrderCfg[0]
 		svc.hasDefaultOrderConfig = true
@@ -72,42 +79,22 @@ func (s *SettingService) GetConfig(defaults map[string]interface{}) (map[string]
 	for k, v := range defaults {
 		data[k] = v
 	}
-
-	setting, err := s.repo.GetByKey(constants.SettingKeySiteConfig)
-	if err != nil {
-		return nil, err
-	}
-	if setting == nil {
+	if s == nil {
 		return data, nil
 	}
 
-	for k, v := range setting.ValueJSON {
+	value, err := s.GetByKey(constants.SettingKeySiteConfig)
+	if err != nil {
+		return nil, err
+	}
+	if value == nil {
+		return data, nil
+	}
+
+	for k, v := range value {
 		data[k] = v
 	}
 	return data, nil
-}
-
-// GetByKey 获取设置
-func (s *SettingService) GetByKey(key string) (models.JSON, error) {
-	setting, err := s.repo.GetByKey(key)
-	if err != nil {
-		return nil, err
-	}
-	if setting == nil {
-		return nil, nil
-	}
-	return setting.ValueJSON, nil
-}
-
-// Update 设置值
-func (s *SettingService) Update(key string, value map[string]interface{}) (models.JSON, error) {
-	normalized := normalizeSettingValueByKey(key, value)
-
-	setting, err := s.repo.Upsert(key, normalized)
-	if err != nil {
-		return nil, err
-	}
-	return setting.ValueJSON, nil
 }
 
 // DefaultOrderConfig 默认订单配置。
@@ -411,22 +398,6 @@ func (s *SettingService) GetWalletOnlyPayment() bool {
 		return false
 	}
 	return parseSettingBool(raw)
-}
-
-// GetCallbackRoutes 获取自定义回调路由配置。未配置时返回 nil。
-func (s *SettingService) GetCallbackRoutes() *CallbackRoutesSetting {
-	if s == nil {
-		return nil
-	}
-	value, err := s.GetByKey(constants.SettingKeyCallbackRoutesConfig)
-	if err != nil || value == nil {
-		return nil
-	}
-	setting := callbackRoutesSettingFromJSON(value)
-	if !setting.HasCustomRoutes() {
-		return nil
-	}
-	return &setting
 }
 
 // GetWalletRechargeChannelIDs 获取钱包充值允许的支付渠道ID列表

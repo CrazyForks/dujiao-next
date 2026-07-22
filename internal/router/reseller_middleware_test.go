@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/service"
 	"github.com/gin-gonic/gin"
 )
@@ -50,7 +51,7 @@ func TestResellerTenantMiddlewareSetsTenant(t *testing.T) {
 
 func TestResellerTenantMiddlewareUnavailableReturns404(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resolver := middlewareResolverStub{tenant: service.UnavailableTenantContext("unknown.example.test", service.ResellerDomainUnavailableNotFound)}
+	resolver := middlewareResolverStub{tenant: service.UnavailableTenantContext("unknown.example.test", resellermodule.DomainUnavailableNotFound)}
 	r := gin.New()
 	r.Use(ResellerTenantMiddleware(resolver))
 	r.GET("/probe", func(c *gin.Context) {
@@ -67,7 +68,7 @@ func TestResellerTenantMiddlewareUnavailableReturns404(t *testing.T) {
 
 func TestResellerTenantMiddlewareOnlyBlocksStorefrontGroup(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resolver := middlewareResolverStub{tenant: service.UnavailableTenantContext("unknown.example.test", service.ResellerDomainUnavailableNotFound)}
+	resolver := middlewareResolverStub{tenant: service.UnavailableTenantContext("unknown.example.test", resellermodule.DomainUnavailableNotFound)}
 	r := gin.New()
 
 	r.GET("/sitemap.xml", func(c *gin.Context) { c.String(http.StatusOK, "sitemap") })

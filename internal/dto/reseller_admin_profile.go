@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/service"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 )
 
 type AdminResellerProfileUserResp struct {
@@ -85,9 +85,9 @@ func NewAdminResellerProfileDetailResp(
 	profile *models.ResellerProfile,
 	domains []models.ResellerDomain,
 	siteConfig *models.ResellerSiteConfig,
-	productSummary service.ResellerProductSettingSummary,
+	productSummary resellermodule.ProductSettingSummary,
 	balances []models.ResellerBalanceAccount,
-	recentOrders []service.ResellerOrderListItem,
+	recentOrders []resellermodule.OrderListItem,
 	recentLedgerEntries []models.ResellerLedgerEntry,
 	recentWithdraws []models.ResellerWithdrawRequest,
 ) AdminResellerProfileDetailResp {

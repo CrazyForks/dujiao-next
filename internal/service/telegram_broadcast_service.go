@@ -7,6 +7,8 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/channelclient"
+	telegrammodule "github.com/dujiao-next/internal/modules/telegram"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 )
@@ -45,13 +47,13 @@ type TelegramBroadcastService struct {
 	repo                  repository.TelegramBroadcastRepository
 	userOAuthIdentityRepo repository.UserOAuthIdentityRepository
 	channelClientRepo     repository.ChannelClientRepository
-	channelClientService  *ChannelClientService
+	channelClientService  *channelclient.Service
 	queueClient           *queue.Client
 	telegramSender        telegramBroadcastSender
 }
 
 type telegramBroadcastSender interface {
-	SendWithBotToken(ctx context.Context, botToken string, options TelegramSendOptions) error
+	SendWithBotToken(ctx context.Context, botToken string, options telegrammodule.SendOptions) error
 }
 
 // NewTelegramBroadcastService 创建 Telegram 广播服务。
@@ -59,7 +61,7 @@ func NewTelegramBroadcastService(
 	repo repository.TelegramBroadcastRepository,
 	userOAuthIdentityRepo repository.UserOAuthIdentityRepository,
 	channelClientRepo repository.ChannelClientRepository,
-	channelClientService *ChannelClientService,
+	channelClientService *channelclient.Service,
 	queueClient *queue.Client,
 	telegramSender telegramBroadcastSender,
 ) *TelegramBroadcastService {
@@ -189,7 +191,7 @@ func (s *TelegramBroadcastService) ProcessBroadcast(ctx context.Context, broadca
 	failedCount := 0
 	lastError := ""
 	for _, chatID := range chatIDs {
-		err := s.telegramSender.SendWithBotToken(ctx, token, TelegramSendOptions{
+		err := s.telegramSender.SendWithBotToken(ctx, token, telegrammodule.SendOptions{
 			ChatID:                chatID,
 			Message:               broadcast.MessageHTML,
 			ParseMode:             "HTML",

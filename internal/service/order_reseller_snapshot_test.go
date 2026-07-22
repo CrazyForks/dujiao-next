@@ -10,6 +10,10 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
+	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/glebarez/sqlite"
@@ -163,9 +167,9 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		ProductRepo:             repository.NewProductRepository(db),
 		ProductSKURepo:          repository.NewProductSKURepository(db),
 		CardSecretRepo:          repository.NewCardSecretRepository(db),
-		CouponRepo:              repository.NewCouponRepository(db),
-		CouponUsageRepo:         repository.NewCouponUsageRepository(db),
-		PromotionRepo:           repository.NewPromotionRepository(db),
+		CouponRepo:              coupongormstore.New(db),
+		CouponUsageRepo:         coupongormstore.NewUsageStore(db),
+		PromotionRepo:           promotiongormstore.New(db),
 		ExpireMinutes:           15,
 		ResellerRepo:            resellerRepo,
 		ResellerPricingResolver: NewResellerPricingResolver(resellerRepo),
@@ -415,13 +419,12 @@ func TestCreateOrderResellerRuntimePricesMatchPreviewAndSnapshotAcrossRuleSource
 
 func TestPreviewAndCreateOrderResellerRejectServicePersistedHiddenProductWithoutSnapshot(t *testing.T) {
 	f := newOrderResellerSnapshotFixture(t)
-	settingSvc := NewResellerProductSettingService(
-		repository.NewResellerProductSettingRepository(f.db),
-		f.resellerRepo,
+	settingSvc := resellermodule.NewProductSettingService(
+		resellerpersistence.NewProductSettingStore(repository.NewResellerProductSettingRepository(f.db), f.resellerRepo),
 		repository.NewProductRepository(f.db),
 	)
-	if _, err := settingSvc.SaveUserProductSettings(f.owner.ID, f.product.ID, ResellerProductSettingSaveInput{
-		Settings: []ResellerProductSettingInput{
+	if _, err := settingSvc.SaveUserProductSettings(f.owner.ID, f.product.ID, resellermodule.ProductSettingSaveInput{
+		Settings: []resellermodule.ProductSettingInput{
 			{SKUID: 0, IsListed: false, PricingMode: models.ResellerPricingModeInherit},
 		},
 	}); err != nil {

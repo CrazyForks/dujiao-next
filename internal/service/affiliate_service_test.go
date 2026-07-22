@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -137,7 +138,7 @@ func setupAffiliateServiceTest(t *testing.T) (*AffiliateService, *gorm.DB) {
 
 	settingRepo := newMockSettingRepo()
 	settingSvc := NewSettingService(settingRepo)
-	if _, err := settingSvc.UpdateAffiliateSetting(AffiliateSetting{
+	if _, err := settingSvc.UpdateAffiliateSetting(settingsmodule.AffiliateSetting{
 		Enabled:        true,
 		CommissionRate: 20,
 	}); err != nil {

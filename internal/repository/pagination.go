@@ -1,18 +1,11 @@
 package repository
 
-import "gorm.io/gorm"
+import (
+	"github.com/dujiao-next/internal/persistence/gormutil"
 
-// applyPagination 应用分页参数，统一处理非法页码与偏移量。
+	"gorm.io/gorm"
+)
+
 func applyPagination(query *gorm.DB, page, pageSize int) *gorm.DB {
-	if query == nil || pageSize <= 0 {
-		return query
-	}
-	if page < 1 {
-		page = 1
-	}
-	offset := (page - 1) * pageSize
-	if offset < 0 {
-		offset = 0
-	}
-	return query.Limit(pageSize).Offset(offset)
+	return gormutil.ApplyPagination(query, page, pageSize)
 }

@@ -21,9 +21,9 @@ type taskHandler func(context.Context, *asynq.Task) error
 // asynq 那一层收到的就是 nil panic + 我们返回的 error)。
 //
 // 行为:
-// - panic 被恢复后转换为 error 返回给 asynq(asynq 会按配置重试)
-// - zap 结构化日志记录 task_type / task_id / retry_count / queue / stack,
-//   运维可通过 logs/app.log 的 worker_panic_recovered 日志做告警
+//   - panic 被恢复后转换为 error 返回给 asynq(asynq 会按配置重试)
+//   - zap 结构化日志记录 task_type / task_id / retry_count / queue / stack,
+//     运维可通过 logs/app.log 的 worker_panic_recovered 日志做告警
 func withPanicRecovery(taskType string, fn taskHandler) taskHandler {
 	return func(ctx context.Context, t *asynq.Task) (retErr error) {
 		defer func() {

@@ -10,6 +10,11 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/coupon"
+	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
+	"github.com/dujiao-next/internal/modules/memberlevel"
+	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 
 	"github.com/glebarez/sqlite"
@@ -129,16 +134,16 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 	}
 
 	userRepo := repository.NewUserRepository(db)
-	levelRepo := repository.NewMemberLevelRepository(db)
-	priceRepo := repository.NewMemberLevelPriceRepository(db)
+	levelRepo := memberlevelgormstore.NewLevelStore(db)
+	priceRepo := memberlevelgormstore.NewPriceStore(db)
 	svc := NewOrderService(OrderServiceOptions{
 		UserRepo:           userRepo,
 		ProductRepo:        repository.NewProductRepository(db),
 		ProductSKURepo:     repository.NewProductSKURepository(db),
-		PromotionRepo:      repository.NewPromotionRepository(db),
-		CouponRepo:         repository.NewCouponRepository(db),
-		CouponUsageRepo:    repository.NewCouponUsageRepository(db),
-		MemberLevelService: NewMemberLevelService(levelRepo, priceRepo, userRepo),
+		PromotionRepo:      promotiongormstore.New(db),
+		CouponRepo:         coupongormstore.New(db),
+		CouponUsageRepo:    coupongormstore.NewUsageStore(db),
+		MemberLevelService: memberlevel.NewService(levelRepo, priceRepo, userRepo),
 		ExpireMinutes:      15,
 	})
 
@@ -334,8 +339,8 @@ func TestBuildOrderResultRejectsCouponWhenDisabledForAllWholesaleItems(t *testin
 			{ProductID: fixture.product.ID, SKUID: fixture.sku.ID, Quantity: 5},
 		},
 	})
-	if !errors.Is(err, ErrCouponWholesaleDisabled) {
-		t.Fatalf("expected ErrCouponWholesaleDisabled, got %v", err)
+	if !errors.Is(err, coupon.ErrWholesaleDisabled) {
+		t.Fatalf("expected coupon.ErrWholesaleDisabled, got %v", err)
 	}
 }
 

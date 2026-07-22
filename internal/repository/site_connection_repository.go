@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/siteconnection"
 
 	"gorm.io/gorm"
 )
@@ -15,14 +16,8 @@ type SiteConnectionRepository interface {
 	Create(conn *models.SiteConnection) error
 	Update(conn *models.SiteConnection) error
 	Delete(id uint) error
-	List(filter SiteConnectionListFilter) ([]models.SiteConnection, int64, error)
+	List(filter siteconnection.ListFilter) ([]models.SiteConnection, int64, error)
 	ListActive() ([]models.SiteConnection, error)
-}
-
-// SiteConnectionListFilter 连接列表筛选
-type SiteConnectionListFilter struct {
-	Status string
-	Pagination
 }
 
 // GormSiteConnectionRepository GORM 实现
@@ -75,7 +70,7 @@ func (r *GormSiteConnectionRepository) Delete(id uint) error {
 }
 
 // List 列表查询
-func (r *GormSiteConnectionRepository) List(filter SiteConnectionListFilter) ([]models.SiteConnection, int64, error) {
+func (r *GormSiteConnectionRepository) List(filter siteconnection.ListFilter) ([]models.SiteConnection, int64, error) {
 	var conns []models.SiteConnection
 	var total int64
 

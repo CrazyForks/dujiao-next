@@ -1,0 +1,267 @@
+package notification
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/dujiao-next/internal/constants"
+	"github.com/dujiao-next/internal/logger"
+	"github.com/dujiao-next/internal/models"
+	paymentcommon "github.com/dujiao-next/internal/payment/common"
+	"github.com/dujiao-next/internal/queue"
+)
+
+func detachOutboundRequestContext(parent context.Context) (context.Context, context.CancelFunc) {
+	if parent == nil {
+		return paymentcommon.WithDefaultTimeout(context.Background())
+	}
+	return paymentcommon.WithDefaultTimeout(context.WithoutCancel(parent))
+}
+
+// TestSendInput 通知测试发送参数
+type TestSendInput struct {
+	Channel   string
+	Target    string
+	Scene     string
+	Locale    string
+	Variables map[string]interface{}
+}
+
+// SendTest 测试发送通知
+func (s *Service) SendTest(ctx context.Context, input TestSendInput) error {
+	if s == nil {
+		return ErrSendFailed
+	}
+	channel := strings.ToLower(strings.TrimSpace(input.Channel))
+	target := strings.TrimSpace(input.Target)
+	if channel == "" || target == "" {
+		return ErrConfigInvalid
+	}
+
+	setting, err := s.settingService.GetNotificationCenterSetting()
+	if err != nil {
+		return err
+	}
+	scene := strings.ToLower(strings.TrimSpace(input.Scene))
+	if scene == "" {
+		scene = constants.NotificationEventExceptionAlert
+	}
+	template := setting.Templates.TemplateByEvent(scene).ResolveLocaleTemplate(resolveNotificationLocale(input.Locale, setting.DefaultLocale))
+	variables := cloneNotificationVariables(input.Variables)
+	if variables == nil {
+		variables = map[string]interface{}{}
+	}
+	locale := resolveNotificationLocale(input.Locale, setting.DefaultLocale)
+	applyNotificationTestVariables(variables, BuildTestVariables(scene, locale))
+	variables["event_type"] = scene
+	variables["message"] = pickNotificationMessage(variables["message"], "test message")
+	title := renderNotificationTemplate(template.Title, variables)
+	body := renderNotificationTemplate(template.Body, variables)
+	if strings.TrimSpace(body) == "" {
+		body = title
+	}
+	if strings.TrimSpace(title) == "" {
+		title = "Notification Test"
+	}
+
+	switch channel {
+	case "email":
+		sendErr := ErrSendFailed
+		if s.emailService != nil {
+			sendErr = s.emailService.SendCustomEmail(target, title, body)
+		}
+		s.recordSendAttempt(notificationSendAttempt{
+			eventType: scene,
+			channel:   channel,
+			recipient: target,
+			locale:    locale,
+			title:     title,
+			body:      body,
+			variables: variables,
+			isTest:    true,
+			sendErr:   sendErr,
+		})
+		return sendErr
+	case "telegram":
+		sendErr := ErrSendFailed
+		gatewayCtx, cancel := detachOutboundRequestContext(ctx)
+		defer cancel()
+		if s.telegramSender != nil {
+			sendErr = s.telegramSender.SendMessage(gatewayCtx, target, composeTelegramMessage(title, body))
+		}
+		s.recordSendAttempt(notificationSendAttempt{
+			eventType: scene,
+			channel:   channel,
+			recipient: target,
+			locale:    locale,
+			title:     title,
+			body:      body,
+			variables: variables,
+			isTest:    true,
+			sendErr:   sendErr,
+		})
+		return sendErr
+	default:
+		return ErrConfigInvalid
+	}
+}
+
+func (s *Service) dispatchSingleEvent(ctx context.Context, setting NotificationCenterSetting, payload queue.NotificationDispatchPayload) error {
+	if !payload.Force {
+		ok, err := acquireNotificationDedupe(ctx, setting.DedupeTTLSeconds, payload)
+		if err != nil {
+			logger.Warnw("notification_dedupe_failed", "event_type", payload.EventType, "error", err)
+		}
+		if err == nil && !ok {
+			return nil
+		}
+	}
+
+	locale := resolveNotificationLocale(payload.Locale, setting.DefaultLocale)
+	template := setting.Templates.TemplateByEvent(payload.EventType).ResolveLocaleTemplate(locale)
+	variables := buildNotificationTemplateVariables(payload)
+	title := renderNotificationTemplate(template.Title, variables)
+	body := renderNotificationTemplate(template.Body, variables)
+	if strings.TrimSpace(body) == "" {
+		body = title
+	}
+	if strings.TrimSpace(title) == "" {
+		title = "Notification"
+	}
+
+	var firstErr error
+	if setting.Channels.Email.Enabled && len(setting.Channels.Email.Recipients) > 0 {
+		for _, recipient := range setting.Channels.Email.Recipients {
+			var sendErr error
+			if s.emailService == nil {
+				sendErr = ErrSendFailed
+			} else {
+				sendErr = s.emailService.SendCustomEmail(recipient, title, body)
+			}
+			s.recordSendAttempt(notificationSendAttempt{
+				eventType: payload.EventType,
+				bizType:   payload.BizType,
+				bizID:     payload.BizID,
+				channel:   "email",
+				recipient: recipient,
+				locale:    locale,
+				title:     title,
+				body:      body,
+				variables: variables,
+				sendErr:   sendErr,
+			})
+			if sendErr != nil {
+				logger.Warnw("notification_email_send_failed",
+					"event_type", payload.EventType,
+					"biz_type", payload.BizType,
+					"biz_id", payload.BizID,
+					"recipient", recipient,
+					"error", sendErr,
+				)
+				if firstErr == nil {
+					firstErr = sendErr
+				}
+			}
+		}
+	}
+	if setting.Channels.Telegram.Enabled && len(setting.Channels.Telegram.Recipients) > 0 {
+		message := composeTelegramMessage(title, body)
+		for _, recipient := range setting.Channels.Telegram.Recipients {
+			var sendErr error
+			if s.telegramSender == nil {
+				sendErr = ErrSendFailed
+			} else {
+				sendErr = s.telegramSender.SendMessage(ctx, recipient, message)
+			}
+			s.recordSendAttempt(notificationSendAttempt{
+				eventType: payload.EventType,
+				bizType:   payload.BizType,
+				bizID:     payload.BizID,
+				channel:   "telegram",
+				recipient: recipient,
+				locale:    locale,
+				title:     title,
+				body:      body,
+				variables: variables,
+				sendErr:   sendErr,
+			})
+			if sendErr != nil {
+				logger.Warnw("notification_telegram_send_failed",
+					"event_type", payload.EventType,
+					"biz_type", payload.BizType,
+					"biz_id", payload.BizID,
+					"recipient", recipient,
+					"error", sendErr,
+				)
+				if firstErr == nil {
+					firstErr = sendErr
+				}
+			}
+		}
+	}
+	if firstErr != nil {
+		return fmt.Errorf("%w: %v", ErrSendFailed, firstErr)
+	}
+	return nil
+}
+
+type notificationSendAttempt struct {
+	eventType string
+	bizType   string
+	bizID     uint
+	channel   string
+	recipient string
+	locale    string
+	title     string
+	body      string
+	variables map[string]interface{}
+	isTest    bool
+	sendErr   error
+}
+
+func (s *Service) recordSendAttempt(attempt notificationSendAttempt) {
+	if s == nil || s.logService == nil {
+		return
+	}
+	status := notificationLogStatusSuccess
+	errMessage := ""
+	if attempt.sendErr != nil {
+		status = notificationLogStatusFailed
+		errMessage = attempt.sendErr.Error()
+	}
+	if err := s.logService.Record(LogRecordInput{
+		EventType:    attempt.eventType,
+		BizType:      attempt.bizType,
+		BizID:        attempt.bizID,
+		Channel:      attempt.channel,
+		Recipient:    attempt.recipient,
+		Locale:       attempt.locale,
+		Title:        attempt.title,
+		Body:         attempt.body,
+		Status:       status,
+		ErrorMessage: errMessage,
+		IsTest:       attempt.isTest,
+		Variables:    notificationVariablesToJSON(attempt.variables),
+	}); err != nil {
+		logger.Warnw("notification_log_record_failed",
+			"event_type", attempt.eventType,
+			"biz_type", attempt.bizType,
+			"biz_id", attempt.bizID,
+			"channel", attempt.channel,
+			"recipient", attempt.recipient,
+			"error", err,
+		)
+	}
+}
+
+func notificationVariablesToJSON(data map[string]interface{}) models.JSON {
+	if len(data) == 0 {
+		return models.JSON{}
+	}
+	result := make(models.JSON, len(data))
+	for key, value := range data {
+		result[key] = value
+	}
+	return result
+}
