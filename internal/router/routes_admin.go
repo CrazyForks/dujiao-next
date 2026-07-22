@@ -3,6 +3,7 @@ package router
 import (
 	settingsbootstrap "github.com/dujiao-next/internal/bootstrap/settingshttp"
 	"github.com/dujiao-next/internal/config"
+	channelclienthttp "github.com/dujiao-next/internal/modules/channelclient/transport/http"
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	broadcasthttp "github.com/dujiao-next/internal/modules/telegram/broadcast/transport/http"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -16,7 +17,6 @@ import (
 	auditlogtransport "github.com/dujiao-next/internal/transport/http/auditlog"
 	cardsecrettransport "github.com/dujiao-next/internal/transport/http/cardsecret"
 	catalogtransport "github.com/dujiao-next/internal/transport/http/catalog"
-	channelclienttransport "github.com/dujiao-next/internal/transport/http/channelclient"
 	compliancetransport "github.com/dujiao-next/internal/transport/http/compliance"
 	contenttransport "github.com/dujiao-next/internal/transport/http/content"
 	coupontransport "github.com/dujiao-next/internal/transport/http/coupon"
@@ -37,7 +37,6 @@ import (
 	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
 	adproxywiring "github.com/dujiao-next/internal/wiring/adproxy"
 	affiliatewiring "github.com/dujiao-next/internal/wiring/affiliate"
-	channelclientwiring "github.com/dujiao-next/internal/wiring/channelclient"
 	compliancewiring "github.com/dujiao-next/internal/wiring/compliance"
 	siteconnectionwiring "github.com/dujiao-next/internal/wiring/siteconnection"
 	uploadwiring "github.com/dujiao-next/internal/wiring/upload"
@@ -190,7 +189,7 @@ func registerAdminRoutes(
 	reconciliationtransport.RegisterAdminRoutes(paymentProtected, reconciliationtransport.NewAdminHandler(c.ReconciliationService))
 
 	// 渠道客户端管理
-	channelclienttransport.RegisterAdminRoutes(authorized, channelclientwiring.NewAdminHandler(c))
+	channelclienthttp.RegisterAdminRoutes(authorized, channelclienthttp.NewAdminHandler(c.ChannelClientService))
 
 	// Telegram Bot 群发
 	broadcasthttp.RegisterAdminRoutes(authorized, broadcasthttp.NewAdminHandler(c.TelegramBroadcastService))

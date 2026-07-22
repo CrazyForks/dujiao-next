@@ -6,7 +6,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/apicredential"
 	"github.com/dujiao-next/internal/modules/auditlog"
-	"github.com/dujiao-next/internal/modules/channelclient"
+	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
 	"github.com/dujiao-next/internal/modules/content"
 	localfilestore "github.com/dujiao-next/internal/modules/content/filestore/local"
 	contentgormstore "github.com/dujiao-next/internal/modules/content/store/gormstore"
@@ -98,11 +98,11 @@ func (c *Container) initIntegrationServices() {
 		Procurements: c.ProcurementOrderRepo, Connections: c.SiteConnectionService,
 		Queue: c.QueueClient, Notifications: c.NotificationService,
 	})
-	c.ChannelClientService = channelclient.NewService(c.ChannelClientRepo, c.Config.App.SecretKey)
+	c.ChannelClientService = channelclientapp.NewService(c.ChannelClientStore, c.Config.App.SecretKey)
 	c.TelegramBroadcastService = broadcastapp.NewService(
 		c.TelegramBroadcastRepo,
 		telegrambroadcast.NewUserDirectory(c.UserOAuthIdentityRepo),
-		telegrambroadcast.NewBotTokenResolver(c.ChannelClientRepo, c.ChannelClientService),
+		telegrambroadcast.NewBotTokenResolver(c.ChannelClientService),
 		telegrambroadcast.NewDispatcher(c.QueueClient),
 		telegrammodule.NewNotifyService(c.SettingService, c.Config.TelegramAuth),
 	)

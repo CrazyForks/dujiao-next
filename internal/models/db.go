@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
 	"github.com/glebarez/sqlite" // 纯 Go SQLite 驱动（基于 modernc.org/sqlite）
@@ -178,7 +179,7 @@ func AutoMigrate() error {
 		&DownstreamOrderRef{},
 		&ReconciliationJob{},
 		&ReconciliationItem{},
-		&ChannelClient{},
+		&channelclientdomain.Client{},
 		&broadcastdomain.Broadcast{},
 		&MemberLevel{},
 		&MemberLevelPrice{},

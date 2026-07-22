@@ -1,4 +1,4 @@
-package channelclient
+package channelclientapp
 
 // ClientDetail 渠道客户端详情（含明文 secret，供后台展示）。
 type ClientDetail struct {
@@ -12,4 +12,13 @@ type ClientDetail struct {
 	CallbackURL   string `json:"callback_url"`
 	Description   string `json:"description"`
 	Status        int    `json:"status"`
+}
+
+// ActiveEndpoint contains the decrypted callback credential needed by an
+// integration worker. It deliberately excludes persisted ciphertext.
+type ActiveEndpoint struct {
+	ClientID      uint
+	ChannelKey    string
+	CallbackURL   string
+	ChannelSecret string
 }

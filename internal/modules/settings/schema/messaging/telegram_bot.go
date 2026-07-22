@@ -284,17 +284,6 @@ func SerializeTelegramBotConfigForChannel(setting TelegramBotConfigSetting, botT
 	}
 }
 
-// MaskBotToken 脱敏 bot token：显示前 4 位和后 4 位
-func MaskBotToken(token string) string {
-	if token == "" {
-		return ""
-	}
-	if len(token) <= 12 {
-		return strings.Repeat("*", len(token))
-	}
-	return token[:4] + strings.Repeat("*", len(token)-8) + token[len(token)-4:]
-}
-
 // TelegramBotRuntimeStatusToMap 转换运行时状态为存储结构
 func EncodeTelegramBotRuntimeStatus(status TelegramBotRuntimeStatusSetting) map[string]interface{} {
 	return map[string]interface{}{

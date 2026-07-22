@@ -11,7 +11,8 @@ import (
 	"github.com/dujiao-next/internal/modules/cart"
 	"github.com/dujiao-next/internal/modules/catalog"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
-	"github.com/dujiao-next/internal/modules/channelclient"
+	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
+	channelclientcontract "github.com/dujiao-next/internal/modules/channelclient/contract"
 	"github.com/dujiao-next/internal/modules/compliance"
 	"github.com/dujiao-next/internal/modules/content"
 	"github.com/dujiao-next/internal/modules/coupon"
@@ -86,7 +87,7 @@ type Container struct {
 	DownstreamOrderRefRepo     repository.DownstreamOrderRefRepository
 	ReconciliationJobRepo      reconciliation.JobRepository
 	ReconciliationItemRepo     reconciliation.ItemRepository
-	ChannelClientRepo          repository.ChannelClientRepository
+	ChannelClientStore         channelclientcontract.Store
 	TelegramBroadcastRepo      broadcastcontract.Store
 	MemberLevelRepo            memberlevel.LevelRepository
 	MemberLevelPriceRepo       *memberlevelgormstore.PriceStore
@@ -140,7 +141,7 @@ type Container struct {
 	ProcurementOrderService       *procurement.Service
 	DownstreamCallbackService     *downstreamcallback.Service
 	ReconciliationService         *reconciliation.Service
-	ChannelClientService          *channelclient.Service
+	ChannelClientService          *channelclientapp.Service
 	TelegramBroadcastService      *broadcastapp.Service
 	MemberLevelService            *memberlevel.Service
 	AdProxyService                *adproxy.Service

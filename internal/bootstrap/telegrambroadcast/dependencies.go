@@ -2,9 +2,9 @@ package telegrambroadcast
 
 import (
 	"context"
-	"strings"
+	"errors"
 
-	"github.com/dujiao-next/internal/modules/channelclient"
+	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
 	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
@@ -40,30 +40,25 @@ func (directory UserDirectory) ListTelegramUsers(query broadcastapp.UserQuery) (
 }
 
 type BotTokenResolver struct {
-	repository repository.ChannelClientRepository
-	service    *channelclient.Service
+	service *channelclientapp.Service
 }
 
-func NewBotTokenResolver(repository repository.ChannelClientRepository, service *channelclient.Service) BotTokenResolver {
-	return BotTokenResolver{repository: repository, service: service}
+func NewBotTokenResolver(service *channelclientapp.Service) BotTokenResolver {
+	return BotTokenResolver{service: service}
 }
 
 func (resolver BotTokenResolver) ResolveActiveBotToken() (string, error) {
-	client, err := resolver.repository.FindActiveByChannelType("telegram_bot")
-	if err != nil {
-		return "", err
-	}
-	if client == nil || resolver.service == nil {
+	if resolver.service == nil {
 		return "", broadcastapp.ErrTokenUnavailable
 	}
-	token, err := resolver.service.DecryptBotToken(client)
+	token, err := resolver.service.ResolveBotTokenByType("telegram_bot")
 	if err != nil {
+		if errors.Is(err, channelclientapp.ErrNotFound) {
+			return "", broadcastapp.ErrTokenUnavailable
+		}
 		return "", err
 	}
-	if strings.TrimSpace(token) == "" {
-		return "", broadcastapp.ErrTokenUnavailable
-	}
-	return strings.TrimSpace(token), nil
+	return token, nil
 }
 
 type Dispatcher struct {

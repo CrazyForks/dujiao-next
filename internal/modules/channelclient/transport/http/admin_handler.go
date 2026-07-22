@@ -3,7 +3,7 @@ package channelclienthttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/modules/channelclient"
+	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -12,12 +12,12 @@ import (
 
 // AdminService 是后台渠道客户端端口。
 type AdminService interface {
-	ListChannelClientDetails() ([]channelclient.ClientDetail, error)
-	CreateChannelClient(name, channelType, description, botToken, callbackURL string) (*channelclient.ClientDetail, error)
-	GetChannelClientDetail(id uint) (*channelclient.ClientDetail, error)
+	ListChannelClientDetails() ([]channelclientapp.ClientDetail, error)
+	CreateChannelClient(name, channelType, description, botToken, callbackURL string) (*channelclientapp.ClientDetail, error)
+	GetChannelClientDetail(id uint) (*channelclientapp.ClientDetail, error)
 	UpdateChannelClientStatus(id uint, status int) error
-	UpdateChannelClient(id uint, name, description string, botToken *string, callbackURL *string) (*channelclient.ClientDetail, error)
-	ResetChannelClientSecret(id uint) (*channelclient.ClientDetail, error)
+	UpdateChannelClient(id uint, name, description string, botToken *string, callbackURL *string) (*channelclientapp.ClientDetail, error)
+	ResetChannelClientSecret(id uint) (*channelclientapp.ClientDetail, error)
 	DeleteChannelClient(id uint) error
 }
 
@@ -89,7 +89,7 @@ func (h *AdminHandler) GetChannelClient(c *gin.Context) {
 
 	detail, err := h.clients.GetChannelClientDetail(id)
 	if err != nil {
-		if errors.Is(err, channelclient.ErrNotFound) {
+		if errors.Is(err, channelclientapp.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 			return
 		}
@@ -114,7 +114,7 @@ func (h *AdminHandler) UpdateChannelClientStatus(c *gin.Context) {
 	}
 
 	if err := h.clients.UpdateChannelClientStatus(id, req.Status); err != nil {
-		if errors.Is(err, channelclient.ErrNotFound) {
+		if errors.Is(err, channelclientapp.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 			return
 		}
@@ -141,7 +141,7 @@ func (h *AdminHandler) UpdateChannelClient(c *gin.Context) {
 
 	result, err := h.clients.UpdateChannelClient(id, req.Name, req.Description, req.BotToken, req.CallbackURL)
 	if err != nil {
-		if errors.Is(err, channelclient.ErrNotFound) {
+		if errors.Is(err, channelclientapp.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 			return
 		}
@@ -162,7 +162,7 @@ func (h *AdminHandler) ResetChannelClientSecret(c *gin.Context) {
 
 	result, err := h.clients.ResetChannelClientSecret(id)
 	if err != nil {
-		if errors.Is(err, channelclient.ErrNotFound) {
+		if errors.Is(err, channelclientapp.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 			return
 		}
@@ -182,7 +182,7 @@ func (h *AdminHandler) DeleteChannelClient(c *gin.Context) {
 	}
 
 	if err := h.clients.DeleteChannelClient(id); err != nil {
-		if errors.Is(err, channelclient.ErrNotFound) {
+		if errors.Is(err, channelclientapp.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.not_found", nil)
 			return
 		}

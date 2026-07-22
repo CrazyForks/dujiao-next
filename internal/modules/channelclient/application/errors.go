@@ -1,4 +1,4 @@
-package channelclient
+package channelclientapp
 
 import "errors"
 

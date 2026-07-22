@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/logger"
+	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/upstream"
 
@@ -34,21 +36,18 @@ func (c *Consumer) handleBotNotify(_ context.Context, task *asynq.Task) error {
 	}
 
 	// 从 DB 读取 telegram_bot 类型的活跃 ChannelClient
-	channelClient, err := c.ChannelClientRepo.FindActiveByChannelType("telegram_bot")
+	channelEndpoint, err := c.ChannelClientService.GetActiveEndpoint("telegram_bot")
 	if err != nil {
+		if errors.Is(err, channelclientapp.ErrNotFound) {
+			logger.Debugw("worker_bot_notify_skip_no_channel_client")
+			return nil
+		}
 		logger.Warnw("worker_bot_notify_find_channel_client_failed", "error", err)
 		return fmt.Errorf("find telegram bot channel client: %w", err)
 	}
-	if channelClient == nil || channelClient.CallbackURL == "" {
+	if channelEndpoint == nil || channelEndpoint.CallbackURL == "" {
 		logger.Debugw("worker_bot_notify_skip_no_channel_client")
 		return nil
-	}
-
-	// 解密 ChannelSecret
-	plainSecret, err := c.ChannelClientService.DecryptChannelSecret(channelClient)
-	if err != nil {
-		logger.Warnw("worker_bot_notify_decrypt_secret_failed", "error", err)
-		return fmt.Errorf("decrypt channel secret: %w", err)
 	}
 
 	timestamp := time.Now().Unix()
@@ -86,9 +85,9 @@ func (c *Consumer) handleBotNotify(_ context.Context, task *asynq.Task) error {
 		return nil
 	}
 	body, _ := json.Marshal(requestBody)
-	signature := upstream.Sign(plainSecret, "POST", path, timestamp, body)
+	signature := upstream.Sign(channelEndpoint.ChannelSecret, "POST", path, timestamp, body)
 
-	requestURL, err := buildBotNotifyRequestURL(channelClient.CallbackURL, path)
+	requestURL, err := buildBotNotifyRequestURL(channelEndpoint.CallbackURL, path)
 	if err != nil {
 		return fmt.Errorf("build bot notify request url: %w", err)
 	}
@@ -98,7 +97,7 @@ func (c *Consumer) handleBotNotify(_ context.Context, task *asynq.Task) error {
 		return fmt.Errorf("create bot notify request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Dujiao-Next-Channel-Key", channelClient.ChannelKey)
+	req.Header.Set("Dujiao-Next-Channel-Key", channelEndpoint.ChannelKey)
 	req.Header.Set("Dujiao-Next-Channel-Timestamp", strconv.FormatInt(timestamp, 10))
 	req.Header.Set("Dujiao-Next-Channel-Signature", signature)
 

@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/modules/channelclient"
+	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/upstream"
 
@@ -67,13 +67,13 @@ func ChannelAPIAuthMiddleware(container *provider.Container) gin.HandlerFunc {
 		)
 		if err != nil {
 			switch err {
-			case channelclient.ErrTimestampExpired:
+			case channelclientapp.ErrTimestampExpired:
 				response.ChannelError(c, http.StatusUnauthorized, response.CodeUnauthorized, i18n.T(i18n.ResolveLocale(c), "error.unauthorized"), "channel_client_unauthorized")
-			case channelclient.ErrNotFound:
+			case channelclientapp.ErrNotFound:
 				response.ChannelError(c, http.StatusUnauthorized, response.CodeUnauthorized, i18n.T(i18n.ResolveLocale(c), "error.unauthorized"), "channel_client_unauthorized")
-			case channelclient.ErrDisabled:
+			case channelclientapp.ErrDisabled:
 				response.ChannelError(c, http.StatusForbidden, response.CodeForbidden, i18n.T(i18n.ResolveLocale(c), "error.forbidden"), "channel_client_disabled")
-			case channelclient.ErrSignatureInvalid:
+			case channelclientapp.ErrSignatureInvalid:
 				response.ChannelError(c, http.StatusUnauthorized, response.CodeUnauthorized, i18n.T(i18n.ResolveLocale(c), "error.unauthorized"), "channel_client_unauthorized")
 			default:
 				logger.Errorw("channel_auth_error", "error", err)
@@ -86,8 +86,7 @@ func ChannelAPIAuthMiddleware(container *provider.Container) gin.HandlerFunc {
 		// 异步更新 last_used_at
 		now := time.Now()
 		go func() {
-			client.LastUsedAt = &now
-			if updateErr := container.ChannelClientRepo.Update(client); updateErr != nil {
+			if updateErr := container.ChannelClientService.MarkUsed(client.ID, now); updateErr != nil {
 				logger.Warnw("channel_auth_update_last_used_failed", "error", updateErr)
 			}
 		}()

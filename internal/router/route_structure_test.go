@@ -147,7 +147,7 @@ func TestRouteDomainFilesPreserveTrustBoundaries(t *testing.T) {
 				`settingstransport.RegisterAdminTelegramBotRoutes(authorized,`,
 				`uploadtransport.RegisterAdminRoutes(authorized,`,
 				`broadcasthttp.RegisterAdminRoutes(authorized,`,
-				`channelclienttransport.RegisterAdminRoutes(authorized,`,
+				`channelclienthttp.RegisterAdminRoutes(authorized,`,
 				`siteconnectiontransport.RegisterAdminRoutes(authorized,`,
 				`affiliatetransport.RegisterAdminRoutes(authorized, adminAffiliateHandler)`,
 				`affiliatetransport.RegisterAdminFinanceRoutes(paymentProtected, adminAffiliateHandler)`,

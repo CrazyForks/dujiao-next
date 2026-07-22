@@ -8,6 +8,6 @@ import (
 func NewChannelBotHandler(c *provider.Container) *telegramtransport.ChannelBotHandler {
 	return telegramtransport.NewChannelBotHandler(
 		c.SettingService,
-		telegramChannelBotTokenAdapter{svc: c.ChannelClientService},
+		c.ChannelClientService,
 	)
 }

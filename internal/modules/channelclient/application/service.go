@@ -1,44 +1,40 @@
-package channelclient
+package channelclientapp
 
 import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/dujiao-next/internal/crypto"
-	"github.com/dujiao-next/internal/models"
-	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	channelclientcontract "github.com/dujiao-next/internal/modules/channelclient/contract"
+	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
 	"github.com/dujiao-next/internal/upstream"
 )
 
-type Repository interface {
-	Create(client *models.ChannelClient) error
-	FindByID(id uint) (*models.ChannelClient, error)
-	FindByChannelKey(key string) (*models.ChannelClient, error)
-	FindActiveByChannelType(channelType string) (*models.ChannelClient, error)
-	FindAll() ([]models.ChannelClient, error)
-	Update(client *models.ChannelClient) error
-	Delete(client *models.ChannelClient) error
-}
-
 // Service 渠道客户端业务服务。
 type Service struct {
-	repo      Repository
-	encKey    []byte // AES-256 密钥
-	secretKey string // 原始密钥（用于派生）
+	store  channelclientcontract.Store
+	encKey []byte // AES-256 密钥
 }
 
 // NewService 创建渠道客户端服务。
-func NewService(repo Repository, appSecretKey string) *Service {
+func NewService(store channelclientcontract.Store, appSecretKey string) *Service {
 	return &Service{
-		repo:      repo,
-		encKey:    crypto.DeriveKey(appSecretKey),
-		secretKey: appSecretKey,
+		store:  store,
+		encKey: crypto.DeriveKey(appSecretKey),
 	}
 }
 
 func maskBotToken(token string) string {
-	return settingsmessaging.MaskBotToken(token)
+	if token == "" {
+		return ""
+	}
+	if len(token) <= 12 {
+		return strings.Repeat("*", len(token))
+	}
+	return token[:4] + strings.Repeat("*", len(token)-8) + token[len(token)-4:]
 }
 
 // CreateChannelClient 创建渠道客户端
@@ -63,7 +59,7 @@ func (s *Service) CreateChannelClient(name, channelType, description, botToken, 
 		return nil, fmt.Errorf("encrypt channel secret: %w", err)
 	}
 
-	client := &models.ChannelClient{
+	client := &channelclientdomain.Client{
 		Name:          name,
 		ChannelType:   channelType,
 		ChannelKey:    channelKey,
@@ -82,7 +78,7 @@ func (s *Service) CreateChannelClient(name, channelType, description, botToken, 
 		client.BotToken = encryptedToken
 	}
 
-	if err := s.repo.Create(client); err != nil {
+	if err := s.store.Create(client); err != nil {
 		return nil, err
 	}
 
@@ -101,8 +97,8 @@ func (s *Service) CreateChannelClient(name, channelType, description, botToken, 
 }
 
 // GetChannelClient 获取渠道客户端
-func (s *Service) GetChannelClient(id uint) (*models.ChannelClient, error) {
-	client, err := s.repo.FindByID(id)
+func (s *Service) GetChannelClient(id uint) (*channelclientdomain.Client, error) {
+	client, err := s.store.FindByID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -113,13 +109,13 @@ func (s *Service) GetChannelClient(id uint) (*models.ChannelClient, error) {
 }
 
 // ListChannelClients 列出所有渠道客户端
-func (s *Service) ListChannelClients() ([]models.ChannelClient, error) {
-	return s.repo.FindAll()
+func (s *Service) ListChannelClients() ([]channelclientdomain.Client, error) {
+	return s.store.FindAll()
 }
 
 // GetChannelClientDetail 获取渠道客户端详情（含解密 secret）
 func (s *Service) GetChannelClientDetail(id uint) (*ClientDetail, error) {
-	client, err := s.repo.FindByID(id)
+	client, err := s.store.FindByID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +152,7 @@ func (s *Service) GetChannelClientDetail(id uint) (*ClientDetail, error) {
 
 // ListChannelClientDetails 列出所有渠道客户端（含解密 secret）
 func (s *Service) ListChannelClientDetails() ([]ClientDetail, error) {
-	clients, err := s.repo.FindAll()
+	clients, err := s.store.FindAll()
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +186,7 @@ func (s *Service) ListChannelClientDetails() ([]ClientDetail, error) {
 
 // ResetChannelClientSecret 重置渠道客户端 Secret
 func (s *Service) ResetChannelClientSecret(id uint) (*ClientDetail, error) {
-	client, err := s.repo.FindByID(id)
+	client, err := s.store.FindByID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +206,7 @@ func (s *Service) ResetChannelClientSecret(id uint) (*ClientDetail, error) {
 	}
 
 	client.ChannelSecret = encryptedSecret
-	if err := s.repo.Update(client); err != nil {
+	if err := s.store.Update(client); err != nil {
 		return nil, err
 	}
 
@@ -236,19 +232,19 @@ func (s *Service) ResetChannelClientSecret(id uint) (*ClientDetail, error) {
 
 // DeleteChannelClient 删除渠道客户端（软删除）
 func (s *Service) DeleteChannelClient(id uint) error {
-	client, err := s.repo.FindByID(id)
+	client, err := s.store.FindByID(id)
 	if err != nil {
 		return err
 	}
 	if client == nil {
 		return ErrNotFound
 	}
-	return s.repo.Delete(client)
+	return s.store.Delete(client.ID, time.Now())
 }
 
 // UpdateChannelClientStatus 更新渠道客户端状态
 func (s *Service) UpdateChannelClientStatus(id uint, status int) error {
-	client, err := s.repo.FindByID(id)
+	client, err := s.store.FindByID(id)
 	if err != nil {
 		return err
 	}
@@ -256,12 +252,12 @@ func (s *Service) UpdateChannelClientStatus(id uint, status int) error {
 		return ErrNotFound
 	}
 	client.Status = status
-	return s.repo.Update(client)
+	return s.store.Update(client)
 }
 
 // UpdateChannelClient 更新渠道客户端信息（名称、描述、bot_token）
 func (s *Service) UpdateChannelClient(id uint, name, description string, botToken *string, callbackURL *string) (*ClientDetail, error) {
-	client, err := s.repo.FindByID(id)
+	client, err := s.store.FindByID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +286,7 @@ func (s *Service) UpdateChannelClient(id uint, name, description string, botToke
 		}
 	}
 
-	if err := s.repo.Update(client); err != nil {
+	if err := s.store.Update(client); err != nil {
 		return nil, err
 	}
 
@@ -320,7 +316,7 @@ func (s *Service) UpdateChannelClient(id uint, name, description string, botToke
 }
 
 // DecryptBotToken 解密渠道客户端的 Bot Token（供 Channel API 使用）
-func (s *Service) DecryptBotToken(client *models.ChannelClient) (string, error) {
+func (s *Service) DecryptBotToken(client *channelclientdomain.Client) (string, error) {
 	if client.BotToken == "" {
 		return "", nil
 	}
@@ -328,7 +324,7 @@ func (s *Service) DecryptBotToken(client *models.ChannelClient) (string, error) 
 }
 
 // DecryptChannelSecret 解密渠道客户端的 ChannelSecret
-func (s *Service) DecryptChannelSecret(client *models.ChannelClient) (string, error) {
+func (s *Service) DecryptChannelSecret(client *channelclientdomain.Client) (string, error) {
 	if client.ChannelSecret == "" {
 		return "", nil
 	}
@@ -337,14 +333,14 @@ func (s *Service) DecryptChannelSecret(client *models.ChannelClient) (string, er
 
 // VerifyChannelSignature 验证渠道签名
 // 复用 upstream/signer.go 的 HMAC-SHA256 签名算法
-func (s *Service) VerifyChannelSignature(key, signature string, timestamp int64, method, path string, body []byte) (*models.ChannelClient, error) {
+func (s *Service) VerifyChannelSignature(key, signature string, timestamp int64, method, path string, body []byte) (*channelclientdomain.Client, error) {
 	// 验证时间戳
 	if !upstream.IsTimestampValid(timestamp) {
 		return nil, ErrTimestampExpired
 	}
 
 	// 查找客户端
-	client, err := s.repo.FindByChannelKey(key)
+	client, err := s.store.FindByChannelKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -367,4 +363,61 @@ func (s *Service) VerifyChannelSignature(key, signature string, timestamp int64,
 	}
 
 	return client, nil
+}
+
+// MarkUsed records successful channel authentication without exposing the
+// persistence store to the router.
+func (s *Service) MarkUsed(id uint, usedAt time.Time) error {
+	return s.store.UpdateLastUsed(id, usedAt)
+}
+
+// ResolveBotTokenByType returns the active channel's decrypted bot token.
+func (s *Service) ResolveBotTokenByType(channelType string) (string, error) {
+	client, err := s.store.FindActiveByChannelType(strings.TrimSpace(channelType))
+	if err != nil {
+		return "", err
+	}
+	if client == nil {
+		return "", ErrNotFound
+	}
+	token, err := s.DecryptBotToken(client)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(token) == "" {
+		return "", ErrNotFound
+	}
+	return strings.TrimSpace(token), nil
+}
+
+// DecryptBotTokenByClientID returns one configured bot token to the channel
+// transport without leaking the persisted client entity.
+func (s *Service) DecryptBotTokenByClientID(clientID uint) (string, error) {
+	client, err := s.GetChannelClient(clientID)
+	if err != nil {
+		return "", err
+	}
+	return s.DecryptBotToken(client)
+}
+
+// GetActiveEndpoint resolves the active callback endpoint and decrypts its
+// signing secret for background integrations.
+func (s *Service) GetActiveEndpoint(channelType string) (*ActiveEndpoint, error) {
+	client, err := s.store.FindActiveByChannelType(strings.TrimSpace(channelType))
+	if err != nil {
+		return nil, err
+	}
+	if client == nil {
+		return nil, ErrNotFound
+	}
+	secret, err := s.DecryptChannelSecret(client)
+	if err != nil {
+		return nil, err
+	}
+	return &ActiveEndpoint{
+		ClientID:      client.ID,
+		ChannelKey:    client.ChannelKey,
+		CallbackURL:   client.CallbackURL,
+		ChannelSecret: secret,
+	}, nil
 }
