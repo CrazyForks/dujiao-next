@@ -14,6 +14,7 @@ import (
 	couponmodule "github.com/dujiao-next/internal/modules/coupon"
 	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 
 	"github.com/shopspring/decimal"
 )
@@ -378,7 +379,7 @@ func resolveManualFormSubmission(manualFormData map[string]jsonmap.JSON, product
 	return jsonmap.JSON{}
 }
 
-func firstProductImage(images models.StringArray) string {
+func firstProductImage(images jsonslice.Strings) string {
 	for _, raw := range images {
 		image := strings.TrimSpace(raw)
 		if image != "" {

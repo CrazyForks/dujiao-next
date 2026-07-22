@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 	"gorm.io/gorm"
 )
 
@@ -20,9 +21,9 @@ type PaymentChannel struct {
 	MinAmount          Money          `gorm:"type:decimal(20,2);not null;default:0" json:"min_amount"` // 最小金额限制（0=不限）
 	MaxAmount          Money          `gorm:"type:decimal(20,2);not null;default:0" json:"max_amount"` // 最大金额限制（0=不限）
 	HideAmountOutRange bool           `gorm:"not null;default:false" json:"hide_amount_out_range"`     // 不在金额区间不显示
-	PaymentRoles       StringArray    `gorm:"type:json" json:"payment_roles"`                          // 付款角色限制
-	MemberLevels       UintArray      `gorm:"type:json" json:"member_levels"`                          // 会员等级限制
-	PaymentTypes       StringArray    `gorm:"type:json" json:"payment_types"`                          // 付款类型限制
+	PaymentRoles       jsonslice.Strings    `gorm:"type:json" json:"payment_roles"`                          // 付款角色限制
+	MemberLevels       jsonslice.Uints      `gorm:"type:json" json:"member_levels"`                          // 会员等级限制
+	PaymentTypes       jsonslice.Strings    `gorm:"type:json" json:"payment_types"`                          // 付款类型限制
 	ConfigJSON         jsonmap.JSON   `gorm:"type:json" json:"config_json"`                            // 渠道配置
 	IsActive           bool           `gorm:"index;not null;default:true" json:"is_active"`            // 是否启用
 	SortOrder          int            `gorm:"not null;default:0" json:"sort_order"`                    // 排序

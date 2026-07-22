@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/coupon"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -54,8 +55,8 @@ func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T
 	testCases := []struct {
 		name          string
 		code          string
-		roles         models.StringArray
-		memberLevels  models.UintArray
+		roles         jsonslice.Strings
+		memberLevels  jsonslice.Uints
 		isGuest       bool
 		memberLevelID uint
 		expectErr     error
@@ -69,7 +70,7 @@ func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T
 		{
 			name:          "member-only coupon blocks guest",
 			code:          "MEMBER_ONLY",
-			roles:         models.StringArray{constants.PaymentRoleMember},
+			roles:         jsonslice.Strings{constants.PaymentRoleMember},
 			isGuest:       true,
 			memberLevelID: 0,
 			expectErr:     coupon.ErrPaymentRoleMemberOnly,
@@ -77,7 +78,7 @@ func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T
 		{
 			name:          "guest-only coupon blocks member",
 			code:          "GUEST_ONLY",
-			roles:         models.StringArray{constants.PaymentRoleGuest},
+			roles:         jsonslice.Strings{constants.PaymentRoleGuest},
 			isGuest:       false,
 			memberLevelID: 1,
 			expectErr:     coupon.ErrPaymentRoleGuestOnly,
@@ -85,7 +86,7 @@ func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T
 		{
 			name:          "member-level limited coupon blocks other levels",
 			code:          "VIP2_ONLY",
-			memberLevels:  models.UintArray{2},
+			memberLevels:  jsonslice.Uints{2},
 			isGuest:       false,
 			memberLevelID: 1,
 			expectErr:     coupon.ErrMemberLevelNotAllowed,
@@ -93,15 +94,15 @@ func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T
 		{
 			name:          "member-level limited coupon allows matching level",
 			code:          "VIP3_OK",
-			memberLevels:  models.UintArray{3},
+			memberLevels:  jsonslice.Uints{3},
 			isGuest:       false,
 			memberLevelID: 3,
 		},
 		{
 			name:          "combined restrictions allow matching member",
 			code:          "MEMBER_VIP5",
-			roles:         models.StringArray{constants.PaymentRoleMember},
-			memberLevels:  models.UintArray{5},
+			roles:         jsonslice.Strings{constants.PaymentRoleMember},
+			memberLevels:  jsonslice.Uints{5},
 			isGuest:       false,
 			memberLevelID: 5,
 		},

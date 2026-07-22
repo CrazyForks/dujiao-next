@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 )
 
 // TelegramBroadcastListInput Telegram 广播列表参数。
@@ -135,7 +136,7 @@ func (s *TelegramBroadcastService) CreateBroadcast(ctx context.Context, input Te
 		Title:            title,
 		RecipientType:    recipientType,
 		FiltersJSON:      filtersSnapshot,
-		RecipientChatIDs: models.StringArray(recipientChatIDs),
+		RecipientChatIDs: jsonslice.Strings(recipientChatIDs),
 		RecipientCount:   len(recipientChatIDs),
 		Status:           constants.TelegramBroadcastStatusPending,
 		MessageHTML:      messageHTML,

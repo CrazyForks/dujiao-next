@@ -1,61 +1,11 @@
 package models
 
 import (
-	"database/sql/driver"
-	"encoding/json"
 	"time"
 
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
-
-// StringArray 字符串数组类型，用于存储tags、images等
-type StringArray []string
-
-// Value 实现 driver.Valuer 接口
-func (s StringArray) Value() (driver.Value, error) {
-	if s == nil {
-		return nil, nil
-	}
-	return json.Marshal(s)
-}
-
-// Scan 实现 sql.Scanner 接口
-func (s *StringArray) Scan(value interface{}) error {
-	if value == nil {
-		*s = StringArray{}
-		return nil
-	}
-	bytes, ok := value.([]byte)
-	if !ok {
-		return nil
-	}
-	return json.Unmarshal(bytes, s)
-}
-
-// UintArray 存储无符号整数数组，序列化为 JSON。
-type UintArray []uint
-
-// Value 实现 driver.Valuer 接口
-func (u UintArray) Value() (driver.Value, error) {
-	if u == nil {
-		return nil, nil
-	}
-	return json.Marshal(u)
-}
-
-// Scan 实现 sql.Scanner 接口
-func (u *UintArray) Scan(value interface{}) error {
-	if value == nil {
-		*u = UintArray{}
-		return nil
-	}
-	bytes, ok := value.([]byte)
-	if !ok {
-		return nil
-	}
-	return json.Unmarshal(bytes, u)
-}
 
 // Category 分类表
 type Category struct {

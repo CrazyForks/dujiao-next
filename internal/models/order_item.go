@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 	"gorm.io/gorm"
 )
 
@@ -15,7 +16,7 @@ type OrderItem struct {
 	SKUID                        uint           `gorm:"column:sku_id;index;not null;default:0" json:"sku_id"`                   // SKU ID
 	TitleJSON                    jsonmap.JSON   `gorm:"type:json;not null" json:"title"`                                        // 商品标题快照
 	SKUSnapshotJSON              jsonmap.JSON   `gorm:"type:json" json:"sku_snapshot"`                                          // SKU 快照（编码/规格）
-	Tags                         StringArray    `gorm:"type:json" json:"tags"`                                                  // 标签快照
+	Tags                         jsonslice.Strings    `gorm:"type:json" json:"tags"`                                                  // 标签快照
 	OriginalUnitPrice            Money          `gorm:"type:decimal(20,2);not null;default:0" json:"original_unit_price"`       // 原始单价快照
 	UnitPrice                    Money          `gorm:"type:decimal(20,2);not null;default:0" json:"unit_price"`                // 单价
 	CostPrice                    Money          `gorm:"type:decimal(20,2);not null;default:0" json:"cost_price"`                // 成本价快照

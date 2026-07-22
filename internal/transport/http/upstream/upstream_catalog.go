@@ -11,6 +11,7 @@ import (
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 
 	"github.com/gin-gonic/gin"
 )
@@ -33,8 +34,8 @@ type upstreamProduct struct {
 	Title            jsonmap.JSON               `json:"title"`
 	Description      jsonmap.JSON               `json:"description"`
 	Content          jsonmap.JSON               `json:"content"`
-	Images           models.StringArray         `json:"images"`
-	Tags             models.StringArray         `json:"tags"`
+	Images           jsonslice.Strings         `json:"images"`
+	Tags             jsonslice.Strings         `json:"tags"`
 	PriceAmount      string                     `json:"price_amount"`
 	OriginalPrice    string                     `json:"original_price,omitempty"`
 	MemberPrice      string                     `json:"member_price,omitempty"`

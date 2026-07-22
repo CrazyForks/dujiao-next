@@ -8,6 +8,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 
 	"github.com/shopspring/decimal"
 )
@@ -106,8 +107,8 @@ func (s *WriteService) Create(input CreateProductInput) (*models.Product, error)
 		PriceAmount:          models.NewMoneyFromDecimal(priceAmount),
 		CostPriceAmount:      models.NewMoneyFromDecimal(costPriceAmount),
 		WholesalePrices:      models.WholesalePriceTiers{},
-		Images:               models.StringArray(input.Images),
-		Tags:                 models.StringArray(input.Tags),
+		Images:               jsonslice.Strings(input.Images),
+		Tags:                 jsonslice.Strings(input.Tags),
 		PurchaseType:         purchaseType,
 		MinPurchaseQuantity:  minPurchaseQuantity,
 		MaxPurchaseQuantity:  maxPurchaseQuantity,

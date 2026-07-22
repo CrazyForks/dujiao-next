@@ -3,6 +3,7 @@ package dto
 import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 )
 
 // CartProductResp 购物车商品摘要
@@ -10,8 +11,8 @@ type CartProductResp struct {
 	Slug                string             `json:"slug"`
 	Title               jsonmap.JSON       `json:"title"`
 	PriceAmount         models.Money       `json:"price_amount"`
-	Images              models.StringArray `json:"images"`
-	Tags                models.StringArray `json:"tags"`
+	Images              jsonslice.Strings `json:"images"`
+	Tags                jsonslice.Strings `json:"tags"`
 	PurchaseType        string             `json:"purchase_type"`
 	MinPurchaseQuantity int                `json:"min_purchase_quantity"`
 	MaxPurchaseQuantity int                `json:"max_purchase_quantity"`

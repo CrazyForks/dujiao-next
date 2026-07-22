@@ -18,6 +18,7 @@ import (
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 
 	"github.com/gin-gonic/gin"
 )
@@ -152,7 +153,7 @@ type OrderPreviewItem struct {
 	SKUID              uint               `json:"sku_id"`
 	TitleJSON          jsonmap.JSON       `json:"title"`
 	SKUSnapshotJSON    jsonmap.JSON       `json:"sku_snapshot"`
-	Tags               models.StringArray `json:"tags"`
+	Tags               jsonslice.Strings `json:"tags"`
 	OriginalUnitPrice  models.Money       `json:"original_unit_price"`
 	UnitPrice          models.Money       `json:"unit_price"`
 	Quantity           int                `json:"quantity"`

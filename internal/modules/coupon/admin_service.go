@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 
 	"github.com/shopspring/decimal"
 )
@@ -262,16 +263,16 @@ func encodeScopeRefIDs(ids []uint) (string, error) {
 }
 
 // normalizeCouponPaymentRoles 归一化优惠券付款角色限制，仅允许 guest/member，自动去重与去空。
-func normalizeCouponPaymentRoles(raw []string) (models.StringArray, error) {
+func normalizeCouponPaymentRoles(raw []string) (jsonslice.Strings, error) {
 	if len(raw) == 0 {
-		return models.StringArray{}, nil
+		return jsonslice.Strings{}, nil
 	}
 	allowed := map[string]struct{}{
 		constants.PaymentRoleGuest:  {},
 		constants.PaymentRoleMember: {},
 	}
 	seen := make(map[string]struct{}, len(raw))
-	normalized := make(models.StringArray, 0, len(raw))
+	normalized := make(jsonslice.Strings, 0, len(raw))
 	for _, item := range raw {
 		role := strings.ToLower(strings.TrimSpace(item))
 		if role == "" {
@@ -290,12 +291,12 @@ func normalizeCouponPaymentRoles(raw []string) (models.StringArray, error) {
 }
 
 // normalizeCouponMemberLevels 归一化优惠券会员等级限制，过滤 0 并去重。
-func normalizeCouponMemberLevels(raw []uint) models.UintArray {
+func normalizeCouponMemberLevels(raw []uint) jsonslice.Uints {
 	if len(raw) == 0 {
-		return models.UintArray{}
+		return jsonslice.Uints{}
 	}
 	seen := make(map[uint]struct{}, len(raw))
-	normalized := make(models.UintArray, 0, len(raw))
+	normalized := make(jsonslice.Uints, 0, len(raw))
 	for _, item := range raw {
 		if item == 0 {
 			continue

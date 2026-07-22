@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/modules/channelclient"
 	telegrammodule "github.com/dujiao-next/internal/modules/telegram"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 	"gorm.io/gorm"
 )
 
@@ -201,7 +202,7 @@ func TestTelegramBroadcastServiceProcessBroadcastUpdatesStats(t *testing.T) {
 				ID:               1,
 				Title:            "Demo",
 				RecipientType:    constants.TelegramBroadcastRecipientTypeSpecific,
-				RecipientChatIDs: models.StringArray{"1001", "1002"},
+				RecipientChatIDs: jsonslice.Strings{"1001", "1002"},
 				RecipientCount:   2,
 				Status:           constants.TelegramBroadcastStatusPending,
 				MessageHTML:      "<b>Hello</b>",

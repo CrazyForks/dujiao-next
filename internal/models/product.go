@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 	"gorm.io/gorm"
 )
 
@@ -20,8 +21,8 @@ type Product struct {
 	PriceAmount          Money               `gorm:"type:decimal(20,2);not null;default:0" json:"price_amount"`           // 价格金额
 	CostPriceAmount      Money               `gorm:"type:decimal(20,2);not null;default:0" json:"cost_price_amount"`      // 成本价（取最低活跃SKU成本价）
 	WholesalePrices      WholesalePriceTiers `gorm:"type:json" json:"wholesale_prices"`                                   // 批发价阶梯
-	Images               StringArray         `gorm:"type:json" json:"images"`                                             // 图片数组
-	Tags                 StringArray         `gorm:"type:json" json:"tags"`                                               // 标签数组
+	Images               jsonslice.Strings         `gorm:"type:json" json:"images"`                                             // 图片数组
+	Tags                 jsonslice.Strings         `gorm:"type:json" json:"tags"`                                               // 标签数组
 	PurchaseType         string              `gorm:"type:varchar(20);not null;default:'member'" json:"purchase_type"`     // 购买身份（guest/member）
 	MinPurchaseQuantity  int                 `gorm:"not null;default:0" json:"min_purchase_quantity"`                     // 单次最小购买数量（0 表示不限制）
 	MaxPurchaseQuantity  int                 `gorm:"not null;default:0" json:"max_purchase_quantity"`                     // 单次最大购买数量（0 表示不限制）

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 	"gorm.io/gorm"
 )
 
@@ -13,7 +14,7 @@ type TelegramBroadcast struct {
 	Title            string         `gorm:"size:200;not null" json:"title"`
 	RecipientType    string         `gorm:"size:32;not null;index" json:"recipient_type"`
 	FiltersJSON      jsonmap.JSON   `gorm:"type:json" json:"filters"`
-	RecipientChatIDs StringArray    `gorm:"type:json" json:"-"`
+	RecipientChatIDs jsonslice.Strings    `gorm:"type:json" json:"-"`
 	RecipientCount   int            `gorm:"not null;default:0" json:"recipient_count"`
 	SuccessCount     int            `gorm:"not null;default:0" json:"success_count"`
 	FailedCount      int            `gorm:"not null;default:0" json:"failed_count"`

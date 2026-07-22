@@ -3,6 +3,7 @@ package dto
 import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 
 	"github.com/shopspring/decimal"
 )
@@ -18,8 +19,8 @@ type ProductResp struct {
 	Content              jsonmap.JSON         `json:"content"`
 	PriceAmount          models.Money         `json:"price_amount"`
 	WholesalePrices      []WholesalePriceResp `json:"wholesale_prices,omitempty"`
-	Images               models.StringArray   `json:"images"`
-	Tags                 models.StringArray   `json:"tags"`
+	Images               jsonslice.Strings   `json:"images"`
+	Tags                 jsonslice.Strings   `json:"tags"`
 	PurchaseType         string               `json:"purchase_type"`
 	MinPurchaseQuantity  int                  `json:"min_purchase_quantity"`
 	MaxPurchaseQuantity  int                  `json:"max_purchase_quantity"`

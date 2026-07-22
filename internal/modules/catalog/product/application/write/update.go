@@ -8,6 +8,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 
 	"github.com/shopspring/decimal"
 )
@@ -48,8 +49,8 @@ func (s *WriteService) Update(id string, input CreateProductInput) (*models.Prod
 	product.ManualFormSchemaJSON = jsonmap.JSON{}
 	product.PriceAmount = models.NewMoneyFromDecimal(priceAmount)
 	product.SortOrder = input.SortOrder
-	product.Images = models.StringArray(input.Images)
-	product.Tags = models.StringArray(input.Tags)
+	product.Images = jsonslice.Strings(input.Images)
+	product.Tags = jsonslice.Strings(input.Tags)
 	paymentChannelIDs, err := s.filterAvailablePaymentChannelIDs(input.PaymentChannelIDs)
 	if err != nil {
 		return nil, err

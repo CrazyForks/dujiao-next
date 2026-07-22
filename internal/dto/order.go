@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 )
 
 // OrderSummary 订单列表响应（精简字段）
@@ -154,7 +155,7 @@ func truncateFulfillment(d *OrderDetail) {
 type OrderItemResp struct {
 	Title                    jsonmap.JSON       `json:"title"`
 	SKUSnapshot              jsonmap.JSON       `json:"sku_snapshot"`
-	Tags                     models.StringArray `json:"tags"`
+	Tags                     jsonslice.Strings `json:"tags"`
 	Quantity                 int                `json:"quantity"`
 	OriginalUnitPrice        models.Money       `json:"original_unit_price"`
 	UnitPrice                models.Money       `json:"unit_price"`

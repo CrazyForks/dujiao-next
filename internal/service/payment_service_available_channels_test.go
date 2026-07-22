@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -21,8 +22,8 @@ func TestGetAvailableChannelsFilters(t *testing.T) {
 		HideAmountOutRange: true,
 		MinAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString("10.00")),
 		MaxAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
-		PaymentRoles:       models.StringArray{constants.PaymentRoleGuest},
-		PaymentTypes:       models.StringArray{constants.PaymentTypeOrder},
+		PaymentRoles:       jsonslice.Strings{constants.PaymentRoleGuest},
+		PaymentTypes:       jsonslice.Strings{constants.PaymentTypeOrder},
 	})
 	guestOrderOutOfRange := createAvailableChannelFixture(t, db, models.PaymentChannel{
 		Name:               "guest-order-out-range",
@@ -30,33 +31,33 @@ func TestGetAvailableChannelsFilters(t *testing.T) {
 		HideAmountOutRange: true,
 		MinAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
 		MaxAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString("200.00")),
-		PaymentRoles:       models.StringArray{constants.PaymentRoleGuest},
-		PaymentTypes:       models.StringArray{constants.PaymentTypeOrder},
+		PaymentRoles:       jsonslice.Strings{constants.PaymentRoleGuest},
+		PaymentTypes:       jsonslice.Strings{constants.PaymentTypeOrder},
 	})
 	memberLv2Wallet := createAvailableChannelFixture(t, db, models.PaymentChannel{
 		Name:         "member-lv2-wallet",
 		Icon:         "https://cdn.example.com/icon.png",
 		IsActive:     true,
-		PaymentRoles: models.StringArray{constants.PaymentRoleMember},
-		MemberLevels: models.UintArray{2},
-		PaymentTypes: models.StringArray{constants.PaymentTypeWallet},
+		PaymentRoles: jsonslice.Strings{constants.PaymentRoleMember},
+		MemberLevels: jsonslice.Uints{2},
+		PaymentTypes: jsonslice.Strings{constants.PaymentTypeWallet},
 	})
 	memberLv3Wallet := createAvailableChannelFixture(t, db, models.PaymentChannel{
 		Name:         "member-lv3-wallet",
 		IsActive:     true,
-		PaymentRoles: models.StringArray{constants.PaymentRoleMember},
-		MemberLevels: models.UintArray{3},
-		PaymentTypes: models.StringArray{constants.PaymentTypeWallet},
+		PaymentRoles: jsonslice.Strings{constants.PaymentRoleMember},
+		MemberLevels: jsonslice.Uints{3},
+		PaymentTypes: jsonslice.Strings{constants.PaymentTypeWallet},
 	})
 	memberLevelOnlyLv2 := createAvailableChannelFixture(t, db, models.PaymentChannel{
 		Name:         "member-level-only-lv2",
 		IsActive:     true,
-		MemberLevels: models.UintArray{2},
+		MemberLevels: jsonslice.Uints{2},
 	})
 	typeLimitedOrder := createAvailableChannelFixture(t, db, models.PaymentChannel{
 		Name:         "type-limited-order",
 		IsActive:     true,
-		PaymentTypes: models.StringArray{constants.PaymentTypeOrder},
+		PaymentTypes: jsonslice.Strings{constants.PaymentTypeOrder},
 	})
 	unrestricted := createAvailableChannelFixture(t, db, models.PaymentChannel{
 		Name:     "unrestricted",

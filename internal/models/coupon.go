@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonslice"
 	"gorm.io/gorm"
 )
 
@@ -19,8 +20,8 @@ type Coupon struct {
 	PerUserLimit           int            `gorm:"not null;default:0" json:"per_user_limit"`                  // 每人使用上限（0 表示不限制）
 	DisabledWholesalePrice bool           `gorm:"not null;default:false" json:"disabled_wholesale_price"`    // 是否禁止批发价商品使用
 	PerItemDiscount        bool           `gorm:"not null;default:false" json:"per_item_discount"`           // 固定金额券是否按商品数量抵扣
-	PaymentRoles           StringArray    `gorm:"type:json" json:"payment_roles"`                            // 付款角色限制（留空不限制）
-	MemberLevels           UintArray      `gorm:"type:json" json:"member_levels"`                            // 会员等级限制（留空不限制）
+	PaymentRoles           jsonslice.Strings    `gorm:"type:json" json:"payment_roles"`                            // 付款角色限制（留空不限制）
+	MemberLevels           jsonslice.Uints      `gorm:"type:json" json:"member_levels"`                            // 会员等级限制（留空不限制）
 	ScopeType              string         `gorm:"not null" json:"scope_type"`                                // 适用范围（product）
 	ScopeRefIDs            string         `gorm:"type:text" json:"scope_ref_ids"`                            // 适用商品ID集合（JSON数组）
 	StartsAt               *time.Time     `gorm:"index" json:"starts_at"`                                    // 生效时间

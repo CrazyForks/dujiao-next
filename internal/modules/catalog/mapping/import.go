@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/shopspring/decimal"
@@ -147,8 +148,8 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 		PriceAmount:          models.NewMoneyFromDecimal(priceAmount.Round(2)),
 		CostPriceAmount:      models.NewMoneyFromDecimal(costPriceAmount.Round(2)),
 		WholesalePrices:      models.WholesalePriceTiers{},
-		Images:               models.StringArray(localImages),
-		Tags:                 models.StringArray(upProduct.Tags),
+		Images:               jsonslice.Strings(localImages),
+		Tags:                 jsonslice.Strings(upProduct.Tags),
 		PurchaseType:         constants.ProductPurchaseMember,
 		FulfillmentType:      fulfillmentType,
 		ManualStockTotal:     0,
