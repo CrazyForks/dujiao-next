@@ -15,6 +15,7 @@ import (
 	"github.com/dujiao-next/internal/modules/promotion"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/hibiken/asynq"
 	"github.com/shopspring/decimal"
@@ -140,7 +141,7 @@ type CreateOrderInput struct {
 	AffiliateCode       string
 	AffiliateVisitorKey string
 	ClientIP            string
-	ManualFormData      map[string]models.JSON
+	ManualFormData      map[string]jsonmap.JSON
 	SkipRiskControl     bool // 完全跳过风控（下游订单）
 	SkipIPRiskControl   bool // 跳过 IP 维度风控（渠道/Bot 订单）
 }
@@ -156,7 +157,7 @@ type CreateGuestOrderInput struct {
 	AffiliateCode       string
 	AffiliateVisitorKey string
 	ClientIP            string
-	ManualFormData      map[string]models.JSON
+	ManualFormData      map[string]jsonmap.JSON
 }
 
 // CreateOrderItem 创建订单项输入
@@ -276,7 +277,7 @@ type orderCreateParams struct {
 	AffiliateVisitorKey string
 	ClientIP            string
 	IsGuest             bool
-	ManualFormData      map[string]models.JSON
+	ManualFormData      map[string]jsonmap.JSON
 	SkipManualFormCheck bool
 	SkipRiskControl     bool
 	SkipIPRiskControl   bool
@@ -298,8 +299,8 @@ type OrderPreview struct {
 type OrderPreviewItem struct {
 	ProductID          uint               `json:"product_id"`
 	SKUID              uint               `json:"sku_id"`
-	TitleJSON          models.JSON        `json:"title"`
-	SKUSnapshotJSON    models.JSON        `json:"sku_snapshot"`
+	TitleJSON          jsonmap.JSON       `json:"title"`
+	SKUSnapshotJSON    jsonmap.JSON       `json:"sku_snapshot"`
 	Tags               models.StringArray `json:"tags"`
 	OriginalUnitPrice  models.Money       `json:"original_unit_price"`
 	UnitPrice          models.Money       `json:"unit_price"`

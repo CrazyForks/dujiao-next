@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 var settingSupportedLanguages = append([]string(nil), constants.SupportedLocales...)
@@ -29,8 +29,8 @@ const (
 )
 
 // normalizeSiteSetting 归一化站点配置结构。
-func normalizeSiteSetting(value map[string]interface{}) models.JSON {
-	normalized := make(models.JSON, len(value)+8)
+func normalizeSiteSetting(value map[string]interface{}) jsonmap.JSON {
+	normalized := make(jsonmap.JSON, len(value)+8)
 	for key, raw := range value {
 		normalized[key] = raw
 	}
@@ -313,7 +313,7 @@ func normalizeStorefrontTemplate(raw interface{}) string {
 	return constants.StorefrontTemplateDefault
 }
 
-func normalizeNavConfig(value map[string]interface{}) models.JSON {
+func normalizeNavConfig(value map[string]interface{}) jsonmap.JSON {
 	// builtin: blog / notice / about 开关，默认 true
 	builtin := map[string]interface{}{
 		"blog":   true,
@@ -401,7 +401,7 @@ func normalizeNavConfig(value map[string]interface{}) models.JSON {
 		}
 	}
 
-	return models.JSON{
+	return jsonmap.JSON{
 		"builtin":      builtin,
 		"custom_items": customItems,
 	}
@@ -467,8 +467,8 @@ func isValidRegistrationEmailDomain(domain string) bool {
 }
 
 // normalizeRegistrationSetting 归一化注册配置。
-func normalizeRegistrationSetting(value map[string]interface{}) models.JSON {
-	normalized := make(models.JSON, 4)
+func normalizeRegistrationSetting(value map[string]interface{}) jsonmap.JSON {
+	normalized := make(jsonmap.JSON, 4)
 	registrationEnabled := true
 	if raw, ok := value[constants.SettingFieldRegistrationEnabled]; ok {
 		registrationEnabled = parseSettingBool(raw)

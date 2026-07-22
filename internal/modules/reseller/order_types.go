@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 const (
@@ -42,8 +43,8 @@ type OrderListItem struct {
 
 // OrderItemDetail 分销商视角订单明细行。
 type OrderItemDetail struct {
-	Title               models.JSON
-	SKUSnapshot         models.JSON
+	Title               jsonmap.JSON
+	SKUSnapshot         jsonmap.JSON
 	Quantity            int
 	UnitPrice           models.Money
 	TotalPrice          models.Money

@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/dujiaopay"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // dujiaoPayAdapter 是 DujiaoPay 的 Provider + Webhooker 实现。
@@ -30,7 +30,7 @@ func (a *dujiaoPayAdapter) Type() string {
 	return constants.PaymentProviderDujiaoPay + ":"
 }
 
-func (a *dujiaoPayAdapter) parseConfig(raw models.JSON, channelType string) (*dujiaopay.Config, error) {
+func (a *dujiaoPayAdapter) parseConfig(raw jsonmap.JSON, channelType string) (*dujiaopay.Config, error) {
 	cfg, err := dujiaopay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapDujiaoPayError(err)
@@ -67,7 +67,7 @@ func checkDujiaoPayChannelTypeForMode(cfg *dujiaopay.Config, channelType string)
 }
 
 // ValidateConfig 验证 DujiaoPay channel.ConfigJSON。
-func (a *dujiaoPayAdapter) ValidateConfig(raw models.JSON, channelType string) error {
+func (a *dujiaoPayAdapter) ValidateConfig(raw jsonmap.JSON, channelType string) error {
 	channelType = strings.ToLower(strings.TrimSpace(channelType))
 	if channelType != "" && channelType != constants.PaymentProviderDujiaoPay && !dujiaopay.IsSupportedTokenID(channelType) {
 		return fmt.Errorf("%w: dujiaopay token_id %s", ErrUnsupportedChannel, channelType)
@@ -80,7 +80,7 @@ func (a *dujiaoPayAdapter) ValidateConfig(raw models.JSON, channelType string) e
 }
 
 // CreatePayment 创建 DujiaoPay 收银台订单。
-func (a *dujiaoPayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
+func (a *dujiaoPayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input CreateInput) (*CreateResult, error) {
 	channelType := strings.ToLower(strings.TrimSpace(input.ChannelType))
 	if channelType != "" && channelType != constants.PaymentProviderDujiaoPay && !dujiaopay.IsSupportedTokenID(channelType) {
 		return nil, fmt.Errorf("%w: dujiaopay token_id %s", ErrUnsupportedChannel, channelType)
@@ -137,7 +137,7 @@ func (a *dujiaoPayAdapter) CreatePayment(ctx context.Context, raw models.JSON, i
 		qrCodeURL = pickFirstNonEmpty(result.PayAddress, result.CheckoutURL)
 	}
 
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	for key, value := range result.Raw {
 		payload[key] = value
 	}
@@ -162,7 +162,7 @@ func (a *dujiaoPayAdapter) CreatePayment(ctx context.Context, raw models.JSON, i
 }
 
 // ParseWebhook 验签并解析 DujiaoPay webhook。
-func (a *dujiaoPayAdapter) ParseWebhook(_ context.Context, raw models.JSON, headers map[string]string, body []byte, now time.Time) (*WebhookResult, error) {
+func (a *dujiaoPayAdapter) ParseWebhook(_ context.Context, raw jsonmap.JSON, headers map[string]string, body []byte, now time.Time) (*WebhookResult, error) {
 	cfg, err := dujiaopay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapDujiaoPayError(err)
@@ -172,7 +172,7 @@ func (a *dujiaoPayAdapter) ParseWebhook(_ context.Context, raw models.JSON, head
 		return nil, mapDujiaoPayError(err)
 	}
 
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	for key, value := range event.Raw {
 		payload[key] = value
 	}
@@ -189,7 +189,7 @@ func (a *dujiaoPayAdapter) ParseWebhook(_ context.Context, raw models.JSON, head
 	}, nil
 }
 
-func rawFiatCurrency(raw models.JSON) string {
+func rawFiatCurrency(raw jsonmap.JSON) string {
 	if raw == nil {
 		return ""
 	}

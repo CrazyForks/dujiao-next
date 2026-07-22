@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -111,7 +112,7 @@ func (h *ChannelHandler) List(c *gin.Context) {
 	response.ChannelSuccess(c, gin.H{"items": items})
 }
 
-func resolveLocalizedJSON(m models.JSON, locale, defaultLocale string) string {
+func resolveLocalizedJSON(m jsonmap.JSON, locale, defaultLocale string) string {
 	if len(m) == 0 {
 		return ""
 	}

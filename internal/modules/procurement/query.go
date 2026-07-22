@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -132,13 +133,13 @@ func normalizeProcurementUpstreamStatus(status string) string {
 }
 
 // buildUpstreamRefundRecords 标准化上游退款记录并按 created_at 升序排序，随后重排顺序ID。
-func buildUpstreamRefundRecords(records []models.JSON) []models.JSON {
+func buildUpstreamRefundRecords(records []jsonmap.JSON) []jsonmap.JSON {
 	if len(records) == 0 {
-		return make([]models.JSON, 0)
+		return make([]jsonmap.JSON, 0)
 	}
-	normalized := make([]models.JSON, 0, len(records))
+	normalized := make([]jsonmap.JSON, 0, len(records))
 	for i := range records {
-		record := make(models.JSON, len(records[i]))
+		record := make(jsonmap.JSON, len(records[i]))
 		for k, v := range records[i] {
 			record[k] = v
 		}

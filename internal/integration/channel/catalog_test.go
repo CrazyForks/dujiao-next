@@ -13,6 +13,7 @@ import (
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -39,7 +40,7 @@ func TestGetCategoriesIncludesParentIDAndVisibleParent(t *testing.T) {
 
 	parent := models.Category{
 		Slug:     "games",
-		NameJSON: models.JSON{"zh-CN": "游戏"},
+		NameJSON: jsonmap.JSON{"zh-CN": "游戏"},
 	}
 	if err := db.Create(&parent).Error; err != nil {
 		t.Fatalf("create parent category failed: %v", err)
@@ -47,14 +48,14 @@ func TestGetCategoriesIncludesParentIDAndVisibleParent(t *testing.T) {
 	child := models.Category{
 		ParentID: parent.ID,
 		Slug:     "steam",
-		NameJSON: models.JSON{"zh-CN": "Steam"},
+		NameJSON: jsonmap.JSON{"zh-CN": "Steam"},
 	}
 	if err := db.Create(&child).Error; err != nil {
 		t.Fatalf("create child category failed: %v", err)
 	}
 	hidden := models.Category{
 		Slug:     "hidden",
-		NameJSON: models.JSON{"zh-CN": "hidden"},
+		NameJSON: jsonmap.JSON{"zh-CN": "hidden"},
 	}
 	if err := db.Create(&hidden).Error; err != nil {
 		t.Fatalf("create hidden category failed: %v", err)
@@ -63,7 +64,7 @@ func TestGetCategoriesIncludesParentIDAndVisibleParent(t *testing.T) {
 	product := models.Product{
 		CategoryID:  child.ID,
 		Slug:        "steam-product",
-		TitleJSON:   models.JSON{"zh-CN": "Steam Product"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "Steam Product"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
@@ -150,7 +151,7 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 
 	category := models.Category{
 		Slug:     "games",
-		NameJSON: models.JSON{"zh-CN": "游戏"},
+		NameJSON: jsonmap.JSON{"zh-CN": "游戏"},
 		IsActive: true,
 	}
 	if err := db.Create(&category).Error; err != nil {
@@ -160,8 +161,8 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 	product := models.Product{
 		CategoryID:          category.ID,
 		Slug:                "stock-display-product",
-		TitleJSON:           models.JSON{"zh-CN": "库存展示商品"},
-		ContentJSON:         models.JSON{"zh-CN": "商品详情"},
+		TitleJSON:           jsonmap.JSON{"zh-CN": "库存展示商品"},
+		ContentJSON:         jsonmap.JSON{"zh-CN": "商品详情"},
 		PriceAmount:         models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		FulfillmentType:     constants.FulfillmentTypeManual,
 		StockDisplayMode:    constants.ProductStockDisplayRange,
@@ -178,7 +179,7 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 	sku := models.ProductSKU{
 		ProductID:        product.ID,
 		SKUCode:          "vip-year",
-		SpecValuesJSON:   models.JSON{"zh-CN": "年卡"},
+		SpecValuesJSON:   jsonmap.JSON{"zh-CN": "年卡"},
 		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		ManualStockTotal: 42,
 		ManualStockSold:  0,

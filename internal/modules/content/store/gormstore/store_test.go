@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/content"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -44,12 +45,12 @@ func TestPostStoreQueriesAndOrderedRelations(t *testing.T) {
 	older := now.Add(-2 * time.Hour)
 	newer := now.Add(-time.Hour)
 
-	category := models.Category{Slug: "products", NameJSON: models.JSON{"zh-CN": "products"}, IsActive: true}
+	category := models.Category{Slug: "products", NameJSON: jsonmap.JSON{"zh-CN": "products"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create product category: %v", err)
 	}
-	firstProduct := models.Product{CategoryID: category.ID, Slug: "first-product", TitleJSON: models.JSON{"zh-CN": "first"}, IsActive: true}
-	secondProduct := models.Product{CategoryID: category.ID, Slug: "second-product", TitleJSON: models.JSON{"zh-CN": "second"}, IsActive: true}
+	firstProduct := models.Product{CategoryID: category.ID, Slug: "first-product", TitleJSON: jsonmap.JSON{"zh-CN": "first"}, IsActive: true}
+	secondProduct := models.Product{CategoryID: category.ID, Slug: "second-product", TitleJSON: jsonmap.JSON{"zh-CN": "second"}, IsActive: true}
 	if err := db.Create(&firstProduct).Error; err != nil {
 		t.Fatalf("create first product: %v", err)
 	}
@@ -58,10 +59,10 @@ func TestPostStoreQueriesAndOrderedRelations(t *testing.T) {
 	}
 
 	posts := []models.Post{
-		{Slug: "older", Type: constants.PostTypeBlog, TitleJSON: models.JSON{"zh-CN": "Older guide"}, IsPublished: true, PublishedAt: &older},
-		{Slug: "newer", Type: constants.PostTypeBlog, TitleJSON: models.JSON{"zh-CN": "Newer guide"}, IsPublished: true, PublishedAt: &newer},
-		{Slug: "draft", Type: constants.PostTypeBlog, TitleJSON: models.JSON{"zh-CN": "Draft guide"}, IsPublished: false},
-		{Slug: "notice", Type: constants.PostTypeNotice, TitleJSON: models.JSON{"zh-CN": "Notice"}, IsPublished: true, PublishedAt: &newer},
+		{Slug: "older", Type: constants.PostTypeBlog, TitleJSON: jsonmap.JSON{"zh-CN": "Older guide"}, IsPublished: true, PublishedAt: &older},
+		{Slug: "newer", Type: constants.PostTypeBlog, TitleJSON: jsonmap.JSON{"zh-CN": "Newer guide"}, IsPublished: true, PublishedAt: &newer},
+		{Slug: "draft", Type: constants.PostTypeBlog, TitleJSON: jsonmap.JSON{"zh-CN": "Draft guide"}, IsPublished: false},
+		{Slug: "notice", Type: constants.PostTypeNotice, TitleJSON: jsonmap.JSON{"zh-CN": "Notice"}, IsPublished: true, PublishedAt: &newer},
 	}
 	for index := range posts {
 		if err := store.Create(ctx, &posts[index]); err != nil {
@@ -143,15 +144,15 @@ func TestPostCategoryStoreTreeFiltersAndUsageCounts(t *testing.T) {
 	store := NewPostCategoryStore(db)
 	ctx := context.Background()
 
-	root := models.PostCategory{Slug: "root", NameJSON: models.JSON{"zh-CN": "root"}, IsActive: true, SortOrder: 2}
+	root := models.PostCategory{Slug: "root", NameJSON: jsonmap.JSON{"zh-CN": "root"}, IsActive: true, SortOrder: 2}
 	if err := store.Create(ctx, &root); err != nil {
 		t.Fatalf("create root category: %v", err)
 	}
-	child := models.PostCategory{Slug: "child", NameJSON: models.JSON{"zh-CN": "child"}, ParentID: &root.ID, IsActive: true, SortOrder: 1}
+	child := models.PostCategory{Slug: "child", NameJSON: jsonmap.JSON{"zh-CN": "child"}, ParentID: &root.ID, IsActive: true, SortOrder: 1}
 	if err := store.Create(ctx, &child); err != nil {
 		t.Fatalf("create child category: %v", err)
 	}
-	disabled := models.PostCategory{Slug: "disabled", NameJSON: models.JSON{"zh-CN": "disabled"}, IsActive: true, SortOrder: 0}
+	disabled := models.PostCategory{Slug: "disabled", NameJSON: jsonmap.JSON{"zh-CN": "disabled"}, IsActive: true, SortOrder: 0}
 	if err := store.Create(ctx, &disabled); err != nil {
 		t.Fatalf("create disabled category fixture: %v", err)
 	}
@@ -178,7 +179,7 @@ func TestPostCategoryStoreTreeFiltersAndUsageCounts(t *testing.T) {
 	if err != nil || childCount != 1 {
 		t.Fatalf("child count want 1, count=%d err=%v", childCount, err)
 	}
-	post := models.Post{Slug: "category-post", Type: constants.PostTypeBlog, TitleJSON: models.JSON{"zh-CN": "post"}, CategoryID: &child.ID}
+	post := models.Post{Slug: "category-post", Type: constants.PostTypeBlog, TitleJSON: jsonmap.JSON{"zh-CN": "post"}, CategoryID: &child.ID}
 	if err := db.Create(&post).Error; err != nil {
 		t.Fatalf("create categorized post: %v", err)
 	}
@@ -205,10 +206,10 @@ func TestBannerStoreSearchAndValidityWindow(t *testing.T) {
 	future := now.Add(time.Hour)
 
 	banners := []models.Banner{
-		{Name: "primary", Position: constants.BannerPositionHomeHero, TitleJSON: models.JSON{"en-US": "Hero launch"}, Image: "/primary.png", LinkType: constants.BannerLinkTypeNone, IsActive: true, StartAt: &past, EndAt: &future, SortOrder: 20},
-		{Name: "secondary", Position: constants.BannerPositionHomeHero, TitleJSON: models.JSON{"en-US": "Secondary"}, Image: "/secondary.png", LinkType: constants.BannerLinkTypeNone, IsActive: true, SortOrder: 10},
-		{Name: "future", Position: constants.BannerPositionHomeHero, TitleJSON: models.JSON{"en-US": "Future"}, Image: "/future.png", LinkType: constants.BannerLinkTypeNone, IsActive: true, StartAt: &future, SortOrder: 30},
-		{Name: "disabled", Position: constants.BannerPositionHomeHero, TitleJSON: models.JSON{"en-US": "Hero disabled"}, Image: "/disabled.png", LinkType: constants.BannerLinkTypeNone, IsActive: true, SortOrder: 40},
+		{Name: "primary", Position: constants.BannerPositionHomeHero, TitleJSON: jsonmap.JSON{"en-US": "Hero launch"}, Image: "/primary.png", LinkType: constants.BannerLinkTypeNone, IsActive: true, StartAt: &past, EndAt: &future, SortOrder: 20},
+		{Name: "secondary", Position: constants.BannerPositionHomeHero, TitleJSON: jsonmap.JSON{"en-US": "Secondary"}, Image: "/secondary.png", LinkType: constants.BannerLinkTypeNone, IsActive: true, SortOrder: 10},
+		{Name: "future", Position: constants.BannerPositionHomeHero, TitleJSON: jsonmap.JSON{"en-US": "Future"}, Image: "/future.png", LinkType: constants.BannerLinkTypeNone, IsActive: true, StartAt: &future, SortOrder: 30},
+		{Name: "disabled", Position: constants.BannerPositionHomeHero, TitleJSON: jsonmap.JSON{"en-US": "Hero disabled"}, Image: "/disabled.png", LinkType: constants.BannerLinkTypeNone, IsActive: true, SortOrder: 40},
 	}
 	for index := range banners {
 		if err := store.Create(ctx, &banners[index]); err != nil {

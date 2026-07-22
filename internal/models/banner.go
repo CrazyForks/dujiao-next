@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 
@@ -11,8 +12,8 @@ type Banner struct {
 	ID           uint           `gorm:"primarykey" json:"id"`                                      // 主键
 	Name         string         `gorm:"type:varchar(120);not null;index" json:"name"`              // 后台名称
 	Position     string         `gorm:"type:varchar(60);not null;index" json:"position"`           // 投放位置
-	TitleJSON    JSON           `gorm:"type:json" json:"title"`                                    // 多语言标题
-	SubtitleJSON JSON           `gorm:"type:json" json:"subtitle"`                                 // 多语言副标题
+	TitleJSON    jsonmap.JSON   `gorm:"type:json" json:"title"`                                    // 多语言标题
+	SubtitleJSON jsonmap.JSON   `gorm:"type:json" json:"subtitle"`                                 // 多语言副标题
 	Image        string         `gorm:"type:varchar(500);not null" json:"image"`                   // 主图
 	MobileImage  string         `gorm:"type:varchar(500)" json:"mobile_image"`                     // 移动端图片
 	LinkType     string         `gorm:"type:varchar(20);not null;default:'none'" json:"link_type"` // 跳转类型

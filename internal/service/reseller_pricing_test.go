@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
@@ -267,7 +268,7 @@ func testOrderBuildResult(items ...struct {
 }) *orderBuildResult {
 	plans := make([]childOrderPlan, 0, len(items))
 	for _, item := range items {
-		product := &models.Product{ID: item.productID, TitleJSON: models.JSON{"zh-CN": fmt.Sprintf("p%d", item.productID)}}
+		product := &models.Product{ID: item.productID, TitleJSON: jsonmap.JSON{"zh-CN": fmt.Sprintf("p%d", item.productID)}}
 		sku := &models.ProductSKU{
 			ID:              item.skuID,
 			ProductID:       item.productID,
@@ -280,7 +281,7 @@ func testOrderBuildResult(items ...struct {
 			ProductID:          item.productID,
 			SKUID:              item.skuID,
 			TitleJSON:          product.TitleJSON,
-			SKUSnapshotJSON:    models.JSON{"sku_id": item.skuID},
+			SKUSnapshotJSON:    jsonmap.JSON{"sku_id": item.skuID},
 			OriginalUnitPrice:  models.NewMoneyFromDecimal(item.base),
 			UnitPrice:          models.NewMoneyFromDecimal(item.base),
 			CostPrice:          models.NewMoneyFromDecimal(item.cost),
@@ -522,7 +523,7 @@ func TestResellerPricingResolverRuntimePrioritySnapshotSources(t *testing.T) {
 	if !ok || len(items) != 3 {
 		t.Fatalf("pricing snapshot items mismatch: %#v", ctx.PricingSnapshot["items"])
 	}
-	first, ok := items[0].(models.JSON)
+	first, ok := items[0].(jsonmap.JSON)
 	if !ok {
 		t.Fatalf("pricing snapshot item type mismatch: %#v", items[0])
 	}

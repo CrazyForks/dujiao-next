@@ -3,11 +3,11 @@ package memberlevelhttp
 import (
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestResolveLocalizedJSONPrefersLocaleThenDefault(t *testing.T) {
-	m := models.JSON{
+	m := jsonmap.JSON{
 		"en-US": "Gold",
 		"zh-CN": "黄金",
 	}
@@ -17,7 +17,7 @@ func TestResolveLocalizedJSONPrefersLocaleThenDefault(t *testing.T) {
 	if got := resolveLocalizedJSON(m, "ja-JP", "zh-CN"); got != "黄金" {
 		t.Fatalf("default prefer: got %q", got)
 	}
-	if got := resolveLocalizedJSON(models.JSON{}, "zh-CN", "zh-CN"); got != "" {
+	if got := resolveLocalizedJSON(jsonmap.JSON{}, "zh-CN", "zh-CN"); got != "" {
 		t.Fatalf("empty map: got %q", got)
 	}
 }

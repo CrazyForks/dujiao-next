@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -122,7 +123,7 @@ func TestOrderRefundRecordRepositoryListAdminFilters(t *testing.T) {
 		{
 			OrderID:         order1.ID,
 			ProductID:       1,
-			TitleJSON:       models.JSON{"zh-CN": "会员商品A"},
+			TitleJSON:       jsonmap.JSON{"zh-CN": "会员商品A"},
 			UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 			CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
 			Quantity:        1,
@@ -135,7 +136,7 @@ func TestOrderRefundRecordRepositoryListAdminFilters(t *testing.T) {
 		{
 			OrderID:         order2.ID,
 			ProductID:       2,
-			TitleJSON:       models.JSON{"zh-CN": "游客商品B"},
+			TitleJSON:       jsonmap.JSON{"zh-CN": "游客商品B"},
 			UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
 			CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(40)),
 			Quantity:        1,
@@ -148,7 +149,7 @@ func TestOrderRefundRecordRepositoryListAdminFilters(t *testing.T) {
 		{
 			OrderID:         order3.ID,
 			ProductID:       3,
-			TitleJSON:       models.JSON{"zh-CN": "其他商品C"},
+			TitleJSON:       jsonmap.JSON{"zh-CN": "其他商品C"},
 			UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(60)),
 			CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
 			Quantity:        1,

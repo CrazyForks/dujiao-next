@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestResellerSiteConfigServiceUserUpdateRequiresActiveProfile(t *testing.T) {
@@ -63,7 +64,7 @@ func TestResellerSiteConfigServiceNormalizesAndStoresSafeFields(t *testing.T) {
 	if row.SupportJSON["telegram"] != "https://t.me/alice" || row.SupportJSON["email"] != "support@example.test" {
 		t.Fatalf("unexpected support json: %+v", row.SupportJSON)
 	}
-	announcementTitle := row.AnnouncementJSON["title"].(models.JSON)
+	announcementTitle := row.AnnouncementJSON["title"].(jsonmap.JSON)
 	if _, exists := announcementTitle["fr-FR"]; exists {
 		t.Fatalf("unexpected unsupported locale retained: %+v", announcementTitle)
 	}
@@ -234,7 +235,7 @@ func TestResellerSiteConfigServiceOverlayEmitsActiveAnnouncement(t *testing.T) {
 
 func resellerSiteConfigTestMap(value interface{}) map[string]interface{} {
 	switch typed := value.(type) {
-	case models.JSON:
+	case jsonmap.JSON:
 		return map[string]interface{}(typed)
 	case map[string]interface{}:
 		return typed

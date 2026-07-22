@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/epusdt"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -35,7 +36,7 @@ func (a *epusdtAdapter) Type() string {
 }
 
 // parseConfig 解析并验证 epusdt Config。epusdt 不需要 interactionMode。
-func (a *epusdtAdapter) parseConfig(raw models.JSON) (*epusdt.Config, error) {
+func (a *epusdtAdapter) parseConfig(raw jsonmap.JSON) (*epusdt.Config, error) {
 	cfg, err := epusdt.ParseConfig(raw)
 	if err != nil {
 		return nil, mapEpusdtError(err)
@@ -47,13 +48,13 @@ func (a *epusdtAdapter) parseConfig(raw models.JSON) (*epusdt.Config, error) {
 }
 
 // ValidateConfig 验证 channel.ConfigJSON。
-func (a *epusdtAdapter) ValidateConfig(raw models.JSON, _ string) error {
+func (a *epusdtAdapter) ValidateConfig(raw jsonmap.JSON, _ string) error {
 	_, err := a.parseConfig(raw)
 	return err
 }
 
 // CreatePayment 创建支付。epusdt 的实际币种和网络由配置决定，不依赖 channel_type。
-func (a *epusdtAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
+func (a *epusdtAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input CreateInput) (*CreateResult, error) {
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
@@ -81,7 +82,7 @@ func (a *epusdtAdapter) CreatePayment(ctx context.Context, raw models.JSON, inpu
 		ProviderRef:        result.TradeID,
 		RedirectURL:        result.PaymentURL,
 		QRCodeURL:          result.PaymentURL, // epusdt 是 USDT 网关，PaymentURL 同时用于跳转和 QR 展示
-		Payload:            models.JSON(result.Raw),
+		Payload:            jsonmap.JSON(result.Raw),
 		DisplayChannelType: epusdtDisplayChannelType(cfg),
 	}, nil
 }
@@ -105,7 +106,7 @@ func epusdtDisplayChannelType(cfg *epusdt.Config) string {
 }
 
 // VerifyCallback 实现 CallbackVerifier。epusdt 用 JSON POST body，form 参数忽略。
-func (a *epusdtAdapter) VerifyCallback(raw models.JSON, _ map[string][]string, body []byte) (*CallbackResult, error) {
+func (a *epusdtAdapter) VerifyCallback(raw jsonmap.JSON, _ map[string][]string, body []byte) (*CallbackResult, error) {
 	cfg, err := epusdt.ParseConfig(raw)
 	if err != nil {
 		return nil, mapEpusdtError(err)
@@ -133,11 +134,11 @@ func (a *epusdtAdapter) VerifyCallback(raw models.JSON, _ map[string][]string, b
 	}
 
 	// 把 callback 关键字段塞进 Payload
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	if pb, marshalErr := json.Marshal(data); marshalErr == nil {
 		var m map[string]interface{}
 		if jsonErr := json.Unmarshal(pb, &m); jsonErr == nil {
-			payload = models.JSON(m)
+			payload = jsonmap.JSON(m)
 		}
 	}
 

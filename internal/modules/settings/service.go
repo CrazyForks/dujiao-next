@@ -1,8 +1,6 @@
 package settings
 
-import (
-	"github.com/dujiao-next/internal/models"
-)
+import "github.com/dujiao-next/internal/shared/jsonmap"
 
 // Service 是站点设置的核心用例入口：读写、Registry 归一化与声明式副作用。
 type Service struct {
@@ -12,7 +10,7 @@ type Service struct {
 
 // UpdateResult 包含持久化后的设置值及其声明式外部影响。
 type UpdateResult struct {
-	Value   models.JSON
+	Value   jsonmap.JSON
 	Effects []Effect
 }
 
@@ -35,7 +33,7 @@ func NewService(repo Repository, registry Registry) *Service {
 }
 
 // GetByKey 获取设置原始 JSON；不存在时返回 nil。
-func (s *Service) GetByKey(key string) (models.JSON, error) {
+func (s *Service) GetByKey(key string) (jsonmap.JSON, error) {
 	if s == nil || s.repo == nil {
 		return nil, nil
 	}
@@ -50,7 +48,7 @@ func (s *Service) GetByKey(key string) (models.JSON, error) {
 }
 
 // Update 设置值。
-func (s *Service) Update(key string, value map[string]interface{}) (models.JSON, error) {
+func (s *Service) Update(key string, value map[string]interface{}) (jsonmap.JSON, error) {
 	result, err := s.UpdateWithEffects(key, value)
 	if err != nil {
 		return nil, err
@@ -63,7 +61,7 @@ func (s *Service) UpdateWithEffects(key string, value map[string]interface{}) (U
 	if s == nil || s.repo == nil {
 		return UpdateResult{}, nil
 	}
-	normalized := s.registry.Normalize(key, models.JSON(value))
+	normalized := s.registry.Normalize(key, jsonmap.JSON(value))
 
 	setting, err := s.repo.Upsert(key, normalized)
 	if err != nil {

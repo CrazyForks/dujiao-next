@@ -8,11 +8,12 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/notification"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
 
-func (s *PaymentService) buildOrderNotificationPayload(order *models.Order, payment *models.Payment) models.JSON {
+func (s *PaymentService) buildOrderNotificationPayload(order *models.Order, payment *models.Payment) jsonmap.JSON {
 	locale := s.notificationTemplateLocale()
 	customerEmail, customerLabel, customerType := s.resolveNotificationCustomer(order)
 	// 父订单拆单时商品项可能只存在于子订单，通知变量需先补齐聚合商品明细。
@@ -20,7 +21,7 @@ func (s *PaymentService) buildOrderNotificationPayload(order *models.Order, paym
 	itemsSummary, fulfillmentItemsSummary, counts := notification.BuildOrderItemSummaries(order.Items, locale)
 	providerType, channelType, paymentChannel := notificationPaymentChannel(order, payment)
 
-	payload := models.JSON{
+	payload := jsonmap.JSON{
 		"order_id":                  fmt.Sprintf("%d", order.ID),
 		"order_no":                  strings.TrimSpace(order.OrderNo),
 		"user_id":                   fmt.Sprintf("%d", order.UserID),
@@ -52,7 +53,7 @@ func (s *PaymentService) buildOrderNotificationPayload(order *models.Order, paym
 	return payload
 }
 
-func (s *PaymentService) buildWalletRechargeNotificationPayload(recharge *models.WalletRechargeOrder, payment *models.Payment) models.JSON {
+func (s *PaymentService) buildWalletRechargeNotificationPayload(recharge *models.WalletRechargeOrder, payment *models.Payment) jsonmap.JSON {
 	customerEmail, customerLabel := s.resolveUserNotificationIdentity(recharge.UserID)
 	providerType := strings.TrimSpace(recharge.ProviderType)
 	channelType := strings.TrimSpace(recharge.ChannelType)
@@ -63,7 +64,7 @@ func (s *PaymentService) buildWalletRechargeNotificationPayload(recharge *models
 		paymentChannel = channelType
 	}
 
-	payload := models.JSON{
+	payload := jsonmap.JSON{
 		"user_id":         fmt.Sprintf("%d", recharge.UserID),
 		"recharge_id":     fmt.Sprintf("%d", recharge.ID),
 		"recharge_no":     strings.TrimSpace(recharge.RechargeNo),
@@ -81,7 +82,7 @@ func (s *PaymentService) buildWalletRechargeNotificationPayload(recharge *models
 	return payload
 }
 
-func (s *PaymentService) buildManualFulfillmentNotificationPayload(order *models.Order, parent *models.Order) models.JSON {
+func (s *PaymentService) buildManualFulfillmentNotificationPayload(order *models.Order, parent *models.Order) jsonmap.JSON {
 	payload := s.buildOrderNotificationPayload(order, nil)
 	if parent != nil {
 		payload["parent_order_id"] = fmt.Sprintf("%d", parent.ID)

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 
@@ -43,7 +44,7 @@ func ensureManualStockRemainingMigration() error {
 
 		marker := Setting{
 			Key: manualStockRemainingMigrationSettingKey,
-			ValueJSON: JSON{
+			ValueJSON: jsonmap.JSON{
 				"done":        true,
 				"migrated_at": time.Now().UTC().Format(time.RFC3339),
 			},
@@ -52,7 +53,7 @@ func ensureManualStockRemainingMigration() error {
 	})
 }
 
-func migrationDone(value JSON) bool {
+func migrationDone(value jsonmap.JSON) bool {
 	if len(value) == 0 {
 		return false
 	}
@@ -96,7 +97,7 @@ func ensureOrderItemOriginalPriceMigration() error {
 
 		marker := Setting{
 			Key: orderItemOriginalPriceMigrationKey,
-			ValueJSON: JSON{
+			ValueJSON: jsonmap.JSON{
 				"done":        true,
 				"migrated_at": time.Now().UTC().Format(time.RFC3339),
 			},
@@ -161,7 +162,7 @@ func ensureProductSKUMigration() error {
 	// 迁移完成，写入标记
 	doneMarker := Setting{
 		Key: skuMigrationSettingKey,
-		ValueJSON: JSON{
+		ValueJSON: jsonmap.JSON{
 			"done":        true,
 			"migrated_at": time.Now().UTC().Format(time.RFC3339),
 		},
@@ -203,7 +204,7 @@ func ensureDefaultProductSKUs() error {
 		createRows = append(createRows, ProductSKU{
 			ProductID:         product.ID,
 			SKUCode:           DefaultSKUCode,
-			SpecValuesJSON:    JSON{},
+			SpecValuesJSON:    jsonmap.JSON{},
 			PriceAmount:       product.PriceAmount,
 			ManualStockTotal:  product.ManualStockTotal,
 			ManualStockLocked: product.ManualStockLocked,
@@ -392,7 +393,7 @@ func ensurePaymentProviderBepusdtRenameMigration() error {
 
 		marker := Setting{
 			Key: paymentProviderBepusdtRenameMigrationSettingKey,
-			ValueJSON: JSON{
+			ValueJSON: jsonmap.JSON{
 				"done":        true,
 				"migrated_at": time.Now().UTC().Format(time.RFC3339),
 			},
@@ -436,7 +437,7 @@ func ensurePaymentChannelBepusdtConfigMigration() error {
 			channel := &channels[index]
 			config := channel.ConfigJSON
 			if config == nil {
-				config = JSON{}
+				config = jsonmap.JSON{}
 			}
 			channelType := strings.ToLower(strings.TrimSpace(channel.ChannelType))
 			tradeType, _ := config["trade_type"].(string)
@@ -470,7 +471,7 @@ func ensurePaymentChannelBepusdtConfigMigration() error {
 
 		marker := Setting{
 			Key: paymentChannelBepusdtConfigMigrationSettingKey,
-			ValueJSON: JSON{
+			ValueJSON: jsonmap.JSON{
 				"done":                true,
 				"migrated_at":         time.Now().UTC().Format(time.RFC3339),
 				"migrated_count":      migratedCount,
@@ -505,7 +506,7 @@ func ensureCategoryParentMigration() error {
 
 	doneMarker := Setting{
 		Key: categoryParentMigrationSettingKey,
-		ValueJSON: JSON{
+		ValueJSON: jsonmap.JSON{
 			"done":        true,
 			"migrated_at": time.Now().UTC().Format(time.RFC3339),
 		},

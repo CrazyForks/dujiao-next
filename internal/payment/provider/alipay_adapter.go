@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/alipay"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -41,7 +42,7 @@ func (a *alipayAdapter) Type() string {
 
 // parseConfig 解析并验证 alipay Config。interactionMode 影响 ValidateConfig
 // 是否要求 return_url（jump 模式必填）。
-func (a *alipayAdapter) parseConfig(raw models.JSON, interactionMode string) (*alipay.Config, error) {
+func (a *alipayAdapter) parseConfig(raw jsonmap.JSON, interactionMode string) (*alipay.Config, error) {
 	cfg, err := alipay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapAlipayError(err)
@@ -59,7 +60,7 @@ func (a *alipayAdapter) parseConfig(raw models.JSON, interactionMode string) (*a
 // （QR 模式不要求 return_url，对 config 字段完整性校验最宽松，
 // IsSupportedInteractionMode 列表内）。
 // 实际 interactionMode 在 CreatePayment 阶段从 input.Extra["interaction_mode"] 再次校验。
-func (a *alipayAdapter) ValidateConfig(raw models.JSON, interactionMode string) error {
+func (a *alipayAdapter) ValidateConfig(raw jsonmap.JSON, interactionMode string) error {
 	mode := strings.TrimSpace(interactionMode)
 	if mode == "" {
 		mode = constants.PaymentInteractionQR
@@ -69,7 +70,7 @@ func (a *alipayAdapter) ValidateConfig(raw models.JSON, interactionMode string) 
 }
 
 // CreatePayment 创建支付。
-func (a *alipayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
+func (a *alipayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input CreateInput) (*CreateResult, error) {
 	// 从 input.Extra 取 interaction_mode（jump / qr）。
 	interactionMode, _ := input.Extra["interaction_mode"].(string)
 	cfg, err := a.parseConfig(raw, interactionMode)
@@ -116,9 +117,9 @@ func (a *alipayAdapter) CreatePayment(ctx context.Context, raw models.JSON, inpu
 		return nil, mapAlipayError(err)
 	}
 
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	if result.Raw != nil {
-		payload = models.JSON(result.Raw)
+		payload = jsonmap.JSON(result.Raw)
 	}
 	if converted {
 		payload["exchange_rate"] = strings.TrimSpace(cfg.ExchangeRate)
@@ -140,7 +141,7 @@ func (a *alipayAdapter) CreatePayment(ctx context.Context, raw models.JSON, inpu
 // 依次执行：
 //  1. alipay.VerifyCallback   — 签名验证（防篡改）
 //  2. alipay.VerifyCallbackOwnership — 归属校验（防跨商户注入：app_id 必须与配置一致）
-func (a *alipayAdapter) VerifyCallback(raw models.JSON, form map[string][]string, _ []byte) (*CallbackResult, error) {
+func (a *alipayAdapter) VerifyCallback(raw jsonmap.JSON, form map[string][]string, _ []byte) (*CallbackResult, error) {
 	cfg, err := alipay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapAlipayError(err)
@@ -222,10 +223,10 @@ func pickFormValue(form map[string][]string, key string) string {
 	return strings.TrimSpace(values[0])
 }
 
-// formToJSON 把 form 浅拷贝成 models.JSON（每 key 取首值）用于 Payload 字段。
+// formToJSON 把 form 浅拷贝成 jsonmap.JSON（每 key 取首值）用于 Payload 字段。
 // 同包内 sync-callback 类 adapter 共用。
-func formToJSON(form map[string][]string) models.JSON {
-	out := make(models.JSON, len(form))
+func formToJSON(form map[string][]string) jsonmap.JSON {
+	out := make(jsonmap.JSON, len(form))
 	for k, v := range form {
 		if len(v) == 0 {
 			continue

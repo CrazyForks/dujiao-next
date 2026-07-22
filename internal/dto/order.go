@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // OrderSummary 订单列表响应（精简字段）
@@ -151,8 +152,8 @@ func truncateFulfillment(d *OrderDetail) {
 
 // OrderItemResp 订单项响应
 type OrderItemResp struct {
-	Title                    models.JSON        `json:"title"`
-	SKUSnapshot              models.JSON        `json:"sku_snapshot"`
+	Title                    jsonmap.JSON       `json:"title"`
+	SKUSnapshot              jsonmap.JSON       `json:"sku_snapshot"`
 	Tags                     models.StringArray `json:"tags"`
 	Quantity                 int                `json:"quantity"`
 	OriginalUnitPrice        models.Money       `json:"original_unit_price"`
@@ -164,12 +165,12 @@ type OrderItemResp struct {
 	PromotionDiscountAmount  models.Money       `json:"promotion_discount_amount"`
 	WholesaleDiscountAmount  models.Money       `json:"wholesale_discount_amount"`
 	FulfillmentType          string             `json:"fulfillment_type"`
-	ManualFormSchemaSnapshot models.JSON        `json:"manual_form_schema_snapshot"`
-	ManualFormSubmission     models.JSON        `json:"manual_form_submission"`
+	ManualFormSchemaSnapshot jsonmap.JSON       `json:"manual_form_schema_snapshot"`
+	ManualFormSubmission     jsonmap.JSON       `json:"manual_form_submission"`
 	// Instructions 交付使用说明（多语言 raw JSON，与 Title 字段契约一致，由前端按 locale 解析）。
 	// 仅在订单已付款时填充，未付款订单会在 NewOrderDetail 中置 nil；列表场景（NewOrderSummary）永远为 nil。
 	// 注意：渠道 API（channel_order.go）为服务端消费者（如 Telegram Bot），那里返回已按 locale 解析的字符串而非 raw JSON。
-	Instructions models.JSON `json:"instructions,omitempty"`
+	Instructions jsonmap.JSON `json:"instructions,omitempty"`
 }
 
 func newOrderItemResp(item *models.OrderItem) OrderItemResp {
@@ -200,12 +201,12 @@ func newOrderItemResp(item *models.OrderItem) OrderItemResp {
 
 // FulfillmentResp 交付记录响应
 type FulfillmentResp struct {
-	Type             string      `json:"type"`
-	Status           string      `json:"status"`
-	Payload          string      `json:"payload"`
-	PayloadLineCount int         `json:"payload_line_count"`
-	DeliveryData     models.JSON `json:"delivery_data"`
-	DeliveredAt      *time.Time  `json:"delivered_at,omitempty"`
+	Type             string       `json:"type"`
+	Status           string       `json:"status"`
+	Payload          string       `json:"payload"`
+	PayloadLineCount int          `json:"payload_line_count"`
+	DeliveryData     jsonmap.JSON `json:"delivery_data"`
+	DeliveredAt      *time.Time   `json:"delivered_at,omitempty"`
 }
 
 func newFulfillmentResp(f *models.Fulfillment) FulfillmentResp {

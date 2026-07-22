@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestDashboardSettingCodecPreservesDefaultsAndAcceptedNumberShapes(t *testing.T) {
 	fallback := DefaultDashboardSetting()
-	decoded := DecodeDashboardSetting(models.JSON{
+	decoded := DecodeDashboardSetting(jsonmap.JSON{
 		"alert": map[string]interface{}{
 			"low_stock_threshold":              json.Number("7"),
 			"out_of_stock_products_threshold":  float64(2),
@@ -80,7 +80,7 @@ func TestAffiliateSettingCodecNormalizesAndDetachesWithdrawChannels(t *testing.T
 
 func TestAffiliateSettingDecodeUsesFallbackAndAcceptedScalarShapes(t *testing.T) {
 	fallback := DefaultAffiliateSetting()
-	decoded := DecodeAffiliateSetting(models.JSON{
+	decoded := DecodeAffiliateSetting(jsonmap.JSON{
 		"enabled":             "yes",
 		"commission_rate":     "12.345",
 		"confirm_days":        float64(4),
@@ -102,7 +102,7 @@ func TestUpstreamSyncCodecPreservesFallbackAndBounds(t *testing.T) {
 		t.Fatalf("upstream fallback mismatch: %#v", fallback)
 	}
 
-	decoded := DecodeUpstreamSyncConfig(models.JSON{
+	decoded := DecodeUpstreamSyncConfig(jsonmap.JSON{
 		constants.SettingFieldUpstreamSyncIntervalMin: "360",
 		constants.SettingFieldUpstreamPreOrderCheck:   false,
 		constants.SettingFieldUpstreamSyncPageSize:    float64(100),
@@ -129,15 +129,15 @@ func TestUpstreamSyncCodecPreservesFallbackAndBounds(t *testing.T) {
 }
 
 func TestTypedSettingJSONNormalizersComposeDefaultDecodeAndEncode(t *testing.T) {
-	dashboard := NormalizeDashboardSettingJSON(models.JSON{})
+	dashboard := NormalizeDashboardSettingJSON(jsonmap.JSON{})
 	if dashboard["alert"] == nil || dashboard["ranking"] == nil {
 		t.Fatalf("dashboard JSON normalizer omitted defaults: %#v", dashboard)
 	}
-	affiliate := NormalizeAffiliateSettingJSON(models.JSON{"commission_rate": 101})
+	affiliate := NormalizeAffiliateSettingJSON(jsonmap.JSON{"commission_rate": 101})
 	if affiliate["commission_rate"] != 100.0 {
 		t.Fatalf("affiliate JSON normalizer did not clamp: %#v", affiliate)
 	}
-	upstream := NormalizeUpstreamSyncConfigJSON(models.JSON{
+	upstream := NormalizeUpstreamSyncConfigJSON(jsonmap.JSON{
 		constants.SettingFieldUpstreamSyncIntervalMin: 1,
 	})
 	if upstream[constants.SettingFieldUpstreamSyncIntervalMin] != 5 {

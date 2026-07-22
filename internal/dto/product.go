@@ -2,6 +2,7 @@ package dto
 
 import (
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -11,10 +12,10 @@ type ProductResp struct {
 	ID                   uint                 `json:"id"`
 	CategoryID           uint                 `json:"category_id"`
 	Slug                 string               `json:"slug"`
-	SeoMeta              models.JSON          `json:"seo_meta"`
-	Title                models.JSON          `json:"title"`
-	Description          models.JSON          `json:"description"`
-	Content              models.JSON          `json:"content"`
+	SeoMeta              jsonmap.JSON         `json:"seo_meta"`
+	Title                jsonmap.JSON         `json:"title"`
+	Description          jsonmap.JSON         `json:"description"`
+	Content              jsonmap.JSON         `json:"content"`
 	PriceAmount          models.Money         `json:"price_amount"`
 	WholesalePrices      []WholesalePriceResp `json:"wholesale_prices,omitempty"`
 	Images               models.StringArray   `json:"images"`
@@ -28,7 +29,7 @@ type ProductResp struct {
 	StockRangeMax        *int                 `json:"stock_range_max,omitempty"`
 	StockQuantityHidden  bool                 `json:"stock_quantity_hidden"`
 	FulfillmentType      string               `json:"fulfillment_type"`
-	ManualFormSchema     models.JSON          `json:"manual_form_schema"`
+	ManualFormSchema     jsonmap.JSON         `json:"manual_form_schema"`
 	ManualStockAvailable int                  `json:"manual_stock_available"`
 	AutoStockAvailable   int64                `json:"auto_stock_available"`
 	StockStatus          string               `json:"stock_status"`
@@ -85,7 +86,7 @@ func NewWholesalePriceRespList(tiers models.WholesalePriceTiers) []WholesalePric
 type SKUResp struct {
 	ID                  uint         `json:"id"`
 	SKUCode             string       `json:"sku_code"`
-	SpecValues          models.JSON  `json:"spec_values"`
+	SpecValues          jsonmap.JSON `json:"spec_values"`
 	PriceAmount         models.Money `json:"price_amount"`
 	ManualStockTotal    int          `json:"manual_stock_total"`
 	ManualStockSold     int          `json:"manual_stock_sold"`
@@ -107,12 +108,12 @@ type SKUResp struct {
 
 // CategoryResp 分类公共响应
 type CategoryResp struct {
-	ID        uint        `json:"id"`
-	ParentID  uint        `json:"parent_id"`
-	Slug      string      `json:"slug"`
-	Name      models.JSON `json:"name"`
-	Icon      string      `json:"icon,omitempty"`
-	SortOrder int         `json:"sort_order"`
+	ID        uint         `json:"id"`
+	ParentID  uint         `json:"parent_id"`
+	Slug      string       `json:"slug"`
+	Name      jsonmap.JSON `json:"name"`
+	Icon      string       `json:"icon,omitempty"`
+	SortOrder int          `json:"sort_order"`
 }
 
 // NewCategoryResp 从 models.Category 构造响应
@@ -154,13 +155,13 @@ type MemberLevelPrice struct {
 
 // MemberLevelResp 会员等级公共响应
 type MemberLevelResp struct {
-	ID                uint        `json:"id"`
-	Name              models.JSON `json:"name"`
-	Slug              string      `json:"slug"`
-	Icon              string      `json:"icon"`
-	DiscountRate      float64     `json:"discount_rate"`
-	RechargeThreshold float64     `json:"recharge_threshold"`
-	SpendThreshold    float64     `json:"spend_threshold"`
-	IsDefault         bool        `json:"is_default"`
-	SortOrder         int         `json:"sort_order"`
+	ID                uint         `json:"id"`
+	Name              jsonmap.JSON `json:"name"`
+	Slug              string       `json:"slug"`
+	Icon              string       `json:"icon"`
+	DiscountRate      float64      `json:"discount_rate"`
+	RechargeThreshold float64      `json:"recharge_threshold"`
+	SpendThreshold    float64      `json:"spend_threshold"`
+	IsDefault         bool         `json:"is_default"`
+	SortOrder         int          `json:"sort_order"`
 }

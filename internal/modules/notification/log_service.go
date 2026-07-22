@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 const (
@@ -25,7 +26,7 @@ type LogRecordInput struct {
 	Status       string
 	ErrorMessage string
 	IsTest       bool
-	Variables    models.JSON
+	Variables    jsonmap.JSON
 }
 
 // LogService 通知日志服务。
@@ -81,11 +82,11 @@ func (s *LogService) ListForAdmin(filter LogListFilter) ([]models.NotificationLo
 	return s.repo.ListAdmin(filter)
 }
 
-func cloneNotificationLogJSON(data models.JSON) models.JSON {
+func cloneNotificationLogJSON(data jsonmap.JSON) jsonmap.JSON {
 	if len(data) == 0 {
-		return models.JSON{}
+		return jsonmap.JSON{}
 	}
-	result := make(models.JSON, len(data))
+	result := make(jsonmap.JSON, len(data))
 	for key, value := range data {
 		result[key] = value
 	}

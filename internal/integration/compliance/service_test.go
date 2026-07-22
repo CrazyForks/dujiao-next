@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/compliance"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
@@ -127,7 +128,7 @@ func TestComplianceService_LoadFromExistingSetting(t *testing.T) {
 
 	// 通过仓库写入已确认状态，模拟既有部署
 	repo := repository.NewSettingRepository(db)
-	_, err := repo.Upsert("compliance.acknowledgement.v1", models.JSON{
+	_, err := repo.Upsert("compliance.acknowledgement.v1", jsonmap.JSON{
 		"acknowledged":             true,
 		"acknowledged_at":          "2026-01-01T00:00:00Z",
 		"acknowledged_by_admin_id": float64(2),

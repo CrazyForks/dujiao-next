@@ -13,6 +13,7 @@ import (
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -40,7 +41,7 @@ func TestBuildOrderNotificationPayloadIncludesCustomerAndItemSummary(t *testing.
 	}
 
 	repo := newMockSettingRepo()
-	repo.store[constants.SettingKeyNotificationCenterConfig] = models.JSON{
+	repo.store[constants.SettingKeyNotificationCenterConfig] = jsonmap.JSON{
 		"default_locale": "en-US",
 	}
 
@@ -57,13 +58,13 @@ func TestBuildOrderNotificationPayloadIncludesCustomerAndItemSummary(t *testing.
 		TotalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(99)),
 		Items: []models.OrderItem{
 			{
-				TitleJSON: models.JSON{
+				TitleJSON: jsonmap.JSON{
 					"zh-CN": "自动发货商品",
 					"en-US": "Auto Product",
 				},
-				SKUSnapshotJSON: models.JSON{
+				SKUSnapshotJSON: jsonmap.JSON{
 					"sku_code": "AUTO-001",
-					"spec_values": models.JSON{
+					"spec_values": jsonmap.JSON{
 						"zh-CN": "区域: HK",
 						"en-US": "Region: HK",
 					},
@@ -72,13 +73,13 @@ func TestBuildOrderNotificationPayloadIncludesCustomerAndItemSummary(t *testing.
 				FulfillmentType: constants.FulfillmentTypeAuto,
 			},
 			{
-				TitleJSON: models.JSON{
+				TitleJSON: jsonmap.JSON{
 					"zh-CN": "人工交付商品",
 					"en-US": "Manual Product",
 				},
-				SKUSnapshotJSON: models.JSON{
+				SKUSnapshotJSON: jsonmap.JSON{
 					"sku_code": "MANUAL-002",
-					"spec_values": models.JSON{
+					"spec_values": jsonmap.JSON{
 						"zh-CN": "周期: 30天",
 						"en-US": "Cycle: 30 days",
 					},
@@ -141,7 +142,7 @@ func TestBuildOrderNotificationPayloadUsesDisplayChannelType(t *testing.T) {
 		ID:           10,
 		ProviderType: constants.PaymentProviderBepusdt,
 		ChannelType:  constants.PaymentProviderBepusdt,
-		ProviderPayload: models.JSON{
+		ProviderPayload: jsonmap.JSON{
 			"display_channel_type": "usdt.arbitrum",
 		},
 	}
@@ -169,7 +170,7 @@ func TestBuildOrderNotificationPayloadKeepsBepusdtCashierChannel(t *testing.T) {
 		ID:           11,
 		ProviderType: constants.PaymentProviderBepusdt,
 		ChannelType:  constants.PaymentProviderBepusdt,
-		ProviderPayload: models.JSON{
+		ProviderPayload: jsonmap.JSON{
 			"data": map[string]interface{}{
 				"order_mode": constants.PaymentBepusdtOrderModeCashier,
 			},
@@ -187,11 +188,11 @@ func TestBuildOrderNotificationPayloadKeepsBepusdtCashierChannel(t *testing.T) {
 }
 
 func TestMergeProviderPayloadPreservesDisplayChannelType(t *testing.T) {
-	existing := models.JSON{
+	existing := jsonmap.JSON{
 		"display_channel_type": "usdt.arbitrum",
 		"data":                 map[string]interface{}{"trade_id": "CREATE-1"},
 	}
-	incoming := models.JSON{
+	incoming := jsonmap.JSON{
 		"trade_id": "CALLBACK-1",
 		"status":   float64(2),
 	}
@@ -210,7 +211,7 @@ func TestMergeProviderPayloadPreservesDisplayChannelType(t *testing.T) {
 
 func TestBuildOrderNotificationPayloadFallsBackToChildrenItems(t *testing.T) {
 	repo := newMockSettingRepo()
-	repo.store[constants.SettingKeyNotificationCenterConfig] = models.JSON{
+	repo.store[constants.SettingKeyNotificationCenterConfig] = jsonmap.JSON{
 		"default_locale": "en-US",
 	}
 
@@ -229,13 +230,13 @@ func TestBuildOrderNotificationPayloadFallsBackToChildrenItems(t *testing.T) {
 				Items: []models.OrderItem{
 					{
 						OrderID: 2002,
-						TitleJSON: models.JSON{
+						TitleJSON: jsonmap.JSON{
 							"zh-CN": "上游交付商品",
 							"en-US": "Upstream Product",
 						},
-						SKUSnapshotJSON: models.JSON{
+						SKUSnapshotJSON: jsonmap.JSON{
 							"sku_code": "UPSTREAM-001",
-							"spec_values": models.JSON{
+							"spec_values": jsonmap.JSON{
 								"zh-CN": "节点: SG",
 								"en-US": "Node: SG",
 							},
@@ -250,13 +251,13 @@ func TestBuildOrderNotificationPayloadFallsBackToChildrenItems(t *testing.T) {
 				Items: []models.OrderItem{
 					{
 						OrderID: 2003,
-						TitleJSON: models.JSON{
+						TitleJSON: jsonmap.JSON{
 							"zh-CN": "人工交付商品",
 							"en-US": "Manual Product",
 						},
-						SKUSnapshotJSON: models.JSON{
+						SKUSnapshotJSON: jsonmap.JSON{
 							"sku_code": "MANUAL-003",
-							"spec_values": models.JSON{
+							"spec_values": jsonmap.JSON{
 								"zh-CN": "周期: 7天",
 								"en-US": "Cycle: 7 days",
 							},
@@ -306,14 +307,14 @@ func TestBuildManualFulfillmentNotificationPayloadUsesGuestEmailAndPendingItems(
 		Currency:   "CNY",
 		Items: []models.OrderItem{
 			{
-				TitleJSON:       models.JSON{"zh-CN": "自动商品"},
-				SKUSnapshotJSON: models.JSON{"sku_code": "AUTO-001"},
+				TitleJSON:       jsonmap.JSON{"zh-CN": "自动商品"},
+				SKUSnapshotJSON: jsonmap.JSON{"sku_code": "AUTO-001"},
 				Quantity:        1,
 				FulfillmentType: constants.FulfillmentTypeAuto,
 			},
 			{
-				TitleJSON:       models.JSON{"zh-CN": "待处理商品"},
-				SKUSnapshotJSON: models.JSON{"sku_code": "MANUAL-001"},
+				TitleJSON:       jsonmap.JSON{"zh-CN": "待处理商品"},
+				SKUSnapshotJSON: jsonmap.JSON{"sku_code": "MANUAL-001"},
 				Quantity:        3,
 				FulfillmentType: constants.FulfillmentTypeManual,
 			},
@@ -534,9 +535,9 @@ func TestBuildInventoryAlertDispatchPayloadsIncludesSummaryAndIgnoreRules(t *tes
 			{
 				ProductID:         1,
 				SKUID:             11,
-				ProductTitleJSON:  models.JSON{"en-US": "Manual Product"},
+				ProductTitleJSON:  jsonmap.JSON{"en-US": "Manual Product"},
 				SKUCode:           "MANUAL-A",
-				SKUSpecValuesJSON: models.JSON{"en-US": "Cycle: 30 days"},
+				SKUSpecValuesJSON: jsonmap.JSON{"en-US": "Cycle: 30 days"},
 				FulfillmentType:   constants.FulfillmentTypeManual,
 				AlertType:         constants.NotificationAlertTypeLowStockProducts,
 				AvailableStock:    3,
@@ -544,9 +545,9 @@ func TestBuildInventoryAlertDispatchPayloadsIncludesSummaryAndIgnoreRules(t *tes
 			{
 				ProductID:         2,
 				SKUID:             21,
-				ProductTitleJSON:  models.JSON{"en-US": "Ignored Product"},
+				ProductTitleJSON:  jsonmap.JSON{"en-US": "Ignored Product"},
 				SKUCode:           "IGNORE-ME",
-				SKUSpecValuesJSON: models.JSON{"en-US": "Region: SG"},
+				SKUSpecValuesJSON: jsonmap.JSON{"en-US": "Region: SG"},
 				FulfillmentType:   constants.FulfillmentTypeAuto,
 				AlertType:         constants.NotificationAlertTypeOutOfStockProducts,
 				AvailableStock:    0,
@@ -554,9 +555,9 @@ func TestBuildInventoryAlertDispatchPayloadsIncludesSummaryAndIgnoreRules(t *tes
 			{
 				ProductID:         3,
 				SKUID:             31,
-				ProductTitleJSON:  models.JSON{"en-US": "Auto Product"},
+				ProductTitleJSON:  jsonmap.JSON{"en-US": "Auto Product"},
 				SKUCode:           "AUTO-PRO",
-				SKUSpecValuesJSON: models.JSON{"en-US": "Region: HK"},
+				SKUSpecValuesJSON: jsonmap.JSON{"en-US": "Region: HK"},
 				FulfillmentType:   constants.FulfillmentTypeAuto,
 				AlertType:         constants.NotificationAlertTypeOutOfStockProducts,
 				AvailableStock:    0,

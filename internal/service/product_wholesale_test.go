@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -274,7 +275,7 @@ func TestProductServiceUpdateWholesalePricesOptionalSemantics(t *testing.T) {
 
 	category := models.Category{
 		Slug:     "wholesale-update-category",
-		NameJSON: models.JSON{"zh-CN": "wholesale-update-category"},
+		NameJSON: jsonmap.JSON{"zh-CN": "wholesale-update-category"},
 	}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
@@ -340,7 +341,7 @@ func TestProductServiceUpdateWholesalePricesOnlyTouchesWholesaleField(t *testing
 
 	category := models.Category{
 		Slug:     "wholesale-narrow-category",
-		NameJSON: models.JSON{"zh-CN": "wholesale-narrow-category"},
+		NameJSON: jsonmap.JSON{"zh-CN": "wholesale-narrow-category"},
 		IsActive: true,
 	}
 	if err := db.Create(&category).Error; err != nil {
@@ -350,7 +351,7 @@ func TestProductServiceUpdateWholesalePricesOnlyTouchesWholesaleField(t *testing
 	product := models.Product{
 		CategoryID:       category.ID,
 		Slug:             "wholesale-narrow-product",
-		TitleJSON:        models.JSON{"zh-CN": "原商品名"},
+		TitleJSON:        jsonmap.JSON{"zh-CN": "原商品名"},
 		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		CostPriceAmount:  models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
 		PurchaseType:     constants.ProductPurchaseMember,
@@ -398,7 +399,7 @@ func TestProductServiceUpdateWholesalePricesClearsTiers(t *testing.T) {
 	product := models.Product{
 		CategoryID:  1,
 		Slug:        "wholesale-clear-product",
-		TitleJSON:   models.JSON{"zh-CN": "wholesale-clear-product"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "wholesale-clear-product"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		WholesalePrices: models.WholesalePriceTiers{
 			{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
@@ -424,7 +425,7 @@ func TestProductServiceUpdateWholesalePricesRejectsInvalidInputs(t *testing.T) {
 	product := models.Product{
 		CategoryID:  1,
 		Slug:        "wholesale-invalid-product",
-		TitleJSON:   models.JSON{"zh-CN": "wholesale-invalid-product"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "wholesale-invalid-product"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		WholesalePrices: models.WholesalePriceTiers{
 			{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
@@ -471,7 +472,7 @@ func TestProductServiceUpdateWholesalePricesValidatesSKUBelonging(t *testing.T) 
 	product := models.Product{
 		CategoryID:  1,
 		Slug:        "wholesale-sku-owner-product",
-		TitleJSON:   models.JSON{"zh-CN": "wholesale-sku-owner-product"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "wholesale-sku-owner-product"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 	}
@@ -492,7 +493,7 @@ func TestProductServiceUpdateWholesalePricesValidatesSKUBelonging(t *testing.T) 
 	otherProduct := models.Product{
 		CategoryID:  1,
 		Slug:        "wholesale-sku-owner-other",
-		TitleJSON:   models.JSON{"zh-CN": "wholesale-sku-owner-other"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "wholesale-sku-owner-other"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 	}

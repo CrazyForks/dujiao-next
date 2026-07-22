@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // CreateInput 统一支付创建输入。各 adapter wrapper 把它转成自己的 native 输入。
@@ -31,7 +32,7 @@ type CreateInput struct {
 	ReturnURLQuery map[string]string // P1.2c Task 3: append 到 ReturnURL 的 query 参数(biz_type/order_no/marker 等)
 	ClientIP       string
 	ChannelType    string
-	Extra          models.JSON
+	Extra          jsonmap.JSON
 }
 
 // CreateResult 统一支付创建结果。
@@ -39,7 +40,7 @@ type CreateResult struct {
 	ProviderRef        string
 	RedirectURL        string
 	QRCodeURL          string
-	Payload            models.JSON
+	Payload            jsonmap.JSON
 	DisplayChannelType string
 	AmountSent         string
 	CurrencySent       string
@@ -52,7 +53,7 @@ type QueryResult struct {
 	Amount      models.Money
 	Currency    string
 	PaidAt      *time.Time
-	Payload     models.JSON
+	Payload     jsonmap.JSON
 }
 
 // CallbackResult 同步回调验签后的结构化结果。
@@ -63,7 +64,7 @@ type CallbackResult struct {
 	Amount      models.Money
 	Currency    string
 	PaidAt      *time.Time
-	Payload     models.JSON
+	Payload     jsonmap.JSON
 }
 
 // WebhookResult 是 CallbackResult 的别名:异步 webhook 与同步 callback
@@ -73,24 +74,24 @@ type WebhookResult = CallbackResult
 // Provider 是所有支付网关 adapter 的核心 interface。
 type Provider interface {
 	Type() string
-	ValidateConfig(cfg models.JSON, channelType string) error
-	CreatePayment(ctx context.Context, cfg models.JSON, input CreateInput) (*CreateResult, error)
+	ValidateConfig(cfg jsonmap.JSON, channelType string) error
+	CreatePayment(ctx context.Context, cfg jsonmap.JSON, input CreateInput) (*CreateResult, error)
 }
 
 // Capturer 可选能力:主动查询订单状态(stripe/paypal/wechat 实现)。
 type Capturer interface {
 	Provider
-	QueryPayment(ctx context.Context, cfg models.JSON, providerRef string) (*QueryResult, error)
+	QueryPayment(ctx context.Context, cfg jsonmap.JSON, providerRef string) (*QueryResult, error)
 }
 
 // Webhooker 可选能力:解析异步 webhook(stripe/paypal/wechat 实现)。
 type Webhooker interface {
 	Provider
-	ParseWebhook(ctx context.Context, cfg models.JSON, headers map[string]string, body []byte, now time.Time) (*WebhookResult, error)
+	ParseWebhook(ctx context.Context, cfg jsonmap.JSON, headers map[string]string, body []byte, now time.Time) (*WebhookResult, error)
 }
 
 // CallbackVerifier 可选能力:验证同步回调表单(alipay/epay/epusdt/bepusdt/tokenpay/okpay 实现)。
 type CallbackVerifier interface {
 	Provider
-	VerifyCallback(cfg models.JSON, form map[string][]string, body []byte) (*CallbackResult, error)
+	VerifyCallback(cfg jsonmap.JSON, form map[string][]string, body []byte) (*CallbackResult, error)
 }

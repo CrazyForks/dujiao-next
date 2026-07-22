@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 
@@ -12,8 +13,8 @@ type OrderItem struct {
 	OrderID                      uint           `gorm:"index;not null" json:"order_id"`                                         // 订单ID
 	ProductID                    uint           `gorm:"index;not null" json:"product_id"`                                       // 商品ID
 	SKUID                        uint           `gorm:"column:sku_id;index;not null;default:0" json:"sku_id"`                   // SKU ID
-	TitleJSON                    JSON           `gorm:"type:json;not null" json:"title"`                                        // 商品标题快照
-	SKUSnapshotJSON              JSON           `gorm:"type:json" json:"sku_snapshot"`                                          // SKU 快照（编码/规格）
+	TitleJSON                    jsonmap.JSON   `gorm:"type:json;not null" json:"title"`                                        // 商品标题快照
+	SKUSnapshotJSON              jsonmap.JSON   `gorm:"type:json" json:"sku_snapshot"`                                          // SKU 快照（编码/规格）
 	Tags                         StringArray    `gorm:"type:json" json:"tags"`                                                  // 标签快照
 	OriginalUnitPrice            Money          `gorm:"type:decimal(20,2);not null;default:0" json:"original_unit_price"`       // 原始单价快照
 	UnitPrice                    Money          `gorm:"type:decimal(20,2);not null;default:0" json:"unit_price"`                // 单价
@@ -28,9 +29,9 @@ type OrderItem struct {
 	PromotionID                  *uint          `gorm:"index" json:"promotion_id,omitempty"`                                    // 活动价ID
 	PromotionName                string         `gorm:"-" json:"promotion_name,omitempty"`                                      // 活动价名称
 	FulfillmentType              string         `gorm:"not null" json:"fulfillment_type"`                                       // 交付类型
-	ManualFormSchemaSnapshotJSON JSON           `gorm:"type:json" json:"manual_form_schema_snapshot"`                           // 人工交付表单 schema 快照
-	ManualFormSubmissionJSON     JSON           `gorm:"type:json" json:"manual_form_submission"`                                // 人工交付表单提交值
-	InstructionsJSON             JSON           `gorm:"type:json" json:"instructions"`                                          // 交付后使用说明快照（多语言）
+	ManualFormSchemaSnapshotJSON jsonmap.JSON   `gorm:"type:json" json:"manual_form_schema_snapshot"`                           // 人工交付表单 schema 快照
+	ManualFormSubmissionJSON     jsonmap.JSON   `gorm:"type:json" json:"manual_form_submission"`                                // 人工交付表单提交值
+	InstructionsJSON             jsonmap.JSON   `gorm:"type:json" json:"instructions"`                                          // 交付后使用说明快照（多语言）
 	CreatedAt                    time.Time      `gorm:"index" json:"created_at"`                                                // 创建时间
 	UpdatedAt                    time.Time      `gorm:"index" json:"updated_at"`                                                // 更新时间
 	DeletedAt                    gorm.DeletedAt `gorm:"index" json:"-"`                                                         // 软删除时间

@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	"github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -42,7 +43,7 @@ func createMemberLevelFixture(
 	t.Helper()
 
 	level := models.MemberLevel{
-		NameJSON: models.JSON{
+		NameJSON: jsonmap.JSON{
 			"zh-CN": slug,
 		},
 		Slug:              slug,
@@ -219,7 +220,7 @@ func TestMemberLevelServiceCreateLevelRejectsActiveSortOrderConflict(t *testing.
 	_ = createMemberLevelFixture(t, db, "sort-existing", 10, "0", true)
 
 	err := svc.CreateLevel(&models.MemberLevel{
-		NameJSON:          models.JSON{"zh-CN": "sort-conflict"},
+		NameJSON:          jsonmap.JSON{"zh-CN": "sort-conflict"},
 		Slug:              "sort-conflict",
 		DiscountRate:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		RechargeThreshold: models.NewMoneyFromDecimal(decimal.Zero),

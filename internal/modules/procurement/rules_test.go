@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // ── Unit tests for pure functions ──
@@ -68,7 +68,7 @@ func TestParseRetryIntervals(t *testing.T) {
 }
 
 func TestBuildUpstreamRefundRecords_SortsByCreatedAtAscAndRenumbersID(t *testing.T) {
-	records := []models.JSON{
+	records := []jsonmap.JSON{
 		{
 			"id":         99,
 			"type":       "wallet",

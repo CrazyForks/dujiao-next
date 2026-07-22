@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 var (
@@ -97,7 +98,7 @@ func (s *CategoryService) Create(input CreateCategoryInput) (*models.Category, e
 	category := models.Category{
 		ParentID:  input.ParentID,
 		Slug:      input.Slug,
-		NameJSON:  models.JSON(input.NameJSON),
+		NameJSON:  jsonmap.JSON(input.NameJSON),
 		Icon:      input.Icon,
 		SortOrder: input.SortOrder,
 		IsActive:  true,
@@ -131,7 +132,7 @@ func (s *CategoryService) Update(id string, input CreateCategoryInput) (*models.
 
 	category.ParentID = input.ParentID
 	category.Slug = input.Slug
-	category.NameJSON = models.JSON(input.NameJSON)
+	category.NameJSON = jsonmap.JSON(input.NameJSON)
 	category.Icon = input.Icon
 	category.SortOrder = input.SortOrder
 

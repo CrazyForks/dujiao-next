@@ -20,6 +20,7 @@ import (
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	resellerhttp "github.com/dujiao-next/internal/transport/http/reseller"
 
 	"github.com/gin-gonic/gin"
@@ -337,8 +338,8 @@ func TestAdminResellerManagementGetProfileDetailAggregatesOperationalData(t *tes
 		Quantity:        1,
 		UnitPrice:       models.NewMoneyFromDecimal(decimal.RequireFromString("129.00")),
 		TotalPrice:      models.NewMoneyFromDecimal(decimal.RequireFromString("129.00")),
-		TitleJSON:       models.JSON{"zh-CN": "后台商品"},
-		SKUSnapshotJSON: models.JSON{"sku_code": "A"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "后台商品"},
+		SKUSnapshotJSON: jsonmap.JSON{"sku_code": "A"},
 		CostPrice:       models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
 	}
 	if err := db.Create(&orderItem).Error; err != nil {
@@ -492,14 +493,14 @@ func TestAdminResellerManagementSetPrimaryDomainRejectsUnverifiedDomain(t *testi
 
 func seedResellerProductSettingProductForAdminHandler(t *testing.T, db *gorm.DB) (models.Product, []models.ProductSKU) {
 	t.Helper()
-	category := models.Category{Slug: fmt.Sprintf("admin-setting-cat-%d", time.Now().UnixNano()), NameJSON: models.JSON{"zh-CN": "分类"}, IsActive: true}
+	category := models.Category{Slug: fmt.Sprintf("admin-setting-cat-%d", time.Now().UnixNano()), NameJSON: jsonmap.JSON{"zh-CN": "分类"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
 	product := models.Product{
 		CategoryID:      category.ID,
 		Slug:            fmt.Sprintf("admin-setting-product-%d", time.Now().UnixNano()),
-		TitleJSON:       models.JSON{"zh-CN": "后台商品", "zh-TW": "後台商品", "en-US": "Admin Product"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "后台商品", "zh-TW": "後台商品", "en-US": "Admin Product"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
 		CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
 		IsActive:        true,

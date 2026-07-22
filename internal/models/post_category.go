@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 
@@ -11,7 +12,7 @@ type PostCategory struct {
 	ID        uint           `gorm:"primarykey" json:"id"`
 	ParentID  *uint          `gorm:"index" json:"parent_id"`
 	Slug      string         `gorm:"uniqueIndex;not null" json:"slug"`
-	NameJSON  JSON           `gorm:"type:json;not null" json:"name"`
+	NameJSON  jsonmap.JSON   `gorm:"type:json;not null" json:"name"`
 	Icon      string         `gorm:"type:varchar(500)" json:"icon"`
 	IsActive  bool           `gorm:"not null;default:true;index" json:"is_active"`
 	SortOrder int            `gorm:"default:0;index" json:"sort_order"`

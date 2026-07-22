@@ -7,11 +7,11 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/reseller"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 type publicConfigCacheAdapter struct{}
@@ -92,7 +92,7 @@ func (a publicConfigSettingsAdapter) GetByKey(key string) (interface{}, error) {
 	return value, nil
 }
 
-func (a publicConfigSettingsAdapter) GetActiveHomeAnnouncement() (models.JSON, bool) {
+func (a publicConfigSettingsAdapter) GetActiveHomeAnnouncement() (jsonmap.JSON, bool) {
 	return a.settings.GetActiveHomeAnnouncement()
 }
 
@@ -110,7 +110,7 @@ type publicConfigCaptchaAdapter struct {
 	svc *captcha.Service
 }
 
-func (a publicConfigCaptchaAdapter) GetPublicSetting() (models.JSON, error) {
+func (a publicConfigCaptchaAdapter) GetPublicSetting() (jsonmap.JSON, error) {
 	return a.svc.GetPublicSetting()
 }
 

@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -375,7 +376,7 @@ func (h *AdminManagementHandler) recordAudit(c *gin.Context, action string, obje
 		Object:           object,
 		Method:           method,
 		RequestID:        strings.TrimSpace(c.GetString("request_id")),
-		Detail:           models.JSON(detail),
+		Detail:           jsonmap.JSON(detail),
 	})
 }
 

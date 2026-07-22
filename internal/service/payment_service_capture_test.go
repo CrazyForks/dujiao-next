@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // recordingCapturer 捕获传入 ValidateConfig 的第二参数,用于回归测试。
@@ -17,16 +18,16 @@ type recordingCapturer struct {
 
 func (r *recordingCapturer) Type() string { return "test_capturer" }
 
-func (r *recordingCapturer) ValidateConfig(_ models.JSON, mode string) error {
+func (r *recordingCapturer) ValidateConfig(_ jsonmap.JSON, mode string) error {
 	r.receivedMode = mode
 	return errors.New("stop-test")
 }
 
-func (r *recordingCapturer) CreatePayment(_ context.Context, _ models.JSON, _ provider.CreateInput) (*provider.CreateResult, error) {
+func (r *recordingCapturer) CreatePayment(_ context.Context, _ jsonmap.JSON, _ provider.CreateInput) (*provider.CreateResult, error) {
 	return nil, errors.New("not-implemented")
 }
 
-func (r *recordingCapturer) QueryPayment(_ context.Context, _ models.JSON, _ string) (*provider.QueryResult, error) {
+func (r *recordingCapturer) QueryPayment(_ context.Context, _ jsonmap.JSON, _ string) (*provider.QueryResult, error) {
 	return nil, errors.New("not-implemented")
 }
 

@@ -3,13 +3,14 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 
 // MemberLevel 会员等级定义
 type MemberLevel struct {
 	ID                uint           `gorm:"primarykey" json:"id"`
-	NameJSON          JSON           `gorm:"type:json;not null" json:"name"`                                  // 多语言名称
+	NameJSON          jsonmap.JSON   `gorm:"type:json;not null" json:"name"`                                  // 多语言名称
 	Slug              string         `gorm:"uniqueIndex;not null" json:"slug"`                                // 唯一标识（default/silver/gold/diamond）
 	Icon              string         `gorm:"default:''" json:"icon"`                                          // 等级图标（emoji 或图片 URL）
 	DiscountRate      Money          `gorm:"type:decimal(6,2);not null;default:100" json:"discount_rate"`     // 全局折扣率（100=原价, 90=9折, 80=8折）

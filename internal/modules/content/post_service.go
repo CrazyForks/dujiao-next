@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // CreatePostInput 描述文章创建和更新所需字段。
@@ -117,9 +118,9 @@ func (s *PostService) Create(ctx context.Context, input CreatePostInput) (*model
 	post := models.Post{
 		Slug:        input.Slug,
 		Type:        input.Type,
-		TitleJSON:   models.JSON(input.TitleJSON),
-		SummaryJSON: models.JSON(input.SummaryJSON),
-		ContentJSON: models.JSON(input.ContentJSON),
+		TitleJSON:   jsonmap.JSON(input.TitleJSON),
+		SummaryJSON: jsonmap.JSON(input.SummaryJSON),
+		ContentJSON: jsonmap.JSON(input.ContentJSON),
 		Thumbnail:   input.Thumbnail,
 		IsPublished: isPublished,
 		CategoryID:  categoryID,
@@ -171,9 +172,9 @@ func (s *PostService) Update(ctx context.Context, id string, input CreatePostInp
 
 	post.Slug = input.Slug
 	post.Type = input.Type
-	post.TitleJSON = models.JSON(input.TitleJSON)
-	post.SummaryJSON = models.JSON(input.SummaryJSON)
-	post.ContentJSON = models.JSON(input.ContentJSON)
+	post.TitleJSON = jsonmap.JSON(input.TitleJSON)
+	post.SummaryJSON = jsonmap.JSON(input.SummaryJSON)
+	post.ContentJSON = jsonmap.JSON(input.ContentJSON)
 	post.Thumbnail = input.Thumbnail
 	post.CategoryID = categoryID
 	if input.IsPublished != nil {

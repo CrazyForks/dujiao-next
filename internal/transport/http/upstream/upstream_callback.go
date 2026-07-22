@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	upstreamadapter "github.com/dujiao-next/internal/upstream"
 
 	"github.com/gin-gonic/gin"
@@ -23,11 +23,11 @@ type callbackPayload struct {
 	DownstreamOrderNo string `json:"downstream_order_no"`
 	Status            string `json:"status"`
 	Fulfillment       *struct {
-		Type         string      `json:"type"`
-		Status       string      `json:"status"`
-		Payload      string      `json:"payload"`
-		DeliveryData models.JSON `json:"delivery_data"`
-		DeliveredAt  *time.Time  `json:"delivered_at"`
+		Type         string       `json:"type"`
+		Status       string       `json:"status"`
+		Payload      string       `json:"payload"`
+		DeliveryData jsonmap.JSON `json:"delivery_data"`
+		DeliveredAt  *time.Time   `json:"delivered_at"`
 	} `json:"fulfillment,omitempty"`
 	Timestamp int64 `json:"timestamp"`
 }

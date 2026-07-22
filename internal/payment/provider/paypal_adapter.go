@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/paypal"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -37,7 +38,7 @@ func (a *paypalAdapter) Type() string {
 
 // parseConfig 解析并验证 paypal Config，把 paypal.ErrConfigInvalid 等映射为 provider.ErrXxx。
 // 4 个公开方法共用，避免每个都重复 6 行样板。
-func (a *paypalAdapter) parseConfig(raw models.JSON) (*paypal.Config, error) {
+func (a *paypalAdapter) parseConfig(raw jsonmap.JSON) (*paypal.Config, error) {
 	cfg, err := paypal.ParseConfig(raw)
 	if err != nil {
 		return nil, mapPaypalError(err)
@@ -49,13 +50,13 @@ func (a *paypalAdapter) parseConfig(raw models.JSON) (*paypal.Config, error) {
 }
 
 // ValidateConfig 验证 channel.ConfigJSON。
-func (a *paypalAdapter) ValidateConfig(raw models.JSON, _ string) error {
+func (a *paypalAdapter) ValidateConfig(raw jsonmap.JSON, _ string) error {
 	_, err := a.parseConfig(raw)
 	return err
 }
 
 // CreatePayment 创建支付。
-func (a *paypalAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
+func (a *paypalAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input CreateInput) (*CreateResult, error) {
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
@@ -102,9 +103,9 @@ func (a *paypalAdapter) CreatePayment(ctx context.Context, raw models.JSON, inpu
 		return nil, mapPaypalError(err)
 	}
 
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	if result.Raw != nil {
-		payload = models.JSON(result.Raw)
+		payload = jsonmap.JSON(result.Raw)
 	}
 	if converted {
 		payload["exchange_rate"] = strings.TrimSpace(cfg.ExchangeRate)
@@ -122,7 +123,7 @@ func (a *paypalAdapter) CreatePayment(ctx context.Context, raw models.JSON, inpu
 }
 
 // QueryPayment 调用 paypal.CaptureOrder 完成捕获并返回状态（实现 Capturer）。
-func (a *paypalAdapter) QueryPayment(ctx context.Context, raw models.JSON, providerRef string) (*QueryResult, error) {
+func (a *paypalAdapter) QueryPayment(ctx context.Context, raw jsonmap.JSON, providerRef string) (*QueryResult, error) {
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
@@ -148,12 +149,12 @@ func (a *paypalAdapter) QueryPayment(ctx context.Context, raw models.JSON, provi
 		Amount:      amount,
 		Currency:    strings.ToUpper(strings.TrimSpace(result.Currency)),
 		PaidAt:      result.PaidAt,
-		Payload:     models.JSON(result.Raw),
+		Payload:     jsonmap.JSON(result.Raw),
 	}, nil
 }
 
 // ParseWebhook 合并 paypal 的 VerifyWebhookSignature + ParseWebhookEvent 两步（stripe 是一步）。
-func (a *paypalAdapter) ParseWebhook(ctx context.Context, raw models.JSON, headers map[string]string, body []byte, _ time.Time) (*WebhookResult, error) {
+func (a *paypalAdapter) ParseWebhook(ctx context.Context, raw jsonmap.JSON, headers map[string]string, body []byte, _ time.Time) (*WebhookResult, error) {
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
@@ -197,7 +198,7 @@ func (a *paypalAdapter) ParseWebhook(ctx context.Context, raw models.JSON, heade
 		Amount:      amount,
 		Currency:    strings.ToUpper(strings.TrimSpace(currency)),
 		PaidAt:      parsed.PaidAt(),
-		Payload:     models.JSON(map[string]interface{}{"event": event}),
+		Payload:     jsonmap.JSON(map[string]interface{}{"event": event}),
 	}, nil
 }
 

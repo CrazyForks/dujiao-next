@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -237,7 +238,7 @@ func TestPaymentRepositoryListAdminLightweightSkipCount(t *testing.T) {
 		t.Fatalf("create order failed: %v", err)
 	}
 
-	payload := models.JSON{
+	payload := jsonmap.JSON{
 		"display_channel_type": "usdt.arbitrum",
 		"foo":                  "bar",
 		"nested":               map[string]interface{}{"key": "value"},

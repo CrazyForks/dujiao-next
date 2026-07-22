@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 const (
@@ -23,7 +24,7 @@ const (
 
 type SettingRepository interface {
 	GetByKey(key string) (*models.Setting, error)
-	Upsert(key string, value models.JSON) (*models.Setting, error)
+	Upsert(key string, value jsonmap.JSON) (*models.Setting, error)
 }
 
 // Service 合规声明确认服务。
@@ -93,7 +94,7 @@ func (s *Service) Acknowledge(req AcknowledgeRequest) error {
 		return ErrAlreadyAcknowledged
 	}
 
-	value := models.JSON{
+	value := jsonmap.JSON{
 		"acknowledged":             true,
 		"acknowledged_at":          time.Now().UTC().Format(time.RFC3339),
 		"acknowledged_by_admin_id": req.AdminID,
@@ -110,12 +111,12 @@ func (s *Service) Acknowledge(req AcknowledgeRequest) error {
 	return nil
 }
 
-func complianceJSONBool(j models.JSON, key string) bool {
+func complianceJSONBool(j jsonmap.JSON, key string) bool {
 	v, ok := j[key].(bool)
 	return ok && v
 }
 
-func complianceJSONString(j models.JSON, key string) string {
+func complianceJSONString(j jsonmap.JSON, key string) string {
 	v, _ := j[key].(string)
 	return v
 }

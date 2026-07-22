@@ -13,6 +13,7 @@ import (
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -43,7 +44,7 @@ func assertBuildOrderResultRejectsPurchaseQuantity(t *testing.T, fixture orderPu
 	now := time.Now()
 	category := models.Category{
 		Slug:      fixture.categorySlug,
-		NameJSON:  models.JSON{"zh-CN": "测试分类"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		SortOrder: 0,
 		CreatedAt: now,
 	}
@@ -54,7 +55,7 @@ func assertBuildOrderResultRejectsPurchaseQuantity(t *testing.T, fixture orderPu
 	product := models.Product{
 		CategoryID:          category.ID,
 		Slug:                fixture.productSlug,
-		TitleJSON:           models.JSON{"zh-CN": "测试商品"},
+		TitleJSON:           jsonmap.JSON{"zh-CN": "测试商品"},
 		PriceAmount:         models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:        constants.ProductPurchaseMember,
 		FulfillmentType:     constants.FulfillmentTypeManual,
@@ -118,7 +119,7 @@ func TestBuildOrderResultRejectsZeroPromotionPrice(t *testing.T) {
 	now := time.Now()
 	category := models.Category{
 		Slug:      "test-category",
-		NameJSON:  models.JSON{"zh-CN": "测试分类"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		SortOrder: 0,
 		CreatedAt: now,
 	}
@@ -129,7 +130,7 @@ func TestBuildOrderResultRejectsZeroPromotionPrice(t *testing.T) {
 	product := models.Product{
 		CategoryID:      category.ID,
 		Slug:            "test-product",
-		TitleJSON:       models.JSON{"zh-CN": "测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -214,7 +215,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 	now := time.Now()
 	category := models.Category{
 		Slug:      "manual-member-preview-category",
-		NameJSON:  models.JSON{"zh-CN": "测试分类"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		SortOrder: 0,
 		CreatedAt: now,
 	}
@@ -222,7 +223,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 		t.Fatalf("create category failed: %v", err)
 	}
 	level := models.MemberLevel{
-		NameJSON:     models.JSON{"zh-CN": "金牌会员"},
+		NameJSON:     jsonmap.JSON{"zh-CN": "金牌会员"},
 		Slug:         "gold",
 		DiscountRate: models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
 		IsActive:     true,
@@ -247,11 +248,11 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 	product := models.Product{
 		CategoryID:      category.ID,
 		Slug:            "manual-member-preview-product",
-		TitleJSON:       models.JSON{"zh-CN": "人工发货商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "人工发货商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
-		ManualFormSchemaJSON: models.JSON{
+		ManualFormSchemaJSON: jsonmap.JSON{
 			"fields": []interface{}{
 				map[string]interface{}{
 					"key":      "account",
@@ -345,7 +346,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 	now := time.Now()
 	category := models.Category{
 		Slug:      "stack-promo-member-category",
-		NameJSON:  models.JSON{"zh-CN": "测试分类"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		SortOrder: 0,
 		CreatedAt: now,
 	}
@@ -353,7 +354,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 		t.Fatalf("create category failed: %v", err)
 	}
 	level := models.MemberLevel{
-		NameJSON:     models.JSON{"zh-CN": "金牌会员"},
+		NameJSON:     jsonmap.JSON{"zh-CN": "金牌会员"},
 		Slug:         "stack-gold",
 		DiscountRate: models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
 		IsActive:     true,
@@ -378,7 +379,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 	product := models.Product{
 		CategoryID:      category.ID,
 		Slug:            "stack-promo-member-product",
-		TitleJSON:       models.JSON{"zh-CN": "叠加优惠商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "叠加优惠商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
@@ -510,7 +511,7 @@ func TestBuildOrderResultOriginalAmountBeforePromotion(t *testing.T) {
 	now := time.Now()
 	category := models.Category{
 		Slug:      "test-category-original",
-		NameJSON:  models.JSON{"zh-CN": "测试分类"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		SortOrder: 0,
 		CreatedAt: now,
 	}
@@ -521,7 +522,7 @@ func TestBuildOrderResultOriginalAmountBeforePromotion(t *testing.T) {
 	product := models.Product{
 		CategoryID:      category.ID,
 		Slug:            "test-product-original",
-		TitleJSON:       models.JSON{"zh-CN": "测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("59.90")),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -615,7 +616,7 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 	now := time.Now()
 	category := models.Category{
 		Slug:      "test-category-coupon",
-		NameJSON:  models.JSON{"zh-CN": "测试分类"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		SortOrder: 0,
 		CreatedAt: now,
 	}
@@ -626,7 +627,7 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 	product := models.Product{
 		CategoryID:      category.ID,
 		Slug:            "test-product-coupon",
-		TitleJSON:       models.JSON{"zh-CN": "测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,

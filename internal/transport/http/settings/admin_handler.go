@@ -5,15 +5,15 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/http/response"
-	"github.com/dujiao-next/internal/models"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
 
 // AdminService 是后台通用设置端口。
 type AdminService interface {
-	GetByKey(key string) (models.JSON, error)
+	GetByKey(key string) (jsonmap.JSON, error)
 	UpdateWithEffects(key string, value map[string]interface{}) (settingsmodule.UpdateResult, error)
 	InvalidateCallbackRoutesCache()
 }

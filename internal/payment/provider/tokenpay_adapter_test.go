@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/tokenpay"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestTokenpayAdapter_Type(t *testing.T) {
@@ -20,7 +20,7 @@ func TestTokenpayAdapter_Type(t *testing.T) {
 
 func TestTokenpayAdapter_ValidateConfig_EmptyRejected(t *testing.T) {
 	a := NewTokenpayAdapter()
-	err := a.ValidateConfig(models.JSON{}, "")
+	err := a.ValidateConfig(jsonmap.JSON{}, "")
 	if err == nil {
 		t.Fatalf("expected error from empty config")
 	}
@@ -31,7 +31,7 @@ func TestTokenpayAdapter_ValidateConfig_EmptyRejected(t *testing.T) {
 
 func TestTokenpayAdapter_CreatePayment_ConfigInvalidMapped(t *testing.T) {
 	a := NewTokenpayAdapter()
-	_, err := a.CreatePayment(context.Background(), models.JSON{}, CreateInput{
+	_, err := a.CreatePayment(context.Background(), jsonmap.JSON{}, CreateInput{
 		OrderNo:  "ORDER_1",
 		Currency: "USDT",
 	})

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 var (
@@ -38,8 +38,8 @@ var manualFormFieldKeyPattern = regexp.MustCompile(`^[a-z0-9_]{1,64}$`)
 type manualFormField struct {
 	Key         string
 	Type        string
-	Label       models.JSON
-	Placeholder models.JSON
+	Label       jsonmap.JSON
+	Placeholder jsonmap.JSON
 	Required    bool
 	Regex       string
 	Min         *float64
@@ -53,7 +53,7 @@ type manualFormSchema struct {
 }
 
 // ValidateAndNormalize 校验表单结构和提交值，并返回可持久化的规范化快照。
-func ValidateAndNormalize(schemaJSON models.JSON, submissionJSON models.JSON) (models.JSON, models.JSON, error) {
+func ValidateAndNormalize(schemaJSON jsonmap.JSON, submissionJSON jsonmap.JSON) (jsonmap.JSON, jsonmap.JSON, error) {
 	schema, normalizedSchema, err := parseManualFormSchema(schemaJSON)
 	if err != nil {
 		return nil, nil, err
@@ -66,14 +66,14 @@ func ValidateAndNormalize(schemaJSON models.JSON, submissionJSON models.JSON) (m
 }
 
 // NormalizeSchema 只校验并规范化表单结构，供商品创建和更新使用。
-func NormalizeSchema(schemaJSON models.JSON) (models.JSON, error) {
+func NormalizeSchema(schemaJSON jsonmap.JSON) (jsonmap.JSON, error) {
 	_, normalizedSchema, err := parseManualFormSchema(schemaJSON)
 	return normalizedSchema, err
 }
 
-func parseManualFormSchema(schemaJSON models.JSON) (*manualFormSchema, models.JSON, error) {
+func parseManualFormSchema(schemaJSON jsonmap.JSON) (*manualFormSchema, jsonmap.JSON, error) {
 	if len(schemaJSON) == 0 {
-		return &manualFormSchema{Fields: []manualFormField{}}, models.JSON{"fields": []models.JSON{}}, nil
+		return &manualFormSchema{Fields: []manualFormField{}}, jsonmap.JSON{"fields": []jsonmap.JSON{}}, nil
 	}
 	rawFields, ok := schemaJSON["fields"]
 	if !ok {
@@ -86,7 +86,7 @@ func parseManualFormSchema(schemaJSON models.JSON) (*manualFormSchema, models.JS
 
 	result := &manualFormSchema{Fields: make([]manualFormField, 0, len(fieldList))}
 	keys := make(map[string]struct{}, len(fieldList))
-	normalizedFields := make([]models.JSON, 0, len(fieldList))
+	normalizedFields := make([]jsonmap.JSON, 0, len(fieldList))
 
 	for _, rawField := range fieldList {
 		fieldMap, ok := rawField.(map[string]interface{})
@@ -174,7 +174,7 @@ func parseManualFormSchema(schemaJSON models.JSON) (*manualFormSchema, models.JS
 		}
 		result.Fields = append(result.Fields, field)
 
-		normalizedField := models.JSON{
+		normalizedField := jsonmap.JSON{
 			"key":      key,
 			"type":     typeValue,
 			"required": required,
@@ -205,13 +205,13 @@ func parseManualFormSchema(schemaJSON models.JSON) (*manualFormSchema, models.JS
 		normalizedFields = append(normalizedFields, normalizedField)
 	}
 
-	normalizedSchema := models.JSON{
+	normalizedSchema := jsonmap.JSON{
 		"fields": normalizedFields,
 	}
 	return result, normalizedSchema, nil
 }
 
-func normalizeManualFormSubmission(schema *manualFormSchema, submissionJSON models.JSON) (models.JSON, error) {
+func normalizeManualFormSubmission(schema *manualFormSchema, submissionJSON jsonmap.JSON) (jsonmap.JSON, error) {
 	if schema == nil {
 		return nil, ErrSchemaInvalid
 	}
@@ -219,7 +219,7 @@ func normalizeManualFormSubmission(schema *manualFormSchema, submissionJSON mode
 		if len(submissionJSON) > 0 {
 			return nil, ErrFieldInvalid
 		}
-		return models.JSON{}, nil
+		return jsonmap.JSON{}, nil
 	}
 	if len(submissionJSON) == 0 {
 		for _, field := range schema.Fields {
@@ -227,10 +227,10 @@ func normalizeManualFormSubmission(schema *manualFormSchema, submissionJSON mode
 				return nil, ErrRequiredMissing
 			}
 		}
-		return models.JSON{}, nil
+		return jsonmap.JSON{}, nil
 	}
 
-	normalized := make(models.JSON, len(schema.Fields))
+	normalized := make(jsonmap.JSON, len(schema.Fields))
 	allowed := make(map[string]manualFormField, len(schema.Fields))
 	for _, field := range schema.Fields {
 		allowed[field.Key] = field
@@ -517,16 +517,16 @@ func parseOptionalTrimmedStringStrict(fieldMap map[string]interface{}, key strin
 	return strings.TrimSpace(value), nil
 }
 
-func parseLocaleTextMapStrict(fieldMap map[string]interface{}, key string) (models.JSON, error) {
+func parseLocaleTextMapStrict(fieldMap map[string]interface{}, key string) (jsonmap.JSON, error) {
 	raw, ok := fieldMap[key]
 	if !ok {
-		return models.JSON{}, nil
+		return jsonmap.JSON{}, nil
 	}
 	mapValue, ok := raw.(map[string]interface{})
 	if !ok {
 		return nil, ErrSchemaInvalid
 	}
-	result := models.JSON{}
+	result := jsonmap.JSON{}
 	for locale, localeRaw := range mapValue {
 		text, ok := localeRaw.(string)
 		if !ok {

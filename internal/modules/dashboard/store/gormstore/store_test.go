@@ -8,6 +8,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -37,7 +38,7 @@ func createDashboardCategory(t *testing.T, db *gorm.DB, slug string) *models.Cat
 	t.Helper()
 	category := &models.Category{
 		Slug:     slug,
-		NameJSON: models.JSON{"zh-CN": "测试分类"},
+		NameJSON: jsonmap.JSON{"zh-CN": "测试分类"},
 	}
 	if err := db.Create(category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
@@ -74,7 +75,7 @@ func createDashboardProfitOrderWithItem(
 	item := &models.OrderItem{
 		OrderID:         order.ID,
 		ProductID:       product.ID,
-		TitleJSON:       models.JSON{"zh-CN": title},
+		TitleJSON:       jsonmap.JSON{"zh-CN": title},
 		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
 		CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(cost)),
 		Quantity:        1,

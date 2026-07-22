@@ -14,6 +14,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -270,7 +271,7 @@ func TestExportAdminPaymentsByUserID(t *testing.T) {
 	query := h.payments.(*fakeAdminPaymentQuery)
 	for i := range query.payments {
 		if query.payments[i].ID == fixture.OrderPaymentID {
-			query.payments[i].ProviderPayload = models.JSON{"display_channel_type": "usdt.arbitrum"}
+			query.payments[i].ProviderPayload = jsonmap.JSON{"display_channel_type": "usdt.arbitrum"}
 		}
 	}
 

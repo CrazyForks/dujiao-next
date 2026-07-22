@@ -14,6 +14,7 @@ import (
 	"github.com/dujiao-next/internal/modules/content/store/gormstore"
 	"github.com/dujiao-next/internal/modules/sitemap"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -119,8 +120,8 @@ func TestSitemapServicePropagatesPublishedPostReaderFailure(t *testing.T) {
 func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 	svc, db := newSitemapServiceForTest(t, nil)
 
-	activeCategory := models.Category{Slug: "games", NameJSON: models.JSON{"zh-CN": "games"}, IsActive: true}
-	inactiveCategory := models.Category{Slug: "hidden", NameJSON: models.JSON{"zh-CN": "hidden"}, IsActive: true}
+	activeCategory := models.Category{Slug: "games", NameJSON: jsonmap.JSON{"zh-CN": "games"}, IsActive: true}
+	inactiveCategory := models.Category{Slug: "hidden", NameJSON: jsonmap.JSON{"zh-CN": "hidden"}, IsActive: true}
 	if err := db.Create(&activeCategory).Error; err != nil {
 		t.Fatalf("create active category: %v", err)
 	}
@@ -135,7 +136,7 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 	visibleProduct := models.Product{
 		CategoryID:      activeCategory.ID,
 		Slug:            "visible-product",
-		TitleJSON:       models.JSON{"zh-CN": "p"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "p"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -148,7 +149,7 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 	hiddenByProductInactive := models.Product{
 		CategoryID:      activeCategory.ID,
 		Slug:            "draft-product",
-		TitleJSON:       models.JSON{"zh-CN": "p"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "p"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -161,7 +162,7 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 	hiddenByCategoryInactive := models.Product{
 		CategoryID:      inactiveCategory.ID,
 		Slug:            "in-hidden-category",
-		TitleJSON:       models.JSON{"zh-CN": "p"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "p"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -174,13 +175,13 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 	publishedPost := models.Post{
 		Slug:        "hello",
 		Type:        constants.PostTypeBlog,
-		TitleJSON:   models.JSON{"zh-CN": "hello"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "hello"},
 		IsPublished: true,
 	}
 	draftPost := models.Post{
 		Slug:        "draft",
 		Type:        constants.PostTypeBlog,
-		TitleJSON:   models.JSON{"zh-CN": "draft"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "draft"},
 		IsPublished: false,
 	}
 	if err := db.Create(&publishedPost).Error; err != nil {

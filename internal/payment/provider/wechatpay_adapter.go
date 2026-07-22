@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/wechatpay"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -38,7 +39,7 @@ func (a *wechatpayAdapter) Type() string {
 // 当 interactionMode 为空字符串时，跳过 wechatpay.ValidateConfig 对 interaction_mode 的校验，
 // 仅做 ParseConfig。这用于 QueryPayment/ParseWebhook 等阶段，这些阶段不需要 interaction_mode，
 // 但需要能正常解析 Config 以获取认证信息。
-func (a *wechatpayAdapter) parseConfig(raw models.JSON, interactionMode string) (*wechatpay.Config, error) {
+func (a *wechatpayAdapter) parseConfig(raw jsonmap.JSON, interactionMode string) (*wechatpay.Config, error) {
 	cfg, err := wechatpay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapWechatpayError(err)
@@ -63,7 +64,7 @@ func (a *wechatpayAdapter) parseConfig(raw models.JSON, interactionMode string) 
 // （QR 模式不要求 h5_redirect_url，对 config 字段完整性校验最宽松，
 // IsSupportedInteractionMode 列表内）。
 // 实际 interactionMode 在 CreatePayment 阶段从 input.Extra["interaction_mode"] 再次校验。
-func (a *wechatpayAdapter) ValidateConfig(raw models.JSON, interactionMode string) error {
+func (a *wechatpayAdapter) ValidateConfig(raw jsonmap.JSON, interactionMode string) error {
 	mode := strings.TrimSpace(interactionMode)
 	if mode == "" {
 		mode = constants.PaymentInteractionQR
@@ -73,7 +74,7 @@ func (a *wechatpayAdapter) ValidateConfig(raw models.JSON, interactionMode strin
 }
 
 // CreatePayment 创建支付。
-func (a *wechatpayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
+func (a *wechatpayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input CreateInput) (*CreateResult, error) {
 	// 从 input.Extra 取 interaction_mode（jsapi/native/h5）
 	interactionMode, _ := input.Extra["interaction_mode"].(string)
 	cfg, err := a.parseConfig(raw, interactionMode)
@@ -120,7 +121,7 @@ func (a *wechatpayAdapter) CreatePayment(ctx context.Context, raw models.JSON, i
 	// wechat CreatePayment 阶段返回 PrepayID，但不是最终的 transaction_id。
 	// 最终 transaction_id 在 Query 或 Webhook 时才出现。所以 ProviderRef 设为空，
 	// PrepayID 和 PayURL/QRCode 入 Payload 供上游参考。
-	payload := models.JSON{
+	payload := jsonmap.JSON{
 		"prepay_id": result.PrepayID,
 		"raw":       result.Raw,
 	}
@@ -143,7 +144,7 @@ func (a *wechatpayAdapter) CreatePayment(ctx context.Context, raw models.JSON, i
 // QueryPayment 主动查询订单状态(实现 Capturer)。
 // wechat 的 QueryOrderByOutTradeNo 用商户订单号查询，返回 TransactionID（wechat 的 transaction_id）。
 // 调用方传入的 providerRef 实际就是 OrderNo（因为 CreatePayment 阶段没有 transaction_id）。
-func (a *wechatpayAdapter) QueryPayment(ctx context.Context, raw models.JSON, providerRef string) (*QueryResult, error) {
+func (a *wechatpayAdapter) QueryPayment(ctx context.Context, raw jsonmap.JSON, providerRef string) (*QueryResult, error) {
 	cfg, err := a.parseConfig(raw, "")
 	if err != nil {
 		return nil, err
@@ -169,12 +170,12 @@ func (a *wechatpayAdapter) QueryPayment(ctx context.Context, raw models.JSON, pr
 		Amount:      amount,
 		Currency:    strings.ToUpper(strings.TrimSpace(result.Currency)),
 		PaidAt:      result.PaidAt,
-		Payload:     models.JSON(result.Raw),
+		Payload:     jsonmap.JSON(result.Raw),
 	}, nil
 }
 
 // ParseWebhook 验签并解析 webhook(实现 Webhooker)。
-func (a *wechatpayAdapter) ParseWebhook(ctx context.Context, raw models.JSON, headers map[string]string, body []byte, _ time.Time) (*WebhookResult, error) {
+func (a *wechatpayAdapter) ParseWebhook(ctx context.Context, raw jsonmap.JSON, headers map[string]string, body []byte, _ time.Time) (*WebhookResult, error) {
 	cfg, err := a.parseConfig(raw, "")
 	if err != nil {
 		return nil, err
@@ -201,7 +202,7 @@ func (a *wechatpayAdapter) ParseWebhook(ctx context.Context, raw models.JSON, he
 		Amount:      amount,
 		Currency:    strings.ToUpper(strings.TrimSpace(result.Currency)),
 		PaidAt:      result.PaidAt,
-		Payload:     models.JSON(result.Raw),
+		Payload:     jsonmap.JSON(result.Raw),
 	}, nil
 }
 

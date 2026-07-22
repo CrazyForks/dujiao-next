@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
 
@@ -15,7 +16,7 @@ func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T)
 
 	category := models.Category{
 		Slug:     "mapped-category",
-		NameJSON: models.JSON{"zh-CN": "mapped-category"},
+		NameJSON: jsonmap.JSON{"zh-CN": "mapped-category"},
 	}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
@@ -24,7 +25,7 @@ func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T)
 	product := models.Product{
 		CategoryID:       category.ID,
 		Slug:             "mapped-product",
-		TitleJSON:        models.JSON{"zh-CN": "mapped-product"},
+		TitleJSON:        jsonmap.JSON{"zh-CN": "mapped-product"},
 		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeUpstream,
@@ -39,7 +40,7 @@ func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T)
 	sku := models.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        models.DefaultSKUCode,
-		SpecValuesJSON: models.JSON{},
+		SpecValuesJSON: jsonmap.JSON{},
 		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
 	}
@@ -84,7 +85,7 @@ func TestProductServiceUpdateFiltersUnavailablePaymentChannels(t *testing.T) {
 
 	category := models.Category{
 		Slug:     "payment-channel-update-category",
-		NameJSON: models.JSON{"zh-CN": "payment-channel-update-category"},
+		NameJSON: jsonmap.JSON{"zh-CN": "payment-channel-update-category"},
 	}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
@@ -94,7 +95,7 @@ func TestProductServiceUpdateFiltersUnavailablePaymentChannels(t *testing.T) {
 	product := models.Product{
 		CategoryID:        category.ID,
 		Slug:              "payment-channel-update",
-		TitleJSON:         models.JSON{"zh-CN": "payment-channel-update"},
+		TitleJSON:         jsonmap.JSON{"zh-CN": "payment-channel-update"},
 		PriceAmount:       models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:      constants.ProductPurchaseMember,
 		FulfillmentType:   constants.FulfillmentTypeAuto,
@@ -129,7 +130,7 @@ func TestProductServiceUpdateFiltersUnavailablePaymentChannels(t *testing.T) {
 func TestProductServiceUpdateRejectsInvalidPurchaseLimits(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	cat := models.Category{Slug: "test-purchase-limit-update", NameJSON: models.JSON{"zh-CN": "test"}}
+	cat := models.Category{Slug: "test-purchase-limit-update", NameJSON: jsonmap.JSON{"zh-CN": "test"}}
 	if err := db.Create(&cat).Error; err != nil {
 		t.Fatalf("create category: %v", err)
 	}

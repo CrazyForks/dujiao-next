@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // CryptoWalletInfo 是二维码加密货币支付页需要直接展示的链上付款信息。
@@ -30,7 +30,7 @@ func (info CryptoWalletInfo) HasAny() bool {
 //   - epusdt:    data.receive_address  (地址)  / data.actual_amount
 //   - dujiaopay: pay_address           (地址)  / payable_amount / chain / token_id
 //   - tokenpay:  暂不支持（包未解析地址），保留扩展位
-func ExtractCryptoWalletInfo(providerType, interactionMode string, payload models.JSON) CryptoWalletInfo {
+func ExtractCryptoWalletInfo(providerType, interactionMode string, payload jsonmap.JSON) CryptoWalletInfo {
 	if strings.ToLower(strings.TrimSpace(interactionMode)) != constants.PaymentInteractionQR {
 		return CryptoWalletInfo{}
 	}
@@ -73,7 +73,7 @@ func ExtractCryptoWalletInfo(providerType, interactionMode string, payload model
 }
 
 // ExtractUSDTWalletInfo 从 Payment.ProviderPayload 中提取 USDT 收款钱包地址和链上实付金额。
-func ExtractUSDTWalletInfo(providerType, interactionMode string, payload models.JSON) (address, chainAmount string) {
+func ExtractUSDTWalletInfo(providerType, interactionMode string, payload jsonmap.JSON) (address, chainAmount string) {
 	info := ExtractCryptoWalletInfo(providerType, interactionMode, payload)
 	return info.Address, info.ChainAmount
 }
@@ -88,7 +88,7 @@ func firstPayloadString(values ...string) string {
 }
 
 // readPayloadString 沿 keys 路径在 payload 内取字符串值，支持 string / json.Number / 数值（fmt 转换）。
-func readPayloadString(payload models.JSON, keys ...string) string {
+func readPayloadString(payload jsonmap.JSON, keys ...string) string {
 	if payload == nil || len(keys) == 0 {
 		return ""
 	}
@@ -96,7 +96,7 @@ func readPayloadString(payload models.JSON, keys ...string) string {
 	for _, k := range keys {
 		m, ok := cur.(map[string]any)
 		if !ok {
-			if mj, ok2 := cur.(models.JSON); ok2 {
+			if mj, ok2 := cur.(jsonmap.JSON); ok2 {
 				m = map[string]any(mj)
 			} else {
 				return ""

@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -52,7 +53,7 @@ func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *m
 	// NotifyURL / ReturnURL 留空：各 adapter/native 包均实现 "input值 || cfg值" fallback，
 	// 空值时自动读取 channel.ConfigJSON 里配置的 notify_url / return_url。
 	// P1.2c Task 3: returnURLQuery 携带 biz_type/order_no/marker 等，由 wrapper append 到 ReturnURL。
-	extra := models.JSON{}
+	extra := jsonmap.JSON{}
 	if interactionMode := strings.TrimSpace(channel.InteractionMode); interactionMode != "" {
 		extra["interaction_mode"] = interactionMode
 	}
@@ -110,7 +111,7 @@ func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *m
 	// 避免修改 payment.channel_type 的数据库语义。
 	if displayChannelType := strings.TrimSpace(result.DisplayChannelType); displayChannelType != "" {
 		if payment.ProviderPayload == nil {
-			payment.ProviderPayload = models.JSON{}
+			payment.ProviderPayload = jsonmap.JSON{}
 		}
 		payment.ProviderPayload["display_channel_type"] = displayChannelType
 	}

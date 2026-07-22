@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -48,7 +49,7 @@ func (h *Handler) handleAlipayCallback(c *gin.Context) bool {
 	updated, err := h.service.HandleSyncCallback(channel, form, nil)
 	if err != nil {
 		log.Warnw("alipay_callback_handle_failed", "payment_id", payment.ID, "channel_id", channel.ID, "error", err)
-		h.enqueuePaymentExceptionAlert(c, models.JSON{
+		h.enqueuePaymentExceptionAlert(c, jsonmap.JSON{
 			"alert_type": "alipay_callback_handle_failed", "alert_level": "error",
 			"payment_id":   fmt.Sprintf("%d", payment.ID),
 			"out_trade_no": strings.TrimSpace(getFirstValue(form, "out_trade_no")),
@@ -106,7 +107,7 @@ func (h *Handler) handleEpayCallback(c *gin.Context) bool {
 	updated, err := h.service.HandleSyncCallback(channel, form, nil)
 	if err != nil {
 		log.Warnw("epay_callback_handle_failed", "payment_id", payment.ID, "channel_id", channel.ID, "out_trade_no", outTradeNo, "error", err)
-		h.enqueuePaymentExceptionAlert(c, models.JSON{
+		h.enqueuePaymentExceptionAlert(c, jsonmap.JSON{
 			"alert_type": "epay_callback_handle_failed", "alert_level": "error",
 			"payment_id": fmt.Sprintf("%d", payment.ID), "out_trade_no": outTradeNo,
 			"message": strings.TrimSpace(err.Error()), "provider": constants.PaymentProviderEpay,

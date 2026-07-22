@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -243,7 +244,7 @@ func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (mo
 		ProfitAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
 		ProfitEligible:    eligible,
 		ProfitBlockReason: "",
-		PricingSnapshotJSON: models.JSON{
+		PricingSnapshotJSON: jsonmap.JSON{
 			"base_amount":     "100.00",
 			"reseller_amount": "130.00",
 			"profit_amount":   "30.00",
@@ -259,7 +260,7 @@ func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (mo
 				},
 			},
 		},
-		RiskSnapshotJSON: models.JSON{"profit_eligible": eligible},
+		RiskSnapshotJSON: jsonmap.JSON{"profit_eligible": eligible},
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}

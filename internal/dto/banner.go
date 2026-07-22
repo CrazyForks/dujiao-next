@@ -2,19 +2,20 @@ package dto
 
 import (
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // BannerResp 前台 Banner 响应
 type BannerResp struct {
-	ID           uint        `json:"id"`
-	Position     string      `json:"position"`
-	Title        models.JSON `json:"title"`
-	Subtitle     models.JSON `json:"subtitle"`
-	Image        string      `json:"image"`
-	MobileImage  string      `json:"mobile_image,omitempty"`
-	LinkType     string      `json:"link_type"`
-	LinkValue    string      `json:"link_value,omitempty"`
-	OpenInNewTab bool        `json:"open_in_new_tab"`
+	ID           uint         `json:"id"`
+	Position     string       `json:"position"`
+	Title        jsonmap.JSON `json:"title"`
+	Subtitle     jsonmap.JSON `json:"subtitle"`
+	Image        string       `json:"image"`
+	MobileImage  string       `json:"mobile_image,omitempty"`
+	LinkType     string       `json:"link_type"`
+	LinkValue    string       `json:"link_value,omitempty"`
+	OpenInNewTab bool         `json:"open_in_new_tab"`
 }
 
 // NewBannerResp 从 models.Banner 构造响应

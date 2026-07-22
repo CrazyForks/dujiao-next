@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 type LocalizedTextInput map[string]string
@@ -95,8 +96,8 @@ func newResellerFieldError(field string) error {
 	return &ResellerSiteConfigFieldError{Field: field}
 }
 
-func normalizeResellerLocalizedText(raw LocalizedTextInput, max int) models.JSON {
-	out := models.JSON{}
+func normalizeResellerLocalizedText(raw LocalizedTextInput, max int) jsonmap.JSON {
+	out := jsonmap.JSON{}
 	for _, lang := range []string{"zh-CN", "zh-TW", "en-US"} {
 		out[lang] = trimLimit(raw[lang], max)
 	}
@@ -144,7 +145,7 @@ func validateSupportURL(raw string) (string, error) {
 }
 
 // NormalizeResellerSupport 归一化并校验客服联系方式。
-func NormalizeResellerSupport(input ResellerSupportInput) (models.JSON, error) {
+func NormalizeResellerSupport(input ResellerSupportInput) (jsonmap.JSON, error) {
 	telegram := trimLimit(input.Telegram, 500)
 	if telegram != "" && !strings.HasPrefix(telegram, "https://telegram.me/") && !strings.HasPrefix(telegram, "https://t.me/") && !strings.HasPrefix(telegram, "tg://") {
 		return nil, newResellerFieldError("support_telegram")
@@ -164,15 +165,15 @@ func NormalizeResellerSupport(input ResellerSupportInput) (models.JSON, error) {
 	if err != nil {
 		return nil, newResellerFieldError("support_url")
 	}
-	return models.JSON{"telegram": telegram, "whatsapp": whatsApp, "email": email, "support_url": supportURL}, nil
+	return jsonmap.JSON{"telegram": telegram, "whatsapp": whatsApp, "email": email, "support_url": supportURL}, nil
 }
 
-func normalizeResellerAnnouncement(input ResellerAnnouncementInput) models.JSON {
+func normalizeResellerAnnouncement(input ResellerAnnouncementInput) jsonmap.JSON {
 	typ := trimLimit(input.Type, 32)
 	if typ != "info" && typ != "success" && typ != "warning" {
 		typ = "info"
 	}
-	return models.JSON{
+	return jsonmap.JSON{
 		"enabled": input.Enabled,
 		"type":    typ,
 		"title":   normalizeResellerLocalizedText(input.Title, 120),
@@ -182,12 +183,12 @@ func normalizeResellerAnnouncement(input ResellerAnnouncementInput) models.JSON 
 	}
 }
 
-func normalizeResellerSEO(input ResellerSEOInput) (models.JSON, error) {
+func normalizeResellerSEO(input ResellerSEOInput) (jsonmap.JSON, error) {
 	image, err := validateHTTPOrUploadPath(input.DefaultOGImage)
 	if err != nil {
 		return nil, newResellerFieldError("image")
 	}
-	return models.JSON{
+	return jsonmap.JSON{
 		"title":            normalizeResellerLocalizedText(input.Title, 120),
 		"keywords":         normalizeResellerLocalizedText(input.Keywords, 200),
 		"description":      normalizeResellerLocalizedText(input.Description, 300),
@@ -195,8 +196,8 @@ func normalizeResellerSEO(input ResellerSEOInput) (models.JSON, error) {
 	}, nil
 }
 
-func normalizeResellerFooterLinks(input []ResellerFooterLinkInput) (models.JSON, error) {
-	items := make([]models.JSON, 0, min(len(input), 10))
+func normalizeResellerFooterLinks(input []ResellerFooterLinkInput) (jsonmap.JSON, error) {
+	items := make([]jsonmap.JSON, 0, min(len(input), 10))
 	for i, item := range input {
 		if i >= 10 {
 			break
@@ -208,16 +209,16 @@ func normalizeResellerFooterLinks(input []ResellerFooterLinkInput) (models.JSON,
 		if urlValue == "" {
 			continue
 		}
-		items = append(items, models.JSON{
+		items = append(items, jsonmap.JSON{
 			"name": normalizeResellerLocalizedText(item.Name, 80),
 			"url":  urlValue,
 		})
 	}
-	return models.JSON{"items": items}, nil
+	return jsonmap.JSON{"items": items}, nil
 }
 
-func normalizeResellerNavConfig(input ResellerNavConfigInput) (models.JSON, error) {
-	builtin := models.JSON{"blog": true, "notice": true, "about": true}
+func normalizeResellerNavConfig(input ResellerNavConfigInput) (jsonmap.JSON, error) {
+	builtin := jsonmap.JSON{"blog": true, "notice": true, "about": true}
 	for _, key := range []string{"blog", "notice", "about"} {
 		if value, ok := input.Builtin[key]; ok {
 			builtin[key] = value
@@ -227,7 +228,7 @@ func normalizeResellerNavConfig(input ResellerNavConfigInput) (models.JSON, erro
 	if err != nil {
 		return nil, err
 	}
-	return models.JSON{"builtin": builtin, "custom_items": custom["items"]}, nil
+	return jsonmap.JSON{"builtin": builtin, "custom_items": custom["items"]}, nil
 }
 
 func (s *SiteConfigService) buildModel(resellerID uint, input ResellerSiteConfigInput) (*models.ResellerSiteConfig, error) {
@@ -265,7 +266,7 @@ func (s *SiteConfigService) buildModel(resellerID uint, input ResellerSiteConfig
 		SEOJSON:          seo,
 		FooterLinksJSON:  footerLinks,
 		NavConfigJSON:    navConfig,
-		ThemeJSON:        models.JSON{},
+		ThemeJSON:        jsonmap.JSON{},
 	}, nil
 }
 
@@ -397,14 +398,14 @@ func clonePublicConfigMap(in map[string]interface{}) map[string]interface{} {
 	return out
 }
 
-func footerItemsFromEnvelope(raw models.JSON) []interface{} {
+func footerItemsFromEnvelope(raw jsonmap.JSON) []interface{} {
 	if raw == nil {
 		return make([]interface{}, 0)
 	}
 	if items, ok := raw["items"].([]interface{}); ok {
 		return items
 	}
-	if typed, ok := raw["items"].([]models.JSON); ok {
+	if typed, ok := raw["items"].([]jsonmap.JSON); ok {
 		out := make([]interface{}, 0, len(typed))
 		for _, item := range typed {
 			out = append(out, item)
@@ -415,12 +416,12 @@ func footerItemsFromEnvelope(raw models.JSON) []interface{} {
 }
 
 // resellerAnnouncementLocalizedMap 兼容两种载体：DB 反序列化后的 map[string]interface{}
-// 与 Upsert 后内存对象里的 models.JSON。
+// 与 Upsert 后内存对象里的 jsonmap.JSON。
 func resellerAnnouncementLocalizedMap(raw interface{}) map[string]interface{} {
 	switch typed := raw.(type) {
 	case map[string]interface{}:
 		return typed
-	case models.JSON:
+	case jsonmap.JSON:
 		return map[string]interface{}(typed)
 	default:
 		return map[string]interface{}{}
@@ -429,7 +430,7 @@ func resellerAnnouncementLocalizedMap(raw interface{}) map[string]interface{} {
 
 // applyResellerAnnouncementToPublicConfig 将分销站公告以主站同构的
 // {type,title,content,version} 写入 public config；未启用或内容为空时移除该字段。
-func applyResellerAnnouncementToPublicConfig(out map[string]interface{}, raw models.JSON) {
+func applyResellerAnnouncementToPublicConfig(out map[string]interface{}, raw jsonmap.JSON) {
 	delete(out, "announcement")
 	if !parseOverlayBool(raw["enabled"]) {
 		return

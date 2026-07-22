@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -16,7 +17,7 @@ func TestValidateChannelStripeOfficial(t *testing.T) {
 		ChannelType:     constants.PaymentChannelTypeStripe,
 		InteractionMode: constants.PaymentInteractionRedirect,
 		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		ConfigJSON: models.JSON{
+		ConfigJSON: jsonmap.JSON{
 			"secret_key":             "sk_test_123456",
 			"webhook_secret":         "whsec_123456",
 			"success_url":            "https://example.com/payment?stripe_return=1",
@@ -39,7 +40,7 @@ func TestValidateChannelStripeInvalidInteractionMode(t *testing.T) {
 		ChannelType:     constants.PaymentChannelTypeStripe,
 		InteractionMode: constants.PaymentInteractionQR,
 		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		ConfigJSON: models.JSON{
+		ConfigJSON: jsonmap.JSON{
 			"secret_key":           "sk_test_123456",
 			"webhook_secret":       "whsec_123456",
 			"success_url":          "https://example.com/payment?stripe_return=1",

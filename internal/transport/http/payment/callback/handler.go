@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -40,7 +41,7 @@ type ChannelLookup interface {
 
 // ExceptionAlerter queues operational callback alerts without coupling HTTP to notifications.
 type ExceptionAlerter interface {
-	EnqueuePaymentExceptionAlert(method, path, clientIP string, data models.JSON) error
+	EnqueuePaymentExceptionAlert(method, path, clientIP string, data jsonmap.JSON) error
 }
 
 // Handler dispatches the shared synchronous callback endpoint to its provider protocol.
@@ -84,7 +85,7 @@ func (h *Handler) PaymentCallback(c *gin.Context) {
 		"client_ip", c.ClientIP(),
 		"content_type", strings.TrimSpace(c.GetHeader("Content-Type")),
 	)
-	h.enqueuePaymentExceptionAlert(c, models.JSON{
+	h.enqueuePaymentExceptionAlert(c, jsonmap.JSON{
 		"alert_type":  "callback_unrecognized",
 		"alert_level": "warning",
 		"message":     "支付回调请求无法匹配已支持的回调格式",
@@ -92,7 +93,7 @@ func (h *Handler) PaymentCallback(c *gin.Context) {
 	c.AbortWithStatus(http.StatusNotFound)
 }
 
-func (h *Handler) enqueuePaymentExceptionAlert(c *gin.Context, data models.JSON) {
+func (h *Handler) enqueuePaymentExceptionAlert(c *gin.Context, data jsonmap.JSON) {
 	if h == nil || h.alerts == nil || c == nil || c.Request == nil {
 		return
 	}

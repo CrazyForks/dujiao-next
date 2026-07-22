@@ -15,6 +15,7 @@ import (
 	paymentprovider "github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	paymentcallback "github.com/dujiao-next/internal/transport/http/payment/callback"
 
 	"github.com/gin-gonic/gin"
@@ -106,7 +107,7 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 		ChannelType:     constants.PaymentChannelTypeUsdt,
 		InteractionMode: constants.PaymentInteractionQR,
 		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		ConfigJSON: models.JSON{
+		ConfigJSON: jsonmap.JSON{
 			"merchant_id":    "shop-1",
 			"merchant_token": "token-1",
 			"return_url":     "https://example.com/pay",

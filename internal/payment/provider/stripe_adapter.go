@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/stripe"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -35,7 +36,7 @@ func (a *stripeAdapter) Type() string {
 
 // parseConfig 解析并验证 stripe Config，把 stripe.ErrConfigInvalid 等映射为 provider.ErrXxx。
 // 4 个公开方法共用，避免每个都重复 6 行样板。
-func (a *stripeAdapter) parseConfig(raw models.JSON) (*stripe.Config, error) {
+func (a *stripeAdapter) parseConfig(raw jsonmap.JSON) (*stripe.Config, error) {
 	cfg, err := stripe.ParseConfig(raw)
 	if err != nil {
 		return nil, mapStripeError(err)
@@ -49,7 +50,7 @@ func (a *stripeAdapter) parseConfig(raw models.JSON) (*stripe.Config, error) {
 // ValidateConfig 验证 channel.ConfigJSON。
 // 第二参数 interactionMode 由 admin 端 ValidateChannel 传入；stripe 只支持 redirect 模式。
 // 若传空字符串（非 admin 端调用），不做 interactionMode 校验，以保持向后兼容。
-func (a *stripeAdapter) ValidateConfig(raw models.JSON, interactionMode string) error {
+func (a *stripeAdapter) ValidateConfig(raw jsonmap.JSON, interactionMode string) error {
 	if interactionMode != "" && strings.ToLower(strings.TrimSpace(interactionMode)) != constants.PaymentInteractionRedirect {
 		return fmt.Errorf("%w: stripe only supports redirect interaction_mode", ErrConfigInvalid)
 	}
@@ -58,7 +59,7 @@ func (a *stripeAdapter) ValidateConfig(raw models.JSON, interactionMode string) 
 }
 
 // CreatePayment 创建支付。
-func (a *stripeAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
+func (a *stripeAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input CreateInput) (*CreateResult, error) {
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
@@ -106,9 +107,9 @@ func (a *stripeAdapter) CreatePayment(ctx context.Context, raw models.JSON, inpu
 		return nil, mapStripeError(err)
 	}
 
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	if result.Raw != nil {
-		payload = models.JSON(result.Raw)
+		payload = jsonmap.JSON(result.Raw)
 	}
 	if converted {
 		payload["exchange_rate"] = strings.TrimSpace(cfg.ExchangeRate)
@@ -126,7 +127,7 @@ func (a *stripeAdapter) CreatePayment(ctx context.Context, raw models.JSON, inpu
 }
 
 // QueryPayment 主动查询订单状态(实现 Capturer)。
-func (a *stripeAdapter) QueryPayment(ctx context.Context, raw models.JSON, providerRef string) (*QueryResult, error) {
+func (a *stripeAdapter) QueryPayment(ctx context.Context, raw jsonmap.JSON, providerRef string) (*QueryResult, error) {
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
@@ -152,12 +153,12 @@ func (a *stripeAdapter) QueryPayment(ctx context.Context, raw models.JSON, provi
 		Amount:      amount,
 		Currency:    strings.ToUpper(strings.TrimSpace(result.Currency)),
 		PaidAt:      result.PaidAt,
-		Payload:     models.JSON(result.Raw),
+		Payload:     jsonmap.JSON(result.Raw),
 	}, nil
 }
 
 // ParseWebhook 验签并解析 webhook(实现 Webhooker)。
-func (a *stripeAdapter) ParseWebhook(_ context.Context, raw models.JSON, headers map[string]string, body []byte, now time.Time) (*WebhookResult, error) {
+func (a *stripeAdapter) ParseWebhook(_ context.Context, raw jsonmap.JSON, headers map[string]string, body []byte, now time.Time) (*WebhookResult, error) {
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
@@ -184,7 +185,7 @@ func (a *stripeAdapter) ParseWebhook(_ context.Context, raw models.JSON, headers
 		Amount:      amount,
 		Currency:    strings.ToUpper(strings.TrimSpace(result.Currency)),
 		PaidAt:      result.PaidAt,
-		Payload:     models.JSON(result.Raw),
+		Payload:     jsonmap.JSON(result.Raw),
 	}, nil
 }
 

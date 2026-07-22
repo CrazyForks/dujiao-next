@@ -11,6 +11,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestDujiaoPayAdapter_Type(t *testing.T) {
@@ -23,7 +24,7 @@ func TestDujiaoPayAdapter_Type(t *testing.T) {
 
 func TestDujiaoPayAdapter_ValidateConfig_UnsupportedToken(t *testing.T) {
 	a := NewDujiaoPayAdapter()
-	err := a.ValidateConfig(models.JSON{
+	err := a.ValidateConfig(jsonmap.JSON{
 		"api_base_url":   "https://api.example.com",
 		"api_key_id":     "key-1",
 		"api_secret":     "secret-1",
@@ -40,7 +41,7 @@ func TestDujiaoPayAdapter_ValidateConfig_UnsupportedToken(t *testing.T) {
 
 func TestDujiaoPayAdapter_ValidateConfig_CashierMode(t *testing.T) {
 	a := NewDujiaoPayAdapter()
-	base := models.JSON{
+	base := jsonmap.JSON{
 		"api_base_url":    "https://api.example.com",
 		"api_key_id":      "key-1",
 		"api_secret":      "secret-1",
@@ -57,7 +58,7 @@ func TestDujiaoPayAdapter_ValidateConfig_CashierMode(t *testing.T) {
 		t.Fatalf("cashier with token channel_type should fail, got %v", err)
 	}
 
-	transaction := models.JSON{
+	transaction := jsonmap.JSON{
 		"api_base_url":   "https://api.example.com",
 		"api_key_id":     "key-1",
 		"api_secret":     "secret-1",
@@ -74,7 +75,7 @@ func TestDujiaoPayAdapter_ValidateConfig_CashierMode(t *testing.T) {
 
 func TestDujiaoPayAdapter_CreatePaymentCashierRejectsQRMode(t *testing.T) {
 	a := NewDujiaoPayAdapter()
-	_, err := a.CreatePayment(context.Background(), models.JSON{
+	_, err := a.CreatePayment(context.Background(), jsonmap.JSON{
 		"api_base_url":   "https://api.example.com",
 		"api_key_id":     "key-1",
 		"api_secret":     "secret-1",
@@ -86,7 +87,7 @@ func TestDujiaoPayAdapter_CreatePaymentCashierRejectsQRMode(t *testing.T) {
 		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("10")),
 		Currency:    "USD",
 		ChannelType: "dujiaopay",
-		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionQR},
+		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},
 	})
 	if !errors.Is(err, ErrConfigInvalid) {
 		t.Fatalf("cashier + qr should fail with ErrConfigInvalid, got %v", err)
@@ -101,7 +102,7 @@ func TestDujiaoPayAdapter_CreatePaymentCashierRedirect(t *testing.T) {
 	defer server.Close()
 
 	a := NewDujiaoPayAdapter()
-	result, err := a.CreatePayment(context.Background(), models.JSON{
+	result, err := a.CreatePayment(context.Background(), jsonmap.JSON{
 		"api_base_url":    server.URL,
 		"api_key_id":      "key-1",
 		"api_secret":      "secret-1",
@@ -114,7 +115,7 @@ func TestDujiaoPayAdapter_CreatePaymentCashierRedirect(t *testing.T) {
 		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("10")),
 		Currency:    "USD",
 		ChannelType: "dujiaopay",
-		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
+		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
 	})
 	if err != nil {
 		t.Fatalf("CreatePayment failed: %v", err)
@@ -138,7 +139,7 @@ func TestDujiaoPayAdapter_CreatePaymentQRCodeModeUsesWalletAddress(t *testing.T)
 	defer server.Close()
 
 	a := NewDujiaoPayAdapter()
-	result, err := a.CreatePayment(context.Background(), models.JSON{
+	result, err := a.CreatePayment(context.Background(), jsonmap.JSON{
 		"api_base_url":   server.URL,
 		"api_key_id":     "key-1",
 		"api_secret":     "secret-1",
@@ -150,7 +151,7 @@ func TestDujiaoPayAdapter_CreatePaymentQRCodeModeUsesWalletAddress(t *testing.T)
 		Currency:       "USD",
 		ChannelType:    "tron-usdt",
 		ReturnURLQuery: map[string]string{"biz_type": "order", "order_no": "ORDER-1"},
-		Extra:          models.JSON{"interaction_mode": constants.PaymentInteractionQR},
+		Extra:          jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},
 	})
 	if err != nil {
 		t.Fatalf("CreatePayment failed: %v", err)

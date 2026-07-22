@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -17,7 +18,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 	lowStockProduct := &models.Product{
 		CategoryID:       category.ID,
 		Slug:             "manual-low-stock",
-		TitleJSON:        models.JSON{"zh-CN": "多 SKU 手动商品"},
+		TitleJSON:        jsonmap.JSON{"zh-CN": "多 SKU 手动商品"},
 		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(99)),
 		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
@@ -46,7 +47,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 	unlimitedProduct := &models.Product{
 		CategoryID:       category.ID,
 		Slug:             "manual-unlimited-sku",
-		TitleJSON:        models.JSON{"zh-CN": "无限库存商品"},
+		TitleJSON:        jsonmap.JSON{"zh-CN": "无限库存商品"},
 		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
 		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
@@ -70,7 +71,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 	outOfStockProduct := &models.Product{
 		CategoryID:       category.ID,
 		Slug:             "manual-fallback-zero",
-		TitleJSON:        models.JSON{"zh-CN": "回退零库存商品"},
+		TitleJSON:        jsonmap.JSON{"zh-CN": "回退零库存商品"},
 		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(77)),
 		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
@@ -106,7 +107,7 @@ func TestGetInventoryAlertItemsFallsBackToProductLevelWhenOnlyInactiveAutoSKUHas
 	product := &models.Product{
 		CategoryID:      category.ID,
 		Slug:            "dashboard-auto-legacy-stock",
-		TitleJSON:       models.JSON{"zh-CN": "自动发货商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "自动发货商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(99)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,

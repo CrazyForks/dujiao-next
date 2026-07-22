@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
 	"github.com/dujiao-next/internal/modules/content/store/gormstore"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -33,7 +34,7 @@ func createCategoryThroughService(t *testing.T, svc *domaincontent.PostCategoryS
 	t.Helper()
 
 	category, err := svc.Create(context.Background(), domaincontent.CreatePostCategoryInput{
-		NameJSON:  models.JSON{"zh-CN": slug},
+		NameJSON:  jsonmap.JSON{"zh-CN": slug},
 		Slug:      slug,
 		ParentID:  parentID,
 		SortOrder: sortOrder,
@@ -56,7 +57,7 @@ func TestPostCategoryServiceCreateRejectsInvalidParentAndDuplicateSlug(t *testin
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := svc.Create(context.Background(), domaincontent.CreatePostCategoryInput{
-				NameJSON: models.JSON{"zh-CN": name},
+				NameJSON: jsonmap.JSON{"zh-CN": name},
 				Slug:     "invalid-" + name,
 				ParentID: parentID,
 			})
@@ -67,7 +68,7 @@ func TestPostCategoryServiceCreateRejectsInvalidParentAndDuplicateSlug(t *testin
 	}
 
 	_, err := svc.Create(context.Background(), domaincontent.CreatePostCategoryInput{
-		NameJSON: models.JSON{"zh-CN": "duplicate"},
+		NameJSON: jsonmap.JSON{"zh-CN": "duplicate"},
 		Slug:     root.Slug,
 	})
 	if err != domaincontent.ErrSlugExists {
@@ -82,7 +83,7 @@ func TestPostCategoryServiceUpdateRejectsCyclesAndMovingRootWithChildren(t *test
 	otherRoot := createCategoryThroughService(t, svc, "other-root", nil, 0)
 
 	_, err := svc.Update(context.Background(), root.ID, domaincontent.CreatePostCategoryInput{
-		NameJSON: models.JSON{"zh-CN": "root"},
+		NameJSON: jsonmap.JSON{"zh-CN": "root"},
 		Slug:     root.Slug,
 		ParentID: &root.ID,
 	})
@@ -91,7 +92,7 @@ func TestPostCategoryServiceUpdateRejectsCyclesAndMovingRootWithChildren(t *test
 	}
 
 	_, err = svc.Update(context.Background(), root.ID, domaincontent.CreatePostCategoryInput{
-		NameJSON: models.JSON{"zh-CN": "root"},
+		NameJSON: jsonmap.JSON{"zh-CN": "root"},
 		Slug:     root.Slug,
 		ParentID: &otherRoot.ID,
 	})
@@ -113,7 +114,7 @@ func TestPostCategoryServiceDeleteRejectsCategoriesInUse(t *testing.T) {
 	post := models.Post{
 		Slug:       "category-post",
 		Type:       constants.PostTypeBlog,
-		TitleJSON:  models.JSON{"zh-CN": "category-post"},
+		TitleJSON:  jsonmap.JSON{"zh-CN": "category-post"},
 		CategoryID: &withPost.ID,
 	}
 	if err := db.Create(&post).Error; err != nil {

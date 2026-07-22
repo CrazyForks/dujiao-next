@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 const (
@@ -139,7 +140,7 @@ func NormalizeOrderRefundConfig(cfg OrderRefundConfig) OrderRefundConfig {
 }
 
 // orderConfigFromJSON 从 JSON map 解析订单配置。
-func orderConfigFromJSON(raw models.JSON, fallback OrderConfig) OrderConfig {
+func orderConfigFromJSON(raw jsonmap.JSON, fallback OrderConfig) OrderConfig {
 	result := NormalizeOrderConfig(fallback)
 	if raw == nil {
 		return result
@@ -154,13 +155,13 @@ func orderConfigFromJSON(raw models.JSON, fallback OrderConfig) OrderConfig {
 }
 
 // OrderConfigToMap 将订单配置转为 map 用于存储。
-func OrderConfigToMap(cfg OrderConfig) models.JSON {
+func OrderConfigToMap(cfg OrderConfig) jsonmap.JSON {
 	normalized := NormalizeOrderConfig(cfg)
 	data, err := json.Marshal(normalized)
 	if err != nil {
-		return models.JSON{}
+		return jsonmap.JSON{}
 	}
-	var result models.JSON
+	var result jsonmap.JSON
 	_ = json.Unmarshal(data, &result)
 	return result
 }

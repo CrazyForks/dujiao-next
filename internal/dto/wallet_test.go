@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestWalletAccountRespOmitsSensitiveFields(t *testing.T) {
@@ -86,7 +87,7 @@ func TestWalletRechargePaymentPayloadOmitsSensitiveFields(t *testing.T) {
 		FixedFee:        newMoney("0.50"),
 		ProviderRef:     "ALI-REF-001",
 		GatewayOrderNo:  "GW-001",
-		ProviderPayload: models.JSON{"raw": "data"},
+		ProviderPayload: jsonmap.JSON{"raw": "data"},
 		PayURL:          "https://pay.example.com",
 		ExpiredAt:       &expires,
 		Status:          "paid",

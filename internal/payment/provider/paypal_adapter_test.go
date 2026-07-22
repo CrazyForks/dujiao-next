@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/paypal"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -24,7 +25,7 @@ func TestPaypalAdapter_Type(t *testing.T) {
 
 func TestPaypalAdapter_ValidateConfig_EmptyRejected(t *testing.T) {
 	a := NewPaypalAdapter()
-	err := a.ValidateConfig(models.JSON{}, "")
+	err := a.ValidateConfig(jsonmap.JSON{}, "")
 	if err == nil {
 		t.Fatalf("expected error from empty config")
 	}
@@ -35,7 +36,7 @@ func TestPaypalAdapter_ValidateConfig_EmptyRejected(t *testing.T) {
 
 func TestPaypalAdapter_CreatePayment_ConfigInvalidMapped(t *testing.T) {
 	a := NewPaypalAdapter()
-	_, err := a.CreatePayment(context.Background(), models.JSON{}, CreateInput{
+	_, err := a.CreatePayment(context.Background(), jsonmap.JSON{}, CreateInput{
 		OrderNo:  "ORDER_1",
 		Currency: "USD",
 	})
@@ -74,7 +75,7 @@ func TestPaypalAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 	defer server.Close()
 
 	a := NewPaypalAdapter()
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"client_id":     "client-audit",
 		"client_secret": "secret-audit",
 		"base_url":      server.URL,

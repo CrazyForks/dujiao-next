@@ -1,6 +1,6 @@
 package settings
 
-import "github.com/dujiao-next/internal/models"
+import "github.com/dujiao-next/internal/shared/jsonmap"
 
 // DashboardAlertSetting 描述仪表盘告警阈值。
 type DashboardAlertSetting struct {
@@ -62,7 +62,7 @@ func NormalizeDashboardSetting(setting DashboardSetting) DashboardSetting {
 }
 
 // DecodeDashboardSetting 从持久化 JSON 解码，并对缺失字段使用 fallback。
-func DecodeDashboardSetting(raw models.JSON, fallback DashboardSetting) DashboardSetting {
+func DecodeDashboardSetting(raw jsonmap.JSON, fallback DashboardSetting) DashboardSetting {
 	result := fallback
 	if alert, ok := raw["alert"].(map[string]interface{}); ok {
 		if parsed, err := parseInt(alert["low_stock_threshold"]); err == nil {
@@ -90,9 +90,9 @@ func DecodeDashboardSetting(raw models.JSON, fallback DashboardSetting) Dashboar
 }
 
 // EncodeDashboardSetting 把 typed setting 编码为稳定的持久化 JSON。
-func EncodeDashboardSetting(setting DashboardSetting) models.JSON {
+func EncodeDashboardSetting(setting DashboardSetting) jsonmap.JSON {
 	normalized := NormalizeDashboardSetting(setting)
-	return models.JSON{
+	return jsonmap.JSON{
 		"alert": map[string]interface{}{
 			"low_stock_threshold":              normalized.Alert.LowStockThreshold,
 			"out_of_stock_products_threshold":  normalized.Alert.OutOfStockProductsThreshold,
@@ -107,6 +107,6 @@ func EncodeDashboardSetting(setting DashboardSetting) models.JSON {
 }
 
 // NormalizeDashboardSettingJSON 是 Registry 使用的原始 JSON 写入策略。
-func NormalizeDashboardSettingJSON(raw models.JSON) models.JSON {
+func NormalizeDashboardSettingJSON(raw jsonmap.JSON) jsonmap.JSON {
 	return EncodeDashboardSetting(DecodeDashboardSetting(raw, DefaultDashboardSetting()))
 }

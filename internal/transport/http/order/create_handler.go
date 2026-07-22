@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -51,13 +52,13 @@ type OrderPaymentCreator interface {
 
 // CreateOrderAndPayRequest 创建订单并发起支付请求
 type CreateOrderAndPayRequest struct {
-	Items               []OrderItemRequest     `json:"items" binding:"required"`
-	CouponCode          string                 `json:"coupon_code"`
-	AffiliateCode       string                 `json:"affiliate_code"`
-	AffiliateVisitorKey string                 `json:"affiliate_visitor_key"`
-	ManualFormData      map[string]models.JSON `json:"manual_form_data"`
-	ChannelID           uint                   `json:"channel_id"`
-	UseBalance          bool                   `json:"use_balance"`
+	Items               []OrderItemRequest      `json:"items" binding:"required"`
+	CouponCode          string                  `json:"coupon_code"`
+	AffiliateCode       string                  `json:"affiliate_code"`
+	AffiliateVisitorKey string                  `json:"affiliate_visitor_key"`
+	ManualFormData      map[string]jsonmap.JSON `json:"manual_form_data"`
+	ChannelID           uint                    `json:"channel_id"`
+	UseBalance          bool                    `json:"use_balance"`
 }
 
 // CreateGuestOrderAndPayRequest 游客创建订单并发起支付请求
@@ -68,7 +69,7 @@ type CreateGuestOrderAndPayRequest struct {
 	CouponCode          string                       `json:"coupon_code"`
 	AffiliateCode       string                       `json:"affiliate_code"`
 	AffiliateVisitorKey string                       `json:"affiliate_visitor_key"`
-	ManualFormData      map[string]models.JSON       `json:"manual_form_data"`
+	ManualFormData      map[string]jsonmap.JSON      `json:"manual_form_data"`
 	CaptchaPayload      shared.CaptchaPayloadRequest `json:"captcha_payload"`
 	ChannelID           uint                         `json:"channel_id"`
 }

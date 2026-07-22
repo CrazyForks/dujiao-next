@@ -10,6 +10,7 @@ import (
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
@@ -20,7 +21,7 @@ func TestProductServiceQuickUpdateRejectsActivationWithoutCategory(t *testing.T)
 	product := models.Product{
 		CategoryID:      0,
 		Slug:            "uncategorized-imported-product",
-		TitleJSON:       models.JSON{"zh-CN": "uncategorized-imported-product"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "uncategorized-imported-product"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		FulfillmentType: constants.FulfillmentTypeUpstream,
 		IsMapped:        true,
@@ -48,7 +49,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
 	// 创建分类
-	cat := models.Category{Slug: "test-cat", NameJSON: models.JSON{"zh-CN": "test"}}
+	cat := models.Category{Slug: "test-cat", NameJSON: jsonmap.JSON{"zh-CN": "test"}}
 	if err := db.Create(&cat).Error; err != nil {
 		t.Fatalf("create category: %v", err)
 	}
@@ -57,7 +58,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	product := models.Product{
 		CategoryID:      cat.ID,
 		Slug:            "test-product",
-		TitleJSON:       models.JSON{"zh-CN": "test-product"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "test-product"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -188,7 +189,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 	product := models.Product{
 		CategoryID:      1,
 		Slug:            "rollback-product-delete",
-		TitleJSON:       models.JSON{"zh-CN": "rollback-product-delete"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "rollback-product-delete"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,

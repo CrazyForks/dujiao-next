@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/modules/notification"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	paymenttransport "github.com/dujiao-next/internal/transport/http/payment"
 	paymentcallbacktransport "github.com/dujiao-next/internal/transport/http/payment/callback"
 )
@@ -157,11 +158,11 @@ type exceptionAlerterAdapter struct {
 	notifications *notification.Service
 }
 
-func (a exceptionAlerterAdapter) EnqueuePaymentExceptionAlert(method, path, clientIP string, data models.JSON) error {
+func (a exceptionAlerterAdapter) EnqueuePaymentExceptionAlert(method, path, clientIP string, data jsonmap.JSON) error {
 	if a.notifications == nil {
 		return nil
 	}
-	payload := models.JSON{
+	payload := jsonmap.JSON{
 		"source":      constants.NotificationBizTypePaymentCallback,
 		"method":      method,
 		"path":        path,

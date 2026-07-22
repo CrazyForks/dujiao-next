@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 var ErrSMTPConfigInvalid = errors.New("smtp config invalid")
@@ -167,9 +167,9 @@ func SMTPSettingToConfig(setting SMTPSetting) config.EmailConfig {
 }
 
 // EncodeSMTPSetting 将 SMTP 设置编码为 settings 表结构。
-func EncodeSMTPSetting(setting SMTPSetting) models.JSON {
+func EncodeSMTPSetting(setting SMTPSetting) jsonmap.JSON {
 	normalized := NormalizeSMTPSetting(setting)
-	return models.JSON{
+	return jsonmap.JSON{
 		"enabled":                    normalized.Enabled,
 		"host":                       normalized.Host,
 		"port":                       normalized.Port,
@@ -190,9 +190,9 @@ func EncodeSMTPSetting(setting SMTPSetting) models.JSON {
 }
 
 // MaskSMTPSettingForAdmin 返回脱敏后的 SMTP 设置。
-func MaskSMTPSettingForAdmin(setting SMTPSetting) models.JSON {
+func MaskSMTPSettingForAdmin(setting SMTPSetting) jsonmap.JSON {
 	normalized := NormalizeSMTPSetting(setting)
-	return models.JSON{
+	return jsonmap.JSON{
 		"enabled":                    normalized.Enabled,
 		"host":                       normalized.Host,
 		"port":                       normalized.Port,
@@ -214,7 +214,7 @@ func MaskSMTPSettingForAdmin(setting SMTPSetting) models.JSON {
 }
 
 // DecodeSMTPSetting 从持久化 JSON 解码，并对缺失字段使用 fallback。
-func DecodeSMTPSetting(raw models.JSON, fallback SMTPSetting) SMTPSetting {
+func DecodeSMTPSetting(raw jsonmap.JSON, fallback SMTPSetting) SMTPSetting {
 	next := fallback
 	if raw == nil {
 		return next

@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 type ResellerOrderResp struct {
@@ -23,8 +24,8 @@ type ResellerOrderResp struct {
 }
 
 type ResellerOrderItemResp struct {
-	Title               models.JSON  `json:"title"`
-	SKUSnapshot         models.JSON  `json:"sku_snapshot"`
+	Title               jsonmap.JSON `json:"title"`
+	SKUSnapshot         jsonmap.JSON `json:"sku_snapshot"`
 	Quantity            int          `json:"quantity"`
 	UnitPrice           models.Money `json:"unit_price"`
 	TotalPrice          models.Money `json:"total_price"`

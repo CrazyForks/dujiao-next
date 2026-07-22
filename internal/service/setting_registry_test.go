@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestDefaultSettingRegistryCoversLegacyNormalizedKeys(t *testing.T) {
@@ -96,10 +96,10 @@ func TestSettingServiceUpdateKeepsUnknownKeyPassThroughBehavior(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update unknown setting: %v", err)
 	}
-	if !reflect.DeepEqual(got, models.JSON(input)) {
+	if !reflect.DeepEqual(got, jsonmap.JSON(input)) {
 		t.Fatalf("unknown setting changed during pass-through: %#v", got)
 	}
-	if saved := repo.store["custom_extension_config"]; !reflect.DeepEqual(saved, models.JSON(input)) {
+	if saved := repo.store["custom_extension_config"]; !reflect.DeepEqual(saved, jsonmap.JSON(input)) {
 		t.Fatalf("unknown setting persisted with a different shape: %#v", saved)
 	}
 }

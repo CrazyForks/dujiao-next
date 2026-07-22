@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // CapturePaymentInput 捕获支付输入。
@@ -95,7 +96,7 @@ func (s *PaymentService) captureViaRegistry(input CapturePaymentInput, payment *
 		return nil, mapProviderErrorToService(err)
 	}
 
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	if queryResult.Payload != nil {
 		payload = queryResult.Payload
 	}

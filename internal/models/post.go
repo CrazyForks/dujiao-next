@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 
@@ -11,9 +12,9 @@ type Post struct {
 	ID          uint           `gorm:"primarykey" json:"id"`                    // 主键
 	Slug        string         `gorm:"uniqueIndex;not null" json:"slug"`        // 唯一标识
 	Type        string         `gorm:"not null;index" json:"type"`              // 类型（blog/notice）
-	TitleJSON   JSON           `gorm:"type:json;not null" json:"title"`         // 多语言标题
-	SummaryJSON JSON           `gorm:"type:json" json:"summary"`                // 多语言摘要
-	ContentJSON JSON           `gorm:"type:json" json:"content"`                // 多语言内容
+	TitleJSON   jsonmap.JSON   `gorm:"type:json;not null" json:"title"`         // 多语言标题
+	SummaryJSON jsonmap.JSON   `gorm:"type:json" json:"summary"`                // 多语言摘要
+	ContentJSON jsonmap.JSON   `gorm:"type:json" json:"content"`                // 多语言内容
 	Thumbnail   string         `json:"thumbnail"`                               // 缩略图
 	CategoryID  *uint          `gorm:"index" json:"category_id"`                // 文章分类ID
 	IsPublished bool           `gorm:"default:false;index" json:"is_published"` // 是否发布

@@ -6,7 +6,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 const (
@@ -76,7 +76,7 @@ func ValidateAffiliateSetting(setting AffiliateSetting) error {
 }
 
 // DecodeAffiliateSetting 从持久化 JSON 解码，并对缺失字段使用 fallback。
-func DecodeAffiliateSetting(raw models.JSON, fallback AffiliateSetting) AffiliateSetting {
+func DecodeAffiliateSetting(raw jsonmap.JSON, fallback AffiliateSetting) AffiliateSetting {
 	result := fallback
 	if value, exists := raw["enabled"]; exists {
 		result.Enabled = parseBool(value)
@@ -103,9 +103,9 @@ func DecodeAffiliateSetting(raw models.JSON, fallback AffiliateSetting) Affiliat
 }
 
 // EncodeAffiliateSetting 把 typed setting 编码为稳定的持久化 JSON。
-func EncodeAffiliateSetting(setting AffiliateSetting) models.JSON {
+func EncodeAffiliateSetting(setting AffiliateSetting) jsonmap.JSON {
 	normalized := NormalizeAffiliateSetting(setting)
-	return models.JSON{
+	return jsonmap.JSON{
 		"enabled":             normalized.Enabled,
 		"commission_rate":     normalized.CommissionRate,
 		"confirm_days":        normalized.ConfirmDays,
@@ -115,7 +115,7 @@ func EncodeAffiliateSetting(setting AffiliateSetting) models.JSON {
 }
 
 // NormalizeAffiliateSettingJSON 是 Registry 使用的原始 JSON 写入策略。
-func NormalizeAffiliateSettingJSON(raw models.JSON) models.JSON {
+func NormalizeAffiliateSettingJSON(raw jsonmap.JSON) jsonmap.JSON {
 	return EncodeAffiliateSetting(DecodeAffiliateSetting(raw, DefaultAffiliateSetting()))
 }
 

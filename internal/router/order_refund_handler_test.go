@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	ordertransport "github.com/dujiao-next/internal/transport/http/order"
 	orderwiring "github.com/dujiao-next/internal/wiring/order"
 
@@ -132,7 +133,7 @@ func seedAdminOrderRefundData(t *testing.T, db *gorm.DB) adminOrderRefundFixture
 		{
 			OrderID:         memberOrder.ID,
 			ProductID:       1,
-			TitleJSON:       models.JSON{"zh-CN": "会员退款测试商品"},
+			TitleJSON:       jsonmap.JSON{"zh-CN": "会员退款测试商品"},
 			UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 			CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
 			Quantity:        1,
@@ -145,7 +146,7 @@ func seedAdminOrderRefundData(t *testing.T, db *gorm.DB) adminOrderRefundFixture
 		{
 			OrderID:         guestOrder.ID,
 			ProductID:       2,
-			TitleJSON:       models.JSON{"zh-CN": "游客退款测试商品"},
+			TitleJSON:       jsonmap.JSON{"zh-CN": "游客退款测试商品"},
 			UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
 			CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(40)),
 			Quantity:        1,

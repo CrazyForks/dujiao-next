@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/epay"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -34,7 +35,7 @@ func (a *epayAdapter) Type() string {
 
 // parseConfig 解析并验证 epay Config。epay 不需要 interactionMode，
 // 通过 dispatch 时按 mode 调用不同的函数（BuildRedirectURL vs CreatePayment）。
-func (a *epayAdapter) parseConfig(raw models.JSON) (*epay.Config, error) {
+func (a *epayAdapter) parseConfig(raw jsonmap.JSON) (*epay.Config, error) {
 	cfg, err := epay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapEpayError(err)
@@ -48,7 +49,7 @@ func (a *epayAdapter) parseConfig(raw models.JSON) (*epay.Config, error) {
 // ValidateConfig 验证 channel.ConfigJSON。
 // 入口先校验 channelType（如果非空）是否被 epay 支持，
 // 然后调用 parseConfig 验证配置完整性。
-func (a *epayAdapter) ValidateConfig(raw models.JSON, channelType string) error {
+func (a *epayAdapter) ValidateConfig(raw jsonmap.JSON, channelType string) error {
 	if channelType != "" && !epay.IsSupportedChannelType(channelType) {
 		return fmt.Errorf("%w: epay channel_type %s", ErrUnsupportedChannel, channelType)
 	}
@@ -60,7 +61,7 @@ func (a *epayAdapter) ValidateConfig(raw models.JSON, channelType string) error 
 //   - mode == "redirect" → BuildRedirectURL（不发 HTTP，仅构造跳转 URL）
 //   - mode == "" 或 mode == "qr" → CreatePayment（发 HTTP）
 //   - 其他 mode → 返回 ErrConfigInvalid
-func (a *epayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
+func (a *epayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input CreateInput) (*CreateResult, error) {
 	// 先校验 channelType
 	if !epay.IsSupportedChannelType(input.ChannelType) {
 		return nil, fmt.Errorf("%w: epay channel_type %s", ErrUnsupportedChannel, input.ChannelType)
@@ -133,9 +134,9 @@ func (a *epayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input 
 		return nil, mapEpayError(err)
 	}
 
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	if result.Raw != nil {
-		payload = models.JSON(result.Raw)
+		payload = jsonmap.JSON(result.Raw)
 	}
 	if converted {
 		payload["exchange_rate"] = strings.TrimSpace(cfg.ExchangeRate)
@@ -160,7 +161,7 @@ func (a *epayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input 
 //   - trade_status = TRADE_SUCCESS / TRADE_FINISHED 等
 //   - money        = 金额
 //   - sign / sign_type / type / pid / param 等元数据
-func (a *epayAdapter) VerifyCallback(raw models.JSON, form map[string][]string, _ []byte) (*CallbackResult, error) {
+func (a *epayAdapter) VerifyCallback(raw jsonmap.JSON, form map[string][]string, _ []byte) (*CallbackResult, error) {
 	cfg, err := epay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapEpayError(err)

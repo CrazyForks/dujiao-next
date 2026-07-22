@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -380,7 +381,7 @@ func (h *Handler) GetProductDetail(c *gin.Context) {
 	})
 }
 
-func normalizeChannelManualFormSchema(schema models.JSON, locale, defaultLocale string) gin.H {
+func normalizeChannelManualFormSchema(schema jsonmap.JSON, locale, defaultLocale string) gin.H {
 	fieldsRaw, ok := schema["fields"]
 	if !ok {
 		return gin.H{"fields": []gin.H{}}
@@ -452,10 +453,10 @@ func localizedFieldText(raw interface{}, locale, defaultLocale string) string {
 	switch value := raw.(type) {
 	case string:
 		return strings.TrimSpace(value)
-	case models.JSON:
+	case jsonmap.JSON:
 		return strings.TrimSpace(resolveLocalizedJSON(value, locale, defaultLocale))
 	case map[string]interface{}:
-		return strings.TrimSpace(resolveLocalizedJSON(models.JSON(value), locale, defaultLocale))
+		return strings.TrimSpace(resolveLocalizedJSON(jsonmap.JSON(value), locale, defaultLocale))
 	default:
 		text := strings.TrimSpace(fmt.Sprintf("%v", raw))
 		if text == "<nil>" {

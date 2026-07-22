@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -34,7 +35,7 @@ func setupMappingStoreTest(t *testing.T) (*MappingStore, *SKUMappingStore, *gorm
 	defaultCategory := models.Category{
 		ID:       1,
 		Slug:     "default-test-category",
-		NameJSON: models.JSON{"zh-CN": "default"},
+		NameJSON: jsonmap.JSON{"zh-CN": "default"},
 		IsActive: true,
 	}
 	if err := db.Create(&defaultCategory).Error; err != nil {
@@ -48,7 +49,7 @@ func createMappedProduct(t *testing.T, db *gorm.DB, slug, title string) *models.
 	product := &models.Product{
 		CategoryID:      1,
 		Slug:            slug,
-		TitleJSON:       models.JSON{"zh-CN": title},
+		TitleJSON:       jsonmap.JSON{"zh-CN": title},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeUpstream,

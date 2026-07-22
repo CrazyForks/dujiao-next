@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestHomeAnnouncementActiveDisabled(t *testing.T) {
 	repo := newMockSettingRepo()
 	svc := NewSettingService(repo)
-	repo.store[constants.SettingKeyHomeAnnouncement] = models.JSON{
+	repo.store[constants.SettingKeyHomeAnnouncement] = jsonmap.JSON{
 		"enabled": false,
 		"type":    "info",
 		"content": map[string]interface{}{"zh-CN": "<p>hi</p>"},
@@ -23,7 +23,7 @@ func TestHomeAnnouncementActiveDisabled(t *testing.T) {
 func TestHomeAnnouncementActiveEmptyContent(t *testing.T) {
 	repo := newMockSettingRepo()
 	svc := NewSettingService(repo)
-	repo.store[constants.SettingKeyHomeAnnouncement] = models.JSON{
+	repo.store[constants.SettingKeyHomeAnnouncement] = jsonmap.JSON{
 		"enabled": true,
 		"type":    "info",
 		"content": map[string]interface{}{"zh-CN": "   "},
@@ -36,7 +36,7 @@ func TestHomeAnnouncementActiveEmptyContent(t *testing.T) {
 func TestHomeAnnouncementActiveOK(t *testing.T) {
 	repo := newMockSettingRepo()
 	svc := NewSettingService(repo)
-	repo.store[constants.SettingKeyHomeAnnouncement] = models.JSON{
+	repo.store[constants.SettingKeyHomeAnnouncement] = jsonmap.JSON{
 		"enabled": true,
 		"type":    "warning",
 		"title":   map[string]interface{}{"zh-CN": "维护通知"},

@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	couponmodule "github.com/dujiao-next/internal/modules/coupon"
 	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -78,7 +79,7 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 	}
 	manualFormData := input.ManualFormData
 	if manualFormData == nil {
-		manualFormData = map[string]models.JSON{}
+		manualFormData = map[string]jsonmap.JSON{}
 	}
 	for _, item := range mergedItems {
 		if item.ProductID == 0 || item.Quantity <= 0 {
@@ -197,8 +198,8 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 			}
 		}
 
-		manualSchemaSnapshot := models.JSON{}
-		manualSubmission := models.JSON{}
+		manualSchemaSnapshot := jsonmap.JSON{}
+		manualSubmission := jsonmap.JSON{}
 		if !input.SkipManualFormCheck && (fulfillmentType == constants.FulfillmentTypeManual ||
 			(fulfillmentType == constants.FulfillmentTypeUpstream && len(product.ManualFormSchemaJSON) > 0)) {
 			submission := resolveManualFormSubmission(manualFormData, product.ID, sku.ID)
@@ -228,7 +229,7 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 			ProductID: product.ID,
 			SKUID:     sku.ID,
 			TitleJSON: product.TitleJSON,
-			SKUSnapshotJSON: models.JSON{
+			SKUSnapshotJSON: jsonmap.JSON{
 				"sku_id":      sku.ID,
 				"sku_code":    sku.SKUCode,
 				"spec_values": sku.SpecValuesJSON,
@@ -353,15 +354,15 @@ func (s *OrderService) resolveExpireMinutes() int {
 	return resolveOrderPaymentExpireMinutes(s.settingService, s.expireMinutes)
 }
 
-func resolveManualFormSubmission(manualFormData map[string]models.JSON, productID, skuID uint) models.JSON {
+func resolveManualFormSubmission(manualFormData map[string]jsonmap.JSON, productID, skuID uint) jsonmap.JSON {
 	if len(manualFormData) == 0 || productID == 0 {
-		return models.JSON{}
+		return jsonmap.JSON{}
 	}
 
 	itemKey := buildOrderItemKey(productID, skuID)
 	if submission, ok := manualFormData[itemKey]; ok {
 		if submission == nil {
-			return models.JSON{}
+			return jsonmap.JSON{}
 		}
 		return submission
 	}
@@ -369,12 +370,12 @@ func resolveManualFormSubmission(manualFormData map[string]models.JSON, productI
 	legacyKey := strconv.FormatUint(uint64(productID), 10)
 	if submission, ok := manualFormData[legacyKey]; ok {
 		if submission == nil {
-			return models.JSON{}
+			return jsonmap.JSON{}
 		}
 		return submission
 	}
 
-	return models.JSON{}
+	return jsonmap.JSON{}
 }
 
 func firstProductImage(images models.StringArray) string {

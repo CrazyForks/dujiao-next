@@ -20,6 +20,7 @@ import (
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	cataloghttp "github.com/dujiao-next/internal/transport/http/catalog"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -209,7 +210,7 @@ func TestBatchUpdateProductStatusReturnsFailureReasons(t *testing.T) {
 	product := models.Product{
 		CategoryID:      0,
 		Slug:            "batch-uncategorized-product",
-		TitleJSON:       models.JSON{"zh-CN": "batch-uncategorized-product"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "batch-uncategorized-product"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		FulfillmentType: constants.FulfillmentTypeUpstream,
 		IsMapped:        true,
@@ -265,7 +266,7 @@ func TestUpdateProductWholesalePricesHandlerUpdatesTiers(t *testing.T) {
 	product := models.Product{
 		CategoryID:  1,
 		Slug:        "handler-wholesale-product",
-		TitleJSON:   models.JSON{"zh-CN": "handler-wholesale-product"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "handler-wholesale-product"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 	}
@@ -306,7 +307,7 @@ func TestUpdateProductWholesalePricesHandlerAllowsClear(t *testing.T) {
 	product := models.Product{
 		CategoryID:  1,
 		Slug:        "handler-wholesale-clear",
-		TitleJSON:   models.JSON{"zh-CN": "handler-wholesale-clear"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "handler-wholesale-clear"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		WholesalePrices: models.WholesalePriceTiers{
 			{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
@@ -344,7 +345,7 @@ func TestUpdateProductWholesalePricesHandlerRejectsInvalidTier(t *testing.T) {
 	product := models.Product{
 		CategoryID:  1,
 		Slug:        "handler-wholesale-invalid",
-		TitleJSON:   models.JSON{"zh-CN": "handler-wholesale-invalid"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "handler-wholesale-invalid"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 	}

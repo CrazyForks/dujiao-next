@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -28,12 +29,12 @@ func TestCategoryStoreListSortOrderDescending(t *testing.T) {
 
 	high := &models.Category{
 		Slug:      "high",
-		NameJSON:  models.JSON{"zh-CN": "high"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "high"},
 		SortOrder: 100,
 	}
 	low := &models.Category{
 		Slug:      "low",
-		NameJSON:  models.JSON{"zh-CN": "low"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "low"},
 		SortOrder: 1,
 	}
 	if err := repo.Create(high); err != nil {
@@ -64,7 +65,7 @@ func TestCategoryStoreRestoreRevivesSoftDeletedSlug(t *testing.T) {
 	existing := &models.Category{
 		ParentID: 0,
 		Slug:     "softdel-streaming",
-		NameJSON: models.JSON{"zh-CN": "旧名"},
+		NameJSON: jsonmap.JSON{"zh-CN": "旧名"},
 		IsActive: true,
 	}
 	if err := store.Create(existing); err != nil {
@@ -86,7 +87,7 @@ func TestCategoryStoreRestoreRevivesSoftDeletedSlug(t *testing.T) {
 		t.Fatalf("expected soft-deleted row visible via unscoped lookup, got %+v", deleted)
 	}
 
-	deleted.NameJSON = models.JSON{"zh-CN": "新名"}
+	deleted.NameJSON = jsonmap.JSON{"zh-CN": "新名"}
 	deleted.IsActive = true
 	if err := store.Restore(deleted); err != nil {
 		t.Fatalf("restore category failed: %v", err)

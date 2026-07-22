@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -52,14 +53,14 @@ func seedResellerProductSettingProfile(t *testing.T, db *gorm.DB, email string) 
 
 func seedResellerProductSettingProduct(t *testing.T, db *gorm.DB, slug string) (models.Product, []models.ProductSKU) {
 	t.Helper()
-	category := models.Category{Slug: "cat-" + slug, NameJSON: models.JSON{"zh-CN": "分类"}, IsActive: true}
+	category := models.Category{Slug: "cat-" + slug, NameJSON: jsonmap.JSON{"zh-CN": "分类"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
 	product := models.Product{
 		CategoryID:      category.ID,
 		Slug:            slug,
-		TitleJSON:       models.JSON{"zh-CN": "商品 " + slug, "zh-TW": "商品 " + slug, "en-US": "Product " + slug},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "商品 " + slug, "zh-TW": "商品 " + slug, "en-US": "Product " + slug},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
 		CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
 		IsActive:        true,
@@ -72,7 +73,7 @@ func seedResellerProductSettingProduct(t *testing.T, db *gorm.DB, slug string) (
 		{
 			ProductID:       product.ID,
 			SKUCode:         "MONTH-1",
-			SpecValuesJSON:  models.JSON{"zh-CN": "1个月", "zh-TW": "1個月", "en-US": "1 month"},
+			SpecValuesJSON:  jsonmap.JSON{"zh-CN": "1个月", "zh-TW": "1個月", "en-US": "1 month"},
 			PriceAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
 			CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
 			IsActive:        true,
@@ -81,7 +82,7 @@ func seedResellerProductSettingProduct(t *testing.T, db *gorm.DB, slug string) (
 		{
 			ProductID:       product.ID,
 			SKUCode:         "MONTH-3",
-			SpecValuesJSON:  models.JSON{"zh-CN": "3个月", "zh-TW": "3個月", "en-US": "3 months"},
+			SpecValuesJSON:  jsonmap.JSON{"zh-CN": "3个月", "zh-TW": "3個月", "en-US": "3 months"},
 			PriceAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("250.00")),
 			CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("180.00")),
 			IsActive:        true,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
 
@@ -176,7 +177,7 @@ func (s *AccountingLedgerService) HandleRefundDeduct(
 		Currency:    strings.TrimSpace(snapshot.Currency),
 		Status:      deductStatus,
 		AvailableAt: deductAvailableAt,
-		MetadataJSON: models.JSON{
+		MetadataJSON: jsonmap.JSON{
 			"refund_record_id":       refundRecord.ID,
 			"refund_type":            refundRecord.Type,
 			"refund_amount":          refundAmount.StringFixed(2),

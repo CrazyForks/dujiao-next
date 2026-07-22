@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestResolveTenantReturnURLMainTenantKeepsConfigFallback(t *testing.T) {
 	ctx := WithTenantContext(context.Background(), MainTenantContext("main.example.com"))
-	channel := &models.PaymentChannel{ConfigJSON: models.JSON{"return_url": "https://main.example.com/pay"}}
+	channel := &models.PaymentChannel{ConfigJSON: jsonmap.JSON{"return_url": "https://main.example.com/pay"}}
 
 	if got := resolveTenantReturnURL(ctx, "https", channel); got != "" {
 		t.Fatalf("main tenant want empty got %q", got)
@@ -25,7 +26,7 @@ func TestResolveTenantReturnURLMainTenantKeepsConfigFallback(t *testing.T) {
 
 func TestResolveTenantReturnURLResellerTenantUsesRequestHost(t *testing.T) {
 	ctx := WithTenantContext(context.Background(), ResellerTenantContext("shop.example.com", 7, 3, "primary.example.com"))
-	channel := &models.PaymentChannel{ConfigJSON: models.JSON{"return_url": "https://main.example.com/pay"}}
+	channel := &models.PaymentChannel{ConfigJSON: jsonmap.JSON{"return_url": "https://main.example.com/pay"}}
 
 	if got := resolveTenantReturnURL(ctx, "https", channel); got != "https://shop.example.com/pay" {
 		t.Fatalf("want https://shop.example.com/pay got %q", got)
@@ -64,19 +65,19 @@ func TestResolveTenantReturnURLUnavailableTenantKeepsConfigFallback(t *testing.T
 }
 
 func TestTenantReturnPathReusesConfiguredPath(t *testing.T) {
-	channel := &models.PaymentChannel{ConfigJSON: models.JSON{"return_url": "https://main.example.com/checkout/result?from=gateway"}}
+	channel := &models.PaymentChannel{ConfigJSON: jsonmap.JSON{"return_url": "https://main.example.com/checkout/result?from=gateway"}}
 	if got := tenantReturnPath(channel); got != "/checkout/result?from=gateway" {
 		t.Fatalf("want /checkout/result?from=gateway got %q", got)
 	}
 
 	// stripe/dujiaopay 使用 success_url
-	channel = &models.PaymentChannel{ConfigJSON: models.JSON{"success_url": "https://main.example.com/pay/success"}}
+	channel = &models.PaymentChannel{ConfigJSON: jsonmap.JSON{"success_url": "https://main.example.com/pay/success"}}
 	if got := tenantReturnPath(channel); got != "/pay/success" {
 		t.Fatalf("want /pay/success got %q", got)
 	}
 
 	// return_url 优先于 success_url
-	channel = &models.PaymentChannel{ConfigJSON: models.JSON{
+	channel = &models.PaymentChannel{ConfigJSON: jsonmap.JSON{
 		"return_url":  "https://main.example.com/pay/return",
 		"success_url": "https://main.example.com/pay/success",
 	}}
@@ -89,11 +90,11 @@ func TestTenantReturnPathDefaults(t *testing.T) {
 	if got := tenantReturnPath(nil); got != "/pay" {
 		t.Fatalf("nil channel want /pay got %q", got)
 	}
-	if got := tenantReturnPath(&models.PaymentChannel{ConfigJSON: models.JSON{}}); got != "/pay" {
+	if got := tenantReturnPath(&models.PaymentChannel{ConfigJSON: jsonmap.JSON{}}); got != "/pay" {
 		t.Fatalf("empty config want /pay got %q", got)
 	}
 	// 配置只有域名没有路径时也回落 /pay
-	channel := &models.PaymentChannel{ConfigJSON: models.JSON{"return_url": "https://main.example.com/"}}
+	channel := &models.PaymentChannel{ConfigJSON: jsonmap.JSON{"return_url": "https://main.example.com/"}}
 	if got := tenantReturnPath(channel); got != "/pay" {
 		t.Fatalf("root path want /pay got %q", got)
 	}

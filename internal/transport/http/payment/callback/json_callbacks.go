@@ -10,8 +10,8 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/okpay"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,7 +25,7 @@ type bodyCallback struct {
 	failBody     string
 	contentType  string
 	alertType    string
-	alertData    models.JSON
+	alertData    jsonmap.JSON
 }
 
 func (h *Handler) handleOkpayCallback(c *gin.Context) bool {
@@ -49,7 +49,7 @@ func (h *Handler) handleOkpayCallback(c *gin.Context) bool {
 		orderNo: uniqueID, providerRef: orderID,
 		successBody: constants.OkpayCallbackSuccess, failBody: constants.OkpayCallbackFail,
 		contentType: "application/json", alertType: "okpay_callback_handle_failed",
-		alertData: models.JSON{"unique_id": uniqueID},
+		alertData: jsonmap.JSON{"unique_id": uniqueID},
 	})
 }
 
@@ -167,7 +167,7 @@ func (h *Handler) processBodyCallback(c *gin.Context, body []byte, callback body
 	if err != nil {
 		log.Errorw(callback.logPrefix+"_callback_handle_failed", "payment_id", payment.ID, "error", err)
 		if callback.alertType != "" {
-			alert := models.JSON{
+			alert := jsonmap.JSON{
 				"alert_type": callback.alertType, "alert_level": "error",
 				"payment_id": fmt.Sprintf("%d", payment.ID), "message": strings.TrimSpace(err.Error()),
 				"provider": callback.providerType,

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 var ErrNotificationConfigInvalid = errors.New("notification config invalid")
@@ -321,9 +321,9 @@ func NotificationCenterSettingToMap(setting NotificationCenterSetting) map[strin
 }
 
 // MaskNotificationCenterSettingForAdmin 返回管理端可用配置
-func MaskNotificationCenterSettingForAdmin(setting NotificationCenterSetting) models.JSON {
+func MaskNotificationCenterSettingForAdmin(setting NotificationCenterSetting) jsonmap.JSON {
 	normalized := NormalizeNotificationCenterSetting(setting)
-	return models.JSON(NotificationCenterSettingToMap(normalized))
+	return jsonmap.JSON(NotificationCenterSettingToMap(normalized))
 }
 
 // ApplyNotificationCenterSettingPatch 把补丁应用到当前通知中心配置并完成校验。
@@ -446,7 +446,7 @@ func (s NotificationSceneTemplate) ResolveLocaleTemplate(locale string) Notifica
 	}
 }
 
-func DecodeNotificationCenterSetting(raw models.JSON, fallback NotificationCenterSetting) NotificationCenterSetting {
+func DecodeNotificationCenterSetting(raw jsonmap.JSON, fallback NotificationCenterSetting) NotificationCenterSetting {
 	next := fallback
 	if raw == nil {
 		return next

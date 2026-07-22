@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
 	"github.com/dujiao-next/internal/modules/content/store/gormstore"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -41,7 +42,7 @@ func createPostCategoryFixture(t *testing.T, db *gorm.DB, slug string, parentID 
 	category := models.PostCategory{
 		ParentID: parentID,
 		Slug:     slug,
-		NameJSON: models.JSON{
+		NameJSON: jsonmap.JSON{
 			"zh-CN": slug,
 		},
 		IsActive: true,
@@ -58,7 +59,7 @@ func createPostFixture(t *testing.T, db *gorm.DB, slug string, postType string, 
 	post := models.Post{
 		Slug:       slug,
 		Type:       postType,
-		TitleJSON:  models.JSON{"zh-CN": slug},
+		TitleJSON:  jsonmap.JSON{"zh-CN": slug},
 		CategoryID: categoryID,
 	}
 	if err := db.Create(&post).Error; err != nil {
@@ -179,21 +180,21 @@ func TestPostServiceListPublicFiltersDraftsAndOrdersByPublishedAt(t *testing.T) 
 		{
 			Slug:        "older-published",
 			Type:        constants.PostTypeBlog,
-			TitleJSON:   models.JSON{"zh-CN": "older"},
+			TitleJSON:   jsonmap.JSON{"zh-CN": "older"},
 			IsPublished: true,
 			PublishedAt: &olderPublishedAt,
 		},
 		{
 			Slug:        "newer-published",
 			Type:        constants.PostTypeBlog,
-			TitleJSON:   models.JSON{"zh-CN": "newer"},
+			TitleJSON:   jsonmap.JSON{"zh-CN": "newer"},
 			IsPublished: true,
 			PublishedAt: &newerPublishedAt,
 		},
 		{
 			Slug:        "draft",
 			Type:        constants.PostTypeBlog,
-			TitleJSON:   models.JSON{"zh-CN": "draft"},
+			TitleJSON:   jsonmap.JSON{"zh-CN": "draft"},
 			IsPublished: false,
 		},
 	}

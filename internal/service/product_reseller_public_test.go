@@ -10,6 +10,7 @@ import (
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -63,7 +64,7 @@ func seedResellerPublicProduct(t *testing.T, db *gorm.DB, categoryID uint, slug 
 	product := models.Product{
 		CategoryID:      categoryID,
 		Slug:            slug,
-		TitleJSON:       models.JSON{"zh-CN": slug},
+		TitleJSON:       jsonmap.JSON{"zh-CN": slug},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -115,7 +116,7 @@ func createResellerPublicSetting(t *testing.T, db *gorm.DB, setting models.Resel
 
 func TestProductServiceListPublicForTenantExcludesResellerHiddenProductsBeforePagination(t *testing.T) {
 	svc, resellerRepo, db := newProductServiceForResellerPublicTest(t)
-	category := models.Category{Slug: "reseller-public", NameJSON: models.JSON{"zh-CN": "reseller-public"}, IsActive: true}
+	category := models.Category{Slug: "reseller-public", NameJSON: jsonmap.JSON{"zh-CN": "reseller-public"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
@@ -158,7 +159,7 @@ func TestProductServiceListPublicForTenantExcludesResellerHiddenProductsBeforePa
 
 func TestProductServiceGetPublicBySlugForTenantRejectsHiddenProduct(t *testing.T) {
 	svc, resellerRepo, db := newProductServiceForResellerPublicTest(t)
-	category := models.Category{Slug: "reseller-detail", NameJSON: models.JSON{"zh-CN": "reseller-detail"}, IsActive: true}
+	category := models.Category{Slug: "reseller-detail", NameJSON: jsonmap.JSON{"zh-CN": "reseller-detail"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}

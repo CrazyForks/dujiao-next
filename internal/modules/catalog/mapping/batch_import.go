@@ -8,6 +8,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/catalog"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/upstream"
 )
 
@@ -207,7 +208,7 @@ func (s *Service) findOrCreateCategoryFromUpstream(
 }
 
 // findOrCreateLocalCategory 按 slug 查找或创建本地分类
-func (s *Service) findOrCreateLocalCategory(slug string, nameJSON models.JSON, parentID uint) (*models.Category, error) {
+func (s *Service) findOrCreateLocalCategory(slug string, nameJSON jsonmap.JSON, parentID uint) (*models.Category, error) {
 	// 先查找是否已存在同 slug 分类
 	existing, err := s.categories.GetBySlug(slug)
 	if err != nil {

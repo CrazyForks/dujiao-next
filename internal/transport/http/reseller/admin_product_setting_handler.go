@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -94,7 +95,7 @@ func (h *AdminProductSettingHandler) UpdateProductSettings(c *gin.Context) {
 		respondAdminProductSettingError(c, err)
 		return
 	}
-	h.recordAudit(c, "reseller_product_setting_save", "/admin/resellers/product-settings/:reseller_id/:product_id", "PUT", models.JSON{
+	h.recordAudit(c, "reseller_product_setting_save", "/admin/resellers/product-settings/:reseller_id/:product_id", "PUT", jsonmap.JSON{
 		"reseller_id":    resellerID,
 		"product_id":     productID,
 		"sku_ids":        collectProductSettingRequestSKUIDs(req.Settings),
@@ -153,7 +154,7 @@ func (h *AdminProductSettingHandler) ResetProductSetting(c *gin.Context) {
 		respondAdminProductSettingError(c, err)
 		return
 	}
-	h.recordAudit(c, "reseller_product_setting_reset", "/admin/resellers/product-settings/:reseller_id/:product_id", "DELETE", models.JSON{
+	h.recordAudit(c, "reseller_product_setting_reset", "/admin/resellers/product-settings/:reseller_id/:product_id", "DELETE", jsonmap.JSON{
 		"reseller_id": resellerID,
 		"product_id":  productID,
 		"sku_ids":     []uint{skuID},
@@ -183,7 +184,7 @@ func collectProductSettingRequestSKUIDs(settings []productSettingRequest) []uint
 	return out
 }
 
-func (h *AdminProductSettingHandler) recordAudit(c *gin.Context, action, object, method string, detail models.JSON) {
+func (h *AdminProductSettingHandler) recordAudit(c *gin.Context, action, object, method string, detail jsonmap.JSON) {
 	if h == nil || h.audit == nil {
 		return
 	}

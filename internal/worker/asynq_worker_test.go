@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestBuildBotNotifyRequestURLReplacesPath(t *testing.T) {
@@ -51,7 +52,7 @@ func TestBuildOrderInstructionsEmailText(t *testing.T) {
 	t.Run("locale preferred over fallback", func(t *testing.T) {
 		order := &models.Order{
 			Items: []models.OrderItem{
-				{InstructionsJSON: models.JSON{
+				{InstructionsJSON: jsonmap.JSON{
 					"zh-CN": "<p>中文说明</p>",
 					"en-US": "<p>English</p>",
 				}},
@@ -65,7 +66,7 @@ func TestBuildOrderInstructionsEmailText(t *testing.T) {
 	t.Run("falls back to zh-CN when locale missing", func(t *testing.T) {
 		order := &models.Order{
 			Items: []models.OrderItem{
-				{InstructionsJSON: models.JSON{"zh-CN": "fallback"}},
+				{InstructionsJSON: jsonmap.JSON{"zh-CN": "fallback"}},
 			},
 		}
 		if got := buildOrderInstructionsEmailText(order, "ja-JP"); got != "fallback" {
@@ -76,9 +77,9 @@ func TestBuildOrderInstructionsEmailText(t *testing.T) {
 	t.Run("dedupes identical items and joins distinct", func(t *testing.T) {
 		order := &models.Order{
 			Items: []models.OrderItem{
-				{InstructionsJSON: models.JSON{"zh-CN": "<p>A</p>"}},
-				{InstructionsJSON: models.JSON{"zh-CN": "<p>A</p>"}}, // 重复，应去重
-				{InstructionsJSON: models.JSON{"zh-CN": "<p>B</p>"}},
+				{InstructionsJSON: jsonmap.JSON{"zh-CN": "<p>A</p>"}},
+				{InstructionsJSON: jsonmap.JSON{"zh-CN": "<p>A</p>"}}, // 重复，应去重
+				{InstructionsJSON: jsonmap.JSON{"zh-CN": "<p>B</p>"}},
 			},
 		}
 		got := buildOrderInstructionsEmailText(order, "zh-CN")
@@ -90,8 +91,8 @@ func TestBuildOrderInstructionsEmailText(t *testing.T) {
 	t.Run("collects from children items", func(t *testing.T) {
 		order := &models.Order{
 			Children: []models.Order{
-				{Items: []models.OrderItem{{InstructionsJSON: models.JSON{"zh-CN": "child1"}}}},
-				{Items: []models.OrderItem{{InstructionsJSON: models.JSON{"zh-CN": "child2"}}}},
+				{Items: []models.OrderItem{{InstructionsJSON: jsonmap.JSON{"zh-CN": "child1"}}}},
+				{Items: []models.OrderItem{{InstructionsJSON: jsonmap.JSON{"zh-CN": "child2"}}}},
 			},
 		}
 		got := buildOrderInstructionsEmailText(order, "zh-CN")
@@ -112,7 +113,7 @@ func TestBuildOrderInstructionsEmailText(t *testing.T) {
 	t.Run("strips HTML from instructions", func(t *testing.T) {
 		order := &models.Order{
 			Items: []models.OrderItem{
-				{InstructionsJSON: models.JSON{"zh-CN": "<p>步骤一</p><ul><li>登录</li><li>激活</li></ul>"}},
+				{InstructionsJSON: jsonmap.JSON{"zh-CN": "<p>步骤一</p><ul><li>登录</li><li>激活</li></ul>"}},
 			},
 		}
 		got := buildOrderInstructionsEmailText(order, "zh-CN")

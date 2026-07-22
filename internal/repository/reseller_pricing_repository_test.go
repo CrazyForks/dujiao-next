@@ -8,6 +8,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -43,7 +44,7 @@ func seedResellerPricingProduct(t *testing.T, db *gorm.DB, slug string, activeSK
 	var category models.Category
 	if err := db.FirstOrCreate(&category, models.Category{
 		Slug:     "repo-pricing",
-		NameJSON: models.JSON{"zh-CN": "repo-pricing"},
+		NameJSON: jsonmap.JSON{"zh-CN": "repo-pricing"},
 		IsActive: true,
 	}).Error; err != nil {
 		t.Fatalf("seed category failed: %v", err)
@@ -51,7 +52,7 @@ func seedResellerPricingProduct(t *testing.T, db *gorm.DB, slug string, activeSK
 	product := models.Product{
 		CategoryID:      category.ID,
 		Slug:            slug,
-		TitleJSON:       models.JSON{"zh-CN": slug},
+		TitleJSON:       jsonmap.JSON{"zh-CN": slug},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -285,8 +286,8 @@ func TestResellerPricingRepositoryRelatedAccountAndSnapshot(t *testing.T) {
 		ResellerAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
 		ProfitAmount:        models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
 		ProfitEligible:      true,
-		PricingSnapshotJSON: models.JSON{"items": []interface{}{map[string]interface{}{"order_item_id": float64(0)}}},
-		RiskSnapshotJSON:    models.JSON{"profit_eligible": true},
+		PricingSnapshotJSON: jsonmap.JSON{"items": []interface{}{map[string]interface{}{"order_item_id": float64(0)}}},
+		RiskSnapshotJSON:    jsonmap.JSON{"profit_eligible": true},
 	}
 	if err := repo.CreateOrderSnapshot(snapshot); err != nil {
 		t.Fatalf("CreateOrderSnapshot failed: %v", err)

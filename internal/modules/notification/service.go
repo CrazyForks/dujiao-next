@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/queue"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/hibiken/asynq"
 )
@@ -18,7 +18,7 @@ type EnqueueInput struct {
 	BizID     uint
 	Locale    string
 	Force     bool
-	Data      models.JSON
+	Data      jsonmap.JSON
 }
 
 // Service 通知中心服务。

@@ -7,14 +7,15 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 type mockSettingRepo struct {
-	store map[string]models.JSON
+	store map[string]jsonmap.JSON
 }
 
 func newMockSettingRepo() *mockSettingRepo {
-	return &mockSettingRepo{store: map[string]models.JSON{}}
+	return &mockSettingRepo{store: map[string]jsonmap.JSON{}}
 }
 
 func (m *mockSettingRepo) GetByKey(key string) (*models.Setting, error) {
@@ -25,7 +26,7 @@ func (m *mockSettingRepo) GetByKey(key string) (*models.Setting, error) {
 	return &models.Setting{Key: key, ValueJSON: value}, nil
 }
 
-func (m *mockSettingRepo) Upsert(key string, value models.JSON) (*models.Setting, error) {
+func (m *mockSettingRepo) Upsert(key string, value jsonmap.JSON) (*models.Setting, error) {
 	m.store[key] = value
 	return &models.Setting{Key: key, ValueJSON: value}, nil
 }

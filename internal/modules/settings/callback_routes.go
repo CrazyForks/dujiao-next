@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // CallbackRoutesSetting 回调路由配置
@@ -25,7 +25,7 @@ func (s *CallbackRoutesSetting) HasCustomRoutes() bool {
 }
 
 // DecodeCallbackRoutesSetting 从 JSON map 解析回调路由配置
-func DecodeCallbackRoutesSetting(value models.JSON) CallbackRoutesSetting {
+func DecodeCallbackRoutesSetting(value jsonmap.JSON) CallbackRoutesSetting {
 	return CallbackRoutesSetting{
 		PaymentCallback:  normalizeCallbackRoutePath(readString(value, constants.SettingFieldPaymentCallback, "")),
 		DujiaoPayWebhook: normalizeCallbackRoutePath(readString(value, constants.SettingFieldDujiaoPayWebhook, "")),
@@ -36,8 +36,8 @@ func DecodeCallbackRoutesSetting(value models.JSON) CallbackRoutesSetting {
 }
 
 // EncodeCallbackRoutesSetting 将回调路由配置序列化为 JSON map
-func EncodeCallbackRoutesSetting(s CallbackRoutesSetting) models.JSON {
-	return models.JSON{
+func EncodeCallbackRoutesSetting(s CallbackRoutesSetting) jsonmap.JSON {
+	return jsonmap.JSON{
 		constants.SettingFieldPaymentCallback:  s.PaymentCallback,
 		constants.SettingFieldDujiaoPayWebhook: s.DujiaoPayWebhook,
 		constants.SettingFieldPaypalWebhook:    s.PaypalWebhook,
@@ -47,7 +47,7 @@ func EncodeCallbackRoutesSetting(s CallbackRoutesSetting) models.JSON {
 }
 
 // NormalizeCallbackRoutesSettingJSON 是 Registry 使用的原始 JSON 写入策略。
-func NormalizeCallbackRoutesSettingJSON(value models.JSON) models.JSON {
+func NormalizeCallbackRoutesSettingJSON(value jsonmap.JSON) jsonmap.JSON {
 	setting := DecodeCallbackRoutesSetting(value)
 	deduplicateCallbackRoutes(&setting)
 	return EncodeCallbackRoutesSetting(setting)

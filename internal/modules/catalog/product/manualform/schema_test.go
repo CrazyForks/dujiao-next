@@ -4,11 +4,11 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestValidateAndNormalizeManualFormRequiredMissing(t *testing.T) {
-	schema := models.JSON{
+	schema := jsonmap.JSON{
 		"fields": []interface{}{
 			map[string]interface{}{
 				"key":      "name",
@@ -17,7 +17,7 @@ func TestValidateAndNormalizeManualFormRequiredMissing(t *testing.T) {
 			},
 		},
 	}
-	submission := models.JSON{}
+	submission := jsonmap.JSON{}
 	_, _, err := ValidateAndNormalize(schema, submission)
 	if !errors.Is(err, ErrRequiredMissing) {
 		t.Fatalf("expected ErrRequiredMissing, got %v", err)
@@ -25,7 +25,7 @@ func TestValidateAndNormalizeManualFormRequiredMissing(t *testing.T) {
 }
 
 func TestValidateAndNormalizeManualFormTypeInvalid(t *testing.T) {
-	schema := models.JSON{
+	schema := jsonmap.JSON{
 		"fields": []interface{}{
 			map[string]interface{}{
 				"key":      "age",
@@ -34,7 +34,7 @@ func TestValidateAndNormalizeManualFormTypeInvalid(t *testing.T) {
 			},
 		},
 	}
-	submission := models.JSON{"age": map[string]interface{}{"value": 18}}
+	submission := jsonmap.JSON{"age": map[string]interface{}{"value": 18}}
 	_, _, err := ValidateAndNormalize(schema, submission)
 	if !errors.Is(err, ErrTypeInvalid) {
 		t.Fatalf("expected ErrTypeInvalid, got %v", err)
@@ -42,7 +42,7 @@ func TestValidateAndNormalizeManualFormTypeInvalid(t *testing.T) {
 }
 
 func TestValidateAndNormalizeManualFormOptionInvalid(t *testing.T) {
-	schema := models.JSON{
+	schema := jsonmap.JSON{
 		"fields": []interface{}{
 			map[string]interface{}{
 				"key":      "province",
@@ -52,7 +52,7 @@ func TestValidateAndNormalizeManualFormOptionInvalid(t *testing.T) {
 			},
 		},
 	}
-	submission := models.JSON{"province": "SH"}
+	submission := jsonmap.JSON{"province": "SH"}
 	_, _, err := ValidateAndNormalize(schema, submission)
 	if !errors.Is(err, ErrOptionInvalid) {
 		t.Fatalf("expected ErrOptionInvalid, got %v", err)
@@ -60,7 +60,7 @@ func TestValidateAndNormalizeManualFormOptionInvalid(t *testing.T) {
 }
 
 func TestValidateAndNormalizeManualFormSuccess(t *testing.T) {
-	schema := models.JSON{
+	schema := jsonmap.JSON{
 		"fields": []interface{}{
 			map[string]interface{}{
 				"key":      "name",
@@ -89,7 +89,7 @@ func TestValidateAndNormalizeManualFormSuccess(t *testing.T) {
 			},
 		},
 	}
-	submission := models.JSON{
+	submission := jsonmap.JSON{
 		"name":  " Alice ",
 		"phone": "13800138000",
 		"city":  "beijing",
@@ -118,7 +118,7 @@ func TestValidateAndNormalizeManualFormSuccess(t *testing.T) {
 }
 
 func TestParseManualFormSchemaInvalidRegex(t *testing.T) {
-	schema := models.JSON{
+	schema := jsonmap.JSON{
 		"fields": []interface{}{
 			map[string]interface{}{
 				"key":      "phone",
@@ -135,7 +135,7 @@ func TestParseManualFormSchemaInvalidRegex(t *testing.T) {
 }
 
 func TestValidateAndNormalizeManualFormEmailPhoneAndCheckbox(t *testing.T) {
-	schema := models.JSON{
+	schema := jsonmap.JSON{
 		"fields": []interface{}{
 			map[string]interface{}{
 				"key":      "contact_phone",
@@ -155,7 +155,7 @@ func TestValidateAndNormalizeManualFormEmailPhoneAndCheckbox(t *testing.T) {
 			},
 		},
 	}
-	submission := models.JSON{
+	submission := jsonmap.JSON{
 		"contact_phone": "+86 13800138000",
 		"contact_email": "test@example.com",
 		"tags":          []interface{}{"B", "A", "A"},
@@ -175,7 +175,7 @@ func TestValidateAndNormalizeManualFormEmailPhoneAndCheckbox(t *testing.T) {
 }
 
 func TestValidateAndNormalizeManualFormSanitizeText(t *testing.T) {
-	schema := models.JSON{
+	schema := jsonmap.JSON{
 		"fields": []interface{}{
 			map[string]interface{}{
 				"key":      "memo",
@@ -184,7 +184,7 @@ func TestValidateAndNormalizeManualFormSanitizeText(t *testing.T) {
 			},
 		},
 	}
-	submission := models.JSON{
+	submission := jsonmap.JSON{
 		"memo": "<script>alert(1)</script>",
 	}
 
@@ -198,7 +198,7 @@ func TestValidateAndNormalizeManualFormSanitizeText(t *testing.T) {
 }
 
 func TestParseManualFormSchemaKeepI18nMeta(t *testing.T) {
-	schema := models.JSON{
+	schema := jsonmap.JSON{
 		"fields": []interface{}{
 			map[string]interface{}{
 				"key":  "receiver_name",
@@ -215,22 +215,22 @@ func TestParseManualFormSchemaKeepI18nMeta(t *testing.T) {
 		},
 	}
 
-	normalizedSchema, _, err := ValidateAndNormalize(schema, models.JSON{"receiver_name": "Alice"})
+	normalizedSchema, _, err := ValidateAndNormalize(schema, jsonmap.JSON{"receiver_name": "Alice"})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	fields, ok := normalizedSchema["fields"].([]models.JSON)
+	fields, ok := normalizedSchema["fields"].([]jsonmap.JSON)
 	if !ok || len(fields) != 1 {
 		t.Fatalf("unexpected normalized fields: %#v", normalizedSchema["fields"])
 	}
-	label, ok := fields[0]["label"].(models.JSON)
+	label, ok := fields[0]["label"].(jsonmap.JSON)
 	if !ok || label["zh-CN"] != "收件人" {
 		t.Fatalf("expected zh-CN label kept, got %#v", fields[0]["label"])
 	}
 }
 
 func TestParseManualFormSchemaInvalidKeyFormat(t *testing.T) {
-	schema := models.JSON{
+	schema := jsonmap.JSON{
 		"fields": []interface{}{
 			map[string]interface{}{
 				"key":      "Receiver-Name",
@@ -247,7 +247,7 @@ func TestParseManualFormSchemaInvalidKeyFormat(t *testing.T) {
 }
 
 func TestValidateAndNormalizeManualFormRegexLiteralPhone(t *testing.T) {
-	schema := models.JSON{
+	schema := jsonmap.JSON{
 		"fields": []interface{}{
 			map[string]interface{}{
 				"key":      "contact_phone",
@@ -257,7 +257,7 @@ func TestValidateAndNormalizeManualFormRegexLiteralPhone(t *testing.T) {
 			},
 		},
 	}
-	submission := models.JSON{
+	submission := jsonmap.JSON{
 		"contact_phone": "13277745648",
 	}
 
@@ -271,7 +271,7 @@ func TestValidateAndNormalizeManualFormRegexLiteralPhone(t *testing.T) {
 }
 
 func TestValidateAndNormalizeManualFormRegexLiteralIgnoreCase(t *testing.T) {
-	schema := models.JSON{
+	schema := jsonmap.JSON{
 		"fields": []interface{}{
 			map[string]interface{}{
 				"key":      "code",
@@ -281,7 +281,7 @@ func TestValidateAndNormalizeManualFormRegexLiteralIgnoreCase(t *testing.T) {
 			},
 		},
 	}
-	submission := models.JSON{
+	submission := jsonmap.JSON{
 		"code": "ABC",
 	}
 

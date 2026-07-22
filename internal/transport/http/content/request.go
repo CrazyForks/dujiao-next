@@ -2,8 +2,8 @@ package contenthttp
 
 import (
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/models"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // CreatePostRequest 创建或更新文章的 HTTP 请求。
@@ -35,23 +35,23 @@ func (request CreatePostRequest) toInput() domaincontent.CreatePostInput {
 
 // CreatePostCategoryRequest 创建文章分类的 HTTP 请求。
 type CreatePostCategoryRequest struct {
-	NameJSON  models.JSON `json:"name" binding:"required"`
-	Slug      string      `json:"slug" binding:"required"`
-	ParentID  *uint       `json:"parent_id"`
-	SortOrder int         `json:"sort_order"`
-	Icon      string      `json:"icon"`
+	NameJSON  jsonmap.JSON `json:"name" binding:"required"`
+	Slug      string       `json:"slug" binding:"required"`
+	ParentID  *uint        `json:"parent_id"`
+	SortOrder int          `json:"sort_order"`
+	Icon      string       `json:"icon"`
 }
 
 // UpdatePostCategoryRequest 更新文章分类的 HTTP 请求。
 type UpdatePostCategoryRequest struct {
-	NameJSON  models.JSON `json:"name"`
-	Slug      string      `json:"slug"`
-	ParentID  *uint       `json:"parent_id"`
-	SortOrder int         `json:"sort_order"`
-	Icon      string      `json:"icon"`
+	NameJSON  jsonmap.JSON `json:"name"`
+	Slug      string       `json:"slug"`
+	ParentID  *uint        `json:"parent_id"`
+	SortOrder int          `json:"sort_order"`
+	Icon      string       `json:"icon"`
 }
 
-func postCategoryInput(name models.JSON, slug string, parentID *uint, sortOrder int, icon string) domaincontent.CreatePostCategoryInput {
+func postCategoryInput(name jsonmap.JSON, slug string, parentID *uint, sortOrder int, icon string) domaincontent.CreatePostCategoryInput {
 	return domaincontent.CreatePostCategoryInput{
 		NameJSON:  name,
 		Slug:      slug,

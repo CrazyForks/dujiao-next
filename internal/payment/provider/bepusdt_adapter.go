@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/bepusdt"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -36,7 +37,7 @@ func (a *bepusdtAdapter) Type() string {
 
 // parseConfig 解析并验证 bepusdt Config。
 // transaction 模式未配置 trade_type 时，由 Config.Normalize 保持旧行为并使用 usdt.trc20。
-func (a *bepusdtAdapter) parseConfig(raw models.JSON) (*bepusdt.Config, error) {
+func (a *bepusdtAdapter) parseConfig(raw jsonmap.JSON) (*bepusdt.Config, error) {
 	cfg, err := bepusdt.ParseConfig(raw)
 	if err != nil {
 		return nil, mapBepusdtError(err)
@@ -49,7 +50,7 @@ func (a *bepusdtAdapter) parseConfig(raw models.JSON) (*bepusdt.Config, error) {
 
 // ValidateConfig 验证 channel.ConfigJSON。
 // 新格式 channel_type 固定为 bepusdt；旧数据继续允许 usdt-trc20 / usdc-trc20 / trx 等 legacy channel_type。
-func (a *bepusdtAdapter) ValidateConfig(raw models.JSON, channelType string) error {
+func (a *bepusdtAdapter) ValidateConfig(raw jsonmap.JSON, channelType string) error {
 	normalizedChannelType := strings.ToLower(strings.TrimSpace(channelType))
 	if normalizedChannelType != "" && normalizedChannelType != constants.PaymentProviderBepusdt && !isLegacyBepusdtChannelType(normalizedChannelType) {
 		return fmt.Errorf("%w: bepusdt channel_type %s", ErrUnsupportedChannel, channelType)
@@ -80,7 +81,7 @@ func (a *bepusdtAdapter) ValidateConfig(raw models.JSON, channelType string) err
 }
 
 // CreatePayment 创建支付。bepusdt 多 channel type，需要先校验 channelType。
-func (a *bepusdtAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
+func (a *bepusdtAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input CreateInput) (*CreateResult, error) {
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
@@ -162,8 +163,8 @@ func bepusdtDisplayChannelType(cfg *bepusdt.Config) string {
 	return strings.TrimSpace(cfg.TradeType)
 }
 
-func buildBepusdtCreatePayload(result *bepusdt.CreateResult, tradeType string, orderMode string) models.JSON {
-	payload := models.JSON{}
+func buildBepusdtCreatePayload(result *bepusdt.CreateResult, tradeType string, orderMode string) jsonmap.JSON {
+	payload := jsonmap.JSON{}
 	if result == nil {
 		return payload
 	}
@@ -190,11 +191,11 @@ func isLegacyBepusdtChannelType(channelType string) bool {
 	return bepusdt.ResolveTradeType(channelType) != ""
 }
 
-func ensureBepusdtPayloadData(payload models.JSON) map[string]interface{} {
+func ensureBepusdtPayloadData(payload jsonmap.JSON) map[string]interface{} {
 	if raw, ok := payload["data"].(map[string]interface{}); ok {
 		return raw
 	}
-	if raw, ok := payload["data"].(models.JSON); ok {
+	if raw, ok := payload["data"].(jsonmap.JSON); ok {
 		data := map[string]interface{}(raw)
 		payload["data"] = data
 		return data
@@ -257,7 +258,7 @@ func normalizeBepusdtNetwork(network string) string {
 // VerifyCallback 实现 CallbackVerifier。bepusdt 用 JSON POST body，form 参数忽略。
 // 注意：callback 阶段不调 ValidateConfig——配置错误由签名校验兜底，
 // 与 alipay/epay/epusdt adapter 行为一致。
-func (a *bepusdtAdapter) VerifyCallback(raw models.JSON, _ map[string][]string, body []byte) (*CallbackResult, error) {
+func (a *bepusdtAdapter) VerifyCallback(raw jsonmap.JSON, _ map[string][]string, body []byte) (*CallbackResult, error) {
 	cfg, err := bepusdt.ParseConfig(raw)
 	if err != nil {
 		return nil, mapBepusdtError(err)
@@ -285,11 +286,11 @@ func (a *bepusdtAdapter) VerifyCallback(raw models.JSON, _ map[string][]string, 
 	}
 
 	// 把 callback 关键字段塞进 Payload
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	if pb, marshalErr := json.Marshal(data); marshalErr == nil {
 		var m map[string]interface{}
 		if jsonErr := json.Unmarshal(pb, &m); jsonErr == nil {
-			payload = models.JSON(m)
+			payload = jsonmap.JSON(m)
 		}
 	}
 

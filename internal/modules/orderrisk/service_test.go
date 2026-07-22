@@ -3,8 +3,8 @@ package orderrisk
 import (
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // --- isIPInBlacklist 测试 ---
@@ -107,7 +107,7 @@ func (s settingReaderStub) GetOrderRiskControlConfig() (settingsmodule.OrderRisk
 	return s.config, nil
 }
 
-func newTestRiskControlService(pendingByUser, pendingByIP, pendingByEmail int64, cfgJSON models.JSON) *Service {
+func newTestRiskControlService(pendingByUser, pendingByIP, pendingByEmail int64, cfgJSON jsonmap.JSON) *Service {
 	config := settingsmodule.DecodeOrderRiskControlConfig(cfgJSON, settingsmodule.DefaultOrderRiskControlConfig())
 	return NewService(settingReaderStub{config: config}, &mockOrderRepoForRisk{
 		pendingByUser:  pendingByUser,
@@ -128,7 +128,7 @@ func TestCheckOrderAllowed_DisabledByDefault(t *testing.T) {
 }
 
 func TestCheckOrderAllowed_IPBlacklist(t *testing.T) {
-	svc := newTestRiskControlService(0, 0, 0, models.JSON{
+	svc := newTestRiskControlService(0, 0, 0, jsonmap.JSON{
 		"enabled":      true,
 		"ip_blacklist": []interface{}{"1.2.3.4", "10.0.0.0/8"},
 	})
@@ -145,7 +145,7 @@ func TestCheckOrderAllowed_IPBlacklist(t *testing.T) {
 }
 
 func TestCheckOrderAllowed_EmailBlacklist(t *testing.T) {
-	svc := newTestRiskControlService(0, 0, 0, models.JSON{
+	svc := newTestRiskControlService(0, 0, 0, jsonmap.JSON{
 		"enabled":         true,
 		"email_blacklist": []interface{}{"spam@example.com"},
 	})
@@ -168,7 +168,7 @@ func TestCheckOrderAllowed_EmailBlacklist(t *testing.T) {
 }
 
 func TestCheckOrderAllowed_PendingOrderLimits(t *testing.T) {
-	cfg := models.JSON{
+	cfg := jsonmap.JSON{
 		"enabled":                            true,
 		"max_pending_orders_per_user":        float64(2),
 		"max_pending_orders_per_ip":          float64(3),
@@ -205,7 +205,7 @@ func TestCheckOrderAllowed_PendingOrderLimits(t *testing.T) {
 }
 
 func TestCheckOrderAllowed_SkipIPCheck(t *testing.T) {
-	cfg := models.JSON{
+	cfg := jsonmap.JSON{
 		"enabled":                     true,
 		"max_pending_orders_per_user": float64(5),
 		"max_pending_orders_per_ip":   float64(1),
@@ -244,7 +244,7 @@ func TestCheckOrderAllowed_SkipIPCheck(t *testing.T) {
 }
 
 func TestCheckOrderAllowed_ZeroLimitMeansNoLimit(t *testing.T) {
-	svc := newTestRiskControlService(999, 999, 999, models.JSON{
+	svc := newTestRiskControlService(999, 999, 999, jsonmap.JSON{
 		"enabled":                            true,
 		"max_pending_orders_per_user":        float64(0),
 		"max_pending_orders_per_ip":          float64(0),

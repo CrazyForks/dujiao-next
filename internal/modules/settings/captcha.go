@@ -7,7 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 var ErrCaptchaConfigInvalid = errors.New("captcha config invalid")
@@ -229,9 +229,9 @@ func CaptchaSettingToConfig(setting CaptchaSetting) config.CaptchaConfig {
 }
 
 // EncodeCaptchaSetting 将验证码设置编码为 settings 表格式。
-func EncodeCaptchaSetting(setting CaptchaSetting) models.JSON {
+func EncodeCaptchaSetting(setting CaptchaSetting) jsonmap.JSON {
 	normalized := NormalizeCaptchaSetting(setting)
-	return models.JSON{
+	return jsonmap.JSON{
 		"provider": normalized.Provider,
 		"scenes": map[string]interface{}{
 			"login":              normalized.Scenes.Login,
@@ -259,9 +259,9 @@ func EncodeCaptchaSetting(setting CaptchaSetting) models.JSON {
 }
 
 // MaskCaptchaSettingForAdmin 返回脱敏后的验证码配置。
-func MaskCaptchaSettingForAdmin(setting CaptchaSetting) models.JSON {
+func MaskCaptchaSettingForAdmin(setting CaptchaSetting) jsonmap.JSON {
 	normalized := NormalizeCaptchaSetting(setting)
-	return models.JSON{
+	return jsonmap.JSON{
 		"provider": normalized.Provider,
 		"scenes": map[string]interface{}{
 			"login":              normalized.Scenes.Login,
@@ -290,9 +290,9 @@ func MaskCaptchaSettingForAdmin(setting CaptchaSetting) models.JSON {
 }
 
 // PublicCaptchaSetting 返回可公开下发前端的验证码配置。
-func PublicCaptchaSetting(setting CaptchaSetting) models.JSON {
+func PublicCaptchaSetting(setting CaptchaSetting) jsonmap.JSON {
 	normalized := NormalizeCaptchaSetting(setting)
-	public := models.JSON{
+	public := jsonmap.JSON{
 		"provider": normalized.Provider,
 		"scenes": map[string]interface{}{
 			"login":              normalized.Scenes.Login,
@@ -329,7 +329,7 @@ func (s CaptchaSetting) IsSceneEnabled(scene string) bool {
 }
 
 // DecodeCaptchaSetting 从持久化 JSON 解码，并对缺失字段使用 fallback。
-func DecodeCaptchaSetting(raw models.JSON, fallback CaptchaSetting) CaptchaSetting {
+func DecodeCaptchaSetting(raw jsonmap.JSON, fallback CaptchaSetting) CaptchaSetting {
 	next := fallback
 	if raw == nil {
 		return next

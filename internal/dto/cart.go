@@ -2,12 +2,13 @@ package dto
 
 import (
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // CartProductResp 购物车商品摘要
 type CartProductResp struct {
 	Slug                string             `json:"slug"`
-	Title               models.JSON        `json:"title"`
+	Title               jsonmap.JSON       `json:"title"`
 	PriceAmount         models.Money       `json:"price_amount"`
 	Images              models.StringArray `json:"images"`
 	Tags                models.StringArray `json:"tags"`

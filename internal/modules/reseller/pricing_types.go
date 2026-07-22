@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
 
@@ -27,8 +28,8 @@ type OrderPricingContext struct {
 	ProfitEligible    bool
 	ProfitBlockReason string
 	Items             []OrderPricingItem
-	PricingSnapshot   models.JSON
-	RiskSnapshot      models.JSON
+	PricingSnapshot   jsonmap.JSON
+	RiskSnapshot      jsonmap.JSON
 }
 
 // OrderPricingItem 分销下单定价明细行。
@@ -114,10 +115,10 @@ func (ctx *OrderPricingContext) BuildSnapshot(orderID uint, now time.Time) *mode
 }
 
 // BuildPricingSnapshotJSON 生成定价快照 JSON。
-func (ctx *OrderPricingContext) BuildPricingSnapshotJSON() models.JSON {
+func (ctx *OrderPricingContext) BuildPricingSnapshotJSON() jsonmap.JSON {
 	items := make([]interface{}, 0, len(ctx.Items))
 	for _, item := range ctx.Items {
-		entry := models.JSON{
+		entry := jsonmap.JSON{
 			"product_id":            item.ProductID,
 			"sku_id":                item.SKUID,
 			"quantity":              item.Quantity,
@@ -139,7 +140,7 @@ func (ctx *OrderPricingContext) BuildPricingSnapshotJSON() models.JSON {
 		}
 		items = append(items, entry)
 	}
-	return models.JSON{
+	return jsonmap.JSON{
 		"currency":        ctx.Currency,
 		"base_amount":     MoneyString(ctx.BaseAmount),
 		"reseller_amount": MoneyString(ctx.ResellerAmount),
@@ -149,11 +150,11 @@ func (ctx *OrderPricingContext) BuildPricingSnapshotJSON() models.JSON {
 }
 
 // BuildRiskSnapshotJSON 生成风控快照 JSON。
-func (ctx *OrderPricingContext) BuildRiskSnapshotJSON() models.JSON {
+func (ctx *OrderPricingContext) BuildRiskSnapshotJSON() jsonmap.JSON {
 	if ctx.RiskSnapshot != nil {
 		return ctx.RiskSnapshot
 	}
-	return models.JSON{
+	return jsonmap.JSON{
 		"buyer_user_id":       ctx.BuyerUserID,
 		"reseller_user_id":    ctx.ResellerUserID,
 		"profit_eligible":     ctx.ProfitEligible,
@@ -202,14 +203,14 @@ func ApplySelfDealingRisk(ctx *OrderPricingContext, profile *models.ResellerProf
 		ctx.ProfitEligible = false
 		ctx.ProfitBlockReason = ProfitBlockRelatedAccount
 	}
-	ctx.RiskSnapshot = models.JSON{
+	ctx.RiskSnapshot = jsonmap.JSON{
 		"buyer_user_id":         ctx.BuyerUserID,
 		"reseller_user_id":      ctx.ResellerUserID,
 		"profit_eligible":       ctx.ProfitEligible,
 		"profit_block_reason":   ctx.ProfitBlockReason,
 		"guest_buyer":           ctx.BuyerUserID == 0,
 		"self_dealing_deferred": "same_contact_and_risk_detected_account_linking",
-		"self_dealing": models.JSON{
+		"self_dealing": jsonmap.JSON{
 			"owner_match":           ownerMatch,
 			"related_account_match": relatedMatch,
 		},

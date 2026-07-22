@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -122,7 +123,7 @@ func (h *AdminSiteConfigHandler) UpdateSiteConfig(c *gin.Context) {
 	if reloaded, reloadErr := h.directory.GetSiteConfigByResellerID(resellerID); reloadErr == nil && reloaded != nil {
 		row = reloaded
 	}
-	h.recordAudit(c, "reseller_site_config_update", "/admin/resellers/site-configs/:reseller_id", "PUT", models.JSON{
+	h.recordAudit(c, "reseller_site_config_update", "/admin/resellers/site-configs/:reseller_id", "PUT", jsonmap.JSON{
 		"reseller_id":    resellerID,
 		"config_id":      row.ID,
 		"site_name":      row.SiteName,
@@ -143,14 +144,14 @@ func (h *AdminSiteConfigHandler) ResetSiteConfig(c *gin.Context) {
 		respondAdminManagementError(c, err)
 		return
 	}
-	h.recordAudit(c, "reseller_site_config_reset", "/admin/resellers/site-configs/:reseller_id/reset", "POST", models.JSON{
+	h.recordAudit(c, "reseller_site_config_reset", "/admin/resellers/site-configs/:reseller_id/reset", "POST", jsonmap.JSON{
 		"reseller_id": resellerID,
 		"source":      "admin",
 	})
 	response.Success(c, gin.H{"ok": true})
 }
 
-func (h *AdminSiteConfigHandler) recordAudit(c *gin.Context, action, object, method string, detail models.JSON) {
+func (h *AdminSiteConfigHandler) recordAudit(c *gin.Context, action, object, method string, detail jsonmap.JSON) {
 	if h == nil || h.audit == nil {
 		return
 	}

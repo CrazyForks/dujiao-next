@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -96,12 +97,12 @@ func (s *WriteService) Create(input CreateProductInput) (*models.Product, error)
 	product := models.Product{
 		CategoryID:           input.CategoryID,
 		Slug:                 input.Slug,
-		SeoMetaJSON:          models.JSON(input.SeoMetaJSON),
-		TitleJSON:            models.JSON(input.TitleJSON),
-		DescriptionJSON:      models.JSON(input.DescriptionJSON),
-		ContentJSON:          models.JSON(input.ContentJSON),
-		InstructionsJSON:     models.JSON(input.InstructionsJSON),
-		ManualFormSchemaJSON: models.JSON{},
+		SeoMetaJSON:          jsonmap.JSON(input.SeoMetaJSON),
+		TitleJSON:            jsonmap.JSON(input.TitleJSON),
+		DescriptionJSON:      jsonmap.JSON(input.DescriptionJSON),
+		ContentJSON:          jsonmap.JSON(input.ContentJSON),
+		InstructionsJSON:     jsonmap.JSON(input.InstructionsJSON),
+		ManualFormSchemaJSON: jsonmap.JSON{},
 		PriceAmount:          models.NewMoneyFromDecimal(priceAmount),
 		CostPriceAmount:      models.NewMoneyFromDecimal(costPriceAmount),
 		WholesalePrices:      models.WholesalePriceTiers{},
@@ -121,7 +122,7 @@ func (s *WriteService) Create(input CreateProductInput) (*models.Product, error)
 		SortOrder:            input.SortOrder,
 	}
 	if fulfillmentType == constants.FulfillmentTypeManual {
-		normalizedSchemaJSON, err := manualform.NormalizeSchema(models.JSON(input.ManualFormSchemaJSON))
+		normalizedSchemaJSON, err := manualform.NormalizeSchema(jsonmap.JSON(input.ManualFormSchemaJSON))
 		if err != nil {
 			return nil, err
 		}

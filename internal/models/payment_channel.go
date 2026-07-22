@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 
@@ -22,7 +23,7 @@ type PaymentChannel struct {
 	PaymentRoles       StringArray    `gorm:"type:json" json:"payment_roles"`                          // 付款角色限制
 	MemberLevels       UintArray      `gorm:"type:json" json:"member_levels"`                          // 会员等级限制
 	PaymentTypes       StringArray    `gorm:"type:json" json:"payment_types"`                          // 付款类型限制
-	ConfigJSON         JSON           `gorm:"type:json" json:"config_json"`                            // 渠道配置
+	ConfigJSON         jsonmap.JSON   `gorm:"type:json" json:"config_json"`                            // 渠道配置
 	IsActive           bool           `gorm:"index;not null;default:true" json:"is_active"`            // 是否启用
 	SortOrder          int            `gorm:"not null;default:0" json:"sort_order"`                    // 排序
 	CreatedAt          time.Time      `gorm:"index" json:"created_at"`                                 // 创建时间

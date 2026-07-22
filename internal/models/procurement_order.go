@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 
@@ -34,7 +35,7 @@ type ProcurementOrder struct {
 	LocalOrder    *Order          `gorm:"foreignKey:LocalOrderID" json:"local_order,omitempty"`
 	ParentOrderNo string          `gorm:"-" json:"parent_order_no,omitempty"` // 父订单号（虚拟字段）
 	// UpstreamRefundRecords 仅用于接口返回，不写入数据库；值来自上游 /upstream/orders 的 refund_records
-	UpstreamRefundRecords []JSON `gorm:"-" json:"upstream_refund_records,omitempty"`
+	UpstreamRefundRecords []jsonmap.JSON `gorm:"-" json:"upstream_refund_records,omitempty"`
 	// UpstreamRefundedAmount 仅用于接口返回，不写入数据库；值来自上游 /upstream/orders 的 refunded_amount
 	UpstreamRefundedAmount string `gorm:"-" json:"upstream_refunded_amount,omitempty"`
 }

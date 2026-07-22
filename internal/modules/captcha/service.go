@@ -12,8 +12,8 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/mojocn/base64Captcha"
 )
@@ -99,7 +99,7 @@ func (s *Service) InvalidateCache() {
 }
 
 // GetPublicSetting 获取公开可下发配置
-func (s *Service) GetPublicSetting() (models.JSON, error) {
+func (s *Service) GetPublicSetting() (jsonmap.JSON, error) {
 	setting, err := s.getSetting()
 	if err != nil {
 		return nil, err

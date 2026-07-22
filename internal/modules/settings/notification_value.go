@@ -5,14 +5,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func toStringAnyMap(value interface{}) map[string]interface{} {
 	switch typed := value.(type) {
 	case map[string]interface{}:
 		return typed
-	case models.JSON:
+	case jsonmap.JSON:
 		result := make(map[string]interface{}, len(typed))
 		for key, item := range typed {
 			result[key] = item

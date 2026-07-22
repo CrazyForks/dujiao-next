@@ -8,6 +8,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // 上游商品状态相关哨兵错误（adapter 层归一化）
@@ -50,10 +51,10 @@ type ProductListResult struct {
 // UpstreamProduct 上游商品信息
 type UpstreamProduct struct {
 	ID               uint                       `json:"id"`
-	SeoMeta          models.JSON                `json:"seo_meta"`
-	Title            models.JSON                `json:"title"`
-	Description      models.JSON                `json:"description"`
-	Content          models.JSON                `json:"content"`
+	SeoMeta          jsonmap.JSON               `json:"seo_meta"`
+	Title            jsonmap.JSON               `json:"title"`
+	Description      jsonmap.JSON               `json:"description"`
+	Content          jsonmap.JSON               `json:"content"`
 	Images           []string                   `json:"images"`
 	Tags             []string                   `json:"tags"`
 	PriceAmount      string                     `json:"price_amount"`
@@ -62,7 +63,7 @@ type UpstreamProduct struct {
 	WholesalePrices  models.WholesalePriceTiers `json:"wholesale_prices,omitempty"`
 	Currency         string                     `json:"currency"`
 	FulfillmentType  string                     `json:"fulfillment_type"`
-	ManualFormSchema models.JSON                `json:"manual_form_schema"`
+	ManualFormSchema jsonmap.JSON               `json:"manual_form_schema"`
 	IsActive         bool                       `json:"is_active"`
 	CategoryID       uint                       `json:"category_id"`
 	SKUs             []UpstreamSKU              `json:"skus"`
@@ -71,12 +72,12 @@ type UpstreamProduct struct {
 
 // UpstreamCategory 上游分类信息
 type UpstreamCategory struct {
-	ID        uint        `json:"id"`
-	ParentID  uint        `json:"parent_id"`
-	Slug      string      `json:"slug"`
-	Name      models.JSON `json:"name"`
-	Icon      string      `json:"icon"`
-	SortOrder int         `json:"sort_order"`
+	ID        uint         `json:"id"`
+	ParentID  uint         `json:"parent_id"`
+	Slug      string       `json:"slug"`
+	Name      jsonmap.JSON `json:"name"`
+	Icon      string       `json:"icon"`
+	SortOrder int          `json:"sort_order"`
 }
 
 // CategoryListResult 分类列表结果
@@ -87,25 +88,25 @@ type CategoryListResult struct {
 
 // UpstreamSKU 上游 SKU 信息
 type UpstreamSKU struct {
-	ID            uint        `json:"id"`
-	SKUCode       string      `json:"sku_code"`
-	SpecValues    models.JSON `json:"spec_values"`
-	PriceAmount   string      `json:"price_amount"`
-	OriginalPrice string      `json:"original_price,omitempty"`
-	MemberPrice   string      `json:"member_price,omitempty"`
-	StockStatus   string      `json:"stock_status"`
-	StockQuantity int         `json:"stock_quantity"` // 实际可用库存（-1=无限）
-	IsActive      bool        `json:"is_active"`
+	ID            uint         `json:"id"`
+	SKUCode       string       `json:"sku_code"`
+	SpecValues    jsonmap.JSON `json:"spec_values"`
+	PriceAmount   string       `json:"price_amount"`
+	OriginalPrice string       `json:"original_price,omitempty"`
+	MemberPrice   string       `json:"member_price,omitempty"`
+	StockStatus   string       `json:"stock_status"`
+	StockQuantity int          `json:"stock_quantity"` // 实际可用库存（-1=无限）
+	IsActive      bool         `json:"is_active"`
 }
 
 // CreateUpstreamOrderReq 创建上游采购单请求
 type CreateUpstreamOrderReq struct {
-	SKUID             uint        `json:"sku_id"`
-	Quantity          int         `json:"quantity"`
-	ManualFormData    models.JSON `json:"manual_form_data,omitempty"`
-	DownstreamOrderNo string      `json:"downstream_order_no"`
-	TraceID           string      `json:"trace_id"`
-	CallbackURL       string      `json:"callback_url"`
+	SKUID             uint         `json:"sku_id"`
+	Quantity          int          `json:"quantity"`
+	ManualFormData    jsonmap.JSON `json:"manual_form_data,omitempty"`
+	DownstreamOrderNo string       `json:"downstream_order_no"`
+	TraceID           string       `json:"trace_id"`
+	CallbackURL       string       `json:"callback_url"`
 }
 
 // CreateUpstreamOrderResp 创建上游采购单响应
@@ -122,11 +123,11 @@ type CreateUpstreamOrderResp struct {
 
 // UpstreamFulfillment 上游交付信息
 type UpstreamFulfillment struct {
-	Type         string      `json:"type"`
-	Status       string      `json:"status"`
-	Payload      string      `json:"payload"`
-	DeliveryData models.JSON `json:"delivery_data"`
-	DeliveredAt  *time.Time  `json:"delivered_at,omitempty"`
+	Type         string       `json:"type"`
+	Status       string       `json:"status"`
+	Payload      string       `json:"payload"`
+	DeliveryData jsonmap.JSON `json:"delivery_data"`
+	DeliveredAt  *time.Time   `json:"delivered_at,omitempty"`
 }
 
 // UpstreamOrderDetail 上游订单详情
@@ -139,7 +140,7 @@ type UpstreamOrderDetail struct {
 	Currency       string               `json:"currency"`
 	Fulfillment    *UpstreamFulfillment `json:"fulfillment,omitempty"`
 	// RefundRecords 上游退款记录（协议兼容字段）
-	RefundRecords []models.JSON `json:"refund_records,omitempty"`
+	RefundRecords []jsonmap.JSON `json:"refund_records,omitempty"`
 }
 
 // Adapter 上游站点适配器接口

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 const (
@@ -74,7 +74,7 @@ func NormalizeUpstreamSyncConfig(config UpstreamSyncConfig) UpstreamSyncConfig {
 }
 
 // DecodeUpstreamSyncConfig 从持久化 JSON 解码，并对缺失字段使用 fallback。
-func DecodeUpstreamSyncConfig(raw models.JSON, fallback UpstreamSyncConfig) UpstreamSyncConfig {
+func DecodeUpstreamSyncConfig(raw jsonmap.JSON, fallback UpstreamSyncConfig) UpstreamSyncConfig {
 	result := NormalizeUpstreamSyncConfig(fallback)
 	if parsed, err := parseInt(raw[constants.SettingFieldUpstreamSyncIntervalMin]); err == nil {
 		result.IntervalMinutes = parsed
@@ -95,9 +95,9 @@ func DecodeUpstreamSyncConfig(raw models.JSON, fallback UpstreamSyncConfig) Upst
 }
 
 // EncodeUpstreamSyncConfig 把 typed setting 编码为稳定的持久化 JSON。
-func EncodeUpstreamSyncConfig(config UpstreamSyncConfig) models.JSON {
+func EncodeUpstreamSyncConfig(config UpstreamSyncConfig) jsonmap.JSON {
 	normalized := NormalizeUpstreamSyncConfig(config)
-	return models.JSON{
+	return jsonmap.JSON{
 		constants.SettingFieldUpstreamSyncIntervalMin: normalized.IntervalMinutes,
 		constants.SettingFieldUpstreamPreOrderCheck:   normalized.PreOrderStockCheckEnabled,
 		constants.SettingFieldUpstreamSyncPageSize:    normalized.SyncPageSize,
@@ -107,7 +107,7 @@ func EncodeUpstreamSyncConfig(config UpstreamSyncConfig) models.JSON {
 }
 
 // NormalizeUpstreamSyncConfigJSON 是 Registry 使用的原始 JSON 写入策略。
-func NormalizeUpstreamSyncConfigJSON(raw models.JSON) models.JSON {
+func NormalizeUpstreamSyncConfigJSON(raw jsonmap.JSON) jsonmap.JSON {
 	return EncodeUpstreamSyncConfig(DecodeUpstreamSyncConfig(raw, DefaultUpstreamSyncConfig()))
 }
 

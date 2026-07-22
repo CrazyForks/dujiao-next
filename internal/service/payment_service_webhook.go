@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"go.uber.org/zap"
 )
@@ -57,7 +58,7 @@ func (s *PaymentService) HandleSyncCallback(
 		return nil, err
 	}
 
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	if result.Payload != nil {
 		payload = result.Payload
 	}
@@ -330,7 +331,7 @@ func (s *PaymentService) commitVerifiedWebhook(
 		return nil, result.Status, err
 	}
 
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	if result.Payload != nil {
 		payload = result.Payload
 	}

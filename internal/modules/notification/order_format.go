@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 type OrderItemCounts struct {
@@ -65,7 +66,7 @@ func buildNotificationOrderItemLine(index int, item models.OrderItem, locale str
 	return line
 }
 
-func buildNotificationSKUSummary(snapshot models.JSON, locale string) string {
+func buildNotificationSKUSummary(snapshot jsonmap.JSON, locale string) string {
 	if len(snapshot) == 0 {
 		return ""
 	}
@@ -113,10 +114,10 @@ func NormalizeFulfillmentType(fulfillmentType string) string {
 
 func notificationInterfaceText(value interface{}, locale, defaultLocale string) string {
 	switch typed := value.(type) {
-	case models.JSON:
+	case jsonmap.JSON:
 		return resolveNotificationLocalizedJSON(typed, locale, defaultLocale)
 	case map[string]interface{}:
-		return resolveNotificationLocalizedJSON(models.JSON(typed), locale, defaultLocale)
+		return resolveNotificationLocalizedJSON(jsonmap.JSON(typed), locale, defaultLocale)
 	case nil:
 		return ""
 	default:
@@ -128,7 +129,7 @@ func notificationInterfaceText(value interface{}, locale, defaultLocale string) 
 	}
 }
 
-func resolveNotificationLocalizedJSON(value models.JSON, locale, defaultLocale string) string {
+func resolveNotificationLocalizedJSON(value jsonmap.JSON, locale, defaultLocale string) string {
 	if len(value) == 0 {
 		return ""
 	}

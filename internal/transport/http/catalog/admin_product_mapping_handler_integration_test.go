@@ -18,6 +18,7 @@ import (
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	cataloghttp "github.com/dujiao-next/internal/transport/http/catalog"
 	"github.com/dujiao-next/internal/upstream"
 	"github.com/gin-gonic/gin"
@@ -149,7 +150,7 @@ func TestBatchImportUpstreamProductsAutoCreatesCategory(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok": true,
 				"categories": []upstream.UpstreamCategory{
-					{ID: 9, Slug: "upstream-streaming", Name: models.JSON{"zh-CN": "流媒体"}},
+					{ID: 9, Slug: "upstream-streaming", Name: jsonmap.JSON{"zh-CN": "流媒体"}},
 				},
 			})
 		case "/api/v1/upstream/products/101":
@@ -158,9 +159,9 @@ func TestBatchImportUpstreamProductsAutoCreatesCategory(t *testing.T) {
 				"product": upstream.UpstreamProduct{
 					ID:              101,
 					CategoryID:      9,
-					Title:           models.JSON{"zh-CN": "上游商品"},
-					Description:     models.JSON{"zh-CN": "描述"},
-					Content:         models.JSON{"zh-CN": "内容"},
+					Title:           jsonmap.JSON{"zh-CN": "上游商品"},
+					Description:     jsonmap.JSON{"zh-CN": "描述"},
+					Content:         jsonmap.JSON{"zh-CN": "内容"},
 					Images:          []string{},
 					Tags:            []string{},
 					PriceAmount:     "10.00",
@@ -168,7 +169,7 @@ func TestBatchImportUpstreamProductsAutoCreatesCategory(t *testing.T) {
 					FulfillmentType: constants.FulfillmentTypeAuto,
 					IsActive:        true,
 					SKUs: []upstream.UpstreamSKU{
-						{ID: 201, SKUCode: "SKU-A", SpecValues: models.JSON{"name": "A"}, PriceAmount: "10.00", IsActive: true},
+						{ID: 201, SKUCode: "SKU-A", SpecValues: jsonmap.JSON{"name": "A"}, PriceAmount: "10.00", IsActive: true},
 					},
 				},
 			})
@@ -216,7 +217,7 @@ func TestBatchImportUpstreamProductsRestoresSoftDeletedAutoCategory(t *testing.T
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok": true,
 				"categories": []upstream.UpstreamCategory{
-					{ID: 9, Slug: "upstream-streaming", Name: models.JSON{"zh-CN": "流媒体"}},
+					{ID: 9, Slug: "upstream-streaming", Name: jsonmap.JSON{"zh-CN": "流媒体"}},
 				},
 			})
 		case "/api/v1/upstream/products/101":
@@ -225,13 +226,13 @@ func TestBatchImportUpstreamProductsRestoresSoftDeletedAutoCategory(t *testing.T
 				"product": upstream.UpstreamProduct{
 					ID:              101,
 					CategoryID:      9,
-					Title:           models.JSON{"zh-CN": "上游商品"},
+					Title:           jsonmap.JSON{"zh-CN": "上游商品"},
 					PriceAmount:     "10.00",
 					Currency:        "CNY",
 					FulfillmentType: constants.FulfillmentTypeAuto,
 					IsActive:        true,
 					SKUs: []upstream.UpstreamSKU{
-						{ID: 201, SKUCode: "SKU-A", SpecValues: models.JSON{"name": "A"}, PriceAmount: "10.00", IsActive: true},
+						{ID: 201, SKUCode: "SKU-A", SpecValues: jsonmap.JSON{"name": "A"}, PriceAmount: "10.00", IsActive: true},
 					},
 				},
 			})
@@ -243,7 +244,7 @@ func TestBatchImportUpstreamProductsRestoresSoftDeletedAutoCategory(t *testing.T
 
 	deletedCategory := models.Category{
 		Slug:     "upstream-streaming",
-		NameJSON: models.JSON{"zh-CN": "已删除分类"},
+		NameJSON: jsonmap.JSON{"zh-CN": "已删除分类"},
 		IsActive: true,
 	}
 	if err := db.Create(&deletedCategory).Error; err != nil {

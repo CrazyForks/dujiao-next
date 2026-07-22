@@ -16,6 +16,7 @@ import (
 	"github.com/dujiao-next/internal/modules/content"
 	contentgormstore "github.com/dujiao-next/internal/modules/content/store/gormstore"
 	dashboardgormstore "github.com/dujiao-next/internal/modules/dashboard/store/gormstore"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/driver/postgres"
@@ -78,7 +79,7 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 
 	category := &models.Category{
 		Slug:     "pg-category",
-		NameJSON: models.JSON{"zh-CN": "Postgres 分类"},
+		NameJSON: jsonmap.JSON{"zh-CN": "Postgres 分类"},
 	}
 	if err := db.Create(category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
@@ -88,8 +89,8 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 	product := &models.Product{
 		CategoryID:       category.ID,
 		Slug:             "pg-product-rocket",
-		TitleJSON:        models.JSON{"zh-CN": "火箭会员"},
-		DescriptionJSON:  models.JSON{"en-US": "rocket booster package"},
+		TitleJSON:        jsonmap.JSON{"zh-CN": "火箭会员"},
+		DescriptionJSON:  jsonmap.JSON{"en-US": "rocket booster package"},
 		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(99)),
 		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
@@ -126,7 +127,7 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 	post := &models.Post{
 		Slug:        "pg-post-release",
 		Type:        "notice",
-		TitleJSON:   models.JSON{"en-US": "Release Notes"},
+		TitleJSON:   jsonmap.JSON{"en-US": "Release Notes"},
 		IsPublished: true,
 	}
 	if err := postStore.Create(ctx, post); err != nil {
@@ -149,7 +150,7 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 	banner := &models.Banner{
 		Name:      "pg-home-banner",
 		Position:  "home",
-		TitleJSON: models.JSON{"zh-CN": "春季大促"},
+		TitleJSON: jsonmap.JSON{"zh-CN": "春季大促"},
 		Image:     "/banner.png",
 		LinkType:  "none",
 		IsActive:  true,
@@ -178,9 +179,9 @@ func TestPostgresContentGormStoresPreserveQuerySemantics(t *testing.T) {
 	newer := now.Add(-time.Hour)
 
 	posts := []models.Post{
-		{Slug: "pg-content-older", Type: constants.PostTypeBlog, TitleJSON: models.JSON{"zh-CN": "模块化指南"}, IsPublished: true, PublishedAt: &older},
-		{Slug: "pg-content-newer", Type: constants.PostTypeBlog, TitleJSON: models.JSON{"zh-CN": "模块化指南新版"}, IsPublished: true, PublishedAt: &newer},
-		{Slug: "pg-content-draft", Type: constants.PostTypeBlog, TitleJSON: models.JSON{"zh-CN": "模块化指南草稿"}, IsPublished: false},
+		{Slug: "pg-content-older", Type: constants.PostTypeBlog, TitleJSON: jsonmap.JSON{"zh-CN": "模块化指南"}, IsPublished: true, PublishedAt: &older},
+		{Slug: "pg-content-newer", Type: constants.PostTypeBlog, TitleJSON: jsonmap.JSON{"zh-CN": "模块化指南新版"}, IsPublished: true, PublishedAt: &newer},
+		{Slug: "pg-content-draft", Type: constants.PostTypeBlog, TitleJSON: jsonmap.JSON{"zh-CN": "模块化指南草稿"}, IsPublished: false},
 	}
 	for index := range posts {
 		if err := db.Create(&posts[index]).Error; err != nil {
@@ -210,7 +211,7 @@ func TestPostgresContentGormStoresPreserveQuerySemantics(t *testing.T) {
 	rollbackPost := &models.Post{
 		Slug:      "pg-content-rollback",
 		Type:      constants.PostTypeBlog,
-		TitleJSON: models.JSON{"zh-CN": "事务回滚"},
+		TitleJSON: jsonmap.JSON{"zh-CN": "事务回滚"},
 	}
 	forcedRollback := errors.New("forced content transaction rollback")
 	err = postStore.WithinPostWriteTransaction(ctx, func(posts content.PostStore, relations content.PostProductRelationStore) error {
@@ -236,7 +237,7 @@ func TestPostgresContentGormStoresPreserveQuerySemantics(t *testing.T) {
 	banner := models.Banner{
 		Name:      "pg-content-banner",
 		Position:  constants.BannerPositionHomeHero,
-		TitleJSON: models.JSON{"en-US": "Modular launch"},
+		TitleJSON: jsonmap.JSON{"en-US": "Modular launch"},
 		Image:     "/pg-content.png",
 		LinkType:  constants.BannerLinkTypeNone,
 		IsActive:  true,
@@ -279,7 +280,7 @@ func TestPostgresDashboardQueries(t *testing.T) {
 
 	category := &models.Category{
 		Slug:     "pg-dashboard-category",
-		NameJSON: models.JSON{"zh-CN": "仪表盘分类"},
+		NameJSON: jsonmap.JSON{"zh-CN": "仪表盘分类"},
 	}
 	if err := db.Create(category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
@@ -288,7 +289,7 @@ func TestPostgresDashboardQueries(t *testing.T) {
 	product := &models.Product{
 		CategoryID:      category.ID,
 		Slug:            "pg-dashboard-product",
-		TitleJSON:       models.JSON{"zh-CN": "仪表盘商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "仪表盘商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(120)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -315,7 +316,7 @@ func TestPostgresDashboardQueries(t *testing.T) {
 	orderItem := &models.OrderItem{
 		OrderID:           order.ID,
 		ProductID:         product.ID,
-		TitleJSON:         models.JSON{"zh-CN": "仪表盘商品"},
+		TitleJSON:         jsonmap.JSON{"zh-CN": "仪表盘商品"},
 		UnitPrice:         models.NewMoneyFromDecimal(decimal.NewFromInt(120)),
 		Quantity:          2,
 		TotalPrice:        models.NewMoneyFromDecimal(decimal.NewFromInt(240)),

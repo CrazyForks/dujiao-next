@@ -9,14 +9,15 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
 
 // BuildLocalRefundRecordsForOrder 构建订单关联的本地退款记录列表。
 // 仅返回本地 order_refund_records 数据，不透传更上游退款记录。
-func (s *OrderService) BuildLocalRefundRecordsForOrder(order *models.Order) ([]models.JSON, error) {
-	recordsJSON := make([]models.JSON, 0)
+func (s *OrderService) BuildLocalRefundRecordsForOrder(order *models.Order) ([]jsonmap.JSON, error) {
+	recordsJSON := make([]jsonmap.JSON, 0)
 	if order == nil || s.orderRefundRecordRepo == nil {
 		return recordsJSON, nil
 	}
@@ -52,9 +53,9 @@ func (s *OrderService) BuildLocalRefundRecordsForOrder(order *models.Order) ([]m
 		return records[i].CreatedAt.Before(records[j].CreatedAt)
 	})
 
-	recordsJSON = make([]models.JSON, 0, len(records))
+	recordsJSON = make([]jsonmap.JSON, 0, len(records))
 	for idx, record := range records {
-		recordsJSON = append(recordsJSON, models.JSON{
+		recordsJSON = append(recordsJSON, jsonmap.JSON{
 			// 不暴露内部退款主键，统一返回列表序号。
 			"id":          idx + 1,
 			"user_id":     record.UserID,

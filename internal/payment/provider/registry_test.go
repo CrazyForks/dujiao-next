@@ -4,16 +4,16 @@ import (
 	"context"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 type fakeProvider struct{ typ string }
 
 func (f *fakeProvider) Type() string { return f.typ }
-func (f *fakeProvider) ValidateConfig(_ models.JSON, _ string) error {
+func (f *fakeProvider) ValidateConfig(_ jsonmap.JSON, _ string) error {
 	return nil
 }
-func (f *fakeProvider) CreatePayment(_ context.Context, _ models.JSON, _ CreateInput) (*CreateResult, error) {
+func (f *fakeProvider) CreatePayment(_ context.Context, _ jsonmap.JSON, _ CreateInput) (*CreateResult, error) {
 	return &CreateResult{ProviderRef: f.typ + "-ref"}, nil
 }
 

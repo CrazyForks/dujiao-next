@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -26,11 +27,11 @@ func (p emptyProviderRefProvider) Type() string {
 	return constants.PaymentProviderOfficial + ":" + constants.PaymentChannelTypeWechat
 }
 
-func (p emptyProviderRefProvider) ValidateConfig(models.JSON, string) error {
+func (p emptyProviderRefProvider) ValidateConfig(jsonmap.JSON, string) error {
 	return nil
 }
 
-func (p emptyProviderRefProvider) CreatePayment(_ context.Context, _ models.JSON, input provider.CreateInput) (*provider.CreateResult, error) {
+func (p emptyProviderRefProvider) CreatePayment(_ context.Context, _ jsonmap.JSON, input provider.CreateInput) (*provider.CreateResult, error) {
 	if p.onCreate != nil {
 		p.onCreate(input)
 	}
@@ -162,7 +163,7 @@ func TestApplyProviderPaymentFallsBackToWechatGatewayOrderNoWhenProviderRefEmpty
 		ChannelType:     constants.PaymentChannelTypeWechat,
 		InteractionMode: constants.PaymentInteractionQR,
 		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		ConfigJSON: models.JSON{
+		ConfigJSON: jsonmap.JSON{
 			"notify_url": "https://api.example.com/api/v1/payments/callback",
 		},
 		CreatedAt: now,
@@ -249,7 +250,7 @@ func TestApplyProviderPaymentStoresDisplayChannelType(t *testing.T) {
 		ChannelType:     constants.PaymentChannelTypeWechat,
 		InteractionMode: constants.PaymentInteractionQR,
 		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		ConfigJSON: models.JSON{
+		ConfigJSON: jsonmap.JSON{
 			"notify_url": "https://api.example.com/api/v1/payments/callback",
 		},
 		CreatedAt: now,
@@ -325,7 +326,7 @@ func TestPaymentDisplayChannelTypeLifecycle(t *testing.T) {
 		ChannelType:     constants.PaymentProviderBepusdt,
 		InteractionMode: constants.PaymentInteractionRedirect,
 		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		ConfigJSON: models.JSON{
+		ConfigJSON: jsonmap.JSON{
 			"notify_url": "https://api.example.com/api/v1/payments/callback",
 		},
 		CreatedAt: now,
@@ -376,7 +377,7 @@ func TestPaymentDisplayChannelTypeLifecycle(t *testing.T) {
 		Amount:      payment.Amount,
 		Currency:    payment.Currency,
 		PaidAt:      &paidAt,
-		Payload: models.JSON{
+		Payload: jsonmap.JSON{
 			"trade_id": "BEP-CALLBACK-1",
 			"status":   float64(2),
 		},
@@ -458,7 +459,7 @@ func TestApplyProviderPaymentUsesGatewayOrderNoForBepusdt(t *testing.T) {
 		ChannelType:     constants.PaymentChannelTypeUsdtTrc20,
 		InteractionMode: constants.PaymentInteractionRedirect,
 		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		ConfigJSON: models.JSON{
+		ConfigJSON: jsonmap.JSON{
 			"gateway_url": server.URL,
 			"auth_token":  "token-001",
 			"trade_type":  "usdt.trc20",
@@ -556,7 +557,7 @@ func TestApplyProviderPaymentUsesGatewayOrderNoForOkpay(t *testing.T) {
 		ChannelType:     constants.PaymentChannelTypeUsdt,
 		InteractionMode: constants.PaymentInteractionQR,
 		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		ConfigJSON: models.JSON{
+		ConfigJSON: jsonmap.JSON{
 			"gateway_url":    server.URL,
 			"merchant_id":    "shop-1001",
 			"merchant_token": "token-1001",
@@ -644,7 +645,7 @@ func TestApplyProviderPaymentBuildsRedirectURLForEpay(t *testing.T) {
 		ChannelType:     constants.PaymentChannelTypeAlipay,
 		InteractionMode: constants.PaymentInteractionRedirect,
 		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		ConfigJSON: models.JSON{
+		ConfigJSON: jsonmap.JSON{
 			"gateway_url":  "https://gateway.example.com",
 			"epay_version": "v1",
 			"merchant_id":  "1001",
@@ -704,7 +705,7 @@ func TestValidateChannelRejectsInvalidEpayInteractionMode(t *testing.T) {
 		ProviderType:    constants.PaymentProviderEpay,
 		ChannelType:     constants.PaymentChannelTypeWechat,
 		InteractionMode: constants.PaymentInteractionPage,
-		ConfigJSON: models.JSON{
+		ConfigJSON: jsonmap.JSON{
 			"gateway_url":  "https://gateway.example.com",
 			"epay_version": "v1",
 			"merchant_id":  "1001",
@@ -724,7 +725,7 @@ func TestValidateChannelRejectsBepusdtCashierQR(t *testing.T) {
 		ProviderType:    constants.PaymentProviderBepusdt,
 		ChannelType:     constants.PaymentProviderBepusdt,
 		InteractionMode: constants.PaymentInteractionQR,
-		ConfigJSON: models.JSON{
+		ConfigJSON: jsonmap.JSON{
 			"gateway_url": "https://bepusdt.example.com",
 			"auth_token":  "token-001",
 			"order_mode":  constants.PaymentBepusdtOrderModeCashier,
@@ -745,7 +746,7 @@ func TestValidateChannelAllowsUnlimitedMaxAmount(t *testing.T) {
 		InteractionMode: constants.PaymentInteractionRedirect,
 		MinAmount:       models.NewMoneyFromDecimal(decimal.RequireFromString("10.00")),
 		MaxAmount:       models.NewMoneyFromDecimal(decimal.Zero),
-		ConfigJSON: models.JSON{
+		ConfigJSON: jsonmap.JSON{
 			"gateway_url":  "https://gateway.example.com",
 			"epay_version": "v1",
 			"merchant_id":  "1001",

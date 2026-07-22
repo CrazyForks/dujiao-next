@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/tokenpay"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -33,7 +34,7 @@ func (a *tokenpayAdapter) Type() string {
 }
 
 // parseConfig 解析并验证 tokenpay Config。tokenpay 不需要 interactionMode。
-func (a *tokenpayAdapter) parseConfig(raw models.JSON) (*tokenpay.Config, error) {
+func (a *tokenpayAdapter) parseConfig(raw jsonmap.JSON) (*tokenpay.Config, error) {
 	cfg, err := tokenpay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapTokenpayError(err)
@@ -46,13 +47,13 @@ func (a *tokenpayAdapter) parseConfig(raw models.JSON) (*tokenpay.Config, error)
 }
 
 // ValidateConfig 验证 channel.ConfigJSON。
-func (a *tokenpayAdapter) ValidateConfig(raw models.JSON, _ string) error {
+func (a *tokenpayAdapter) ValidateConfig(raw jsonmap.JSON, _ string) error {
 	_, err := a.parseConfig(raw)
 	return err
 }
 
 // CreatePayment 创建支付。tokenpay 单 channel type，不需要 IsSupportedChannelType 校验。
-func (a *tokenpayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
+func (a *tokenpayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input CreateInput) (*CreateResult, error) {
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
@@ -93,13 +94,13 @@ func (a *tokenpayAdapter) CreatePayment(ctx context.Context, raw models.JSON, in
 		ProviderRef: result.TokenOrderID,
 		RedirectURL: result.PayURL,
 		QRCodeURL:   qrCode,
-		Payload:     models.JSON(result.Raw),
+		Payload:     jsonmap.JSON(result.Raw),
 	}, nil
 }
 
 // VerifyCallback 实现 CallbackVerifier。tokenpay 用 JSON POST body，form 参数忽略。
 // 注意：tokenpay.VerifyCallback 签名特殊，第一参数 data，第二参数 notifySecret string。
-func (a *tokenpayAdapter) VerifyCallback(raw models.JSON, _ map[string][]string, body []byte) (*CallbackResult, error) {
+func (a *tokenpayAdapter) VerifyCallback(raw jsonmap.JSON, _ map[string][]string, body []byte) (*CallbackResult, error) {
 	cfg, err := tokenpay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapTokenpayError(err)
@@ -139,11 +140,11 @@ func (a *tokenpayAdapter) VerifyCallback(raw models.JSON, _ map[string][]string,
 	}
 
 	// Payload 通过 json.Marshal/Unmarshal CallbackData 序列化
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	if pb, marshalErr := json.Marshal(data); marshalErr == nil {
 		var m map[string]interface{}
 		if jsonErr := json.Unmarshal(pb, &m); jsonErr == nil {
-			payload = models.JSON(m)
+			payload = jsonmap.JSON(m)
 		}
 	}
 

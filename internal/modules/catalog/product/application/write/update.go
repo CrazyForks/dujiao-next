@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -39,12 +40,12 @@ func (s *WriteService) Update(id string, input CreateProductInput) (*models.Prod
 	product.CategoryID = input.CategoryID
 	product.Category = models.Category{}
 	product.Slug = input.Slug
-	product.SeoMetaJSON = models.JSON(input.SeoMetaJSON)
-	product.TitleJSON = models.JSON(input.TitleJSON)
-	product.DescriptionJSON = models.JSON(input.DescriptionJSON)
-	product.ContentJSON = models.JSON(input.ContentJSON)
-	product.InstructionsJSON = models.JSON(input.InstructionsJSON)
-	product.ManualFormSchemaJSON = models.JSON{}
+	product.SeoMetaJSON = jsonmap.JSON(input.SeoMetaJSON)
+	product.TitleJSON = jsonmap.JSON(input.TitleJSON)
+	product.DescriptionJSON = jsonmap.JSON(input.DescriptionJSON)
+	product.ContentJSON = jsonmap.JSON(input.ContentJSON)
+	product.InstructionsJSON = jsonmap.JSON(input.InstructionsJSON)
+	product.ManualFormSchemaJSON = jsonmap.JSON{}
 	product.PriceAmount = models.NewMoneyFromDecimal(priceAmount)
 	product.SortOrder = input.SortOrder
 	product.Images = models.StringArray(input.Images)
@@ -97,7 +98,7 @@ func (s *WriteService) Update(id string, input CreateProductInput) (*models.Prod
 	}
 	product.FulfillmentType = fulfillmentType
 	if fulfillmentType == constants.FulfillmentTypeManual {
-		normalizedSchemaJSON, err := manualform.NormalizeSchema(models.JSON(input.ManualFormSchemaJSON))
+		normalizedSchemaJSON, err := manualform.NormalizeSchema(jsonmap.JSON(input.ManualFormSchemaJSON))
 		if err != nil {
 			return nil, err
 		}

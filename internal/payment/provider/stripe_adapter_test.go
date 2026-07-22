@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/stripe"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -25,7 +26,7 @@ func TestStripeAdapter_Type(t *testing.T) {
 func TestStripeAdapter_ValidateConfig_InvalidIsMapped(t *testing.T) {
 	a := NewStripeAdapter()
 	// 缺 secret_key，应被 stripe.ValidateConfig 拒绝
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"webhook_secret":       "whsec_x",
 		"success_url":          "https://example.com/s",
 		"cancel_url":           "https://example.com/c",
@@ -43,7 +44,7 @@ func TestStripeAdapter_ValidateConfig_InvalidIsMapped(t *testing.T) {
 
 func TestStripeAdapter_CreatePayment_ConfigInvalidMapped(t *testing.T) {
 	a := NewStripeAdapter()
-	raw := models.JSON{} // 空 config
+	raw := jsonmap.JSON{} // 空 config
 	_, err := a.CreatePayment(context.Background(), raw, CreateInput{
 		OrderNo:  "ORDER_1",
 		Currency: "USD",
@@ -73,7 +74,7 @@ func TestStripeAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 	defer server.Close()
 
 	a := NewStripeAdapter()
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"secret_key":           "sk_test_abc",
 		"webhook_secret":       "whsec_xyz",
 		"success_url":          "https://shop.example.com/success",
@@ -126,7 +127,7 @@ func TestStripeAdapter_CreatePayment_NoExchangeRate_AmountSentEqualsOriginal(t *
 	defer server.Close()
 
 	a := NewStripeAdapter()
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"secret_key":           "sk_test_abc",
 		"webhook_secret":       "whsec_xyz",
 		"success_url":          "https://shop.example.com/success",

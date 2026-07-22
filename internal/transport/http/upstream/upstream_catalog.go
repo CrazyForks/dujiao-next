@@ -10,28 +10,29 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
 
 // upstreamCategory 上游分类响应格式
 type upstreamCategory struct {
-	ID        uint        `json:"id"`
-	ParentID  uint        `json:"parent_id"`
-	Slug      string      `json:"slug"`
-	Name      models.JSON `json:"name"`
-	Icon      string      `json:"icon"`
-	SortOrder int         `json:"sort_order"`
+	ID        uint         `json:"id"`
+	ParentID  uint         `json:"parent_id"`
+	Slug      string       `json:"slug"`
+	Name      jsonmap.JSON `json:"name"`
+	Icon      string       `json:"icon"`
+	SortOrder int          `json:"sort_order"`
 }
 
 // upstreamProduct 上游商品响应格式
 type upstreamProduct struct {
 	ID               uint                       `json:"id"`
 	Slug             string                     `json:"slug"`
-	SeoMeta          models.JSON                `json:"seo_meta"`
-	Title            models.JSON                `json:"title"`
-	Description      models.JSON                `json:"description"`
-	Content          models.JSON                `json:"content"`
+	SeoMeta          jsonmap.JSON               `json:"seo_meta"`
+	Title            jsonmap.JSON               `json:"title"`
+	Description      jsonmap.JSON               `json:"description"`
+	Content          jsonmap.JSON               `json:"content"`
 	Images           models.StringArray         `json:"images"`
 	Tags             models.StringArray         `json:"tags"`
 	PriceAmount      string                     `json:"price_amount"`
@@ -39,7 +40,7 @@ type upstreamProduct struct {
 	MemberPrice      string                     `json:"member_price,omitempty"`
 	WholesalePrices  models.WholesalePriceTiers `json:"wholesale_prices,omitempty"`
 	FulfillmentType  string                     `json:"fulfillment_type"`
-	ManualFormSchema models.JSON                `json:"manual_form_schema"`
+	ManualFormSchema jsonmap.JSON               `json:"manual_form_schema"`
 	IsActive         bool                       `json:"is_active"`
 	CategoryID       uint                       `json:"category_id"`
 	SKUs             []upstreamSKU              `json:"skus"`
@@ -48,15 +49,15 @@ type upstreamProduct struct {
 }
 
 type upstreamSKU struct {
-	ID            uint        `json:"id"`
-	SKUCode       string      `json:"sku_code"`
-	SpecValues    models.JSON `json:"spec_values"`
-	PriceAmount   string      `json:"price_amount"`
-	OriginalPrice string      `json:"original_price,omitempty"`
-	MemberPrice   string      `json:"member_price,omitempty"`
-	StockStatus   string      `json:"stock_status"`
-	StockQuantity int         `json:"stock_quantity"`
-	IsActive      bool        `json:"is_active"`
+	ID            uint         `json:"id"`
+	SKUCode       string       `json:"sku_code"`
+	SpecValues    jsonmap.JSON `json:"spec_values"`
+	PriceAmount   string       `json:"price_amount"`
+	OriginalPrice string       `json:"original_price,omitempty"`
+	MemberPrice   string       `json:"member_price,omitempty"`
+	StockStatus   string       `json:"stock_status"`
+	StockQuantity int          `json:"stock_quantity"`
+	IsActive      bool         `json:"is_active"`
 }
 
 // ListCategories GET /api/v1/upstream/categories

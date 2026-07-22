@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
 
@@ -17,7 +18,7 @@ func TestResellerLedgerRespOmitsSensitiveSnapshotFields(t *testing.T) {
 		Amount:         models.NewMoneyFromDecimal(decimal.RequireFromString("12.34")),
 		Currency:       "USD",
 		IdempotencyKey: "order_profit:10",
-		MetadataJSON:   models.JSON{"pricing_snapshot_json": "hidden"},
+		MetadataJSON:   jsonmap.JSON{"pricing_snapshot_json": "hidden"},
 		Status:         models.ResellerLedgerStatusAvailable,
 	}
 
@@ -95,13 +96,13 @@ func TestResellerSiteConfigRespUsesSafeFields(t *testing.T) {
 		SiteName:   "Alice Store",
 		Logo:       "/uploads/logo.png",
 		Favicon:    "/uploads/favicon.png",
-		SupportJSON: models.JSON{
+		SupportJSON: jsonmap.JSON{
 			"telegram": "https://t.me/alice",
 		},
-		SEOJSON: models.JSON{
+		SEOJSON: jsonmap.JSON{
 			"title": map[string]interface{}{"zh-CN": "标题"},
 		},
-		FooterLinksJSON: models.JSON{
+		FooterLinksJSON: jsonmap.JSON{
 			"items": []interface{}{map[string]interface{}{"url": "https://example.test"}},
 		},
 	}

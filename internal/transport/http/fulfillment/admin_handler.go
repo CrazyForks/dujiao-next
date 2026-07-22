@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,7 +24,7 @@ type CreateManualInput struct {
 	OrderID      uint
 	AdminID      uint
 	Payload      string
-	DeliveryData models.JSON
+	DeliveryData jsonmap.JSON
 }
 
 // ManualCreator 管理端录入交付端口。
@@ -54,9 +55,9 @@ func NewAdminHandler(creator ManualCreator, orders AdminOrderReader) *AdminHandl
 
 // AdminCreateFulfillmentRequest 管理端录入交付请求。
 type AdminCreateFulfillmentRequest struct {
-	OrderID      uint        `json:"order_id" binding:"required"`
-	Payload      string      `json:"payload"`
-	DeliveryData models.JSON `json:"delivery_data"`
+	OrderID      uint         `json:"order_id" binding:"required"`
+	Payload      string       `json:"payload"`
+	DeliveryData jsonmap.JSON `json:"delivery_data"`
 }
 
 // AdminCreateFulfillment 管理端录入交付内容。

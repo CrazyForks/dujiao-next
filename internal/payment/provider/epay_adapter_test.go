@@ -15,6 +15,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/epay"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -29,7 +30,7 @@ func TestEpayAdapter_Type(t *testing.T) {
 
 func TestEpayAdapter_ValidateConfig_UnsupportedChannel(t *testing.T) {
 	a := NewEpayAdapter()
-	err := a.ValidateConfig(models.JSON{}, "no-such-channel-type")
+	err := a.ValidateConfig(jsonmap.JSON{}, "no-such-channel-type")
 	if err == nil {
 		t.Fatalf("expected error for unsupported channel")
 	}
@@ -42,7 +43,7 @@ func TestEpayAdapter_CreatePayment_ConfigInvalidMapped(t *testing.T) {
 	a := NewEpayAdapter()
 	// 传一个 epay.IsSupportedChannelType 接受的 channelType(让校验过),
 	// 但 config 空导致 ParseConfig/ValidateConfig 失败
-	_, err := a.CreatePayment(context.Background(), models.JSON{}, CreateInput{
+	_, err := a.CreatePayment(context.Background(), jsonmap.JSON{}, CreateInput{
 		OrderNo:     "ORDER_1",
 		Currency:    "CNY",
 		ChannelType: "alipay", // epay 支持 alipay/wxpay/qqpay
@@ -68,7 +69,7 @@ func TestEpayAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 	defer server.Close()
 
 	a := NewEpayAdapter()
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"gateway_url":  server.URL,
 		"epay_version": "v1",
 		"merchant_id":  "M-AUDIT",
@@ -88,7 +89,7 @@ func TestEpayAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 		Amount:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		ChannelType: "alipay", // epay 支持 alipay/wxpay/qqpay
 		ClientIP:    "127.0.0.1",
-		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionQR},
+		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},
 	}
 
 	result, err := a.CreatePayment(context.Background(), raw, input)
@@ -116,7 +117,7 @@ func TestEpayAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 
 func TestEpayAdapter_VerifyCallbackRejectsMerchantMismatch(t *testing.T) {
 	a := NewEpayAdapter()
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"gateway_url":  "https://epay.example.com",
 		"epay_version": "v1",
 		"merchant_id":  "1001",

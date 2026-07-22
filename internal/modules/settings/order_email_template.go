@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 var ErrOrderEmailTemplateConfigInvalid = errors.New("order email template config invalid")
@@ -275,9 +275,9 @@ func ValidateOrderEmailTemplateSetting(setting OrderEmailTemplateSetting) error 
 // --- ToMap / Mask ---
 
 // EncodeOrderEmailTemplateSetting 序列化为 settings 表结构。
-func EncodeOrderEmailTemplateSetting(setting OrderEmailTemplateSetting) models.JSON {
+func EncodeOrderEmailTemplateSetting(setting OrderEmailTemplateSetting) jsonmap.JSON {
 	normalized := NormalizeOrderEmailTemplateSetting(setting)
-	return models.JSON{
+	return jsonmap.JSON{
 		"templates": map[string]interface{}{
 			"default":                orderEmailSceneTemplateToMap(normalized.Templates.Default),
 			"paid":                   orderEmailSceneTemplateToMap(normalized.Templates.Paid),
@@ -318,7 +318,7 @@ func orderEmailSceneTemplateToMap(t OrderEmailSceneTemplate) map[string]interfac
 }
 
 // MaskOrderEmailTemplateSettingForAdmin 返回管理端可用配置（无敏感字段）
-func MaskOrderEmailTemplateSettingForAdmin(setting OrderEmailTemplateSetting) models.JSON {
+func MaskOrderEmailTemplateSettingForAdmin(setting OrderEmailTemplateSetting) jsonmap.JSON {
 	return EncodeOrderEmailTemplateSetting(setting)
 }
 
@@ -417,7 +417,7 @@ func ResolveOrderEmailGuestTip(tip OrderEmailGuestTip, locale string) string {
 
 // --- JSON 解析 ---
 
-func DecodeOrderEmailTemplateSetting(raw models.JSON, fallback OrderEmailTemplateSetting) OrderEmailTemplateSetting {
+func DecodeOrderEmailTemplateSetting(raw jsonmap.JSON, fallback OrderEmailTemplateSetting) OrderEmailTemplateSetting {
 	next := fallback
 	if raw == nil {
 		return next

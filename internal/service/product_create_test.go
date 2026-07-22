@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
 
@@ -14,7 +15,7 @@ func TestProductServiceCreateRejectsParentCategoryWithChildren(t *testing.T) {
 
 	parent := models.Category{
 		Slug:     "games",
-		NameJSON: models.JSON{"zh-CN": "games"},
+		NameJSON: jsonmap.JSON{"zh-CN": "games"},
 	}
 	if err := db.Create(&parent).Error; err != nil {
 		t.Fatalf("create parent category failed: %v", err)
@@ -22,7 +23,7 @@ func TestProductServiceCreateRejectsParentCategoryWithChildren(t *testing.T) {
 	child := models.Category{
 		ParentID: parent.ID,
 		Slug:     "steam",
-		NameJSON: models.JSON{"zh-CN": "steam"},
+		NameJSON: jsonmap.JSON{"zh-CN": "steam"},
 	}
 	if err := db.Create(&child).Error; err != nil {
 		t.Fatalf("create child category failed: %v", err)
@@ -50,7 +51,7 @@ func TestProductServiceCreateFiltersUnavailablePaymentChannels(t *testing.T) {
 
 	category := models.Category{
 		Slug:     "payment-channel-category",
-		NameJSON: models.JSON{"zh-CN": "payment-channel-category"},
+		NameJSON: jsonmap.JSON{"zh-CN": "payment-channel-category"},
 	}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
@@ -86,7 +87,7 @@ func TestProductServiceCreateFiltersUnavailablePaymentChannels(t *testing.T) {
 func TestProductServiceCreateRejectsInvalidPurchaseLimits(t *testing.T) {
 	svc, db := newProductServiceForTest(t)
 
-	cat := models.Category{Slug: "test-purchase-limit", NameJSON: models.JSON{"zh-CN": "test"}}
+	cat := models.Category{Slug: "test-purchase-limit", NameJSON: jsonmap.JSON{"zh-CN": "test"}}
 	if err := db.Create(&cat).Error; err != nil {
 		t.Fatalf("create category: %v", err)
 	}
@@ -113,7 +114,7 @@ func TestProductServiceCreateRollsBackProductAndSKUWhenWholesaleValidationFails(
 	svc, db := newProductServiceForTest(t)
 	category := models.Category{
 		Slug:     "write-rollback-category",
-		NameJSON: models.JSON{"zh-CN": "write-rollback-category"},
+		NameJSON: jsonmap.JSON{"zh-CN": "write-rollback-category"},
 	}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category: %v", err)

@@ -11,6 +11,7 @@ import (
 	telegrammodule "github.com/dujiao-next/internal/modules/telegram"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // TelegramBroadcastListInput Telegram 广播列表参数。
@@ -33,13 +34,13 @@ type TelegramBroadcastUserQuery struct {
 
 // TelegramBroadcastCreateInput Telegram 广播创建参数。
 type TelegramBroadcastCreateInput struct {
-	Title          string      `json:"title"`
-	RecipientType  string      `json:"recipient_type"`
-	UserIDs        []uint      `json:"user_ids"`
-	Filters        models.JSON `json:"filters"`
-	AttachmentURL  string      `json:"attachment_url"`
-	AttachmentName string      `json:"attachment_name"`
-	MessageHTML    string      `json:"message_html"`
+	Title          string       `json:"title"`
+	RecipientType  string       `json:"recipient_type"`
+	UserIDs        []uint       `json:"user_ids"`
+	Filters        jsonmap.JSON `json:"filters"`
+	AttachmentURL  string       `json:"attachment_url"`
+	AttachmentName string       `json:"attachment_name"`
+	MessageHTML    string       `json:"message_html"`
 }
 
 // TelegramBroadcastService Telegram 广播服务。
@@ -220,10 +221,10 @@ func (s *TelegramBroadcastService) ProcessBroadcast(ctx context.Context, broadca
 	return s.repo.Update(broadcast)
 }
 
-func (s *TelegramBroadcastService) resolveRecipients(input TelegramBroadcastCreateInput) ([]string, models.JSON, error) {
+func (s *TelegramBroadcastService) resolveRecipients(input TelegramBroadcastCreateInput) ([]string, jsonmap.JSON, error) {
 	filtersSnapshot := cloneJSONMap(input.Filters)
 	if filtersSnapshot == nil {
-		filtersSnapshot = models.JSON{}
+		filtersSnapshot = jsonmap.JSON{}
 	}
 
 	var (
@@ -309,11 +310,11 @@ func (s *TelegramBroadcastService) markBroadcastFailed(broadcast *models.Telegra
 	return s.repo.Update(broadcast)
 }
 
-func cloneJSONMap(source models.JSON) models.JSON {
+func cloneJSONMap(source jsonmap.JSON) jsonmap.JSON {
 	if source == nil {
 		return nil
 	}
-	result := make(models.JSON, len(source))
+	result := make(jsonmap.JSON, len(source))
 	for key, value := range source {
 		result[key] = value
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
 
@@ -14,7 +15,7 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 
 	category := models.Category{
 		Slug:     "auto-card-secret-category",
-		NameJSON: models.JSON{"zh-CN": "auto-card-secret-category"},
+		NameJSON: jsonmap.JSON{"zh-CN": "auto-card-secret-category"},
 	}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
@@ -23,7 +24,7 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 	product := models.Product{
 		CategoryID:      category.ID,
 		Slug:            "auto-card-secret-product",
-		TitleJSON:       models.JSON{"zh-CN": "auto-card-secret-product"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "auto-card-secret-product"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
@@ -36,7 +37,7 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 	stockSKU := models.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        "SKU-STOCK",
-		SpecValuesJSON: models.JSON{"zh-CN": "有库存"},
+		SpecValuesJSON: jsonmap.JSON{"zh-CN": "有库存"},
 		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
 		SortOrder:      2,
@@ -44,7 +45,7 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 	spareSKU := models.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        "SKU-SPARE",
-		SpecValuesJSON: models.JSON{"zh-CN": "无库存"},
+		SpecValuesJSON: jsonmap.JSON{"zh-CN": "无库存"},
 		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
 		SortOrder:      1,

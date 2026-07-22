@@ -10,17 +10,18 @@ import (
 	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
 
 type createOrderRequest struct {
-	SKUID             uint        `json:"sku_id" binding:"required"`
-	Quantity          int         `json:"quantity" binding:"required,min=1"`
-	ManualFormData    models.JSON `json:"manual_form_data"`
-	DownstreamOrderNo string      `json:"downstream_order_no"`
-	TraceID           string      `json:"trace_id"`
-	CallbackURL       string      `json:"callback_url"`
+	SKUID             uint         `json:"sku_id" binding:"required"`
+	Quantity          int          `json:"quantity" binding:"required,min=1"`
+	ManualFormData    jsonmap.JSON `json:"manual_form_data"`
+	DownstreamOrderNo string       `json:"downstream_order_no"`
+	TraceID           string       `json:"trace_id"`
+	CallbackURL       string       `json:"callback_url"`
 }
 
 // CreateOrder POST /api/v1/upstream/orders
@@ -86,9 +87,9 @@ func (h *Handler) CreateOrder(c *gin.Context) {
 	}
 
 	// 构建手动表单数据
-	var manualFormData map[string]models.JSON
+	var manualFormData map[string]jsonmap.JSON
 	if req.ManualFormData != nil && product.FulfillmentType == constants.FulfillmentTypeManual {
-		manualFormData = map[string]models.JSON{
+		manualFormData = map[string]jsonmap.JSON{
 			fmt.Sprintf("%d", sku.ProductID): req.ManualFormData,
 		}
 	}
@@ -213,7 +214,7 @@ func (h *Handler) GetOrder(c *gin.Context) {
 	}
 
 	status := strings.ToLower(strings.TrimSpace(order.Status))
-	localRefundRecords := make([]models.JSON, 0)
+	localRefundRecords := make([]jsonmap.JSON, 0)
 
 	// 优先使用采购单视角的上游退款信息，避免订单状态与上游退款状态不一致。
 	if h.Procurements != nil {

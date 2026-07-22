@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/catalog"
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -34,7 +35,7 @@ func createCategoryFixture(t *testing.T, db *gorm.DB, slug string, parentID uint
 	category := models.Category{
 		ParentID: parentID,
 		Slug:     slug,
-		NameJSON: models.JSON{
+		NameJSON: jsonmap.JSON{
 			"zh-CN": slug,
 		},
 	}
@@ -50,7 +51,7 @@ func createProductFixture(t *testing.T, db *gorm.DB, categoryID uint, slug strin
 	product := models.Product{
 		CategoryID:  categoryID,
 		Slug:        slug,
-		TitleJSON:   models.JSON{"zh-CN": slug},
+		TitleJSON:   jsonmap.JSON{"zh-CN": slug},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
@@ -147,12 +148,12 @@ func TestCategoryServiceListSortOrderDescending(t *testing.T) {
 
 	high := models.Category{
 		Slug:      "high",
-		NameJSON:  models.JSON{"zh-CN": "high"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "high"},
 		SortOrder: 100,
 	}
 	low := models.Category{
 		Slug:      "low",
-		NameJSON:  models.JSON{"zh-CN": "low"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "low"},
 		SortOrder: 1,
 	}
 	if err := db.Create(&high).Error; err != nil {

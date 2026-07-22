@@ -5,15 +5,15 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestRegistryNormalizesRegisteredKeysAndPassesUnknownValuesThrough(t *testing.T) {
 	registry, err := NewRegistry(
 		Definition{
 			Key: "site_config",
-			Normalize: func(value models.JSON) models.JSON {
-				return models.JSON{"normalized": value["raw"]}
+			Normalize: func(value jsonmap.JSON) jsonmap.JSON {
+				return jsonmap.JSON{"normalized": value["raw"]}
 			},
 		},
 	)
@@ -21,12 +21,12 @@ func TestRegistryNormalizesRegisteredKeysAndPassesUnknownValuesThrough(t *testin
 		t.Fatalf("create registry: %v", err)
 	}
 
-	registered := models.JSON{"raw": "value"}
-	if got := registry.Normalize("site_config", registered); !reflect.DeepEqual(got, models.JSON{"normalized": "value"}) {
+	registered := jsonmap.JSON{"raw": "value"}
+	if got := registry.Normalize("site_config", registered); !reflect.DeepEqual(got, jsonmap.JSON{"normalized": "value"}) {
 		t.Fatalf("registered normalization mismatch: %#v", got)
 	}
 
-	unknown := models.JSON{"keep": "unchanged"}
+	unknown := jsonmap.JSON{"keep": "unchanged"}
 	if got := registry.Normalize("custom_config", unknown); !reflect.DeepEqual(got, unknown) {
 		t.Fatalf("unknown settings must pass through unchanged: %#v", got)
 	}
@@ -41,7 +41,7 @@ func TestRegistryRejectsInvalidDefinitions(t *testing.T) {
 		{
 			name: "empty key",
 			definitions: []Definition{{
-				Normalize: func(value models.JSON) models.JSON { return value },
+				Normalize: func(value jsonmap.JSON) jsonmap.JSON { return value },
 			}},
 			wantError: "key",
 		},
@@ -49,7 +49,7 @@ func TestRegistryRejectsInvalidDefinitions(t *testing.T) {
 			name: "surrounding whitespace",
 			definitions: []Definition{{
 				Key:       " site_config ",
-				Normalize: func(value models.JSON) models.JSON { return value },
+				Normalize: func(value jsonmap.JSON) jsonmap.JSON { return value },
 			}},
 			wantError: "whitespace",
 		},
@@ -63,8 +63,8 @@ func TestRegistryRejectsInvalidDefinitions(t *testing.T) {
 		{
 			name: "duplicate key",
 			definitions: []Definition{
-				{Key: "site_config", Normalize: func(value models.JSON) models.JSON { return value }},
-				{Key: "site_config", Normalize: func(value models.JSON) models.JSON { return value }},
+				{Key: "site_config", Normalize: func(value jsonmap.JSON) jsonmap.JSON { return value }},
+				{Key: "site_config", Normalize: func(value jsonmap.JSON) jsonmap.JSON { return value }},
 			},
 			wantError: "duplicate",
 		},
@@ -87,7 +87,7 @@ func TestRegistrySupportsEffectOnlyDefinitionsAndReturnsDetachedEffects(t *testi
 		Effects: declaredEffects,
 	})
 	declaredEffects[0] = Effect("mutated_after_construction")
-	input := models.JSON{"wallet_only_payment": true}
+	input := jsonmap.JSON{"wallet_only_payment": true}
 
 	if got := registry.Normalize("wallet_config", input); !reflect.DeepEqual(got, input) {
 		t.Fatalf("effect-only definition must pass values through: %#v", got)
@@ -107,7 +107,7 @@ func TestRegistrySupportsEffectOnlyDefinitionsAndReturnsDetachedEffects(t *testi
 }
 
 func TestRegistryRejectsInvalidEffects(t *testing.T) {
-	identity := func(value models.JSON) models.JSON { return value }
+	identity := func(value jsonmap.JSON) jsonmap.JSON { return value }
 	tests := []struct {
 		name       string
 		definition Definition
@@ -147,7 +147,7 @@ func TestRegistryRejectsInvalidEffects(t *testing.T) {
 }
 
 func TestRegistryKeysAreSortedAndDetached(t *testing.T) {
-	identity := func(value models.JSON) models.JSON { return value }
+	identity := func(value jsonmap.JSON) jsonmap.JSON { return value }
 	registry := MustNewRegistry(
 		Definition{Key: "zeta", Normalize: identity},
 		Definition{Key: "alpha", Normalize: identity},

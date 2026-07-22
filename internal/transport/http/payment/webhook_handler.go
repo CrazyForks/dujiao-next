@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,7 +33,7 @@ type PaymentWebhookService interface {
 
 // ExceptionAlerter 支付异常告警入队端口。
 type ExceptionAlerter interface {
-	EnqueuePaymentExceptionAlert(method, path, clientIP string, data models.JSON) error
+	EnqueuePaymentExceptionAlert(method, path, clientIP string, data jsonmap.JSON) error
 }
 
 // PaypalWebhookQuery PayPal webhook 查询参数。
@@ -101,7 +102,7 @@ func (h *WebhookHandler) PaypalWebhook(c *gin.Context) {
 			"event_type", eventType,
 			"error", err,
 		)
-		h.enqueuePaymentExceptionAlert(c, models.JSON{
+		h.enqueuePaymentExceptionAlert(c, jsonmap.JSON{
 			"alert_type":  "paypal_webhook_handle_failed",
 			"alert_level": "error",
 			"message":     strings.TrimSpace(err.Error()),
@@ -145,7 +146,7 @@ func (h *WebhookHandler) StripeWebhook(c *gin.Context) {
 			"event_type", eventType,
 			"error", err,
 		)
-		h.enqueuePaymentExceptionAlert(c, models.JSON{
+		h.enqueuePaymentExceptionAlert(c, jsonmap.JSON{
 			"alert_type":  "stripe_webhook_handle_failed",
 			"alert_level": "error",
 			"message":     strings.TrimSpace(err.Error()),
@@ -191,7 +192,7 @@ func (h *WebhookHandler) DujiaoPayWebhook(c *gin.Context) {
 			"event_type", eventType,
 			"error", err,
 		)
-		h.enqueuePaymentExceptionAlert(c, models.JSON{
+		h.enqueuePaymentExceptionAlert(c, jsonmap.JSON{
 			"alert_type":  "dujiaopay_webhook_handle_failed",
 			"alert_level": "error",
 			"message":     strings.TrimSpace(err.Error()),
@@ -246,7 +247,7 @@ func respondWebhookSuccess(c *gin.Context, log webhookLogger, prefix string, cha
 	})
 }
 
-func (h *WebhookHandler) enqueuePaymentExceptionAlert(c *gin.Context, data models.JSON) {
+func (h *WebhookHandler) enqueuePaymentExceptionAlert(c *gin.Context, data jsonmap.JSON) {
 	if h == nil || h.alerts == nil || c == nil || c.Request == nil {
 		return
 	}

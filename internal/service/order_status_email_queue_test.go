@@ -6,9 +6,9 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 type orderStatusEmailOrderRepoStub struct {
@@ -131,7 +131,7 @@ func TestEnqueueOrderStatusEmailTaskIfEligibleSkipWhenSMTPDisabled(t *testing.T)
 	})
 
 	repo := newMockSettingRepo()
-	repo.store[constants.SettingKeySMTPConfig] = models.JSON{
+	repo.store[constants.SettingKeySMTPConfig] = jsonmap.JSON{
 		"enabled": false,
 	}
 

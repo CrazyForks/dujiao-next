@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // LocalizedText 多语言文本 {"zh-CN": "...", "zh-TW": "...", "en-US": "..."}
@@ -223,8 +223,8 @@ func EncodeTelegramBotConfig(setting TelegramBotConfigSetting) map[string]interf
 }
 
 // MaskTelegramBotConfigForAdmin 返回管理端配置
-func MaskTelegramBotConfigForAdmin(setting TelegramBotConfigSetting) models.JSON {
-	return models.JSON{
+func MaskTelegramBotConfigForAdmin(setting TelegramBotConfigSetting) jsonmap.JSON {
+	return jsonmap.JSON{
 		"enabled":        setting.Enabled,
 		"default_locale": setting.DefaultLocale,
 		"config_version": setting.ConfigVersion,
@@ -253,8 +253,8 @@ func MaskTelegramBotConfigForAdmin(setting TelegramBotConfigSetting) models.JSON
 }
 
 // SerializeTelegramBotConfigForChannel 返回 Channel API 配置（bot_token 由调用方注入）
-func SerializeTelegramBotConfigForChannel(setting TelegramBotConfigSetting, botToken string) models.JSON {
-	return models.JSON{
+func SerializeTelegramBotConfigForChannel(setting TelegramBotConfigSetting, botToken string) jsonmap.JSON {
+	return jsonmap.JSON{
 		"enabled":        setting.Enabled,
 		"bot_token":      botToken,
 		"default_locale": setting.DefaultLocale,
@@ -311,7 +311,7 @@ func EncodeTelegramBotRuntimeStatus(status TelegramBotRuntimeStatusSetting) map[
 }
 
 // telegramBotConfigFromJSON 从 JSON 读取嵌套结构，兼容旧扁平格式
-func DecodeTelegramBotConfig(raw models.JSON, fallback TelegramBotConfigSetting) TelegramBotConfigSetting {
+func DecodeTelegramBotConfig(raw jsonmap.JSON, fallback TelegramBotConfigSetting) TelegramBotConfigSetting {
 	next := fallback
 	if raw == nil {
 		return next
@@ -355,7 +355,7 @@ func DecodeTelegramBotConfig(raw models.JSON, fallback TelegramBotConfigSetting)
 }
 
 // migrateOldTelegramBotConfig 将旧扁平格式迁移为嵌套结构
-func migrateOldTelegramBotConfig(raw models.JSON, fallback TelegramBotConfigSetting) TelegramBotConfigSetting {
+func migrateOldTelegramBotConfig(raw jsonmap.JSON, fallback TelegramBotConfigSetting) TelegramBotConfigSetting {
 	next := fallback
 	defaultLocale := readString(raw, "default_locale", "zh-CN")
 	next.DefaultLocale = defaultLocale
@@ -378,7 +378,7 @@ func migrateOldTelegramBotConfig(raw models.JSON, fallback TelegramBotConfigSett
 	return next
 }
 
-func DecodeTelegramBotRuntimeStatus(raw models.JSON, fallback TelegramBotRuntimeStatusSetting) TelegramBotRuntimeStatusSetting {
+func DecodeTelegramBotRuntimeStatus(raw jsonmap.JSON, fallback TelegramBotRuntimeStatusSetting) TelegramBotRuntimeStatusSetting {
 	next := fallback
 	if raw == nil {
 		return next
@@ -397,7 +397,7 @@ func DecodeTelegramBotRuntimeStatus(raw models.JSON, fallback TelegramBotRuntime
 }
 
 // normalizeTelegramBotConfig 归一化多语言字段 + trim
-func normalizeTelegramBotConfigMap(raw models.JSON) map[string]interface{} {
+func normalizeTelegramBotConfigMap(raw jsonmap.JSON) map[string]interface{} {
 	setting := DecodeTelegramBotConfig(raw, DefaultTelegramBotConfig())
 	// 归一化多语言字段：确保所有支持的语言键都存在
 	setting.Basic.Description = normalizeLocalizedText(setting.Basic.Description)
@@ -666,6 +666,6 @@ func normalizeLocalizedText(lt LocalizedText) LocalizedText {
 }
 
 // NormalizeTelegramBotConfigJSON 是 Registry 使用的原始 JSON 写入策略。
-func NormalizeTelegramBotConfigJSON(raw models.JSON) models.JSON {
-	return models.JSON(normalizeTelegramBotConfigMap(raw))
+func NormalizeTelegramBotConfigJSON(raw jsonmap.JSON) jsonmap.JSON {
+	return jsonmap.JSON(normalizeTelegramBotConfigMap(raw))
 }

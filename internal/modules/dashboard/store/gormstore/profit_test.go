@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/dashboard"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -20,7 +21,7 @@ func TestGetProfitOverviewDeductsRefundRecords(t *testing.T) {
 	product := &models.Product{
 		CategoryID:      category.ID,
 		Slug:            "dashboard-profit-refund-product",
-		TitleJSON:       models.JSON{"zh-CN": "利润测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "利润测试商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -88,7 +89,7 @@ func TestGetProfitTrendsDeductsRefundRecords(t *testing.T) {
 	product := &models.Product{
 		CategoryID:      category.ID,
 		Slug:            "dashboard-profit-trend-refund-product",
-		TitleJSON:       models.JSON{"zh-CN": "利润趋势测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "利润趋势测试商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -167,7 +168,7 @@ func TestGetProfitOverviewDeductsInWindowRefundForOutOfWindowOrder(t *testing.T)
 	product := &models.Product{
 		CategoryID:      category.ID,
 		Slug:            "dashboard-profit-period-refund-product",
-		TitleJSON:       models.JSON{"zh-CN": "周期退款测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "周期退款测试商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -194,7 +195,7 @@ func TestGetProfitOverviewDeductsInWindowRefundForOutOfWindowOrder(t *testing.T)
 	if err := db.Create(&models.OrderItem{
 		OrderID:         outsideOrder.ID,
 		ProductID:       product.ID,
-		TitleJSON:       models.JSON{"zh-CN": "周期退款测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "周期退款测试商品"},
 		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(40)),
 		Quantity:        1,
@@ -224,7 +225,7 @@ func TestGetProfitOverviewDeductsInWindowRefundForOutOfWindowOrder(t *testing.T)
 	if err := db.Create(&models.OrderItem{
 		OrderID:         inWindowOrder.ID,
 		ProductID:       product.ID,
-		TitleJSON:       models.JSON{"zh-CN": "周期退款测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "周期退款测试商品"},
 		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(60)),
 		CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
 		Quantity:        1,
@@ -272,7 +273,7 @@ func TestGetProfitTrendsIncludesRefundOnlyDayInWindow(t *testing.T) {
 	product := &models.Product{
 		CategoryID:      category.ID,
 		Slug:            "dashboard-profit-refund-only-day-product",
-		TitleJSON:       models.JSON{"zh-CN": "退款单日测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "退款单日测试商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -299,7 +300,7 @@ func TestGetProfitTrendsIncludesRefundOnlyDayInWindow(t *testing.T) {
 	if err := db.Create(&models.OrderItem{
 		OrderID:         inWindowOrder.ID,
 		ProductID:       product.ID,
-		TitleJSON:       models.JSON{"zh-CN": "退款单日测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "退款单日测试商品"},
 		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
 		CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
 		Quantity:        1,
@@ -329,7 +330,7 @@ func TestGetProfitTrendsIncludesRefundOnlyDayInWindow(t *testing.T) {
 	if err := db.Create(&models.OrderItem{
 		OrderID:         outsideOrder.ID,
 		ProductID:       product.ID,
-		TitleJSON:       models.JSON{"zh-CN": "退款单日测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "退款单日测试商品"},
 		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(40)),
 		Quantity:        1,

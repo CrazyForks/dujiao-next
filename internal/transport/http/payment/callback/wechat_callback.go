@@ -7,7 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -43,7 +43,7 @@ func (h *Handler) handleWechatCallback(c *gin.Context) bool {
 	})
 	if err != nil {
 		log.Warnw("wechat_callback_handle_failed", "channel_id", query.ChannelID, "error", err)
-		h.enqueuePaymentExceptionAlert(c, models.JSON{
+		h.enqueuePaymentExceptionAlert(c, jsonmap.JSON{
 			"alert_type": "wechat_callback_handle_failed", "alert_level": "error",
 			"message": strings.TrimSpace(err.Error()), "provider": constants.PaymentChannelTypeWechat,
 		})

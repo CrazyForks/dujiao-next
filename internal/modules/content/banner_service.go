@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // BannerInput 描述 Banner 创建和更新所需字段。
@@ -220,8 +221,8 @@ func normalizeBannerLinkType(raw string) string {
 	}
 }
 
-func normalizeMultiLangJSON(raw map[string]interface{}) models.JSON {
-	result := models.JSON{}
+func normalizeMultiLangJSON(raw map[string]interface{}) jsonmap.JSON {
+	result := jsonmap.JSON{}
 	for _, key := range constants.SupportedLocales {
 		value, exists := raw[key]
 		if !exists {

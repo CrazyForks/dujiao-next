@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -32,21 +33,21 @@ func TestEnsurePaymentProviderBepusdtRenameMigration_RenamesAndIsIdempotent(t *t
 	now := time.Now()
 	if err := db.Create(&PaymentChannel{
 		Name: "old-bepusdt-1", ProviderType: "epusdt", ChannelType: "usdt-trc20",
-		InteractionMode: "redirect", IsActive: true, ConfigJSON: JSON{},
+		InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{},
 		CreatedAt: now, UpdatedAt: now,
 	}).Error; err != nil {
 		t.Fatalf("seed channel 1 failed: %v", err)
 	}
 	if err := db.Create(&PaymentChannel{
 		Name: "old-bepusdt-2", ProviderType: "epusdt", ChannelType: "trx",
-		InteractionMode: "redirect", IsActive: true, ConfigJSON: JSON{},
+		InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{},
 		CreatedAt: now, UpdatedAt: now,
 	}).Error; err != nil {
 		t.Fatalf("seed channel 2 failed: %v", err)
 	}
 	if err := db.Create(&PaymentChannel{
 		Name: "alipay", ProviderType: "official", ChannelType: "alipay",
-		InteractionMode: "redirect", IsActive: true, ConfigJSON: JSON{},
+		InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{},
 		CreatedAt: now, UpdatedAt: now,
 	}).Error; err != nil {
 		t.Fatalf("seed channel 3 failed: %v", err)
@@ -85,7 +86,7 @@ func TestEnsurePaymentProviderBepusdtRenameMigration_RenamesAndIsIdempotent(t *t
 	// Now seed a NEW real epusdt channel (post-migration scenario)
 	if err := db.Create(&PaymentChannel{
 		Name: "real-epusdt", ProviderType: "epusdt", ChannelType: "usdt-trc20",
-		InteractionMode: "redirect", IsActive: true, ConfigJSON: JSON{},
+		InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{},
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
 	}).Error; err != nil {
 		t.Fatalf("seed real epusdt failed: %v", err)
@@ -129,20 +130,20 @@ func TestEnsurePaymentChannelBepusdtConfigMigration_NormalizesLegacyChannels(t *
 	for _, tc := range tests {
 		if err := db.Create(&PaymentChannel{
 			Name: tc.name, ProviderType: "bepusdt", ChannelType: tc.channelType,
-			InteractionMode: "redirect", IsActive: true, ConfigJSON: JSON{"gateway_url": "https://bepusdt.example.com"},
+			InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{"gateway_url": "https://bepusdt.example.com"},
 		}).Error; err != nil {
 			t.Fatalf("seed %s failed: %v", tc.name, err)
 		}
 	}
 	if err := db.Create(&PaymentChannel{
 		Name: "explicit", ProviderType: "bepusdt", ChannelType: "usdt-trc20",
-		InteractionMode: "redirect", IsActive: true, ConfigJSON: JSON{"trade_type": "usdt.arbitrum"},
+		InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{"trade_type": "usdt.arbitrum"},
 	}).Error; err != nil {
 		t.Fatalf("seed explicit failed: %v", err)
 	}
 	if err := db.Create(&PaymentChannel{
 		Name: "unknown", ProviderType: "bepusdt", ChannelType: "future-coin",
-		InteractionMode: "redirect", IsActive: true, ConfigJSON: JSON{},
+		InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{},
 	}).Error; err != nil {
 		t.Fatalf("seed unknown failed: %v", err)
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"gorm.io/gorm"
 )
@@ -61,7 +62,7 @@ type CreateManualInput struct {
 	OrderID      uint
 	AdminID      uint
 	Payload      string
-	DeliveryData models.JSON
+	DeliveryData jsonmap.JSON
 	DeliveredAt  *time.Time
 }
 
@@ -393,11 +394,11 @@ func (s *FulfillmentService) NotifyBotOrderFulfilled(userID, orderID uint) {
 	}
 }
 
-func normalizeManualDeliveryData(raw models.JSON) models.JSON {
+func normalizeManualDeliveryData(raw jsonmap.JSON) jsonmap.JSON {
 	if len(raw) == 0 {
-		return models.JSON{}
+		return jsonmap.JSON{}
 	}
-	normalized := models.JSON{}
+	normalized := jsonmap.JSON{}
 	note := strings.TrimSpace(toStringValue(raw["note"]))
 	if note != "" {
 		normalized["note"] = note
@@ -428,14 +429,14 @@ func normalizeManualDeliveryData(raw models.JSON) models.JSON {
 	return normalized
 }
 
-func normalizeManualDeliveryEntries(raw interface{}) []models.JSON {
-	appendEntry := func(entries []models.JSON, row map[string]interface{}) []models.JSON {
+func normalizeManualDeliveryEntries(raw interface{}) []jsonmap.JSON {
+	appendEntry := func(entries []jsonmap.JSON, row map[string]interface{}) []jsonmap.JSON {
 		key := strings.TrimSpace(toStringValue(row["key"]))
 		value := strings.TrimSpace(toStringValue(row["value"]))
 		if key == "" && value == "" {
 			return entries
 		}
-		entry := models.JSON{}
+		entry := jsonmap.JSON{}
 		if key != "" {
 			entry["key"] = key
 		}
@@ -445,9 +446,9 @@ func normalizeManualDeliveryEntries(raw interface{}) []models.JSON {
 		return append(entries, entry)
 	}
 
-	entries := make([]models.JSON, 0)
+	entries := make([]jsonmap.JSON, 0)
 	switch value := raw.(type) {
-	case []models.JSON:
+	case []jsonmap.JSON:
 		for _, item := range value {
 			entries = appendEntry(entries, item)
 		}
@@ -488,7 +489,7 @@ func normalizeManualDeliveryPrimitive(raw interface{}) interface{} {
 	}
 }
 
-func buildManualDeliveryPayload(data models.JSON) string {
+func buildManualDeliveryPayload(data jsonmap.JSON) string {
 	if len(data) == 0 {
 		return ""
 	}
@@ -496,7 +497,7 @@ func buildManualDeliveryPayload(data models.JSON) string {
 	if note, ok := data["note"].(string); ok && strings.TrimSpace(note) != "" {
 		lines = append(lines, note)
 	}
-	if entries, ok := data["entries"].([]models.JSON); ok {
+	if entries, ok := data["entries"].([]jsonmap.JSON); ok {
 		for _, item := range entries {
 			key := strings.TrimSpace(toStringValue(item["key"]))
 			value := strings.TrimSpace(toStringValue(item["value"]))

@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -150,7 +151,7 @@ func buildAuthzPolicyAuditRecord(c *gin.Context, req authzPolicyPayload, action 
 		Object:           req.Object,
 		Method:           req.Action,
 		RequestID:        strings.TrimSpace(c.GetString("request_id")),
-		Detail: models.JSON{
+		Detail: jsonmap.JSON{
 			"role":   req.Role,
 			"object": req.Object,
 			"method": strings.ToUpper(strings.TrimSpace(req.Action)),
@@ -251,7 +252,7 @@ func (h *AdminHandler) CreateAuthzRole(c *gin.Context) {
 		Action:           "role_create",
 		Role:             role,
 		RequestID:        strings.TrimSpace(c.GetString("request_id")),
-		Detail: models.JSON{
+		Detail: jsonmap.JSON{
 			"role": role,
 		},
 	})
@@ -283,7 +284,7 @@ func (h *AdminHandler) DeleteAuthzRole(c *gin.Context) {
 		Action:           "role_delete",
 		Role:             role,
 		RequestID:        strings.TrimSpace(c.GetString("request_id")),
-		Detail: models.JSON{
+		Detail: jsonmap.JSON{
 			"role": role,
 		},
 	})
@@ -415,7 +416,7 @@ func (h *AdminHandler) SetAuthzAdminRoles(c *gin.Context) {
 		TargetUsername:   admin.Username,
 		Action:           "admin_roles_update",
 		RequestID:        strings.TrimSpace(c.GetString("request_id")),
-		Detail: models.JSON{
+		Detail: jsonmap.JSON{
 			"target_admin_id": adminID,
 			"target_username": admin.Username,
 			"roles":           req.Roles,

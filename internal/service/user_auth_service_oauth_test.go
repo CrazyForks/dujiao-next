@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/telegramidentity"
 
 	"github.com/glebarez/sqlite"
@@ -256,7 +257,7 @@ func TestLoginWithTelegramAssignsDefaultMemberLevel(t *testing.T) {
 
 	now := time.Now()
 	defaultLevel := &models.MemberLevel{
-		NameJSON:  models.JSON{"zh-CN": "默认等级"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "默认等级"},
 		Slug:      "default",
 		IsDefault: true,
 		IsActive:  true,

@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -49,14 +50,14 @@ func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (models.Us
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
-	category := models.Category{Slug: "service-category", NameJSON: models.JSON{"zh-CN": "分类"}, IsActive: true}
+	category := models.Category{Slug: "service-category", NameJSON: jsonmap.JSON{"zh-CN": "分类"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
 	product := models.Product{
 		CategoryID:      category.ID,
 		Slug:            "service-product",
-		TitleJSON:       models.JSON{"zh-CN": "服务商品", "zh-TW": "服務商品", "en-US": "Service Product"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "服务商品", "zh-TW": "服務商品", "en-US": "Service Product"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
 		CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
 		IsActive:        true,

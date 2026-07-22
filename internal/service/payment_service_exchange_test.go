@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -107,7 +108,7 @@ func createExchangePaymentFixture(t *testing.T, db *gorm.DB, originalAmount deci
 		Status:          constants.PaymentStatusPending,
 		ProviderRef:     fmt.Sprintf("PAY-%d", now.UnixNano()),
 		GatewayOrderNo:  order.OrderNo,
-		ProviderPayload: models.JSON{
+		ProviderPayload: jsonmap.JSON{
 			"exchange_rate":     exchangeRate,
 			"original_amount":   originalAmount.StringFixed(2),
 			"original_currency": originalCurrency,

@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/okpay"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -37,7 +38,7 @@ func (a *okpayAdapter) Type() string {
 // parseConfig 解析并验证 okpay Config。
 // 关键：如果 cfg.Coin 未显式配置且 channelType 非空，
 // 则从 channelType 自动 resolve coin（沿用 payment_service_provider.go 的逻辑）。
-func (a *okpayAdapter) parseConfig(raw models.JSON, channelType string) (*okpay.Config, error) {
+func (a *okpayAdapter) parseConfig(raw jsonmap.JSON, channelType string) (*okpay.Config, error) {
 	cfg, err := okpay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapOkpayError(err)
@@ -55,7 +56,7 @@ func (a *okpayAdapter) parseConfig(raw models.JSON, channelType string) (*okpay.
 // ValidateConfig 验证 channel.ConfigJSON。
 // 入口先校验 channelType（如果非空）是否被 okpay 支持，
 // 然后调用 parseConfig 验证配置完整性。
-func (a *okpayAdapter) ValidateConfig(raw models.JSON, channelType string) error {
+func (a *okpayAdapter) ValidateConfig(raw jsonmap.JSON, channelType string) error {
 	if channelType != "" && !okpay.IsSupportedChannelType(channelType) {
 		return fmt.Errorf("%w: okpay channel_type %s", ErrUnsupportedChannel, channelType)
 	}
@@ -64,7 +65,7 @@ func (a *okpayAdapter) ValidateConfig(raw models.JSON, channelType string) error
 }
 
 // CreatePayment 创建支付。okpay 多 channel type，需要先校验 channelType。
-func (a *okpayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input CreateInput) (*CreateResult, error) {
+func (a *okpayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input CreateInput) (*CreateResult, error) {
 	// 先校验 channelType
 	if input.ChannelType != "" && !okpay.IsSupportedChannelType(input.ChannelType) {
 		return nil, fmt.Errorf("%w: okpay channel_type %s", ErrUnsupportedChannel, input.ChannelType)
@@ -120,7 +121,7 @@ func (a *okpayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input
 	}
 
 	// 构造 Payload：先从 native raw 复制，再附加 audit 字段。
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	for k, v := range result.Raw {
 		payload[k] = v
 	}
@@ -145,7 +146,7 @@ func (a *okpayAdapter) CreatePayment(ctx context.Context, raw models.JSON, input
 // VerifyCallback 实现 CallbackVerifier。okpay 用 JSON POST body，form 参数忽略。
 // 注意：callback 阶段不调 ValidateConfig——配置错误由签名校验兜底，
 // 与 alipay/epay/epusdt/bepusdt/tokenpay adapter 行为一致。
-func (a *okpayAdapter) VerifyCallback(raw models.JSON, _ map[string][]string, body []byte) (*CallbackResult, error) {
+func (a *okpayAdapter) VerifyCallback(raw jsonmap.JSON, _ map[string][]string, body []byte) (*CallbackResult, error) {
 	cfg, err := okpay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapOkpayError(err)
@@ -179,11 +180,11 @@ func (a *okpayAdapter) VerifyCallback(raw models.JSON, _ map[string][]string, bo
 	}
 
 	// Payload 通过 json.Marshal+Unmarshal CallbackData 序列化
-	payload := models.JSON{}
+	payload := jsonmap.JSON{}
 	if pb, marshalErr := json.Marshal(data); marshalErr == nil {
 		var m map[string]interface{}
 		if jsonErr := json.Unmarshal(pb, &m); jsonErr == nil {
-			payload = models.JSON(m)
+			payload = jsonmap.JSON(m)
 		}
 	}
 

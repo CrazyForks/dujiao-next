@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -66,8 +67,8 @@ func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (models.R
 		OrderID:         order.ID,
 		ProductID:       10,
 		SKUID:           20,
-		TitleJSON:       models.JSON{"zh-CN": "测试商品"},
-		SKUSnapshotJSON: models.JSON{"规格": "A"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
+		SKUSnapshotJSON: jsonmap.JSON{"规格": "A"},
 		Quantity:        2,
 		UnitPrice:       models.NewMoneyFromDecimal(decimal.RequireFromString("65.00")),
 		TotalPrice:      models.NewMoneyFromDecimal(decimal.RequireFromString("130.00")),
@@ -88,7 +89,7 @@ func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (models.R
 		ProfitAmount:      models.NewMoneyFromDecimal(decimal.RequireFromString("30.00")),
 		ProfitEligible:    false,
 		ProfitBlockReason: "self_dealing_owner",
-		PricingSnapshotJSON: models.JSON{"items": []interface{}{
+		PricingSnapshotJSON: jsonmap.JSON{"items": []interface{}{
 			map[string]interface{}{
 				"order_item_id":          item.ID,
 				"base_unit_amount":       "50.00",
@@ -164,8 +165,8 @@ func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email str
 			OrderID:         child.ID,
 			ProductID:       uint(100 + idx),
 			SKUID:           uint(200 + idx),
-			TitleJSON:       models.JSON{"zh-CN": fmt.Sprintf("子订单商品 %d", idx+1)},
-			SKUSnapshotJSON: models.JSON{"规格": fmt.Sprintf("S%d", idx+1)},
+			TitleJSON:       jsonmap.JSON{"zh-CN": fmt.Sprintf("子订单商品 %d", idx+1)},
+			SKUSnapshotJSON: jsonmap.JSON{"规格": fmt.Sprintf("S%d", idx+1)},
 			Quantity:        1,
 			UnitPrice:       models.NewMoneyFromDecimal(decimal.RequireFromString(amount)),
 			TotalPrice:      models.NewMoneyFromDecimal(decimal.RequireFromString(amount)),
@@ -187,7 +188,7 @@ func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email str
 		ResellerAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("150.00")),
 		ProfitAmount:   models.NewMoneyFromDecimal(decimal.RequireFromString("30.00")),
 		ProfitEligible: true,
-		PricingSnapshotJSON: models.JSON{"items": []interface{}{
+		PricingSnapshotJSON: jsonmap.JSON{"items": []interface{}{
 			map[string]interface{}{
 				"order_item_id":         items[0].ID,
 				"base_unit_amount":      "55.00",

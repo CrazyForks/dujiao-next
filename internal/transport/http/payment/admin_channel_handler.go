@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -95,7 +96,7 @@ func (h *AdminChannelHandler) CreatePaymentChannel(c *gin.Context) {
 		ProviderType:    req.ProviderType,
 		ChannelType:     req.ChannelType,
 		InteractionMode: req.InteractionMode,
-		ConfigJSON:      models.JSON(req.ConfigJSON),
+		ConfigJSON:      jsonmap.JSON(req.ConfigJSON),
 		PaymentRoles:    req.PaymentRoles,
 		MemberLevels:    req.MemberLevels,
 		PaymentTypes:    req.PaymentTypes,
@@ -207,7 +208,7 @@ func (h *AdminChannelHandler) UpdatePaymentChannel(c *gin.Context) {
 		channel.PaymentTypes = req.PaymentTypes
 	}
 	if req.ConfigJSON != nil {
-		channel.ConfigJSON = models.JSON(req.ConfigJSON)
+		channel.ConfigJSON = jsonmap.JSON(req.ConfigJSON)
 	}
 	if req.IsActive != nil {
 		channel.IsActive = *req.IsActive

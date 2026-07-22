@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestExtractUSDTWalletInfo(t *testing.T) {
@@ -12,7 +12,7 @@ func TestExtractUSDTWalletInfo(t *testing.T) {
 		name            string
 		providerType    string
 		interactionMode string
-		payload         models.JSON
+		payload         jsonmap.JSON
 		wantAddress     string
 		wantChainAmount string
 	}{
@@ -20,7 +20,7 @@ func TestExtractUSDTWalletInfo(t *testing.T) {
 			name:            "bepusdt qr with token in data",
 			providerType:    constants.PaymentProviderBepusdt,
 			interactionMode: constants.PaymentInteractionQR,
-			payload: models.JSON{
+			payload: jsonmap.JSON{
 				"data": map[string]any{
 					"token":         "TRX_ADDR_XYZ",
 					"actual_amount": "13.45",
@@ -33,7 +33,7 @@ func TestExtractUSDTWalletInfo(t *testing.T) {
 			name:            "bepusdt redirect mode returns empty",
 			providerType:    constants.PaymentProviderBepusdt,
 			interactionMode: constants.PaymentInteractionRedirect,
-			payload: models.JSON{
+			payload: jsonmap.JSON{
 				"data": map[string]any{"token": "TRX_ADDR_XYZ", "actual_amount": "13.45"},
 			},
 			wantAddress:     "",
@@ -43,7 +43,7 @@ func TestExtractUSDTWalletInfo(t *testing.T) {
 			name:            "epusdt qr without receive_address yields empty",
 			providerType:    constants.PaymentProviderEpusdt,
 			interactionMode: constants.PaymentInteractionQR,
-			payload: models.JSON{
+			payload: jsonmap.JSON{
 				"data": map[string]any{"trade_id": "T1", "actual_amount": "5.00"},
 			},
 			wantAddress:     "",
@@ -53,7 +53,7 @@ func TestExtractUSDTWalletInfo(t *testing.T) {
 			name:            "epusdt qr with receive_address",
 			providerType:    constants.PaymentProviderEpusdt,
 			interactionMode: constants.PaymentInteractionQR,
-			payload: models.JSON{
+			payload: jsonmap.JSON{
 				"data": map[string]any{"receive_address": "TGRC_ADDR", "actual_amount": "9.99"},
 			},
 			wantAddress:     "TGRC_ADDR",
@@ -63,7 +63,7 @@ func TestExtractUSDTWalletInfo(t *testing.T) {
 			name:            "non-usdt provider returns empty",
 			providerType:    constants.PaymentProviderOfficial,
 			interactionMode: constants.PaymentInteractionQR,
-			payload:         models.JSON{"data": map[string]any{"token": "X"}},
+			payload:         jsonmap.JSON{"data": map[string]any{"token": "X"}},
 			wantAddress:     "",
 			wantChainAmount: "",
 		},
@@ -79,7 +79,7 @@ func TestExtractUSDTWalletInfo(t *testing.T) {
 			name:            "bepusdt qr with data scalar instead of map",
 			providerType:    constants.PaymentProviderBepusdt,
 			interactionMode: constants.PaymentInteractionQR,
-			payload:         models.JSON{"data": "oops"},
+			payload:         jsonmap.JSON{"data": "oops"},
 			wantAddress:     "",
 			wantChainAmount: "",
 		},
@@ -98,7 +98,7 @@ func TestExtractUSDTWalletInfo(t *testing.T) {
 }
 
 func TestExtractCryptoWalletInfo_DujiaoPayQR(t *testing.T) {
-	info := ExtractCryptoWalletInfo(constants.PaymentProviderDujiaoPay, constants.PaymentInteractionQR, models.JSON{
+	info := ExtractCryptoWalletInfo(constants.PaymentProviderDujiaoPay, constants.PaymentInteractionQR, jsonmap.JSON{
 		"chain":          "tron",
 		"token_id":       "tron-usdt",
 		"pay_address":    "TAddr",
@@ -120,7 +120,7 @@ func TestExtractCryptoWalletInfo_DujiaoPayQR(t *testing.T) {
 }
 
 func TestExtractCryptoWalletInfo_BepusdtQRIncludesChainLabels(t *testing.T) {
-	info := ExtractCryptoWalletInfo(constants.PaymentProviderBepusdt, constants.PaymentInteractionQR, models.JSON{
+	info := ExtractCryptoWalletInfo(constants.PaymentProviderBepusdt, constants.PaymentInteractionQR, jsonmap.JSON{
 		"data": map[string]any{
 			"token":         "TAddr",
 			"actual_amount": "4.25",
@@ -135,7 +135,7 @@ func TestExtractCryptoWalletInfo_BepusdtQRIncludesChainLabels(t *testing.T) {
 }
 
 func TestExtractCryptoWalletInfo_DujiaoPayWrappedPayload(t *testing.T) {
-	info := ExtractCryptoWalletInfo(constants.PaymentProviderDujiaoPay, constants.PaymentInteractionQR, models.JSON{
+	info := ExtractCryptoWalletInfo(constants.PaymentProviderDujiaoPay, constants.PaymentInteractionQR, jsonmap.JSON{
 		"data": map[string]any{
 			"chain":          "base",
 			"token_id":       "base-usdc",

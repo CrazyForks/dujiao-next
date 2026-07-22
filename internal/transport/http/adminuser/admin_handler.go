@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/coupon"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -172,8 +173,8 @@ type BatchUpdateUserStatusRequest struct {
 
 // UserCouponUsageProduct 优惠券适用商品。
 type UserCouponUsageProduct struct {
-	ID    uint        `json:"id"`
-	Title models.JSON `json:"title"`
+	ID    uint         `json:"id"`
+	Title jsonmap.JSON `json:"title"`
 }
 
 // UserCouponUsageItem 用户优惠券使用记录返回。

@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -65,7 +66,7 @@ func TestCreateAutoFulfillmentRespectsSKUBoundary(t *testing.T) {
 		OrderID:         order.ID,
 		ProductID:       100,
 		SKUID:           1001,
-		TitleJSON:       models.JSON{"zh-CN": "测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
 		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		Quantity:        1,
 		TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)),

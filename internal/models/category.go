@@ -5,32 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
-
-// JSON 类型定义，用于存储多语言内容
-type JSON map[string]interface{}
-
-// Value 实现 driver.Valuer 接口
-func (j JSON) Value() (driver.Value, error) {
-	if j == nil {
-		return nil, nil
-	}
-	return json.Marshal(j)
-}
-
-// Scan 实现 sql.Scanner 接口
-func (j *JSON) Scan(value interface{}) error {
-	if value == nil {
-		*j = make(JSON)
-		return nil
-	}
-	bytes, ok := value.([]byte)
-	if !ok {
-		return nil
-	}
-	return json.Unmarshal(bytes, j)
-}
 
 // StringArray 字符串数组类型，用于存储tags、images等
 type StringArray []string
@@ -56,7 +33,7 @@ func (s *StringArray) Scan(value interface{}) error {
 	return json.Unmarshal(bytes, s)
 }
 
-// UintArray 存储无符号整数数组，序列化为 JSON
+// UintArray 存储无符号整数数组，序列化为 JSON。
 type UintArray []uint
 
 // Value 实现 driver.Valuer 接口
@@ -85,7 +62,7 @@ type Category struct {
 	ID        uint           `gorm:"primarykey" json:"id"`                         // 主键
 	ParentID  uint           `gorm:"not null;default:0;index" json:"parent_id"`    // 父分类ID，0 表示一级分类
 	Slug      string         `gorm:"uniqueIndex;not null" json:"slug"`             // 唯一标识
-	NameJSON  JSON           `gorm:"type:json;not null" json:"name"`               // 多语言名称
+	NameJSON  jsonmap.JSON   `gorm:"type:json;not null" json:"name"`               // 多语言名称
 	Icon      string         `gorm:"type:varchar(500)" json:"icon"`                // 分类图标（图片路径）
 	SortOrder int            `gorm:"default:0;index" json:"sort_order"`            // 排序权重
 	IsActive  bool           `gorm:"not null;default:true;index" json:"is_active"` // 是否启用，停用后前台不展示

@@ -7,9 +7,9 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	paymentcommon "github.com/dujiao-next/internal/payment/common"
 	"github.com/dujiao-next/internal/queue"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func detachOutboundRequestContext(parent context.Context) (context.Context, context.CancelFunc) {
@@ -255,11 +255,11 @@ func (s *Service) recordSendAttempt(attempt notificationSendAttempt) {
 	}
 }
 
-func notificationVariablesToJSON(data map[string]interface{}) models.JSON {
+func notificationVariablesToJSON(data map[string]interface{}) jsonmap.JSON {
 	if len(data) == 0 {
-		return models.JSON{}
+		return jsonmap.JSON{}
 	}
-	result := make(models.JSON, len(data))
+	result := make(jsonmap.JSON, len(data))
 	for key, value := range data {
 		result[key] = value
 	}

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // OrderRateLimitConfig 下单频率限制配置
@@ -104,7 +104,7 @@ func isValidIPOrCIDR(s string) bool {
 }
 
 // DecodeOrderRiskControlConfig 从 JSON map 解析风控配置
-func DecodeOrderRiskControlConfig(raw models.JSON, fallback OrderRiskControlConfig) OrderRiskControlConfig {
+func DecodeOrderRiskControlConfig(raw jsonmap.JSON, fallback OrderRiskControlConfig) OrderRiskControlConfig {
 	result := fallback
 	if raw == nil {
 		return result
@@ -118,19 +118,19 @@ func DecodeOrderRiskControlConfig(raw models.JSON, fallback OrderRiskControlConf
 }
 
 // EncodeOrderRiskControlConfig 将风控配置转为 map 用于存储
-func EncodeOrderRiskControlConfig(cfg OrderRiskControlConfig) models.JSON {
+func EncodeOrderRiskControlConfig(cfg OrderRiskControlConfig) jsonmap.JSON {
 	normalized := NormalizeOrderRiskControlConfig(cfg)
 	data, err := json.Marshal(normalized)
 	if err != nil {
-		return models.JSON{}
+		return jsonmap.JSON{}
 	}
-	var result models.JSON
+	var result jsonmap.JSON
 	_ = json.Unmarshal(data, &result)
 	return result
 }
 
 // NormalizeOrderRiskControlConfigJSON 是 Registry 使用的原始 JSON 写入策略。
-func NormalizeOrderRiskControlConfigJSON(value models.JSON) models.JSON {
+func NormalizeOrderRiskControlConfigJSON(value jsonmap.JSON) jsonmap.JSON {
 	return EncodeOrderRiskControlConfig(DecodeOrderRiskControlConfig(value, DefaultOrderRiskControlConfig()))
 }
 

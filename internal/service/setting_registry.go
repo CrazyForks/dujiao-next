@@ -2,8 +2,8 @@ package service
 
 import (
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // defaultSettingRegistry 显式登记通用 Update API 支持的归一化策略。
@@ -16,13 +16,13 @@ var defaultSettingRegistry = settingsmodule.MustNewRegistry(
 	},
 	settingsmodule.Definition{
 		Key: constants.SettingKeyOrderConfig,
-		Normalize: func(value models.JSON) models.JSON {
+		Normalize: func(value jsonmap.JSON) jsonmap.JSON {
 			return OrderConfigToMap(orderConfigFromJSON(value, DefaultOrderConfig()))
 		},
 	},
 	settingsmodule.Definition{
 		Key:       constants.SettingKeySiteConfig,
-		Normalize: func(value models.JSON) models.JSON { return normalizeSiteSetting(value) },
+		Normalize: func(value jsonmap.JSON) jsonmap.JSON { return normalizeSiteSetting(value) },
 		Effects:   []settingsmodule.Effect{settingsmodule.EffectInvalidatePublicConfigCache},
 	},
 	settingsmodule.Definition{
@@ -31,9 +31,9 @@ var defaultSettingRegistry = settingsmodule.MustNewRegistry(
 	},
 	settingsmodule.Definition{
 		Key: constants.SettingKeyNotificationCenterConfig,
-		Normalize: func(value models.JSON) models.JSON {
+		Normalize: func(value jsonmap.JSON) jsonmap.JSON {
 			setting := settingsmodule.DecodeNotificationCenterSetting(value, settingsmodule.NotificationCenterDefaultSetting())
-			return models.JSON(settingsmodule.NotificationCenterSettingToMap(setting))
+			return jsonmap.JSON(settingsmodule.NotificationCenterSettingToMap(setting))
 		},
 	},
 	settingsmodule.Definition{
@@ -46,12 +46,12 @@ var defaultSettingRegistry = settingsmodule.MustNewRegistry(
 	},
 	settingsmodule.Definition{
 		Key:       constants.SettingKeyNavConfig,
-		Normalize: func(value models.JSON) models.JSON { return normalizeNavConfig(value) },
+		Normalize: func(value jsonmap.JSON) jsonmap.JSON { return normalizeNavConfig(value) },
 		Effects:   []settingsmodule.Effect{settingsmodule.EffectInvalidatePublicConfigCache},
 	},
 	settingsmodule.Definition{
 		Key:       constants.SettingKeyRegistrationConfig,
-		Normalize: func(value models.JSON) models.JSON { return normalizeRegistrationSetting(value) },
+		Normalize: func(value jsonmap.JSON) jsonmap.JSON { return normalizeRegistrationSetting(value) },
 		Effects:   []settingsmodule.Effect{settingsmodule.EffectInvalidatePublicConfigCache},
 	},
 	settingsmodule.Definition{

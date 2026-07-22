@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/modules/siteconnection"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -71,7 +72,7 @@ func createProcTestOrder(t *testing.T, db *gorm.DB, orderNo, status, fulfillment
 		SKUID:           1,
 		Quantity:        1,
 		FulfillmentType: fulfillmentType,
-		TitleJSON:       models.JSON{"zh-CN": "Test Product"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "Test Product"},
 		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 	}

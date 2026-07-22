@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestBannerRespOmitsSensitiveFields(t *testing.T) {
@@ -15,8 +16,8 @@ func TestBannerRespOmitsSensitiveFields(t *testing.T) {
 		ID:           1,
 		Name:         "Admin-Only-Name",
 		Position:     "home_hero",
-		TitleJSON:    models.JSON{"zh-CN": "标题"},
-		SubtitleJSON: models.JSON{"zh-CN": "副标题"},
+		TitleJSON:    jsonmap.JSON{"zh-CN": "标题"},
+		SubtitleJSON: jsonmap.JSON{"zh-CN": "副标题"},
 		Image:        "/img/banner.png",
 		LinkType:     "url",
 		LinkValue:    "https://example.com",

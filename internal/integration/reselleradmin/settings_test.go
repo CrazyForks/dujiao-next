@@ -9,17 +9,18 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	settingstransport "github.com/dujiao-next/internal/transport/http/settings"
 
 	"github.com/gin-gonic/gin"
 )
 
 type adminSettingRepository struct {
-	store map[string]models.JSON
+	store map[string]jsonmap.JSON
 }
 
 func newAdminSettingRepository() *adminSettingRepository {
-	return &adminSettingRepository{store: make(map[string]models.JSON)}
+	return &adminSettingRepository{store: make(map[string]jsonmap.JSON)}
 }
 
 func (repository *adminSettingRepository) GetByKey(key string) (*models.Setting, error) {
@@ -30,7 +31,7 @@ func (repository *adminSettingRepository) GetByKey(key string) (*models.Setting,
 	return &models.Setting{Key: key, ValueJSON: value}, nil
 }
 
-func (repository *adminSettingRepository) Upsert(key string, value models.JSON) (*models.Setting, error) {
+func (repository *adminSettingRepository) Upsert(key string, value jsonmap.JSON) (*models.Setting, error) {
 	repository.store[key] = value
 	return &models.Setting{Key: key, ValueJSON: value}, nil
 }

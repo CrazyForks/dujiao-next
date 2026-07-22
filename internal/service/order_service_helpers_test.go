@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -70,7 +71,7 @@ func TestApplyCouponDiscountToItems(t *testing.T) {
 }
 
 func TestResolveManualFormSubmissionPreferOrderItemKey(t *testing.T) {
-	data := map[string]models.JSON{
+	data := map[string]jsonmap.JSON{
 		"1":    {"legacy": "legacy"},
 		"1:10": {"current": "current"},
 	}
@@ -81,7 +82,7 @@ func TestResolveManualFormSubmissionPreferOrderItemKey(t *testing.T) {
 }
 
 func TestResolveManualFormSubmissionFallbackLegacyProductKey(t *testing.T) {
-	data := map[string]models.JSON{
+	data := map[string]jsonmap.JSON{
 		"1": {"legacy": "legacy"},
 	}
 	got := resolveManualFormSubmission(data, 1, 99)

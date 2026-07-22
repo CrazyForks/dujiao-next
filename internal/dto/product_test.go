@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestCategoryRespOmitsSensitiveFields(t *testing.T) {
@@ -13,7 +14,7 @@ func TestCategoryRespOmitsSensitiveFields(t *testing.T) {
 		ID:        1,
 		ParentID:  0,
 		Slug:      "games",
-		NameJSON:  models.JSON{"zh-CN": "游戏"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "游戏"},
 		Icon:      "/icons/game.png",
 		SortOrder: 10,
 	}

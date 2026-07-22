@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
 
@@ -53,7 +54,7 @@ func (s *AccountingLedgerService) PostOrderProfit(store AccountingLedgerStore, o
 	now := time.Now()
 	availableAt := now.AddDate(0, 0, s.confirmDays)
 	orderID := order.ID
-	metadata := models.JSON{
+	metadata := jsonmap.JSON{
 		"order_no":            order.OrderNo,
 		"reseller_domain":     snapshot.Domain,
 		"wallet_paid_amount":  order.WalletPaidAmount.String(),

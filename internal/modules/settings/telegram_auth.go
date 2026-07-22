@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 var ErrTelegramAuthConfigInvalid = errors.New("telegram auth config invalid")
@@ -210,9 +210,9 @@ func TelegramAuthSettingToConfig(setting TelegramAuthSetting) config.TelegramAut
 }
 
 // EncodeTelegramAuthSetting 转换为 settings 存储结构。
-func EncodeTelegramAuthSetting(setting TelegramAuthSetting) models.JSON {
+func EncodeTelegramAuthSetting(setting TelegramAuthSetting) jsonmap.JSON {
 	normalized := NormalizeTelegramAuthSetting(setting)
-	return models.JSON{
+	return jsonmap.JSON{
 		"enabled":              normalized.Enabled,
 		"bot_username":         normalized.BotUsername,
 		"bot_token":            normalized.BotToken,
@@ -225,9 +225,9 @@ func EncodeTelegramAuthSetting(setting TelegramAuthSetting) models.JSON {
 }
 
 // MaskTelegramAuthSettingForAdmin 返回脱敏配置。
-func MaskTelegramAuthSettingForAdmin(setting TelegramAuthSetting) models.JSON {
+func MaskTelegramAuthSettingForAdmin(setting TelegramAuthSetting) jsonmap.JSON {
 	normalized := NormalizeTelegramAuthSetting(setting)
-	return models.JSON{
+	return jsonmap.JSON{
 		"enabled":              normalized.Enabled,
 		"bot_username":         normalized.BotUsername,
 		"bot_token":            "",
@@ -243,7 +243,7 @@ func MaskTelegramAuthSettingForAdmin(setting TelegramAuthSetting) models.JSON {
 }
 
 // DecodeTelegramAuthSetting 从持久化 JSON 解码，并对缺失字段使用 fallback。
-func DecodeTelegramAuthSetting(raw models.JSON, fallback TelegramAuthSetting) TelegramAuthSetting {
+func DecodeTelegramAuthSetting(raw jsonmap.JSON, fallback TelegramAuthSetting) TelegramAuthSetting {
 	next := fallback
 	if raw == nil {
 		return next
@@ -291,6 +291,6 @@ func DecodeTelegramAuthSetting(raw models.JSON, fallback TelegramAuthSetting) Te
 }
 
 // NormalizeTelegramAuthSettingJSON 是 Registry 使用的原始 JSON 写入策略。
-func NormalizeTelegramAuthSettingJSON(raw models.JSON) models.JSON {
+func NormalizeTelegramAuthSettingJSON(raw jsonmap.JSON) jsonmap.JSON {
 	return EncodeTelegramAuthSetting(DecodeTelegramAuthSetting(raw, DefaultTelegramAuthSetting(config.TelegramAuthConfig{})))
 }

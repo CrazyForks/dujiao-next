@@ -25,7 +25,7 @@ type User struct {
 	TOTPEnabledAt         *time.Time     `gorm:"index" json:"totp_enabled_at,omitempty"`                       // 启用时间，NULL 表示未启用
 	TOTPPendingSecret     string         `gorm:"type:varchar(512);default:''" json:"-"`                        // 绑定流程中尚未首次验证的 secret（加密）
 	TOTPPendingExpiresAt  *time.Time     `json:"-"`                                                            // 待绑定 secret 过期时间（10 分钟）
-	RecoveryCodes         string         `gorm:"type:text;default:''" json:"-"`                                // JSON 数组：[{"hash":"...","used_at":null|"..."}]
+	RecoveryCodes         string         `gorm:"type:text;default:''" json:"-"`                                // jsonmap.JSON 数组：[{"hash":"...","used_at":null|"..."}]
 	EmailVerifiedAt       *time.Time     `json:"email_verified_at"`                                            // 邮箱验证时间
 	LastLoginAt           *time.Time     `json:"last_login_at"`                                                // 最后登录时间
 	CreatedAt             time.Time      `gorm:"index" json:"created_at"`                                      // 创建时间

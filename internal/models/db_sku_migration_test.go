@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -41,7 +42,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 	product := &Product{
 		CategoryID:        1,
 		Slug:              "sku-migration-legacy",
-		TitleJSON:         JSON{"zh-CN": "历史商品"},
+		TitleJSON:         jsonmap.JSON{"zh-CN": "历史商品"},
 		PriceAmount:       NewMoneyFromDecimal(decimal.NewFromInt(128)),
 		PurchaseType:      "member",
 		FulfillmentType:   "manual",
@@ -59,7 +60,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		OrderID:         1,
 		ProductID:       product.ID,
 		SKUID:           0,
-		TitleJSON:       JSON{"zh-CN": "历史商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "历史商品"},
 		UnitPrice:       product.PriceAmount,
 		Quantity:        1,
 		TotalPrice:      product.PriceAmount,

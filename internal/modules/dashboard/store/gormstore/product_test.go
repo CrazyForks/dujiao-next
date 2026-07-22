@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -20,7 +21,7 @@ func TestGetTopProductsIncludesChildOrderItems(t *testing.T) {
 	product := &models.Product{
 		CategoryID:      category.ID,
 		Slug:            "test-dashboard-product",
-		TitleJSON:       models.JSON{"zh-CN": "测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -62,7 +63,7 @@ func TestGetTopProductsIncludesChildOrderItems(t *testing.T) {
 	orderItem := &models.OrderItem{
 		OrderID:           childOrder.ID,
 		ProductID:         product.ID,
-		TitleJSON:         models.JSON{"zh-CN": "测试商品"},
+		TitleJSON:         jsonmap.JSON{"zh-CN": "测试商品"},
 		UnitPrice:         models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		Quantity:          2,
 		TotalPrice:        models.NewMoneyFromDecimal(decimal.NewFromInt(200)),
@@ -105,7 +106,7 @@ func TestGetTopProductsGroupsBySKU(t *testing.T) {
 	product := &models.Product{
 		CategoryID:      category.ID,
 		Slug:            "sku-product",
-		TitleJSON:       models.JSON{"zh-CN": "订阅"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "订阅"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -115,8 +116,8 @@ func TestGetTopProductsGroupsBySKU(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	skuA := &models.ProductSKU{ProductID: product.ID, SKUCode: "MONTH-1", SpecValuesJSON: models.JSON{"zh-CN": "1个月"}, IsActive: true}
-	skuB := &models.ProductSKU{ProductID: product.ID, SKUCode: "MONTH-3", SpecValuesJSON: models.JSON{"zh-CN": "3个月"}, IsActive: true}
+	skuA := &models.ProductSKU{ProductID: product.ID, SKUCode: "MONTH-1", SpecValuesJSON: jsonmap.JSON{"zh-CN": "1个月"}, IsActive: true}
+	skuB := &models.ProductSKU{ProductID: product.ID, SKUCode: "MONTH-3", SpecValuesJSON: jsonmap.JSON{"zh-CN": "3个月"}, IsActive: true}
 	if err := db.Create(skuA).Error; err != nil {
 		t.Fatalf("create skuA failed: %v", err)
 	}
@@ -150,7 +151,7 @@ func TestGetTopProductsGroupsBySKU(t *testing.T) {
 			ProductID:       product.ID,
 			SKUID:           combo.sku.ID,
 			TitleJSON:       product.TitleJSON,
-			SKUSnapshotJSON: models.JSON{"sku_id": combo.sku.ID, "sku_code": combo.sku.SKUCode, "spec_values": combo.sku.SpecValuesJSON},
+			SKUSnapshotJSON: jsonmap.JSON{"sku_id": combo.sku.ID, "sku_code": combo.sku.SKUCode, "spec_values": combo.sku.SpecValuesJSON},
 			UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(combo.total / int64(combo.qty))),
 			Quantity:        combo.qty,
 			TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(combo.total)),

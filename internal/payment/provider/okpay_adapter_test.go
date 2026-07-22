@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/okpay"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestOkpayAdapter_Type(t *testing.T) {
@@ -24,7 +25,7 @@ func TestOkpayAdapter_Type(t *testing.T) {
 
 func TestOkpayAdapter_ValidateConfig_UnsupportedChannel(t *testing.T) {
 	a := NewOkpayAdapter()
-	err := a.ValidateConfig(models.JSON{}, "no-such-channel-type")
+	err := a.ValidateConfig(jsonmap.JSON{}, "no-such-channel-type")
 	if err == nil {
 		t.Fatalf("expected error for unsupported channel")
 	}
@@ -36,7 +37,7 @@ func TestOkpayAdapter_ValidateConfig_UnsupportedChannel(t *testing.T) {
 func TestOkpayAdapter_CreatePayment_ConfigInvalidMapped(t *testing.T) {
 	a := NewOkpayAdapter()
 	// 用 okpay 真实支持的 channelType("usdt" / "trx")
-	_, err := a.CreatePayment(context.Background(), models.JSON{}, CreateInput{
+	_, err := a.CreatePayment(context.Background(), jsonmap.JSON{}, CreateInput{
 		OrderNo:     "ORDER_1",
 		Currency:    "USDT",
 		ChannelType: "usdt",
@@ -62,7 +63,7 @@ func TestOkpayAdapter_CreatePayment_ExchangeRate_C4Regression(t *testing.T) {
 	defer server.Close()
 
 	a := NewOkpayAdapter()
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"gateway_url":    server.URL,
 		"merchant_id":    "shop-c4",
 		"merchant_token": "token-c4",
@@ -128,7 +129,7 @@ func TestOkpayAdapter_CreatePayment_NoExchangeRate_AmountSentEqualsOriginal(t *t
 	defer server.Close()
 
 	a := NewOkpayAdapter()
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"gateway_url":    server.URL,
 		"merchant_id":    "shop-nofx",
 		"merchant_token": "token-nofx",
@@ -176,7 +177,7 @@ func TestOkpayAdapter_CreatePayment_ExchangeRateOneUsesCoinCurrency(t *testing.T
 	defer server.Close()
 
 	a := NewOkpayAdapter()
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"gateway_url":    server.URL,
 		"merchant_id":    "shop-usd-usdt",
 		"merchant_token": "token-usd-usdt",
@@ -219,7 +220,7 @@ func TestOkpayAdapter_CreatePayment_ExchangeRateOneResolvesTRXChannelCurrency(t 
 	defer server.Close()
 
 	a := NewOkpayAdapter()
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"gateway_url":    server.URL,
 		"merchant_id":    "shop-usd-trx",
 		"merchant_token": "token-usd-trx",

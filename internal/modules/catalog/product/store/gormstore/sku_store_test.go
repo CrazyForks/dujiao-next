@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -34,7 +35,7 @@ func TestSKUStoreListByProductSortOrderDescending(t *testing.T) {
 		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		IsActive:       true,
 		SortOrder:      100,
-		SpecValuesJSON: models.JSON{},
+		SpecValuesJSON: jsonmap.JSON{},
 	}
 	low := &models.ProductSKU{
 		ProductID:      1,
@@ -42,7 +43,7 @@ func TestSKUStoreListByProductSortOrderDescending(t *testing.T) {
 		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		IsActive:       true,
 		SortOrder:      1,
-		SpecValuesJSON: models.JSON{},
+		SpecValuesJSON: jsonmap.JSON{},
 	}
 	if err := repo.Create(high); err != nil {
 		t.Fatalf("create high sort sku failed: %v", err)

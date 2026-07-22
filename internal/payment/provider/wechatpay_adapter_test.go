@@ -15,6 +15,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/wechatpay"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -45,7 +46,7 @@ func TestWechatpayAdapter_Type(t *testing.T) {
 func TestWechatpayAdapter_ValidateConfig_EmptyRejected(t *testing.T) {
 	a := NewWechatpayAdapter()
 	// 空 config 传给 ValidateConfig，wechatpay.ParseConfig 因缺少必填字段拒绝，返回 ErrConfigInvalid
-	raw := models.JSON{}
+	raw := jsonmap.JSON{}
 	err := a.ValidateConfig(raw, "redirect")
 	if err == nil {
 		t.Fatalf("expected error for empty config")
@@ -57,7 +58,7 @@ func TestWechatpayAdapter_ValidateConfig_EmptyRejected(t *testing.T) {
 
 func TestWechatpayAdapter_CreatePayment_ConfigInvalidMapped(t *testing.T) {
 	a := NewWechatpayAdapter()
-	raw := models.JSON{} // 空 config
+	raw := jsonmap.JSON{} // 空 config
 	_, err := a.CreatePayment(context.Background(), raw, CreateInput{
 		OrderNo:  "ORDER_1",
 		Currency: "CNY",
@@ -73,9 +74,9 @@ func TestWechatpayAdapter_CreatePayment_ConfigInvalidMapped(t *testing.T) {
 // buildMinimalWechatRaw 构造 wechatpay.ParseConfig 可通过的最小 config。
 // wechatpay ParseConfig 会 parse merchant_private_key（RSA PEM），所以必须使用真实格式。
 // api_v3_key 必须是 32 字节（wechat 规定）。
-func buildMinimalWechatRaw(t *testing.T) models.JSON {
+func buildMinimalWechatRaw(t *testing.T) jsonmap.JSON {
 	t.Helper()
-	return models.JSON{
+	return jsonmap.JSON{
 		"appid":                "wx1234567890abcdef",
 		"mchid":                "1234567890",
 		"merchant_serial_no":   "ABCDEF1234567890",
@@ -168,7 +169,7 @@ func TestWechatpayAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 		Currency:  "USD",
 		Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		ClientIP:  "127.0.0.1",
-		Extra:     models.JSON{"interaction_mode": constants.PaymentInteractionQR},
+		Extra:     jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},
 		NotifyURL: "https://example.com/api/v1/payments/webhook/wechat",
 	}
 

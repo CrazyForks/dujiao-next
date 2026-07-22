@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 
@@ -11,7 +12,7 @@ type TelegramBroadcast struct {
 	ID               uint           `gorm:"primarykey" json:"id"`
 	Title            string         `gorm:"size:200;not null" json:"title"`
 	RecipientType    string         `gorm:"size:32;not null;index" json:"recipient_type"`
-	FiltersJSON      JSON           `gorm:"type:json" json:"filters"`
+	FiltersJSON      jsonmap.JSON   `gorm:"type:json" json:"filters"`
 	RecipientChatIDs StringArray    `gorm:"type:json" json:"-"`
 	RecipientCount   int            `gorm:"not null;default:0" json:"recipient_count"`
 	SuccessCount     int            `gorm:"not null;default:0" json:"success_count"`

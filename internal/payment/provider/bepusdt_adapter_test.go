@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/bepusdt"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
 
@@ -24,7 +25,7 @@ func TestBepusdtAdapter_Type(t *testing.T) {
 
 func TestBepusdtAdapter_ValidateConfig_UnsupportedChannel(t *testing.T) {
 	a := NewBepusdtAdapter()
-	err := a.ValidateConfig(models.JSON{}, "no-such-channel-type")
+	err := a.ValidateConfig(jsonmap.JSON{}, "no-such-channel-type")
 	if err == nil {
 		t.Fatalf("expected error for unsupported channel")
 	}
@@ -36,7 +37,7 @@ func TestBepusdtAdapter_ValidateConfig_UnsupportedChannel(t *testing.T) {
 func TestBepusdtAdapter_CreatePayment_ConfigInvalidMapped(t *testing.T) {
 	a := NewBepusdtAdapter()
 	// 用 bepusdt 真实支持的 channelType（usdt-trc20 / usdc-trc20 / trx）
-	_, err := a.CreatePayment(context.Background(), models.JSON{}, CreateInput{
+	_, err := a.CreatePayment(context.Background(), jsonmap.JSON{}, CreateInput{
 		OrderNo:     "ORDER_1",
 		Currency:    "USDT",
 		ChannelType: "usdt-trc20",
@@ -59,7 +60,7 @@ func TestBepusdtAdapter_CreatePayment_QRModeUsesWalletAddress(t *testing.T) {
 		Subject:     "测试商品",
 		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
 		ChannelType: constants.PaymentChannelTypeUsdtTrc20,
-		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionQR},
+		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},
 	})
 	if err != nil {
 		t.Fatalf("CreatePayment() failed: %v", err)
@@ -93,7 +94,7 @@ func TestBepusdtAdapter_CreatePayment_RedirectModeKeepsCashierURL(t *testing.T) 
 		Subject:     "测试商品",
 		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
 		ChannelType: constants.PaymentChannelTypeUsdtTrc20,
-		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
+		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
 	})
 	if err != nil {
 		t.Fatalf("CreatePayment() failed: %v", err)
@@ -120,7 +121,7 @@ func TestBepusdtAdapter_CreatePayment_ProviderChannelUsesConfiguredTradeType(t *
 		Subject:     "测试商品",
 		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
 		ChannelType: constants.PaymentProviderBepusdt,
-		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
+		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
 	})
 	if err != nil {
 		t.Fatalf("CreatePayment() failed: %v", err)
@@ -146,7 +147,7 @@ func TestBepusdtAdapter_CreatePayment_MissingTradeTypeUsesLegacyDefault(t *testi
 		Subject:     "测试商品",
 		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
 		ChannelType: constants.PaymentChannelTypeTrx,
-		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
+		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
 	})
 	if err != nil {
 		t.Fatalf("CreatePayment() failed: %v", err)
@@ -214,7 +215,7 @@ func TestBepusdtAdapter_CreatePayment_CashierModeUsesCreateOrder(t *testing.T) {
 		Subject:     "测试商品",
 		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
 		ChannelType: constants.PaymentProviderBepusdt,
-		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
+		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
 	})
 	if err != nil {
 		t.Fatalf("CreatePayment() failed: %v", err)
@@ -248,7 +249,7 @@ func TestBepusdtAdapter_CreatePayment_CashierModeRejectsQR(t *testing.T) {
 		OrderNo:     "ORDER-CASHIER-QR",
 		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
 		ChannelType: constants.PaymentProviderBepusdt,
-		Extra:       models.JSON{"interaction_mode": constants.PaymentInteractionQR},
+		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},
 	})
 	if !errors.Is(err, ErrConfigInvalid) {
 		t.Fatalf("expected ErrConfigInvalid, got %v", err)
@@ -320,8 +321,8 @@ func TestResolveBepusdtTradeLabels(t *testing.T) {
 	}
 }
 
-func validBepusdtConfig(gatewayURL string) models.JSON {
-	return models.JSON{
+func validBepusdtConfig(gatewayURL string) jsonmap.JSON {
+	return jsonmap.JSON{
 		"gateway_url": gatewayURL,
 		"auth_token":  "token-001",
 		"trade_type":  "usdt.trc20",

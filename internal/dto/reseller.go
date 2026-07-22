@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 type ResellerProfileSummaryResp struct {
@@ -93,11 +94,11 @@ type ResellerSiteConfigResp struct {
 	SiteName     string        `json:"site_name"`
 	Logo         string        `json:"logo"`
 	Favicon      string        `json:"favicon"`
-	Announcement models.JSON   `json:"announcement"`
-	Support      models.JSON   `json:"support"`
-	SEO          models.JSON   `json:"seo"`
+	Announcement jsonmap.JSON  `json:"announcement"`
+	Support      jsonmap.JSON  `json:"support"`
+	SEO          jsonmap.JSON  `json:"seo"`
 	FooterLinks  []interface{} `json:"footer_links"`
-	NavConfig    models.JSON   `json:"nav_config"`
+	NavConfig    jsonmap.JSON  `json:"nav_config"`
 	UpdatedAt    time.Time     `json:"updated_at"`
 }
 
@@ -127,11 +128,11 @@ type AdminResellerSiteConfigResp struct {
 	SiteName     string                            `json:"site_name"`
 	Logo         string                            `json:"logo"`
 	Favicon      string                            `json:"favicon"`
-	Announcement models.JSON                       `json:"announcement"`
-	Support      models.JSON                       `json:"support"`
-	SEO          models.JSON                       `json:"seo"`
+	Announcement jsonmap.JSON                      `json:"announcement"`
+	Support      jsonmap.JSON                      `json:"support"`
+	SEO          jsonmap.JSON                      `json:"seo"`
 	FooterLinks  []interface{}                     `json:"footer_links"`
-	NavConfig    models.JSON                       `json:"nav_config"`
+	NavConfig    jsonmap.JSON                      `json:"nav_config"`
 	Profile      *ResellerSiteConfigProfileRefResp `json:"profile,omitempty"`
 	CreatedAt    time.Time                         `json:"created_at"`
 	UpdatedAt    time.Time                         `json:"updated_at"`
@@ -153,17 +154,17 @@ type ResellerProductSettingResp struct {
 }
 
 type ResellerProductSettingProductResp struct {
-	ID          uint        `json:"id"`
-	Slug        string      `json:"slug"`
-	Title       models.JSON `json:"title"`
-	PriceAmount string      `json:"price_amount"`
-	IsActive    bool        `json:"is_active"`
+	ID          uint         `json:"id"`
+	Slug        string       `json:"slug"`
+	Title       jsonmap.JSON `json:"title"`
+	PriceAmount string       `json:"price_amount"`
+	IsActive    bool         `json:"is_active"`
 }
 
 type ResellerProductSettingSKUResp struct {
 	ID              uint                        `json:"id"`
 	SKUCode         string                      `json:"sku_code"`
-	SpecValues      models.JSON                 `json:"spec_values"`
+	SpecValues      jsonmap.JSON                `json:"spec_values"`
 	BasePriceAmount string                      `json:"base_price_amount"`
 	IsActive        bool                        `json:"is_active"`
 	Setting         *ResellerProductSettingResp `json:"setting,omitempty"`
@@ -198,11 +199,11 @@ type AdminResellerProductSettingProfileResp struct {
 }
 
 type AdminResellerProductSettingProductResp struct {
-	ID          uint        `json:"id"`
-	Slug        string      `json:"slug"`
-	Title       models.JSON `json:"title"`
-	PriceAmount string      `json:"price_amount"`
-	IsActive    bool        `json:"is_active"`
+	ID          uint         `json:"id"`
+	Slug        string       `json:"slug"`
+	Title       jsonmap.JSON `json:"title"`
+	PriceAmount string       `json:"price_amount"`
+	IsActive    bool         `json:"is_active"`
 }
 
 type AdminResellerProductSettingResp struct {
@@ -308,14 +309,14 @@ func NewResellerSiteConfigResp(row *models.ResellerSiteConfig) *ResellerSiteConf
 	}
 }
 
-func resellerFooterLinksFromEnvelope(raw models.JSON) []interface{} {
+func resellerFooterLinksFromEnvelope(raw jsonmap.JSON) []interface{} {
 	if raw == nil {
 		return make([]interface{}, 0)
 	}
 	if items, ok := raw["items"].([]interface{}); ok {
 		return items
 	}
-	if typed, ok := raw["items"].([]models.JSON); ok {
+	if typed, ok := raw["items"].([]jsonmap.JSON); ok {
 		out := make([]interface{}, 0, len(typed))
 		for _, item := range typed {
 			out = append(out, item)

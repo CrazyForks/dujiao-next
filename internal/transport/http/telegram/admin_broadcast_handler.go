@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/telegram"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -34,7 +35,7 @@ type BroadcastCreateInput struct {
 	Title          string
 	RecipientType  string
 	UserIDs        []uint
-	Filters        models.JSON
+	Filters        jsonmap.JSON
 	AttachmentURL  string
 	AttachmentName string
 	MessageHTML    string
@@ -59,13 +60,13 @@ type BroadcastAdminService interface {
 }
 
 type createBroadcastRequest struct {
-	Title          string      `json:"title" binding:"required"`
-	RecipientType  string      `json:"recipient_type" binding:"required"`
-	UserIDs        []uint      `json:"user_ids"`
-	Filters        models.JSON `json:"filters"`
-	AttachmentURL  string      `json:"attachment_url"`
-	AttachmentName string      `json:"attachment_name"`
-	MessageHTML    string      `json:"message_html" binding:"required"`
+	Title          string       `json:"title" binding:"required"`
+	RecipientType  string       `json:"recipient_type" binding:"required"`
+	UserIDs        []uint       `json:"user_ids"`
+	Filters        jsonmap.JSON `json:"filters"`
+	AttachmentURL  string       `json:"attachment_url"`
+	AttachmentName string       `json:"attachment_name"`
+	MessageHTML    string       `json:"message_html" binding:"required"`
 }
 
 // AdminBroadcastHandler 处理后台 Telegram 群发请求。

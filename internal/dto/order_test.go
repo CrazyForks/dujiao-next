@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestOrderDetailOmitsSensitiveFields(t *testing.T) {
@@ -39,7 +40,7 @@ func TestOrderDetailOmitsSensitiveFields(t *testing.T) {
 				OrderID:            1,
 				ProductID:          5,
 				SKUID:              10,
-				TitleJSON:          models.JSON{"zh-CN": "商品A"},
+				TitleJSON:          jsonmap.JSON{"zh-CN": "商品A"},
 				CostPrice:          newMoney("50.00"),
 				OriginalUnitPrice:  newMoney("120.00"),
 				UnitPrice:          newMoney("100.00"),
@@ -99,7 +100,7 @@ func TestOrderDetailOmitsSensitiveFields(t *testing.T) {
 }
 
 func TestOrderDetailHidesInstructionsBeforePayment(t *testing.T) {
-	instructions := models.JSON{"zh-CN": "账号使用方法：…"}
+	instructions := jsonmap.JSON{"zh-CN": "账号使用方法：…"}
 	mkOrder := func(paidAt *time.Time) *models.Order {
 		return &models.Order{
 			ID:          42,
@@ -113,7 +114,7 @@ func TestOrderDetailHidesInstructionsBeforePayment(t *testing.T) {
 					ID:               1,
 					ProductID:        5,
 					SKUID:            10,
-					TitleJSON:        models.JSON{"zh-CN": "商品A"},
+					TitleJSON:        jsonmap.JSON{"zh-CN": "商品A"},
 					InstructionsJSON: instructions,
 					FulfillmentType:  "auto",
 				},

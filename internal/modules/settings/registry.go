@@ -5,11 +5,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // Normalizer 把任意设置 JSON 归一化为可持久化形状。
-type Normalizer func(value models.JSON) models.JSON
+type Normalizer func(value jsonmap.JSON) jsonmap.JSON
 
 // Effect 描述设置成功写入后需要由调用方处理的外部影响。
 // Registry 只声明影响，不直接依赖缓存、HTTP 或其他基础设施。
@@ -77,7 +77,7 @@ func MustNewRegistry(definitions ...Definition) Registry {
 }
 
 // Normalize 执行已登记的写入策略；未知 key 保持历史行为并原样透传。
-func (registry Registry) Normalize(key string, value models.JSON) models.JSON {
+func (registry Registry) Normalize(key string, value jsonmap.JSON) jsonmap.JSON {
 	definition, exists := registry.definitions[key]
 	if !exists {
 		return value

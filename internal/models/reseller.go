@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 
@@ -104,12 +105,12 @@ type ResellerSiteConfig struct {
 	SiteName         string         `gorm:"type:varchar(120)" json:"site_name"`
 	Logo             string         `gorm:"type:varchar(500)" json:"logo"`
 	Favicon          string         `gorm:"type:varchar(500)" json:"favicon"`
-	AnnouncementJSON JSON           `gorm:"type:json" json:"announcement_json"`
-	SupportJSON      JSON           `gorm:"type:json" json:"support_json"`
-	SEOJSON          JSON           `gorm:"type:json" json:"seo_json"`
-	FooterLinksJSON  JSON           `gorm:"type:json" json:"footer_links_json"`
-	NavConfigJSON    JSON           `gorm:"type:json" json:"nav_config_json"`
-	ThemeJSON        JSON           `gorm:"type:json" json:"theme_json"`
+	AnnouncementJSON jsonmap.JSON   `gorm:"type:json" json:"announcement_json"`
+	SupportJSON      jsonmap.JSON   `gorm:"type:json" json:"support_json"`
+	SEOJSON          jsonmap.JSON   `gorm:"type:json" json:"seo_json"`
+	FooterLinksJSON  jsonmap.JSON   `gorm:"type:json" json:"footer_links_json"`
+	NavConfigJSON    jsonmap.JSON   `gorm:"type:json" json:"nav_config_json"`
+	ThemeJSON        jsonmap.JSON   `gorm:"type:json" json:"theme_json"`
 	CreatedAt        time.Time      `gorm:"index" json:"created_at"`
 	UpdatedAt        time.Time      `gorm:"index" json:"updated_at"`
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
@@ -155,8 +156,8 @@ type ResellerOrderSnapshot struct {
 	ProfitAmount        Money          `gorm:"type:decimal(20,2);not null;default:0" json:"profit_amount"`
 	ProfitEligible      bool           `gorm:"not null;default:true;index" json:"profit_eligible"`
 	ProfitBlockReason   string         `gorm:"type:varchar(64);index" json:"profit_block_reason"`
-	PricingSnapshotJSON JSON           `gorm:"type:json" json:"pricing_snapshot_json"`
-	RiskSnapshotJSON    JSON           `gorm:"type:json" json:"risk_snapshot_json"`
+	PricingSnapshotJSON jsonmap.JSON   `gorm:"type:json" json:"pricing_snapshot_json"`
+	RiskSnapshotJSON    jsonmap.JSON   `gorm:"type:json" json:"risk_snapshot_json"`
 	CreatedAt           time.Time      `gorm:"index" json:"created_at"`
 	UpdatedAt           time.Time      `gorm:"index" json:"updated_at"`
 	DeletedAt           gorm.DeletedAt `gorm:"index" json:"-"`
@@ -175,7 +176,7 @@ type ResellerLedgerEntry struct {
 	Amount            Money          `gorm:"type:decimal(20,2);not null;default:0" json:"amount"`
 	Currency          string         `gorm:"type:varchar(16);not null;index" json:"currency"`
 	IdempotencyKey    string         `gorm:"type:varchar(160);not null;uniqueIndex" json:"idempotency_key"`
-	MetadataJSON      JSON           `gorm:"type:json" json:"metadata_json"`
+	MetadataJSON      jsonmap.JSON   `gorm:"type:json" json:"metadata_json"`
 	Status            string         `gorm:"type:varchar(32);not null;index" json:"status"`
 	AvailableAt       *time.Time     `gorm:"index" json:"available_at,omitempty"`
 	WithdrawRequestID *uint          `gorm:"index" json:"withdraw_request_id,omitempty"`

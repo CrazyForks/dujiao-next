@@ -14,6 +14,7 @@ import (
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/telegramidentity"
 
 	"github.com/hibiken/asynq"
@@ -318,7 +319,7 @@ func buildOrderInstructionsEmailText(order *models.Order, locale string) string 
 	}
 	seen := make(map[string]struct{})
 	var parts []string
-	add := func(raw models.JSON) {
+	add := func(raw jsonmap.JSON) {
 		text := localizedInstructionsText(raw, locale)
 		if text == "" {
 			return
@@ -344,7 +345,7 @@ func buildOrderInstructionsEmailText(order *models.Order, locale string) string 
 	return strings.Join(parts, "\n\n")
 }
 
-func localizedInstructionsText(raw models.JSON, locale string) string {
+func localizedInstructionsText(raw jsonmap.JSON, locale string) string {
 	if len(raw) == 0 {
 		return ""
 	}

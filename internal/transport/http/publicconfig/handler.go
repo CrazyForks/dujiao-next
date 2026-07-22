@@ -8,8 +8,8 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/http/response"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/version"
 
 	"github.com/gin-gonic/gin"
@@ -35,7 +35,7 @@ type Settings interface {
 	GetEmailVerificationEnabled(defaultValue bool) (bool, error)
 	GetRegistrationEmailDomainPolicy() (enabled bool, allowedDomains []string, err error)
 	GetByKey(key string) (interface{}, error)
-	GetActiveHomeAnnouncement() (models.JSON, bool)
+	GetActiveHomeAnnouncement() (jsonmap.JSON, bool)
 }
 
 // PaymentChannels 公开支付渠道端口。
@@ -45,7 +45,7 @@ type PaymentChannels interface {
 
 // CaptchaPublic 公开验证码配置端口。
 type CaptchaPublic interface {
-	GetPublicSetting() (models.JSON, error)
+	GetPublicSetting() (jsonmap.JSON, error)
 }
 
 // TelegramAuthPublic Telegram 登录公开配置端口。

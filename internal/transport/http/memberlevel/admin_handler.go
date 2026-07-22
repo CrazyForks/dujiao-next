@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/memberlevel"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -35,15 +36,15 @@ func NewAdminHandler(service AdminService) *AdminHandler {
 
 // CreateMemberLevelRequest 创建/更新会员等级请求
 type CreateMemberLevelRequest struct {
-	NameJSON          models.JSON `json:"name" binding:"required"`
-	Slug              string      `json:"slug" binding:"required"`
-	Icon              string      `json:"icon"`
-	DiscountRate      float64     `json:"discount_rate"`
-	RechargeThreshold float64     `json:"recharge_threshold"`
-	SpendThreshold    float64     `json:"spend_threshold"`
-	IsDefault         bool        `json:"is_default"`
-	SortOrder         int         `json:"sort_order"`
-	IsActive          *bool       `json:"is_active"`
+	NameJSON          jsonmap.JSON `json:"name" binding:"required"`
+	Slug              string       `json:"slug" binding:"required"`
+	Icon              string       `json:"icon"`
+	DiscountRate      float64      `json:"discount_rate"`
+	RechargeThreshold float64      `json:"recharge_threshold"`
+	SpendThreshold    float64      `json:"spend_threshold"`
+	IsDefault         bool         `json:"is_default"`
+	SortOrder         int          `json:"sort_order"`
+	IsActive          *bool        `json:"is_active"`
 }
 
 // GetAdminMemberLevels 获取会员等级列表

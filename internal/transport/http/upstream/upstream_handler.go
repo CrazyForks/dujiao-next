@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	upstreamadapter "github.com/dujiao-next/internal/upstream"
 
 	"github.com/gin-gonic/gin"
@@ -40,7 +41,7 @@ type CreateOrderInput struct {
 	UserID          uint
 	Items           []CreateOrderItem
 	ClientIP        string
-	ManualFormData  map[string]models.JSON
+	ManualFormData  map[string]jsonmap.JSON
 	SkipRiskControl bool
 }
 
@@ -90,7 +91,7 @@ type MemberLevelService interface {
 }
 
 type Settings interface {
-	GetByKey(key string) (models.JSON, error)
+	GetByKey(key string) (jsonmap.JSON, error)
 	GetSiteCurrency(defaultValue string) (string, error)
 }
 
@@ -102,7 +103,7 @@ type Orders interface {
 	CreateOrder(input CreateOrderInput) (*models.Order, error)
 	GetOrderByUser(orderID, userID uint) (*models.Order, error)
 	CancelOrder(orderID, userID uint) (*models.Order, error)
-	BuildLocalRefundRecordsForOrder(order *models.Order) ([]models.JSON, error)
+	BuildLocalRefundRecordsForOrder(order *models.Order) ([]jsonmap.JSON, error)
 }
 
 type Payments interface {

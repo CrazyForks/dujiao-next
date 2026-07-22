@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -127,7 +128,7 @@ func buildOrderSubject(order *models.Order) string {
 	return order.OrderNo
 }
 
-func pickOrderItemTitle(title models.JSON) string {
+func pickOrderItemTitle(title jsonmap.JSON) string {
 	if title == nil {
 		return ""
 	}

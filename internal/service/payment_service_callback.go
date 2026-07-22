@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"gorm.io/gorm"
 )
@@ -21,7 +22,7 @@ type PaymentCallbackInput struct {
 	Amount      models.Money
 	Currency    string
 	PaidAt      *time.Time
-	Payload     models.JSON
+	Payload     jsonmap.JSON
 }
 
 func (s *PaymentService) HandleCallback(input PaymentCallbackInput) (*models.Payment, error) {
@@ -225,11 +226,11 @@ func (s *PaymentService) applyPaymentUpdate(payment *models.Payment, order *mode
 
 // mergeProviderPayload 合并第三方回调原文，同时保留创建支付阶段写入的展示快照等元数据。
 // 回调字段优先覆盖同名旧字段，未出现在回调中的 display_channel_type 等字段不会丢失。
-func mergeProviderPayload(existing models.JSON, incoming models.JSON) models.JSON {
+func mergeProviderPayload(existing jsonmap.JSON, incoming jsonmap.JSON) jsonmap.JSON {
 	if incoming == nil {
 		return existing
 	}
-	merged := make(models.JSON, len(existing)+len(incoming))
+	merged := make(jsonmap.JSON, len(existing)+len(incoming))
 	for key, value := range existing {
 		merged[key] = value
 	}

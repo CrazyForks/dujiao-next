@@ -1,13 +1,16 @@
 package contenthttp
 
-import "github.com/dujiao-next/internal/models"
+import (
+	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
+)
 
 // AdminPostProductRef 是后台文章编辑回填使用的关联商品精简结构。
 type AdminPostProductRef struct {
-	ID    uint        `json:"id"`
-	Slug  string      `json:"slug"`
-	Title models.JSON `json:"title"`
-	Image string      `json:"image,omitempty"`
+	ID    uint         `json:"id"`
+	Slug  string       `json:"slug"`
+	Title jsonmap.JSON `json:"title"`
+	Image string       `json:"image,omitempty"`
 }
 
 func newAdminPostProductRefs(products []models.Product) []AdminPostProductRef {

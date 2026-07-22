@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -142,7 +143,7 @@ func createTestChildOrderWithFulfillmentType(
 		OrderID:         child.ID,
 		ProductID:       child.ID + 1000,
 		SKUID:           1,
-		TitleJSON:       models.JSON{"zh-CN": orderNo},
+		TitleJSON:       jsonmap.JSON{"zh-CN": orderNo},
 		UnitPrice:       models.NewMoneyFromDecimal(total),
 		CostPrice:       models.NewMoneyFromDecimal(decimal.Zero),
 		Quantity:        1,

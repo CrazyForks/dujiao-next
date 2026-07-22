@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // fakeCategoryRepo 以内存实现分类查找/复活端口，验证 findOrCreateLocalCategory 的调用编排。
@@ -41,7 +42,7 @@ func TestFindOrCreateLocalCategoryRestoresSoftDeleted(t *testing.T) {
 		ID:       7,
 		ParentID: 0,
 		Slug:     "softdel-streaming",
-		NameJSON: models.JSON{"zh-CN": "旧名"},
+		NameJSON: jsonmap.JSON{"zh-CN": "旧名"},
 		IsActive: false,
 	}
 	repo := &fakeCategoryRepo{
@@ -50,7 +51,7 @@ func TestFindOrCreateLocalCategoryRestoresSoftDeleted(t *testing.T) {
 	}
 	svc := &Service{categories: repo}
 
-	restored, err := svc.findOrCreateLocalCategory("softdel-streaming", models.JSON{"zh-CN": "新名"}, 3)
+	restored, err := svc.findOrCreateLocalCategory("softdel-streaming", jsonmap.JSON{"zh-CN": "新名"}, 3)
 	if err != nil {
 		t.Fatalf("findOrCreateLocalCategory failed: %v", err)
 	}
@@ -76,14 +77,14 @@ func TestFindOrCreateLocalCategoryRestoresSoftDeleted(t *testing.T) {
 
 // TestFindOrCreateLocalCategoryReturnsVisibleMatchWithoutRestore 验证同 slug 分类已存在时直接复用。
 func TestFindOrCreateLocalCategoryReturnsVisibleMatchWithoutRestore(t *testing.T) {
-	existing := &models.Category{ID: 5, Slug: "streaming", NameJSON: models.JSON{"zh-CN": "已有"}, IsActive: true}
+	existing := &models.Category{ID: 5, Slug: "streaming", NameJSON: jsonmap.JSON{"zh-CN": "已有"}, IsActive: true}
 	repo := &fakeCategoryRepo{
 		visible: map[string]*models.Category{"streaming": existing},
 		deleted: map[string]*models.Category{},
 	}
 	svc := &Service{categories: repo}
 
-	got, err := svc.findOrCreateLocalCategory("streaming", models.JSON{"zh-CN": "新名"}, 0)
+	got, err := svc.findOrCreateLocalCategory("streaming", jsonmap.JSON{"zh-CN": "新名"}, 0)
 	if err != nil {
 		t.Fatalf("findOrCreateLocalCategory failed: %v", err)
 	}
@@ -106,7 +107,7 @@ func TestFindOrCreateLocalCategoryRequiresCreatorForNewSlug(t *testing.T) {
 	}
 	svc := &Service{categories: repo}
 
-	if _, err := svc.findOrCreateLocalCategory("brand-new", models.JSON{"zh-CN": "新"}, 0); err == nil ||
+	if _, err := svc.findOrCreateLocalCategory("brand-new", jsonmap.JSON{"zh-CN": "新"}, 0); err == nil ||
 		!strings.Contains(err.Error(), "category service not available") {
 		t.Fatalf("expected category service not available error, got %v", err)
 	}

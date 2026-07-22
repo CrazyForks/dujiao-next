@@ -3,7 +3,7 @@ package channelhttp
 import (
 	"github.com/dujiao-next/internal/http/response"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -28,7 +28,7 @@ type previewOrderRequest struct {
 	CouponCode     string                    `json:"coupon_code"`
 	AffiliateCode  string                    `json:"affiliate_code"`
 	AffiliateKey   string                    `json:"affiliate_visitor_key"`
-	ManualFormData map[string]models.JSON    `json:"manual_form_data"`
+	ManualFormData map[string]jsonmap.JSON   `json:"manual_form_data"`
 }
 
 type createOrderRequest struct {
@@ -47,7 +47,7 @@ type createOrderRequest struct {
 	CouponCode     string                    `json:"coupon_code"`
 	AffiliateCode  string                    `json:"affiliate_code"`
 	AffiliateKey   string                    `json:"affiliate_visitor_key"`
-	ManualFormData map[string]models.JSON    `json:"manual_form_data"`
+	ManualFormData map[string]jsonmap.JSON   `json:"manual_form_data"`
 }
 
 // PreviewOrder POST /api/v1/channel/orders/preview

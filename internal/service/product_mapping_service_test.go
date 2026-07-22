@@ -13,6 +13,7 @@ import (
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	"github.com/dujiao-next/internal/modules/siteconnection"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/upstream"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -81,7 +82,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 	if err := categoryRepo.Create(&models.Category{
 		ParentID: 0,
 		Slug:     "test-category",
-		NameJSON: models.JSON{"zh-CN": "Test Category"},
+		NameJSON: jsonmap.JSON{"zh-CN": "Test Category"},
 	}); err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
@@ -96,9 +97,9 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 			"ok": true,
 			"product": upstream.UpstreamProduct{
 				ID:              101,
-				Title:           models.JSON{"zh-CN": "映射测试商品"},
-				Description:     models.JSON{"zh-CN": "描述"},
-				Content:         models.JSON{"zh-CN": "内容"},
+				Title:           jsonmap.JSON{"zh-CN": "映射测试商品"},
+				Description:     jsonmap.JSON{"zh-CN": "描述"},
+				Content:         jsonmap.JSON{"zh-CN": "内容"},
 				Images:          []string{},
 				Tags:            []string{"tag-a"},
 				PriceAmount:     "10.00",
@@ -109,7 +110,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 					{
 						ID:          201,
 						SKUCode:     "SKU-A",
-						SpecValues:  models.JSON{"name": "A"},
+						SpecValues:  jsonmap.JSON{"name": "A"},
 						PriceAmount: "10.00",
 						IsActive:    true,
 					},
@@ -194,7 +195,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 	server := httptest.NewServer(handler)
 
 	categoryRepo := cataloggormstore.NewCategoryStore(db)
-	if err := categoryRepo.Create(&models.Category{Slug: "c", NameJSON: models.JSON{"zh-CN": "C"}}); err != nil {
+	if err := categoryRepo.Create(&models.Category{Slug: "c", NameJSON: jsonmap.JSON{"zh-CN": "C"}}); err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
 
@@ -202,7 +203,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 	product := models.Product{
 		CategoryID:      1,
 		Slug:            "p",
-		TitleJSON:       models.JSON{"zh-CN": "P"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "P"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		FulfillmentType: constants.FulfillmentTypeUpstream,
 		IsActive:        true,
@@ -357,7 +358,7 @@ func TestSyncProductKeepsLocalWholesalePricesWhenUpstreamOmitsWholesalePrices(t 
 				"ok": true,
 				"product": upstream.UpstreamProduct{
 					ID:              101,
-					Title:           models.JSON{"zh-CN": "测试"},
+					Title:           jsonmap.JSON{"zh-CN": "测试"},
 					PriceAmount:     "10.00",
 					Currency:        "CNY",
 					FulfillmentType: constants.FulfillmentTypeAuto,
@@ -405,7 +406,7 @@ func TestSyncProductRemapsUpstreamWholesaleSKUID(t *testing.T) {
 				"ok": true,
 				"product": upstream.UpstreamProduct{
 					ID:              101,
-					Title:           models.JSON{"zh-CN": "测试"},
+					Title:           jsonmap.JSON{"zh-CN": "测试"},
 					PriceAmount:     "10.00",
 					Currency:        "CNY",
 					FulfillmentType: constants.FulfillmentTypeAuto,
@@ -540,7 +541,7 @@ func TestSyncConnectionStockKeepsMappingWhenFullSyncIncomplete(t *testing.T) {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"ok": true,
 				"items": []upstream.UpstreamProduct{
-					{ID: 999, Title: models.JSON{"zh-CN": "其他商品"}, PriceAmount: "1.00", IsActive: true},
+					{ID: 999, Title: jsonmap.JSON{"zh-CN": "其他商品"}, PriceAmount: "1.00", IsActive: true},
 				},
 				"total":             10,
 				"page":              1,
@@ -634,7 +635,7 @@ func TestEnsureUpstreamStockRejectsWhenUpstreamReportsZero(t *testing.T) {
 			"ok": true,
 			"product": upstream.UpstreamProduct{
 				ID:              101,
-				Title:           models.JSON{"zh-CN": "测试"},
+				Title:           jsonmap.JSON{"zh-CN": "测试"},
 				PriceAmount:     "10.00",
 				Currency:        "CNY",
 				FulfillmentType: constants.FulfillmentTypeAuto,
@@ -704,7 +705,7 @@ func TestSyncProductRestoresStatusWhenUpstreamRecovers(t *testing.T) {
 				"ok": true,
 				"product": upstream.UpstreamProduct{
 					ID:              101,
-					Title:           models.JSON{"zh-CN": "P"},
+					Title:           jsonmap.JSON{"zh-CN": "P"},
 					PriceAmount:     "10.00",
 					Currency:        "CNY",
 					FulfillmentType: constants.FulfillmentTypeAuto,
@@ -756,7 +757,7 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 	}
 
 	categoryRepo := cataloggormstore.NewCategoryStore(db)
-	if err := categoryRepo.Create(&models.Category{Slug: "c", NameJSON: models.JSON{"zh-CN": "C"}}); err != nil {
+	if err := categoryRepo.Create(&models.Category{Slug: "c", NameJSON: jsonmap.JSON{"zh-CN": "C"}}); err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
 
@@ -766,7 +767,7 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 			"ok": true,
 			"product": upstream.UpstreamProduct{
 				ID:          202,
-				Title:       models.JSON{"zh-CN": "已下架商品"},
+				Title:       jsonmap.JSON{"zh-CN": "已下架商品"},
 				PriceAmount: "10.00",
 				IsActive:    false,
 			},

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // AuthzRecord 权限审计记录输入
@@ -18,7 +19,7 @@ type AuthzRecord struct {
 	Object           string
 	Method           string
 	RequestID        string
-	Detail           models.JSON
+	Detail           jsonmap.JSON
 }
 
 // AuthzService 权限审计服务

@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -550,7 +551,7 @@ func buildWalletRechargeCallbackInput(payment *models.Payment, recharge *models.
 		Amount:      payment.Amount,
 		Currency:    payment.Currency,
 		PaidAt:      ptrTime(time.Now()),
-		Payload: models.JSON{
+		Payload: jsonmap.JSON{
 			"provider_ref": providerRef,
 			"status":       status,
 		},

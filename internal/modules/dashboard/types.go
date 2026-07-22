@@ -1,8 +1,8 @@
 package dashboard
 
 import (
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/reporting"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 type QueryInput = reporting.Query
@@ -87,16 +87,16 @@ type RankingsResponse struct {
 }
 
 type ProductRanking struct {
-	ProductID     uint        `json:"product_id"`
-	SKUID         uint        `json:"sku_id,omitempty"`
-	SKUCode       string      `json:"sku_code,omitempty"`
-	SKUSpecValues models.JSON `json:"sku_spec_values,omitempty"`
-	Title         string      `json:"title"`
-	PaidOrders    int64       `json:"paid_orders"`
-	Quantity      int64       `json:"quantity"`
-	PaidAmount    string      `json:"paid_amount"`
-	TotalCost     string      `json:"total_cost"`
-	Profit        string      `json:"profit"`
+	ProductID     uint         `json:"product_id"`
+	SKUID         uint         `json:"sku_id,omitempty"`
+	SKUCode       string       `json:"sku_code,omitempty"`
+	SKUSpecValues jsonmap.JSON `json:"sku_spec_values,omitempty"`
+	Title         string       `json:"title"`
+	PaidOrders    int64        `json:"paid_orders"`
+	Quantity      int64        `json:"quantity"`
+	PaidAmount    string       `json:"paid_amount"`
+	TotalCost     string       `json:"total_cost"`
+	Profit        string       `json:"profit"`
 }
 
 type ChannelRanking struct {

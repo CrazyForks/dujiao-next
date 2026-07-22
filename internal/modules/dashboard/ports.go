@@ -3,8 +3,8 @@ package dashboard
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/models"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // Repository is the persistence port consumed by the dashboard use cases.
@@ -83,9 +83,9 @@ type StockStatsRow struct {
 type InventoryAlertRow struct {
 	ProductID         uint
 	SKUID             uint
-	ProductTitleJSON  models.JSON
+	ProductTitleJSON  jsonmap.JSON
 	SKUCode           string
-	SKUSpecValuesJSON models.JSON
+	SKUSpecValuesJSON jsonmap.JSON
 	FulfillmentType   string
 	AlertType         string
 	AvailableStock    int64
@@ -93,9 +93,9 @@ type InventoryAlertRow struct {
 
 type ProductRankingRow struct {
 	ProductID         uint
-	SKUID             uint        `gorm:"column:sku_id"`
-	SKUCode           string      `gorm:"column:sku_code"`
-	SKUSpecValuesJSON models.JSON `gorm:"column:sku_spec_values_json;type:json"`
+	SKUID             uint         `gorm:"column:sku_id"`
+	SKUCode           string       `gorm:"column:sku_code"`
+	SKUSpecValuesJSON jsonmap.JSON `gorm:"column:sku_spec_values_json;type:json"`
 	Title             string
 	PaidOrders        int64
 	Quantity          int64

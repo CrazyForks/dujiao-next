@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -225,7 +226,7 @@ func TestResellerRepositorySiteConfigLifecycle(t *testing.T) {
 		ResellerID: profile.ID,
 		SiteName:   "Alice Store",
 		Logo:       "/uploads/reseller/logo.png",
-		SupportJSON: models.JSON{
+		SupportJSON: jsonmap.JSON{
 			"telegram": "https://t.me/alice",
 		},
 	})

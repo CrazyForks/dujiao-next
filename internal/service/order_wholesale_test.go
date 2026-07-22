@@ -16,6 +16,7 @@ import (
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -55,7 +56,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 	now := time.Now()
 	category := models.Category{
 		Slug:      name + "-category",
-		NameJSON:  models.JSON{"zh-CN": "测试分类"},
+		NameJSON:  jsonmap.JSON{"zh-CN": "测试分类"},
 		CreatedAt: now,
 	}
 	if err := db.Create(&category).Error; err != nil {
@@ -65,7 +66,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 	var user models.User
 	if memberRate != nil {
 		level := models.MemberLevel{
-			NameJSON:     models.JSON{"zh-CN": "批发会员"},
+			NameJSON:     jsonmap.JSON{"zh-CN": "批发会员"},
 			Slug:         name + "-level",
 			DiscountRate: models.NewMoneyFromDecimal(*memberRate),
 			IsActive:     true,
@@ -91,7 +92,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 	product := models.Product{
 		CategoryID:      category.ID,
 		Slug:            name + "-product",
-		TitleJSON:       models.JSON{"zh-CN": "批发测试商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "批发测试商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		WholesalePrices: wholesalePrices,
 		PurchaseType:    constants.ProductPurchaseMember,
@@ -354,7 +355,7 @@ func TestBuildOrderResultExcludesWholesaleItemsWhenCouponDisabledWholesalePrice(
 	productB := models.Product{
 		CategoryID:      fixture.product.CategoryID,
 		Slug:            "coupon-disabled-mixed-product-b",
-		TitleJSON:       models.JSON{"zh-CN": "非批发商品"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "非批发商品"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
 )
@@ -21,8 +22,8 @@ func TestBuildChannelOrderPreviewResponseIncludesTelegramFriendlyFields(t *testi
 		Items: []OrderPreviewItem{{
 			ProductID:          12,
 			SKUID:              34,
-			TitleJSON:          models.JSON{"zh-CN": "会员订阅"},
-			SKUSnapshotJSON:    models.JSON{"spec_values": models.JSON{"zh-CN": "季度版"}},
+			TitleJSON:          jsonmap.JSON{"zh-CN": "会员订阅"},
+			SKUSnapshotJSON:    jsonmap.JSON{"spec_values": jsonmap.JSON{"zh-CN": "季度版"}},
 			Quantity:           2,
 			OriginalUnitPrice:  models.NewMoneyFromDecimal(decimal.RequireFromString("60.00")),
 			UnitPrice:          models.NewMoneyFromDecimal(decimal.RequireFromString("54.00")),
@@ -62,7 +63,7 @@ func TestBuildChannelOrderPreviewResponseIncludesTelegramFriendlyFields(t *testi
 }
 
 func TestNormalizeChannelManualFormSchemaUsesLocaleText(t *testing.T) {
-	schema := models.JSON{"fields": []interface{}{
+	schema := jsonmap.JSON{"fields": []interface{}{
 		map[string]interface{}{
 			"key": "account", "type": "text", "required": true,
 			"label":       map[string]interface{}{"zh-CN": "充值账号", "en-US": "Account"},
@@ -108,8 +109,8 @@ func TestBuildChannelOrderDetailResponseUsesTotalPaidAmount(t *testing.T) {
 		Items: []models.OrderItem{{
 			ProductID:          1,
 			SKUID:              2,
-			TitleJSON:          models.JSON{"zh-CN": "测试商品"},
-			SKUSnapshotJSON:    models.JSON{"spec_values": models.JSON{"zh-CN": "标准版"}},
+			TitleJSON:          jsonmap.JSON{"zh-CN": "测试商品"},
+			SKUSnapshotJSON:    jsonmap.JSON{"spec_values": jsonmap.JSON{"zh-CN": "标准版"}},
 			Quantity:           1,
 			OriginalUnitPrice:  models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
 			UnitPrice:          models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
@@ -279,7 +280,7 @@ func TestBuildChannelPaymentResponse_ProviderModeMatrix(t *testing.T) {
 		providerType    string
 		channelType     string
 		interactionMode string
-		payload         models.JSON
+		payload         jsonmap.JSON
 		wantUSDT        *wantUSDT // nil => no wallet_address/chain_amount keys expected
 	}{
 		{name: "alipay qr", providerType: constants.PaymentProviderOfficial, channelType: constants.PaymentChannelTypeAlipay, interactionMode: constants.PaymentInteractionQR},
@@ -294,16 +295,16 @@ func TestBuildChannelPaymentResponse_ProviderModeMatrix(t *testing.T) {
 			providerType:    constants.PaymentProviderBepusdt,
 			channelType:     "",
 			interactionMode: constants.PaymentInteractionQR,
-			payload:         models.JSON{"data": map[string]any{"token": "TBepAddr", "actual_amount": "13.45"}},
+			payload:         jsonmap.JSON{"data": map[string]any{"token": "TBepAddr", "actual_amount": "13.45"}},
 			wantUSDT:        &wantUSDT{address: "TBepAddr", amount: "13.45"},
 		},
-		{name: "bepusdt redirect", providerType: constants.PaymentProviderBepusdt, channelType: "", interactionMode: constants.PaymentInteractionRedirect, payload: models.JSON{"data": map[string]any{"token": "TBepAddr", "actual_amount": "13.45"}}},
+		{name: "bepusdt redirect", providerType: constants.PaymentProviderBepusdt, channelType: "", interactionMode: constants.PaymentInteractionRedirect, payload: jsonmap.JSON{"data": map[string]any{"token": "TBepAddr", "actual_amount": "13.45"}}},
 		{
 			name:            "epusdt qr with receive_address payload",
 			providerType:    constants.PaymentProviderEpusdt,
 			channelType:     "",
 			interactionMode: constants.PaymentInteractionQR,
-			payload:         models.JSON{"data": map[string]any{"receive_address": "TEpusdtAddr", "actual_amount": "9.99"}},
+			payload:         jsonmap.JSON{"data": map[string]any{"receive_address": "TEpusdtAddr", "actual_amount": "9.99"}},
 			wantUSDT:        &wantUSDT{address: "TEpusdtAddr", amount: "9.99"},
 		},
 		{
@@ -311,7 +312,7 @@ func TestBuildChannelPaymentResponse_ProviderModeMatrix(t *testing.T) {
 			providerType:    constants.PaymentProviderEpusdt,
 			channelType:     "",
 			interactionMode: constants.PaymentInteractionQR,
-			payload:         models.JSON{"data": map[string]any{"actual_amount": "5.00"}},
+			payload:         jsonmap.JSON{"data": map[string]any{"actual_amount": "5.00"}},
 			wantUSDT:        &wantUSDT{address: "", amount: "5.00"},
 		},
 		{name: "epusdt redirect", providerType: constants.PaymentProviderEpusdt, channelType: "", interactionMode: constants.PaymentInteractionRedirect},
@@ -320,7 +321,7 @@ func TestBuildChannelPaymentResponse_ProviderModeMatrix(t *testing.T) {
 			providerType:    constants.PaymentProviderDujiaoPay,
 			channelType:     "tron-usdt",
 			interactionMode: constants.PaymentInteractionQR,
-			payload: models.JSON{
+			payload: jsonmap.JSON{
 				"chain":          "tron",
 				"token_id":       "tron-usdt",
 				"pay_address":    "TDujiaoAddr",
@@ -429,7 +430,7 @@ func TestBuildChannelPaymentResponse_USDTQRExposesWalletFields(t *testing.T) {
 		Currency:        "CNY",
 		PayURL:          "https://pay.example.com/c/abc",
 		QRCode:          "https://pay.example.com/c/abc",
-		ProviderPayload: models.JSON{
+		ProviderPayload: jsonmap.JSON{
 			"data": map[string]any{
 				"token":         "TXxxxxx",
 				"actual_amount": "13.45",

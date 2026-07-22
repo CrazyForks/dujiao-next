@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	upstreamtransport "github.com/dujiao-next/internal/transport/http/upstream"
 )
 
@@ -82,7 +83,7 @@ func (a orderServiceAdapter) CancelOrder(orderID, userID uint) (*models.Order, e
 	return order, mapOrderError(err)
 }
 
-func (a orderServiceAdapter) BuildLocalRefundRecordsForOrder(order *models.Order) ([]models.JSON, error) {
+func (a orderServiceAdapter) BuildLocalRefundRecordsForOrder(order *models.Order) ([]jsonmap.JSON, error) {
 	return a.orders.BuildLocalRefundRecordsForOrder(order)
 }
 

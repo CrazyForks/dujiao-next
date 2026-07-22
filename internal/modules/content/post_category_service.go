@@ -4,11 +4,12 @@ import (
 	"context"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // CreatePostCategoryInput 描述文章分类创建和更新所需字段。
 type CreatePostCategoryInput struct {
-	NameJSON  models.JSON
+	NameJSON  jsonmap.JSON
 	Slug      string
 	ParentID  *uint
 	SortOrder int

@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
 
@@ -223,7 +224,7 @@ func buildOrderItemDetails(row OrderSnapshotRow) []OrderItemDetail {
 	return out
 }
 
-func pricingSnapshotByOrderItemID(snapshot models.JSON) map[uint]pricingItemSnapshot {
+func pricingSnapshotByOrderItemID(snapshot jsonmap.JSON) map[uint]pricingItemSnapshot {
 	out := map[uint]pricingItemSnapshot{}
 	rawItems, ok := snapshot["items"].([]interface{})
 	if !ok {

@@ -15,6 +15,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/alipay"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -29,7 +30,7 @@ func TestAlipayAdapter_Type(t *testing.T) {
 
 func TestAlipayAdapter_ValidateConfig_EmptyRejected(t *testing.T) {
 	a := NewAlipayAdapter()
-	err := a.ValidateConfig(models.JSON{}, "")
+	err := a.ValidateConfig(jsonmap.JSON{}, "")
 	if err == nil {
 		t.Fatalf("expected error from empty config")
 	}
@@ -40,7 +41,7 @@ func TestAlipayAdapter_ValidateConfig_EmptyRejected(t *testing.T) {
 
 func TestAlipayAdapter_CreatePayment_ConfigInvalidMapped(t *testing.T) {
 	a := NewAlipayAdapter()
-	_, err := a.CreatePayment(context.Background(), models.JSON{}, CreateInput{
+	_, err := a.CreatePayment(context.Background(), jsonmap.JSON{}, CreateInput{
 		OrderNo:  "ORDER_1",
 		Currency: "CNY",
 	})
@@ -59,7 +60,7 @@ func TestAlipayAdapter_CreatePayment_ConfigInvalidMapped(t *testing.T) {
 func TestAlipayAdapter_ValidateConfig_ValidConfig_C3Regression(t *testing.T) {
 	a := NewAlipayAdapter()
 	// 使用 alipay native test 中确认有效的最小配置（QR 模式不要求 return_url）
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"app_id":            "2026000000000000",
 		"private_key":       "k",
 		"alipay_public_key": "p",
@@ -79,7 +80,7 @@ func TestAlipayAdapter_ValidateConfig_ValidConfig_C3Regression(t *testing.T) {
 // 原因：wrapper 内部当 interactionMode="" 时用 QR 作 default。
 func TestAlipayAdapter_ValidateConfig_EmptyInteractionModeUsesDefault(t *testing.T) {
 	a := NewAlipayAdapter()
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"app_id":            "2026000000000000",
 		"private_key":       "k",
 		"alipay_public_key": "p",
@@ -117,7 +118,7 @@ func TestAlipayAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 	privateKeyPEM, publicKeyPEM := buildAlipayTestKeyPair(t)
 
 	a := NewAlipayAdapter()
-	raw := models.JSON{
+	raw := jsonmap.JSON{
 		"app_id":            "2026000000000000",
 		"private_key":       privateKeyPEM,
 		"alipay_public_key": publicKeyPEM,
@@ -134,7 +135,7 @@ func TestAlipayAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 		Subject:   "audit field test",
 		Currency:  "USD",
 		Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-		Extra:     models.JSON{"interaction_mode": constants.PaymentInteractionQR},
+		Extra:     jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},
 		NotifyURL: "https://example.com/api/v1/payments/callback",
 	}
 

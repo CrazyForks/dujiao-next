@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 
@@ -29,7 +30,7 @@ type Fulfillment struct {
 	Status           string         `gorm:"not null" json:"status"`               // 交付状态（pending/delivered）
 	Payload          string         `gorm:"type:text" json:"payload"`             // 交付内容
 	PayloadLineCount int            `gorm:"-" json:"payload_line_count"`          // 交付内容总行数（非持久化，API 返回时填充）
-	LogisticsJSON    JSON           `gorm:"type:json" json:"delivery_data"`       // 结构化交付信息
+	LogisticsJSON    jsonmap.JSON   `gorm:"type:json" json:"delivery_data"`       // 结构化交付信息
 	DeliveredBy      *uint          `gorm:"index" json:"delivered_by,omitempty"`  // 交付管理员ID
 	DeliveredAt      *time.Time     `gorm:"index" json:"delivered_at,omitempty"`  // 交付时间
 	CreatedAt        time.Time      `gorm:"index" json:"created_at"`              // 创建时间

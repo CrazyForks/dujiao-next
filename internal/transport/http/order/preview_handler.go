@@ -16,6 +16,7 @@ import (
 	"github.com/dujiao-next/internal/modules/coupon"
 	"github.com/dujiao-next/internal/modules/promotion"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -79,11 +80,11 @@ type OrderItemRequest struct {
 
 // CreateOrderRequest 用户订单预览/创建请求体（preview 使用）。
 type CreateOrderRequest struct {
-	Items               []OrderItemRequest     `json:"items" binding:"required"`
-	CouponCode          string                 `json:"coupon_code"`
-	AffiliateCode       string                 `json:"affiliate_code"`
-	AffiliateVisitorKey string                 `json:"affiliate_visitor_key"`
-	ManualFormData      map[string]models.JSON `json:"manual_form_data"`
+	Items               []OrderItemRequest      `json:"items" binding:"required"`
+	CouponCode          string                  `json:"coupon_code"`
+	AffiliateCode       string                  `json:"affiliate_code"`
+	AffiliateVisitorKey string                  `json:"affiliate_visitor_key"`
+	ManualFormData      map[string]jsonmap.JSON `json:"manual_form_data"`
 }
 
 // CreateGuestOrderRequest 游客订单预览请求体。
@@ -94,7 +95,7 @@ type CreateGuestOrderRequest struct {
 	CouponCode          string                       `json:"coupon_code"`
 	AffiliateCode       string                       `json:"affiliate_code"`
 	AffiliateVisitorKey string                       `json:"affiliate_visitor_key"`
-	ManualFormData      map[string]models.JSON       `json:"manual_form_data"`
+	ManualFormData      map[string]jsonmap.JSON      `json:"manual_form_data"`
 	CaptchaPayload      shared.CaptchaPayloadRequest `json:"captcha_payload"`
 }
 
@@ -115,7 +116,7 @@ type CreateOrderInput struct {
 	AffiliateCode       string
 	AffiliateVisitorKey string
 	ClientIP            string
-	ManualFormData      map[string]models.JSON
+	ManualFormData      map[string]jsonmap.JSON
 }
 
 // CreateGuestOrderInput 游客订单预览输入。
@@ -129,7 +130,7 @@ type CreateGuestOrderInput struct {
 	AffiliateCode       string
 	AffiliateVisitorKey string
 	ClientIP            string
-	ManualFormData      map[string]models.JSON
+	ManualFormData      map[string]jsonmap.JSON
 }
 
 // OrderPreview 订单金额预览。
@@ -148,8 +149,8 @@ type OrderPreview struct {
 type OrderPreviewItem struct {
 	ProductID          uint               `json:"product_id"`
 	SKUID              uint               `json:"sku_id"`
-	TitleJSON          models.JSON        `json:"title"`
-	SKUSnapshotJSON    models.JSON        `json:"sku_snapshot"`
+	TitleJSON          jsonmap.JSON       `json:"title"`
+	SKUSnapshotJSON    jsonmap.JSON       `json:"sku_snapshot"`
 	Tags               models.StringArray `json:"tags"`
 	OriginalUnitPrice  models.Money       `json:"original_unit_price"`
 	UnitPrice          models.Money       `json:"unit_price"`

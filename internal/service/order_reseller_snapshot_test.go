@@ -16,6 +16,7 @@ import (
 	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"github.com/hibiken/asynq"
 	"github.com/shopspring/decimal"
@@ -80,7 +81,7 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	category := models.Category{Slug: "reseller-order", NameJSON: models.JSON{"zh-CN": "reseller-order"}, IsActive: true}
+	category := models.Category{Slug: "reseller-order", NameJSON: jsonmap.JSON{"zh-CN": "reseller-order"}, IsActive: true}
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
@@ -104,7 +105,7 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	product := models.Product{
 		CategoryID:      category.ID,
 		Slug:            "reseller-order-product",
-		TitleJSON:       models.JSON{"zh-CN": "reseller-order-product"},
+		TitleJSON:       jsonmap.JSON{"zh-CN": "reseller-order-product"},
 		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
 		WholesalePrices: models.WholesalePriceTiers{{MinQuantity: 2, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))}},
 		PurchaseType:    constants.ProductPurchaseGuest,
@@ -195,7 +196,7 @@ func (f orderResellerSnapshotFixture) addResellerSnapshotProduct(t *testing.T, s
 	product := models.Product{
 		CategoryID:      f.product.CategoryID,
 		Slug:            slug,
-		TitleJSON:       models.JSON{"zh-CN": slug},
+		TitleJSON:       jsonmap.JSON{"zh-CN": slug},
 		PriceAmount:     models.NewMoneyFromDecimal(base),
 		PurchaseType:    constants.ProductPurchaseGuest,
 		FulfillmentType: constants.FulfillmentTypeManual,
@@ -398,7 +399,7 @@ func TestCreateOrderResellerRuntimePricesMatchPreviewAndSnapshotAcrossRuleSource
 	for _, raw := range items {
 		item, ok := raw.(map[string]interface{})
 		if !ok {
-			if asJSON, ok := raw.(models.JSON); ok {
+			if asJSON, ok := raw.(jsonmap.JSON); ok {
 				item = map[string]interface{}(asJSON)
 			} else {
 				t.Fatalf("unexpected pricing snapshot item type: %#v", raw)

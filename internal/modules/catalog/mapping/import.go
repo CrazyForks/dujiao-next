@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/shopspring/decimal"
@@ -197,7 +198,7 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 			defaultSKU := models.ProductSKU{
 				ProductID:      product.ID,
 				SKUCode:        models.DefaultSKUCode,
-				SpecValuesJSON: models.JSON{},
+				SpecValuesJSON: jsonmap.JSON{},
 				PriceAmount:    models.NewMoneyFromDecimal(priceAmount.Round(2)),
 				IsActive:       true,
 				SortOrder:      0,
@@ -487,12 +488,12 @@ func (s *Service) downloadImages(ctx context.Context, adapter upstream.Adapter, 
 }
 
 // downloadContentImages 下载多语言 Content 中的图片并替换 URL
-func (s *Service) downloadContentImages(ctx context.Context, adapter upstream.Adapter, content models.JSON) models.JSON {
+func (s *Service) downloadContentImages(ctx context.Context, adapter upstream.Adapter, content jsonmap.JSON) jsonmap.JSON {
 	if len(content) == 0 {
 		return content
 	}
 
-	// models.JSON 是 map[string]interface{}，值为各语言的 Markdown 文本
+	// jsonmap.JSON 是 map[string]interface{}，值为各语言的 Markdown 文本
 	imgRegex := regexp.MustCompile(`!\[[^\]]*\]\(([^)]+)\)|<img[^>]+src=["']([^"']+)["']`)
 	downloaded := make(map[string]string) // originalURL -> localPath
 
@@ -531,7 +532,7 @@ func (s *Service) downloadContentImages(ctx context.Context, adapter upstream.Ad
 	}
 
 	// 第二遍：替换所有语言文本中的 URL
-	result := make(models.JSON, len(content))
+	result := make(jsonmap.JSON, len(content))
 	for lang, val := range content {
 		text, ok := val.(string)
 		if !ok {

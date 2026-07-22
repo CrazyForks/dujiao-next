@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/notification"
 	"github.com/dujiao-next/internal/queue"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/upstream"
 )
 
@@ -203,7 +204,7 @@ func (s *Service) notifyProcurementFailure(procOrder *models.ProcurementOrder, e
 		EventType: constants.NotificationEventExceptionAlert,
 		BizType:   constants.NotificationBizTypeProcurement,
 		BizID:     procOrder.ID,
-		Data: models.JSON{
+		Data: jsonmap.JSON{
 			"procurement_order_id": procOrder.ID,
 			"local_order_no":       procOrder.LocalOrderNo,
 			"error":                errMsg,

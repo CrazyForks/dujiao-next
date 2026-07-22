@@ -14,6 +14,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	domaincontent "github.com/dujiao-next/internal/modules/content"
 	"github.com/dujiao-next/internal/modules/content/store/gormstore"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	contenttransport "github.com/dujiao-next/internal/transport/http/content"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -99,14 +100,14 @@ func TestPublicContentHandlersReturnOnlyPublicData(t *testing.T) {
 	}
 
 	activeCategory, err := categories.Create(context.Background(), domaincontent.CreatePostCategoryInput{
-		NameJSON: models.JSON{"zh-CN": "active"},
+		NameJSON: jsonmap.JSON{"zh-CN": "active"},
 		Slug:     "active",
 	})
 	if err != nil {
 		t.Fatalf("create active category: %v", err)
 	}
 	disabledCategory, err := categories.Create(context.Background(), domaincontent.CreatePostCategoryInput{
-		NameJSON: models.JSON{"zh-CN": "disabled"},
+		NameJSON: jsonmap.JSON{"zh-CN": "disabled"},
 		Slug:     "disabled",
 	})
 	if err != nil {

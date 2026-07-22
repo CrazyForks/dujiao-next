@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -24,7 +25,7 @@ func (s *WriteService) syncSingleProductSKU(skuRepo SKURepository, productID uin
 		return skuRepo.Create(&models.ProductSKU{
 			ProductID:         productID,
 			SKUCode:           models.DefaultSKUCode,
-			SpecValuesJSON:    models.JSON{},
+			SpecValuesJSON:    jsonmap.JSON{},
 			PriceAmount:       models.NewMoneyFromDecimal(priceAmount),
 			CostPriceAmount:   models.NewMoneyFromDecimal(costPriceAmount),
 			ManualStockTotal:  manualStockTotal,
@@ -92,7 +93,7 @@ func pickSingleModeTargetSKUIndex(skus []models.ProductSKU) int {
 type normalizedProductSKU struct {
 	ID               uint
 	SKUCode          string
-	SpecValuesJSON   models.JSON
+	SpecValuesJSON   jsonmap.JSON
 	PriceAmount      models.Money
 	CostPriceAmount  models.Money
 	ManualStockTotal int
@@ -149,9 +150,9 @@ func (s *WriteService) normalizeProductSKUInputs(inputs []ProductSKUInput, fulfi
 		if input.IsActive != nil {
 			isActive = *input.IsActive
 		}
-		specValues := models.JSON{}
+		specValues := jsonmap.JSON{}
 		if input.SpecValuesJSON != nil {
-			specValues = models.JSON(input.SpecValuesJSON)
+			specValues = jsonmap.JSON(input.SpecValuesJSON)
 		}
 
 		normalized = append(normalized, normalizedProductSKU{

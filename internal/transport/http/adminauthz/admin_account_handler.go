@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -98,7 +99,7 @@ func (h *AdminHandler) CreateAuthzAdmin(c *gin.Context) {
 		TargetUsername:   admin.Username,
 		Action:           "admin_create",
 		RequestID:        strings.TrimSpace(c.GetString("request_id")),
-		Detail: models.JSON{
+		Detail: jsonmap.JSON{
 			"target_admin_id": admin.ID,
 			"target_username": admin.Username,
 			"is_super":        admin.IsSuper,
@@ -221,7 +222,7 @@ func (h *AdminHandler) UpdateAuthzAdmin(c *gin.Context) {
 		TargetUsername:   admin.Username,
 		Action:           "admin_update",
 		RequestID:        strings.TrimSpace(c.GetString("request_id")),
-		Detail: models.JSON{
+		Detail: jsonmap.JSON{
 			"target_admin_id": admin.ID,
 			"target_username": admin.Username,
 			"updated_fields":  updatedFields,
@@ -291,7 +292,7 @@ func (h *AdminHandler) DeleteAuthzAdmin(c *gin.Context) {
 		TargetUsername:   admin.Username,
 		Action:           "admin_delete",
 		RequestID:        strings.TrimSpace(c.GetString("request_id")),
-		Detail: models.JSON{
+		Detail: jsonmap.JSON{
 			"target_admin_id": adminID,
 			"target_username": admin.Username,
 		},

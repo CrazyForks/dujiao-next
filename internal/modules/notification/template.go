@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/queue"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 var notificationTemplateVariablePattern = regexp.MustCompile(`\{\{\s*([a-zA-Z0-9_]+)\s*\}\}`)
@@ -62,7 +62,7 @@ func composeTelegramMessage(title, body string) string {
 	return title + "\n\n" + body
 }
 
-func notificationJSONToMap(data models.JSON) map[string]interface{} {
+func notificationJSONToMap(data jsonmap.JSON) map[string]interface{} {
 	if data == nil {
 		return map[string]interface{}{}
 	}

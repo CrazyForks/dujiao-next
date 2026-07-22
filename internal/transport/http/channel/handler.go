@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
 )
@@ -73,7 +74,7 @@ type CreateOrderInput struct {
 	AffiliateCode       string
 	AffiliateVisitorKey string
 	ClientIP            string
-	ManualFormData      map[string]models.JSON
+	ManualFormData      map[string]jsonmap.JSON
 	SkipIPRiskControl   bool
 }
 
@@ -89,8 +90,8 @@ type OrderPreview struct {
 
 type OrderPreviewItem struct {
 	ProductID, SKUID   uint
-	TitleJSON          models.JSON
-	SKUSnapshotJSON    models.JSON
+	TitleJSON          jsonmap.JSON
+	SKUSnapshotJSON    jsonmap.JSON
 	OriginalUnitPrice  models.Money
 	UnitPrice          models.Money
 	Quantity           int

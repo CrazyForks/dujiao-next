@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"gorm.io/gorm"
 )
@@ -11,7 +12,7 @@ import (
 // SettingRepository 设置数据访问接口
 type SettingRepository interface {
 	GetByKey(key string) (*models.Setting, error)
-	Upsert(key string, value models.JSON) (*models.Setting, error)
+	Upsert(key string, value jsonmap.JSON) (*models.Setting, error)
 }
 
 // GormSettingRepository GORM 实现
@@ -37,7 +38,7 @@ func (r *GormSettingRepository) GetByKey(key string) (*models.Setting, error) {
 }
 
 // Upsert 更新或创建设置
-func (r *GormSettingRepository) Upsert(key string, value models.JSON) (*models.Setting, error) {
+func (r *GormSettingRepository) Upsert(key string, value jsonmap.JSON) (*models.Setting, error) {
 	setting, err := r.GetByKey(key)
 	if err != nil {
 		return nil, err

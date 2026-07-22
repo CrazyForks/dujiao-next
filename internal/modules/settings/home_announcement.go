@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // homeAnnouncementTypes 首页公告允许的类型集合。
@@ -18,17 +18,17 @@ var homeAnnouncementTypes = map[string]struct{}{
 }
 
 // NormalizeHomeAnnouncementJSON 是 Registry 使用的原始 JSON 写入策略。
-func NormalizeHomeAnnouncementJSON(value models.JSON) models.JSON {
+func NormalizeHomeAnnouncementJSON(value jsonmap.JSON) jsonmap.JSON {
 	return normalizeHomeAnnouncement(value)
 }
 
 // normalizeHomeAnnouncement 归一化首页公告设置，避免非法值入库。
-func normalizeHomeAnnouncement(value map[string]interface{}) models.JSON {
+func normalizeHomeAnnouncement(value map[string]interface{}) jsonmap.JSON {
 	annType := normalizeAnnouncementText(value["type"])
 	if _, ok := homeAnnouncementTypes[annType]; !ok {
 		annType = "normal"
 	}
-	return models.JSON{
+	return jsonmap.JSON{
 		"enabled":  parseBool(value["enabled"]),
 		"type":     annType,
 		"title":    normalizeAnnouncementLocalizedField(value["title"]),
@@ -125,7 +125,7 @@ func hasHomeAnnouncementContent(content map[string]interface{}) bool {
 
 // GetActiveHomeAnnouncement 返回当前应展示的首页公告及其展示标记。
 // 当公告未启用、不在排期内或内容为空时返回 (nil, false)。
-func (s *Service) GetActiveHomeAnnouncement() (models.JSON, bool) {
+func (s *Service) GetActiveHomeAnnouncement() (jsonmap.JSON, bool) {
 	if s == nil {
 		return nil, false
 	}
@@ -148,7 +148,7 @@ func (s *Service) GetActiveHomeAnnouncement() (models.JSON, bool) {
 	}
 	title, _ := announcement["title"].(map[string]interface{})
 	annType, _ := announcement["type"].(string)
-	return models.JSON{
+	return jsonmap.JSON{
 		"type":    annType,
 		"title":   title,
 		"content": content,

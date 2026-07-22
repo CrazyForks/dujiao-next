@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
 
@@ -13,12 +14,12 @@ func TestProductServiceListPublicIncludesChildProductsForParentCategory(t *testi
 
 	parent := models.Category{
 		Slug:     "games",
-		NameJSON: models.JSON{"zh-CN": "games"},
+		NameJSON: jsonmap.JSON{"zh-CN": "games"},
 	}
 	child := models.Category{
 		ParentID: 1,
 		Slug:     "steam",
-		NameJSON: models.JSON{"zh-CN": "steam"},
+		NameJSON: jsonmap.JSON{"zh-CN": "steam"},
 	}
 	if err := db.Create(&parent).Error; err != nil {
 		t.Fatalf("create parent category failed: %v", err)
@@ -31,14 +32,14 @@ func TestProductServiceListPublicIncludesChildProductsForParentCategory(t *testi
 	parentProduct := models.Product{
 		CategoryID:  parent.ID,
 		Slug:        "parent-product",
-		TitleJSON:   models.JSON{"zh-CN": "parent-product"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "parent-product"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
 	childProduct := models.Product{
 		CategoryID:  child.ID,
 		Slug:        "child-product",
-		TitleJSON:   models.JSON{"zh-CN": "child-product"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "child-product"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
@@ -66,7 +67,7 @@ func TestProductServiceListPublicSortOrderDescending(t *testing.T) {
 
 	category := models.Category{
 		Slug:     "sort-test",
-		NameJSON: models.JSON{"zh-CN": "sort-test"},
+		NameJSON: jsonmap.JSON{"zh-CN": "sort-test"},
 		IsActive: true,
 	}
 	if err := db.Create(&category).Error; err != nil {
@@ -76,7 +77,7 @@ func TestProductServiceListPublicSortOrderDescending(t *testing.T) {
 	high := models.Product{
 		CategoryID:  category.ID,
 		Slug:        "high-sort-product",
-		TitleJSON:   models.JSON{"zh-CN": "high"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "high"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 		SortOrder:   100,
@@ -84,7 +85,7 @@ func TestProductServiceListPublicSortOrderDescending(t *testing.T) {
 	low := models.Product{
 		CategoryID:  category.ID,
 		Slug:        "low-sort-product",
-		TitleJSON:   models.JSON{"zh-CN": "low"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "low"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 		SortOrder:   1,
@@ -116,7 +117,7 @@ func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 
 	category := models.Category{
 		Slug:     "sku-sort-test",
-		NameJSON: models.JSON{"zh-CN": "sku-sort-test"},
+		NameJSON: jsonmap.JSON{"zh-CN": "sku-sort-test"},
 		IsActive: true,
 	}
 	if err := db.Create(&category).Error; err != nil {
@@ -126,7 +127,7 @@ func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 	product := models.Product{
 		CategoryID:  category.ID,
 		Slug:        "sku-order-product",
-		TitleJSON:   models.JSON{"zh-CN": "sku-order-product"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "sku-order-product"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 		SortOrder:   0,
@@ -138,7 +139,7 @@ func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 	high := models.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        "HIGH",
-		SpecValuesJSON: models.JSON{},
+		SpecValuesJSON: jsonmap.JSON{},
 		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
 		SortOrder:      100,
@@ -146,7 +147,7 @@ func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 	low := models.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        "LOW",
-		SpecValuesJSON: models.JSON{},
+		SpecValuesJSON: jsonmap.JSON{},
 		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
 		SortOrder:      1,
@@ -179,7 +180,7 @@ func TestProductServiceGetAdminByIDIncludesInactiveSKUs(t *testing.T) {
 	product := models.Product{
 		CategoryID:  1,
 		Slug:        "admin-all-skus-product",
-		TitleJSON:   models.JSON{"zh-CN": "admin-all-skus-product"},
+		TitleJSON:   jsonmap.JSON{"zh-CN": "admin-all-skus-product"},
 		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
@@ -190,7 +191,7 @@ func TestProductServiceGetAdminByIDIncludesInactiveSKUs(t *testing.T) {
 	activeSKU := models.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        "ACTIVE",
-		SpecValuesJSON: models.JSON{},
+		SpecValuesJSON: jsonmap.JSON{},
 		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
 		SortOrder:      10,
@@ -198,7 +199,7 @@ func TestProductServiceGetAdminByIDIncludesInactiveSKUs(t *testing.T) {
 	inactiveSKU := models.ProductSKU{
 		ProductID:      product.ID,
 		SKUCode:        "INACTIVE",
-		SpecValuesJSON: models.JSON{},
+		SpecValuesJSON: jsonmap.JSON{},
 		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
 		IsActive:       false,
 		SortOrder:      1,
