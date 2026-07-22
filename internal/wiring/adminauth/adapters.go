@@ -15,12 +15,14 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
-	"github.com/dujiao-next/internal/service"
+	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
+	adminchallenge "github.com/dujiao-next/internal/modules/identity/adminauth/challenge"
+	admintotpapp "github.com/dujiao-next/internal/modules/identity/adminauth/totp/application"
 	adminauthtransport "github.com/dujiao-next/internal/transport/http/adminauth"
 )
 
 type admin2FATOTPTransportAdapter struct {
-	totp *service.TOTPService
+	totp *admintotpapp.Service
 }
 
 func (a admin2FATOTPTransportAdapter) GetStatus(adminID uint) (*adminauthtransport.TOTPStatus, error) {
@@ -90,7 +92,7 @@ func (a admin2FATOTPTransportAdapter) AdminReset(operatorID, targetID uint) erro
 }
 
 type adminLoginAuthTransportAdapter struct {
-	auth *service.AuthService
+	auth *adminauthapp.Service
 }
 
 func (a adminLoginAuthTransportAdapter) Login(username, password string) (*adminauthtransport.AuthLoginResult, error) {
@@ -116,7 +118,7 @@ func (a adminLoginAuthTransportAdapter) ChangePassword(adminID uint, oldPassword
 }
 
 type admin2FAAuthTransportAdapter struct {
-	auth *service.AuthService
+	auth *adminauthapp.Service
 }
 
 func (a admin2FAAuthTransportAdapter) ParseChallengeToken(tokenString string) (*adminauthtransport.ChallengeClaims, error) {
@@ -152,7 +154,7 @@ func (a admin2FAAuthTransportAdapter) CompleteLoginAfter2FA(adminID uint) (*admi
 }
 
 func (a admin2FAAuthTransportAdapter) GetAdminUsername(adminID uint) (string, error) {
-	admin, err := a.auth.AdminStore().GetByID(adminID)
+	admin, err := a.auth.GetAdminByID(adminID)
 	if err != nil {
 		return "", mapAdminAuthTransportError(err)
 	}
@@ -169,7 +171,7 @@ func (admin2FAChallengeStoreAdapter) IsRevoked(ctx context.Context, jti string) 
 	if rdb == nil {
 		return false
 	}
-	v, _ := rdb.Exists(ctx, service.ChallengeRevokedKey(jti)).Result()
+	v, _ := rdb.Exists(ctx, adminchallenge.RevocationKey(jti)).Result()
 	return v == 1
 }
 
@@ -178,9 +180,9 @@ func (admin2FAChallengeStoreAdapter) BumpFails(ctx context.Context, jti string) 
 	if rdb == nil {
 		return 0
 	}
-	cnt, err := rdb.Incr(ctx, service.ChallengeFailKey(jti)).Result()
+	cnt, err := rdb.Incr(ctx, adminchallenge.FailureKey(jti)).Result()
 	if err == nil && cnt == 1 {
-		_ = rdb.Expire(ctx, service.ChallengeFailKey(jti), service.ChallengeTTL).Err()
+		_ = rdb.Expire(ctx, adminchallenge.FailureKey(jti), adminchallenge.TTL).Err()
 	}
 	return cnt
 }
@@ -190,7 +192,7 @@ func (admin2FAChallengeStoreAdapter) Revoke(ctx context.Context, jti string) {
 	if rdb == nil {
 		return
 	}
-	_ = rdb.Set(ctx, service.ChallengeRevokedKey(jti), "1", service.ChallengeTTL).Err()
+	_ = rdb.Set(ctx, adminchallenge.RevocationKey(jti), "1", adminchallenge.TTL).Err()
 }
 
 type adminLoginRecorderAdapter struct {
@@ -245,18 +247,19 @@ func mapAdminAuthTransportError(err error) error {
 		source error
 		target error
 	}{
-		{service.ErrNotFound, adminauthtransport.ErrNotFound},
+		{adminauthapp.ErrNotFound, adminauthtransport.ErrNotFound},
+		{admintotpapp.ErrNotFound, adminauthtransport.ErrNotFound},
 		{usertotpapp.ErrNotFound, adminauthtransport.ErrNotFound},
 		{totpapplication.ErrSubjectNotFound, adminauthtransport.ErrNotFound},
-		{service.ErrInvalidCredentials, adminauthtransport.ErrInvalidCredentials},
-		{service.ErrInvalidPassword, adminauthtransport.ErrInvalidPassword},
+		{adminauthapp.ErrInvalidCredentials, adminauthtransport.ErrInvalidCredentials},
+		{adminauthapp.ErrInvalidPassword, adminauthtransport.ErrInvalidPassword},
 		{totpapplication.ErrAlreadyEnabled, adminauthtransport.ErrTOTPAlreadyEnabled},
 		{totpapplication.ErrNotEnabled, adminauthtransport.ErrTOTPNotEnabled},
 		{totpapplication.ErrPendingExpired, adminauthtransport.ErrTOTPPendingExpired},
 		{totpapplication.ErrCodeInvalid, adminauthtransport.ErrTOTPCodeInvalid},
 		{totpapplication.ErrRecoveryCodeInvalid, adminauthtransport.ErrTOTPRecoveryInvalid},
 		{totpapplication.ErrTooManyAttempts, adminauthtransport.ErrTOTPTooManyAttempts},
-		{service.ErrTOTPCannotResetSelf, adminauthtransport.ErrTOTPCannotResetSelf},
+		{admintotpapp.ErrCannotResetSelf, adminauthtransport.ErrTOTPCannotResetSelf},
 	} {
 		if errors.Is(err, mapping.source) {
 			return fmt.Errorf("%w: %v", mapping.target, err)

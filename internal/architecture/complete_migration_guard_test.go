@@ -120,6 +120,10 @@ var completedMigrationPaths = []string{
 	"internal/service/user_auth_telegram_test_helpers_test.go",
 	"internal/service/user_totp_service.go",
 	"internal/service/user_totp_service_test.go",
+	"internal/service/auth_service.go",
+	"internal/service/auth_service_test.go",
+	"internal/service/totp_service.go",
+	"internal/service/totp_service_test.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

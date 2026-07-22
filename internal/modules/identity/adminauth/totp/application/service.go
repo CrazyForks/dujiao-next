@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"context"
@@ -18,23 +18,20 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// ErrTOTPCannotResetSelf is specific to administrator self-reset protection.
-var ErrTOTPCannotResetSelf = errors.New("cannot reset self via super admin endpoint")
-
 const (
 	totpIssuerDefault     = "Dujiao-Next"
 	totpPendingTTL        = 10 * time.Minute
 	totpEnableMaxFailures = 5
-	totpRecoveryCodeCount = 10
+	RecoveryCodeCount     = 10
 	totpDigits            = 6
 	totpPeriod            = 30
 	totpSkew              = 1
 )
 
-// TOTPService TOTP 业务服务
+// Service TOTP 业务服务
 //
 // 注：审计日志（admin_login_log）由 handler 层在调用前后写入，service 不直接持有 logRepo。
-type TOTPService struct {
+type Service struct {
 	cfg       *config.Config
 	encKey    []byte
 	adminRepo admincontract.Store
@@ -42,15 +39,31 @@ type TOTPService struct {
 	now       func() time.Time
 }
 
-// NewTOTPService 创建实例
-func NewTOTPService(cfg *config.Config, adminRepo admincontract.Store, rds *redis.Client) *TOTPService {
-	return &TOTPService{
+type Option func(*Service)
+
+func WithClock(now func() time.Time) Option {
+	return func(service *Service) {
+		if now != nil {
+			service.now = now
+		}
+	}
+}
+
+// NewService 创建实例
+func NewService(cfg *config.Config, adminRepo admincontract.Store, rds *redis.Client, options ...Option) *Service {
+	service := &Service{
 		cfg:       cfg,
 		encKey:    crypto.DeriveKey(cfg.App.SecretKey),
 		adminRepo: adminRepo,
 		redis:     rds,
 		now:       time.Now,
 	}
+	for _, option := range options {
+		if option != nil {
+			option(service)
+		}
+	}
+	return service
 }
 
 // Status 当前账号 2FA 状态
@@ -62,7 +75,7 @@ type Status struct {
 }
 
 // GetStatus 查询状态
-func (s *TOTPService) GetStatus(adminID uint) (*Status, error) {
+func (s *Service) GetStatus(adminID uint) (*Status, error) {
 	admin, err := s.adminRepo.GetByID(adminID)
 	if err != nil {
 		return nil, err
@@ -93,7 +106,7 @@ type SetupResult struct {
 }
 
 // Setup 生成 pending secret + otpauth URL
-func (s *TOTPService) Setup(adminID uint) (*SetupResult, error) {
+func (s *Service) Setup(adminID uint) (*SetupResult, error) {
 	admin, err := s.adminRepo.GetByID(adminID)
 	if err != nil {
 		return nil, err
@@ -142,12 +155,12 @@ type EnableResult struct {
 }
 
 // Enable 校验首次 code，启用 2FA，生成恢复码
-func (s *TOTPService) Enable(adminID uint, code string) (*EnableResult, error) {
+func (s *Service) Enable(adminID uint, code string) (*EnableResult, error) {
 	prepared, err := totpapplication.Enable(s, totpapplication.EnableInput{
 		AccountID:         adminID,
 		EncryptionKey:     s.encKey,
 		Code:              code,
-		RecoveryCodeCount: totpRecoveryCodeCount,
+		RecoveryCodeCount: RecoveryCodeCount,
 		Now:               s.now,
 	})
 	if err != nil {
@@ -157,7 +170,7 @@ func (s *TOTPService) Enable(adminID uint, code string) (*EnableResult, error) {
 }
 
 // Disable 关闭 2FA：使用 TOTP code 或恢复码二次确认
-func (s *TOTPService) Disable(adminID uint, code string, isRecoveryCode bool) error {
+func (s *Service) Disable(adminID uint, code string, isRecoveryCode bool) error {
 	admin, err := s.adminRepo.GetByID(adminID)
 	if err != nil {
 		return err
@@ -190,7 +203,7 @@ func (s *TOTPService) Disable(adminID uint, code string, isRecoveryCode bool) er
 }
 
 // RegenerateRecoveryCodes 重新生成恢复码（必须当前 TOTP code，不允许用恢复码）
-func (s *TOTPService) RegenerateRecoveryCodes(adminID uint, code string) ([]string, error) {
+func (s *Service) RegenerateRecoveryCodes(adminID uint, code string) ([]string, error) {
 	admin, err := s.adminRepo.GetByID(adminID)
 	if err != nil {
 		return nil, err
@@ -208,7 +221,7 @@ func (s *TOTPService) RegenerateRecoveryCodes(adminID uint, code string) ([]stri
 	if !s.verifyCode(secret, code) {
 		return nil, totpapplication.ErrCodeInvalid
 	}
-	plaintext, codesJSON, err := totpapplication.GenerateRecoveryCodes(totpRecoveryCodeCount)
+	plaintext, codesJSON, err := totpapplication.GenerateRecoveryCodes(RecoveryCodeCount)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +232,7 @@ func (s *TOTPService) RegenerateRecoveryCodes(adminID uint, code string) ([]stri
 }
 
 // VerifyChallengeCode 登录第二步：验证 TOTP code（不消耗恢复码）
-func (s *TOTPService) VerifyChallengeCode(adminID uint, code string) error {
+func (s *Service) VerifyChallengeCode(adminID uint, code string) error {
 	admin, err := s.adminRepo.GetByID(adminID)
 	if err != nil {
 		return err
@@ -241,7 +254,7 @@ func (s *TOTPService) VerifyChallengeCode(adminID uint, code string) error {
 }
 
 // VerifyChallengeRecoveryCode 登录第二步：用恢复码（消耗一个）
-func (s *TOTPService) VerifyChallengeRecoveryCode(adminID uint, code string) error {
+func (s *Service) VerifyChallengeRecoveryCode(adminID uint, code string) error {
 	admin, err := s.adminRepo.GetByID(adminID)
 	if err != nil {
 		return err
@@ -256,9 +269,9 @@ func (s *TOTPService) VerifyChallengeRecoveryCode(adminID uint, code string) err
 }
 
 // AdminReset 超管强制清空目标管理员 2FA
-func (s *TOTPService) AdminReset(operatorID, targetID uint) error {
+func (s *Service) AdminReset(operatorID, targetID uint) error {
 	if operatorID == targetID {
-		return ErrTOTPCannotResetSelf
+		return ErrCannotResetSelf
 	}
 	target, err := s.adminRepo.GetByID(targetID)
 	if err != nil {
@@ -278,7 +291,7 @@ func (s *TOTPService) AdminReset(operatorID, targetID uint) error {
 
 // ---- 内部辅助 ----
 
-func (s *TOTPService) verifyCode(secret, code string) bool {
+func (s *Service) verifyCode(secret, code string) bool {
 	code = strings.TrimSpace(code)
 	if code == "" {
 		return false
@@ -291,7 +304,7 @@ func (s *TOTPService) verifyCode(secret, code string) bool {
 	return valid
 }
 
-func (s *TOTPService) consumeRecoveryCode(admin *admindomain.Admin, code string) error {
+func (s *Service) consumeRecoveryCode(admin *admindomain.Admin, code string) error {
 	js, err := totpapplication.MatchAndConsumeRecoveryCode(admin.RecoveryCodes, code, s.now())
 	if err != nil {
 		return err
@@ -299,7 +312,7 @@ func (s *TOTPService) consumeRecoveryCode(admin *admindomain.Admin, code string)
 	return s.adminRepo.UpdateRecoveryCodes(admin.ID, js)
 }
 
-func (s *TOTPService) LoadEnableSubject(adminID uint) (totpapplication.EnableSubject, error) {
+func (s *Service) LoadEnableSubject(adminID uint) (totpapplication.EnableSubject, error) {
 	admin, err := s.adminRepo.GetByID(adminID)
 	if err != nil || admin == nil {
 		return totpapplication.EnableSubject{}, err
@@ -312,11 +325,11 @@ func (s *TOTPService) LoadEnableSubject(adminID uint) (totpapplication.EnableSub
 	}, nil
 }
 
-func (s *TOTPService) SaveEnabled(adminID uint, result *totpapplication.EnableResult) error {
+func (s *Service) SaveEnabled(adminID uint, result *totpapplication.EnableResult) error {
 	return s.adminRepo.UpdateTOTPEnabled(adminID, result.EncryptedSecret, result.EnabledAt, result.RecoveryCodesJSON)
 }
 
-func (s *TOTPService) ClearEnableFailures(adminID uint) {
+func (s *Service) ClearEnableFailures(adminID uint) {
 	if s.redis != nil {
 		_ = s.redis.Del(context.Background(), enableFailKey(adminID)).Err()
 	}
@@ -326,7 +339,7 @@ func enableFailKey(adminID uint) string {
 	return fmt.Sprintf("2fa:enable:%d:fails", adminID)
 }
 
-func (s *TOTPService) CheckEnableFailures(adminID uint) error {
+func (s *Service) CheckEnableFailures(adminID uint) error {
 	if s.redis == nil {
 		return nil
 	}
@@ -342,7 +355,7 @@ func (s *TOTPService) CheckEnableFailures(adminID uint) error {
 	return nil
 }
 
-func (s *TOTPService) BumpEnableFailure(adminID uint) {
+func (s *Service) BumpEnableFailure(adminID uint) {
 	if s.redis == nil {
 		return
 	}
@@ -353,16 +366,8 @@ func (s *TOTPService) BumpEnableFailure(adminID uint) {
 	}
 }
 
-func (s *TOTPService) VerifyEnableCode(secret, code string) bool {
+func (s *Service) VerifyEnableCode(secret, code string) bool {
 	return s.verifyCode(secret, code)
 }
 
 // 辅助：在 ChallengeToken jti 维度记录失败 / 检查 / revoke
-func ChallengeFailKey(jti string) string    { return "2fa:challenge:" + jti + ":fails" }
-func ChallengeRevokedKey(jti string) string { return "2fa:challenge:" + jti + ":revoked" }
-
-// ChallengeMaxFailures 公开：handler 也用
-const ChallengeMaxFailures = 5
-
-// ChallengeTTL 挑战 token TTL
-const ChallengeTTL = 5 * time.Minute

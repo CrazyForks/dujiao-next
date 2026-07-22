@@ -19,8 +19,8 @@ import (
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/logger"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
+	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
 	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -183,7 +183,7 @@ func JWTAuthMiddleware(secretKey string, adminRepo admincontract.Store) gin.Hand
 
 		tokenString := parts[1]
 		parser := newHS256JWTParser()
-		claims := &service.JWTClaims{}
+		claims := &adminauthapp.JWTClaims{}
 		token, err := parser.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(secretKey), nil
 		})

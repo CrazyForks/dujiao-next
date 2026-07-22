@@ -22,8 +22,6 @@ var (
 	ErrNotFound                            = catalogproduct.ErrNotFound
 	ErrSlugExists                          = catalogproduct.ErrSlugExists
 	ErrProductCategoryInvalid              = catalogproduct.ErrProductCategoryInvalid
-	ErrInvalidCredentials                  = errors.New("invalid credentials")
-	ErrInvalidPassword                     = errors.New("invalid password")
 	ErrUserDisabled                        = affiliatemodule.ErrUserDisabled
 	ErrInvalidEmail                        = errors.New("invalid email")
 	ErrEmailServiceDisabled                = errors.New("email service disabled")

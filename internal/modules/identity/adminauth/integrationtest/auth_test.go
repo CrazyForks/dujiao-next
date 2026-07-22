@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"testing"
@@ -9,6 +9,9 @@ import (
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
+	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
+	adminchallenge "github.com/dujiao-next/internal/modules/identity/adminauth/challenge"
+	admintotpapp "github.com/dujiao-next/internal/modules/identity/adminauth/totp/application"
 
 	"github.com/glebarez/sqlite"
 	"github.com/pquerna/otp/totp"
@@ -16,7 +19,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func newAuthTestService(t *testing.T) (*AuthService, *TOTPService, admincontract.Store) {
+func newAuthTestService(t *testing.T) (*adminauthapp.Service, *admintotpapp.Service, admincontract.Store) {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
@@ -30,7 +33,7 @@ func newAuthTestService(t *testing.T) (*AuthService, *TOTPService, admincontract
 		JWT: config.JWTConfig{SecretKey: "jwt-secret-for-test", ExpireHours: 24},
 	}
 	adminRepo := adminstore.New(db)
-	return NewAuthService(cfg, adminRepo), NewTOTPService(cfg, adminRepo, nil), adminRepo
+	return adminauthapp.NewService(cfg, adminRepo), admintotpapp.NewService(cfg, adminRepo, nil), adminRepo
 }
 
 func createAuthTestAdmin(t *testing.T, repo admincontract.Store, username, password string) *admindomain.Admin {
@@ -85,7 +88,7 @@ func TestLoginWithTOTPReturnsChallenge(t *testing.T) {
 	if claims.AdminID != admin.ID {
 		t.Fatalf("admin id mismatch: %d vs %d", claims.AdminID, admin.ID)
 	}
-	if claims.Purpose != ChallengePurpose2FA {
+	if claims.Purpose != adminchallenge.PurposeTwoFactor {
 		t.Fatalf("purpose mismatch")
 	}
 }
@@ -93,10 +96,10 @@ func TestLoginWithTOTPReturnsChallenge(t *testing.T) {
 func TestLoginInvalidCredentials(t *testing.T) {
 	auth, _, repo := newAuthTestService(t)
 	createAuthTestAdmin(t, repo, "bob", "secret")
-	if _, err := auth.Login("bob", "wrong"); err != ErrInvalidCredentials {
+	if _, err := auth.Login("bob", "wrong"); err != adminauthapp.ErrInvalidCredentials {
 		t.Fatalf("expected invalid creds, got %v", err)
 	}
-	if _, err := auth.Login("nosuch", "x"); err != ErrInvalidCredentials {
+	if _, err := auth.Login("nosuch", "x"); err != adminauthapp.ErrInvalidCredentials {
 		t.Fatalf("expected invalid creds for missing user, got %v", err)
 	}
 }

@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/config"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
+	"github.com/dujiao-next/internal/modules/identity/adminauth/challenge"
 	"github.com/dujiao-next/internal/modules/identity/jwttoken"
 	"github.com/dujiao-next/internal/shared/passwordpolicy"
 
@@ -17,22 +18,22 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// AuthService 认证服务
-type AuthService struct {
+// Service 认证服务
+type Service struct {
 	cfg       *config.Config
 	adminRepo admincontract.Store
 }
 
-// NewAuthService 创建认证服务实例
-func NewAuthService(cfg *config.Config, adminRepo admincontract.Store) *AuthService {
-	return &AuthService{
+// NewService 创建认证服务实例
+func NewService(cfg *config.Config, adminRepo admincontract.Store) *Service {
+	return &Service{
 		cfg:       cfg,
 		adminRepo: adminRepo,
 	}
 }
 
 // HashPassword 使用 bcrypt 加密密码
-func (s *AuthService) HashPassword(password string) (string, error) {
+func (s *Service) HashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
@@ -41,12 +42,12 @@ func (s *AuthService) HashPassword(password string) (string, error) {
 }
 
 // VerifyPassword 验证密码
-func (s *AuthService) VerifyPassword(hashedPassword, password string) error {
+func (s *Service) VerifyPassword(hashedPassword, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
 // ValidatePassword 校验密码是否符合策略
-func (s *AuthService) ValidatePassword(password string) error {
+func (s *Service) ValidatePassword(password string) error {
 	if s == nil || s.cfg == nil {
 		return nil
 	}
@@ -85,14 +86,8 @@ type LoginResult struct {
 	ChallengeExpiresAt time.Time
 }
 
-// ChallengePurpose2FA 挑战 token 的 purpose 常量
-const ChallengePurpose2FA = "2fa_challenge"
-
-// ChallengeTokenTTL 挑战 token 有效期
-const ChallengeTokenTTL = 5 * time.Minute
-
 // GenerateJWT 生成 JWT Token
-func (s *AuthService) GenerateJWT(admin *admindomain.Admin) (string, time.Time, error) {
+func (s *Service) GenerateJWT(admin *admindomain.Admin) (string, time.Time, error) {
 	expiresAt := time.Now().Add(time.Duration(s.cfg.JWT.ExpireHours) * time.Hour)
 
 	claims := JWTClaims{
@@ -117,7 +112,7 @@ func (s *AuthService) GenerateJWT(admin *admindomain.Admin) (string, time.Time, 
 }
 
 // ParseJWT 解析 JWT Token
-func (s *AuthService) ParseJWT(tokenString string) (*JWTClaims, error) {
+func (s *Service) ParseJWT(tokenString string) (*JWTClaims, error) {
 	parser := jwttoken.NewHS256Parser()
 	token, err := parser.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.cfg.JWT.SecretKey), nil
@@ -135,7 +130,7 @@ func (s *AuthService) ParseJWT(tokenString string) (*JWTClaims, error) {
 }
 
 // Login 管理员登录（第一步）
-func (s *AuthService) Login(username, password string) (*LoginResult, error) {
+func (s *Service) Login(username, password string) (*LoginResult, error) {
 	admin, err := s.adminRepo.GetByUsername(username)
 	if err != nil {
 		return nil, err
@@ -183,13 +178,13 @@ func (s *AuthService) Login(username, password string) (*LoginResult, error) {
 }
 
 // IssueChallengeToken 签发 2FA 挑战 token
-func (s *AuthService) IssueChallengeToken(adminID uint) (token, jti string, expiresAt time.Time, err error) {
+func (s *Service) IssueChallengeToken(adminID uint) (token, jti string, expiresAt time.Time, err error) {
 	jti = uuid.NewString()
-	expiresAt = time.Now().Add(ChallengeTokenTTL)
+	expiresAt = time.Now().Add(challenge.TTL)
 	claims := ChallengeClaims{
 		AdminID: adminID,
 		JTI:     jti,
-		Purpose: ChallengePurpose2FA,
+		Purpose: challenge.PurposeTwoFactor,
 		Typ:     jwttoken.TypeTwoFactorChallenge,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
@@ -207,7 +202,7 @@ func (s *AuthService) IssueChallengeToken(adminID uint) (token, jti string, expi
 }
 
 // ParseChallengeToken 解析并校验挑战 token
-func (s *AuthService) ParseChallengeToken(tokenString string) (*ChallengeClaims, error) {
+func (s *Service) ParseChallengeToken(tokenString string) (*ChallengeClaims, error) {
 	parser := jwttoken.NewHS256Parser()
 	tok, err := parser.ParseWithClaims(tokenString, &ChallengeClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(s.cfg.JWT.SecretKey), nil
@@ -219,14 +214,14 @@ func (s *AuthService) ParseChallengeToken(tokenString string) (*ChallengeClaims,
 	if !ok || !tok.Valid {
 		return nil, errors.New("invalid challenge token")
 	}
-	if claims.Purpose != ChallengePurpose2FA || claims.Typ != jwttoken.TypeTwoFactorChallenge {
+	if claims.Purpose != challenge.PurposeTwoFactor || claims.Typ != jwttoken.TypeTwoFactorChallenge {
 		return nil, errors.New("invalid challenge purpose")
 	}
 	return claims, nil
 }
 
 // CompleteLoginAfter2FA 在 2FA 验证通过后完成登录：发正式 JWT、更新 last_login
-func (s *AuthService) CompleteLoginAfter2FA(adminID uint) (*LoginResult, error) {
+func (s *Service) CompleteLoginAfter2FA(adminID uint) (*LoginResult, error) {
 	admin, err := s.adminRepo.GetByID(adminID)
 	if err != nil {
 		return nil, err
@@ -247,13 +242,13 @@ func (s *AuthService) CompleteLoginAfter2FA(adminID uint) (*LoginResult, error) 
 	return &LoginResult{RequiresTOTP: false, Admin: admin, Token: token, ExpiresAt: expiresAt}, nil
 }
 
-// AdminStore 暴露管理员存储给需要按 ID 读取用户名的鉴权适配器。
-func (s *AuthService) AdminStore() admincontract.Store {
-	return s.adminRepo
+// GetAdminByID returns the administrator needed by authentication transports.
+func (s *Service) GetAdminByID(adminID uint) (*admindomain.Admin, error) {
+	return s.adminRepo.GetByID(adminID)
 }
 
 // ChangePassword 修改管理员密码
-func (s *AuthService) ChangePassword(adminID uint, oldPassword, newPassword string) error {
+func (s *Service) ChangePassword(adminID uint, oldPassword, newPassword string) error {
 	admin, err := s.adminRepo.GetByID(adminID)
 	if err != nil {
 		return err

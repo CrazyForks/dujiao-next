@@ -21,6 +21,8 @@ import (
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
+	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
+	admintotpapp "github.com/dujiao-next/internal/modules/identity/adminauth/totp/application"
 	emailverificationcontract "github.com/dujiao-next/internal/modules/identity/emailverification/contract"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
@@ -102,8 +104,8 @@ type Container struct {
 
 	// Services
 	AuthzService                  *authz.Service
-	AuthService                   *service.AuthService
-	TOTPService                   *service.TOTPService
+	AuthService                   *adminauthapp.Service
+	TOTPService                   *admintotpapp.Service
 	UserTOTPService               *usertotpapp.Service
 	UserAuthService               *userauthapp.Service
 	TelegramAuthService           *telegramauthapp.Service

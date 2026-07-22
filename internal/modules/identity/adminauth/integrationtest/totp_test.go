@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"strings"
@@ -12,13 +12,14 @@ import (
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
+	admintotpapp "github.com/dujiao-next/internal/modules/identity/adminauth/totp/application"
 
 	"github.com/glebarez/sqlite"
 	"github.com/pquerna/otp/totp"
 	"gorm.io/gorm"
 )
 
-func newTOTPTestService(t *testing.T) (*TOTPService, admincontract.Store, *gorm.DB) {
+func newTOTPTestService(t *testing.T) (*admintotpapp.Service, admincontract.Store, *gorm.DB) {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
@@ -29,7 +30,7 @@ func newTOTPTestService(t *testing.T) (*TOTPService, admincontract.Store, *gorm.
 	}
 	cfg := &config.Config{App: config.AppConfig{SecretKey: "test-secret-key-for-totp"}}
 	adminRepo := adminstore.New(db)
-	svc := NewTOTPService(cfg, adminRepo, nil)
+	svc := admintotpapp.NewService(cfg, adminRepo, nil)
 	return svc, adminRepo, db
 }
 
@@ -67,8 +68,8 @@ func TestSetupAndEnableFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("enable: %v", err)
 	}
-	if len(enableRes.RecoveryCodes) != totpRecoveryCodeCount {
-		t.Fatalf("expected %d recovery codes, got %d", totpRecoveryCodeCount, len(enableRes.RecoveryCodes))
+	if len(enableRes.RecoveryCodes) != admintotpapp.RecoveryCodeCount {
+		t.Fatalf("expected %d recovery codes, got %d", admintotpapp.RecoveryCodeCount, len(enableRes.RecoveryCodes))
 	}
 	for _, c := range enableRes.RecoveryCodes {
 		if len(c) != 11 || !strings.Contains(c, "-") {
@@ -144,8 +145,8 @@ func TestRecoveryCodeConsume(t *testing.T) {
 		t.Fatalf("expected totpapplication.ErrRecoveryCodeInvalid on reuse, got %v", err)
 	}
 	st, _ := svc.GetStatus(admin.ID)
-	if st.RecoveryCodesRemaining != totpRecoveryCodeCount-1 {
-		t.Fatalf("expected %d remaining, got %d", totpRecoveryCodeCount-1, st.RecoveryCodesRemaining)
+	if st.RecoveryCodesRemaining != admintotpapp.RecoveryCodeCount-1 {
+		t.Fatalf("expected %d remaining, got %d", admintotpapp.RecoveryCodeCount-1, st.RecoveryCodesRemaining)
 	}
 }
 
@@ -158,13 +159,18 @@ func TestRegenerateRecoveryCodes(t *testing.T) {
 
 	now := time.Now().Add(31 * time.Second)
 	newCode, _ := totp.GenerateCode(setupRes.Secret, now)
-	svc.now = func() time.Time { return now }
+	svc = admintotpapp.NewService(
+		&config.Config{App: config.AppConfig{SecretKey: "test-secret-key-for-totp"}},
+		repo,
+		nil,
+		admintotpapp.WithClock(func() time.Time { return now }),
+	)
 	regen, err := svc.RegenerateRecoveryCodes(admin.ID, newCode)
 	if err != nil {
 		t.Fatalf("regenerate: %v", err)
 	}
-	if len(regen) != totpRecoveryCodeCount {
-		t.Fatalf("expected %d, got %d", totpRecoveryCodeCount, len(regen))
+	if len(regen) != admintotpapp.RecoveryCodeCount {
+		t.Fatalf("expected %d, got %d", admintotpapp.RecoveryCodeCount, len(regen))
 	}
 	for _, oldCode := range first.RecoveryCodes {
 		if err := svc.VerifyChallengeRecoveryCode(admin.ID, oldCode); err != totpapplication.ErrRecoveryCodeInvalid {
@@ -205,7 +211,7 @@ func TestDisableWithRecoveryCode(t *testing.T) {
 func TestAdminResetRejectsSelf(t *testing.T) {
 	svc, repo, _ := newTOTPTestService(t)
 	admin := createTOTPTestAdmin(t, repo, "isaac")
-	if err := svc.AdminReset(admin.ID, admin.ID); err != ErrTOTPCannotResetSelf {
+	if err := svc.AdminReset(admin.ID, admin.ID); err != admintotpapp.ErrCannotResetSelf {
 		t.Fatalf("expected cannot reset self, got %v", err)
 	}
 }

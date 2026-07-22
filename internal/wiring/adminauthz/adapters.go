@@ -10,7 +10,7 @@ import (
 	"github.com/dujiao-next/internal/modules/auditlog"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
-	"github.com/dujiao-next/internal/service"
+	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
 	"github.com/dujiao-next/internal/shared/passwordpolicy"
 	adminauthztransport "github.com/dujiao-next/internal/transport/http/adminauthz"
 )
@@ -96,7 +96,7 @@ func (a adminAuthzDirectoryAdapter) Count() (int64, error) {
 }
 
 type adminAuthzPasswordAdapter struct {
-	auth *service.AuthService
+	auth *adminauthapp.Service
 }
 
 func (a adminAuthzPasswordAdapter) ValidatePassword(password string) error {
