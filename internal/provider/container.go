@@ -50,7 +50,7 @@ import (
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	notificationapp "github.com/dujiao-next/internal/modules/notification/application"
 	notificationgormstore "github.com/dujiao-next/internal/modules/notification/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/modules/orderrisk"
+	orderriskapp "github.com/dujiao-next/internal/modules/orderrisk/application"
 	"github.com/dujiao-next/internal/modules/procurement"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
@@ -176,7 +176,7 @@ type Container struct {
 	TelegramBroadcastService      *broadcastapp.Service
 	MemberLevelService            *memberlevelapp.Service
 	AdProxyService                *adproxyapp.Service
-	OrderRiskControlService       *orderrisk.Service
+	OrderRiskControlService       *orderriskapp.Service
 	ComplianceService             *complianceapp.Service
 
 	PaymentProviderRegistry *paymentprovider.Registry

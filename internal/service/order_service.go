@@ -20,7 +20,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
 	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
-	"github.com/dujiao-next/internal/modules/orderrisk"
+	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
 	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
@@ -54,7 +54,7 @@ type OrderService struct {
 	memberLevelService      OrderMemberLevelService
 	resellerPricingResolver *ResellerPricingResolver
 	resellerAccountingSvc   *ResellerAccountingService
-	riskControlSvc          *orderrisk.Service
+	riskControlSvc          orderriskcontract.Controller
 	productMappingService   upstreamStockEnsurer
 	expireMinutes           int
 }
@@ -128,7 +128,7 @@ type OrderServiceOptions struct {
 	MemberLevelService        OrderMemberLevelService
 	ResellerPricingResolver   *ResellerPricingResolver
 	ResellerAccountingService *ResellerAccountingService
-	RiskControlService        *orderrisk.Service
+	RiskControlService        orderriskcontract.Controller
 	ProductMappingService     upstreamStockEnsurer
 	ExpireMinutes             int
 }
@@ -455,7 +455,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 
 	// 风控检查（在锁库存之前）
 	if s.riskControlSvc != nil && !input.SkipRiskControl {
-		if err := s.riskControlSvc.CheckOrderAllowed(orderrisk.CheckInput{
+		if err := s.riskControlSvc.CheckOrderAllowed(orderriskcontract.CheckInput{
 			UserID:      input.UserID,
 			GuestEmail:  input.GuestEmail,
 			ClientIP:    input.ClientIP,

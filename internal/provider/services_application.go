@@ -18,7 +18,8 @@ import (
 	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
 	giftcardsettingscurrency "github.com/dujiao-next/internal/modules/giftcard/infrastructure/settingscurrency"
 	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
-	"github.com/dujiao-next/internal/modules/orderrisk"
+	orderriskapp "github.com/dujiao-next/internal/modules/orderrisk/application"
+	orderrisklimiter "github.com/dujiao-next/internal/modules/orderrisk/infrastructure/redislimiter"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
 	sitemapapp "github.com/dujiao-next/internal/modules/sitemap/application"
 	sitemapcontract "github.com/dujiao-next/internal/modules/sitemap/contract"
@@ -71,7 +72,11 @@ func (c *Container) initApplicationServices() {
 	c.WalletService = service.NewWalletService(c.WalletRepo, c.OrderRepo, c.OrderRefundRecordRepo, c.UserStore, c.AffiliateRefundHandler, c.SettingService)
 	c.OrderRefundService = service.NewOrderRefundService(c.OrderRepo, c.UserStore, c.OrderRefundRecordRepo, c.AffiliateRefundHandler, c.SettingService)
 	c.MemberLevelService = memberlevelapp.NewService(c.MemberLevelRepo, c.MemberLevelPriceRepo, c.MemberLevelUserRepo)
-	c.OrderRiskControlService = orderrisk.NewService(c.SettingService, c.OrderRepo)
+	c.OrderRiskControlService = orderriskapp.NewService(orderriskapp.Options{
+		Settings:    c.SettingService,
+		Orders:      c.OrderRepo,
+		RateLimiter: orderrisklimiter.New(),
+	})
 	c.OrderService = service.NewOrderService(service.OrderServiceOptions{
 		OrderRepo:                 c.OrderRepo,
 		OrderRefundRecordRepo:     c.OrderRefundRecordRepo,

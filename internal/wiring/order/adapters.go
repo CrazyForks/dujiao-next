@@ -17,7 +17,7 @@ import (
 	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
-	"github.com/dujiao-next/internal/modules/orderrisk"
+	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
 	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/queue"
@@ -465,7 +465,7 @@ func mapOrderTransportError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if retryAfter := orderrisk.GetRetryAfter(err); retryAfter > 0 {
+	if retryAfter := orderriskcontract.GetRetryAfter(err); retryAfter > 0 {
 		return ordertransport.WrapRiskRateLimited(retryAfter, err)
 	}
 	for _, mapping := range []struct {
@@ -493,10 +493,10 @@ func mapOrderTransportError(err error) error {
 		{service.ErrProductNotAvailable, ordertransport.ErrProductNotAvailable},
 		{service.ErrResellerCouponNotAllowed, ordertransport.ErrResellerCouponNotAllowed},
 		{service.ErrQueueUnavailable, ordertransport.ErrQueueUnavailable},
-		{orderrisk.ErrRiskIPBlacklisted, ordertransport.ErrRiskIPBlacklisted},
-		{orderrisk.ErrRiskEmailBlacklisted, ordertransport.ErrRiskEmailBlacklisted},
-		{orderrisk.ErrRiskTooManyPendingOrders, ordertransport.ErrRiskTooManyPendingOrders},
-		{orderrisk.ErrRiskOrderRateLimited, ordertransport.ErrRiskOrderRateLimited},
+		{orderriskcontract.ErrIPBlacklisted, ordertransport.ErrRiskIPBlacklisted},
+		{orderriskcontract.ErrEmailBlacklisted, ordertransport.ErrRiskEmailBlacklisted},
+		{orderriskcontract.ErrTooManyPendingOrders, ordertransport.ErrRiskTooManyPendingOrders},
+		{orderriskcontract.ErrOrderRateLimited, ordertransport.ErrRiskOrderRateLimited},
 	} {
 		if errors.Is(err, mapping.source) {
 			return fmt.Errorf("%w: %v", mapping.target, err)

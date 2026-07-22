@@ -1,8 +1,9 @@
-package orderrisk
+package application
 
 import (
 	"testing"
 
+	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
@@ -60,27 +61,6 @@ func TestIsIPInBlacklist_CacheReuse(t *testing.T) {
 	}
 }
 
-// --- RiskRateLimitedError 测试 ---
-
-func TestRiskRateLimitedError_Is(t *testing.T) {
-	err := &RiskRateLimitedError{RetryAfter: 60}
-	if err.Error() != ErrRiskOrderRateLimited.Error() {
-		t.Fatalf("expected error message match")
-	}
-	if !err.Is(ErrRiskOrderRateLimited) {
-		t.Fatal("expected Is(ErrRiskOrderRateLimited) to be true")
-	}
-}
-
-func TestGetRetryAfter(t *testing.T) {
-	if ra := GetRetryAfter(ErrRiskIPBlacklisted); ra != 0 {
-		t.Fatalf("expected 0 for non-rate-limit error, got %d", ra)
-	}
-	if ra := GetRetryAfter(&RiskRateLimitedError{RetryAfter: 42}); ra != 42 {
-		t.Fatalf("expected 42, got %d", ra)
-	}
-}
-
 // --- CheckOrderAllowed 集成测试（使用 mock） ---
 
 type mockOrderRepoForRisk struct {
@@ -103,22 +83,39 @@ type settingReaderStub struct {
 	config settingssecurity.OrderRiskControlConfig
 }
 
+type rateLimiterStub struct {
+	calls  int
+	input  orderriskcontract.CheckInput
+	config settingssecurity.OrderRateLimitConfig
+	err    error
+}
+
+func (s *rateLimiterStub) Check(input orderriskcontract.CheckInput, config settingssecurity.OrderRateLimitConfig) error {
+	s.calls++
+	s.input = input
+	s.config = config
+	return s.err
+}
+
 func (s settingReaderStub) GetOrderRiskControlConfig() (settingssecurity.OrderRiskControlConfig, error) {
 	return s.config, nil
 }
 
 func newTestRiskControlService(pendingByUser, pendingByIP, pendingByEmail int64, cfgJSON jsonmap.JSON) *Service {
 	config := settingssecurity.DecodeOrderRiskControlConfig(cfgJSON, settingssecurity.DefaultOrderRiskControlConfig())
-	return NewService(settingReaderStub{config: config}, &mockOrderRepoForRisk{
-		pendingByUser:  pendingByUser,
-		pendingByIP:    pendingByIP,
-		pendingByEmail: pendingByEmail,
+	return NewService(Options{
+		Settings: settingReaderStub{config: config},
+		Orders: &mockOrderRepoForRisk{
+			pendingByUser:  pendingByUser,
+			pendingByIP:    pendingByIP,
+			pendingByEmail: pendingByEmail,
+		},
 	})
 }
 
 func TestCheckOrderAllowed_DisabledByDefault(t *testing.T) {
 	svc := newTestRiskControlService(100, 100, 100, nil)
-	err := svc.CheckOrderAllowed(CheckInput{
+	err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{
 		UserID:   1,
 		ClientIP: "1.2.3.4",
 	})
@@ -133,13 +130,13 @@ func TestCheckOrderAllowed_IPBlacklist(t *testing.T) {
 		"ip_blacklist": []interface{}{"1.2.3.4", "10.0.0.0/8"},
 	})
 
-	if err := svc.CheckOrderAllowed(CheckInput{ClientIP: "1.2.3.4"}); err != ErrRiskIPBlacklisted {
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{ClientIP: "1.2.3.4"}); err != orderriskcontract.ErrIPBlacklisted {
 		t.Fatalf("expected ErrRiskIPBlacklisted, got %v", err)
 	}
-	if err := svc.CheckOrderAllowed(CheckInput{ClientIP: "10.0.0.1"}); err != ErrRiskIPBlacklisted {
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{ClientIP: "10.0.0.1"}); err != orderriskcontract.ErrIPBlacklisted {
 		t.Fatalf("expected ErrRiskIPBlacklisted for CIDR, got %v", err)
 	}
-	if err := svc.CheckOrderAllowed(CheckInput{ClientIP: "2.3.4.5"}); err != nil {
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{ClientIP: "2.3.4.5"}); err != nil {
 		t.Fatalf("expected nil for non-blocked IP, got %v", err)
 	}
 }
@@ -150,16 +147,16 @@ func TestCheckOrderAllowed_EmailBlacklist(t *testing.T) {
 		"email_blacklist": []interface{}{"spam@example.com"},
 	})
 
-	if err := svc.CheckOrderAllowed(CheckInput{
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{
 		IsGuest:    true,
 		GuestEmail: "SPAM@example.com",
 		ClientIP:   "2.3.4.5",
-	}); err != ErrRiskEmailBlacklisted {
+	}); err != orderriskcontract.ErrEmailBlacklisted {
 		t.Fatalf("expected ErrRiskEmailBlacklisted, got %v", err)
 	}
 
 	// Non-guest should not be blocked by email blacklist
-	if err := svc.CheckOrderAllowed(CheckInput{
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{
 		UserID:   1,
 		ClientIP: "2.3.4.5",
 	}); err != nil {
@@ -177,29 +174,29 @@ func TestCheckOrderAllowed_PendingOrderLimits(t *testing.T) {
 
 	// User at limit
 	svc := newTestRiskControlService(2, 0, 0, cfg)
-	if err := svc.CheckOrderAllowed(CheckInput{UserID: 1, ClientIP: "5.6.7.8"}); err != ErrRiskTooManyPendingOrders {
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{UserID: 1, ClientIP: "5.6.7.8"}); err != orderriskcontract.ErrTooManyPendingOrders {
 		t.Fatalf("expected ErrRiskTooManyPendingOrders for user, got %v", err)
 	}
 
 	// User under limit
 	svc = newTestRiskControlService(1, 0, 0, cfg)
-	if err := svc.CheckOrderAllowed(CheckInput{UserID: 1, ClientIP: "5.6.7.8"}); err != nil {
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{UserID: 1, ClientIP: "5.6.7.8"}); err != nil {
 		t.Fatalf("expected nil for user under limit, got %v", err)
 	}
 
 	// IP at limit
 	svc = newTestRiskControlService(0, 3, 0, cfg)
-	if err := svc.CheckOrderAllowed(CheckInput{ClientIP: "5.6.7.8"}); err != ErrRiskTooManyPendingOrders {
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{ClientIP: "5.6.7.8"}); err != orderriskcontract.ErrTooManyPendingOrders {
 		t.Fatalf("expected ErrRiskTooManyPendingOrders for IP, got %v", err)
 	}
 
 	// Guest email at limit
 	svc = newTestRiskControlService(0, 0, 1, cfg)
-	if err := svc.CheckOrderAllowed(CheckInput{
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{
 		IsGuest:    true,
 		GuestEmail: "test@example.com",
 		ClientIP:   "5.6.7.8",
-	}); err != ErrRiskTooManyPendingOrders {
+	}); err != orderriskcontract.ErrTooManyPendingOrders {
 		t.Fatalf("expected ErrRiskTooManyPendingOrders for guest email, got %v", err)
 	}
 }
@@ -214,7 +211,7 @@ func TestCheckOrderAllowed_SkipIPCheck(t *testing.T) {
 
 	// IP 在黑名单中，但 SkipIPCheck=true 应放行
 	svc := newTestRiskControlService(0, 0, 0, cfg)
-	if err := svc.CheckOrderAllowed(CheckInput{
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{
 		UserID:      1,
 		ClientIP:    "1.2.3.4",
 		SkipIPCheck: true,
@@ -224,7 +221,7 @@ func TestCheckOrderAllowed_SkipIPCheck(t *testing.T) {
 
 	// IP 并发超限，但 SkipIPCheck=true 应放行
 	svc = newTestRiskControlService(0, 999, 0, cfg)
-	if err := svc.CheckOrderAllowed(CheckInput{
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{
 		UserID:      1,
 		ClientIP:    "5.6.7.8",
 		SkipIPCheck: true,
@@ -234,11 +231,11 @@ func TestCheckOrderAllowed_SkipIPCheck(t *testing.T) {
 
 	// 用户维度超限，SkipIPCheck=true 不影响，仍应拦截
 	svc = newTestRiskControlService(5, 0, 0, cfg)
-	if err := svc.CheckOrderAllowed(CheckInput{
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{
 		UserID:      1,
 		ClientIP:    "5.6.7.8",
 		SkipIPCheck: true,
-	}); err != ErrRiskTooManyPendingOrders {
+	}); err != orderriskcontract.ErrTooManyPendingOrders {
 		t.Fatalf("expected ErrRiskTooManyPendingOrders for user limit with SkipIPCheck, got %v", err)
 	}
 }
@@ -250,12 +247,37 @@ func TestCheckOrderAllowed_ZeroLimitMeansNoLimit(t *testing.T) {
 		"max_pending_orders_per_ip":          float64(0),
 		"max_pending_orders_per_guest_email": float64(0),
 	})
-	if err := svc.CheckOrderAllowed(CheckInput{
+	if err := svc.CheckOrderAllowed(orderriskcontract.CheckInput{
 		UserID:     1,
 		ClientIP:   "1.2.3.4",
 		IsGuest:    true,
 		GuestEmail: "test@example.com",
 	}); err != nil {
 		t.Fatalf("expected nil when limits are 0 (disabled), got %v", err)
+	}
+}
+
+func TestCheckOrderAllowed_DelegatesEnabledRateLimit(t *testing.T) {
+	limited := &orderriskcontract.RateLimitedError{RetryAfter: 42}
+	limiter := &rateLimiterStub{err: limited}
+	config := settingssecurity.DefaultOrderRiskControlConfig()
+	config.Enabled = true
+	config.OrderRateLimit.Enabled = true
+	svc := NewService(Options{
+		Settings:    settingReaderStub{config: config},
+		Orders:      &mockOrderRepoForRisk{},
+		RateLimiter: limiter,
+	})
+	input := orderriskcontract.CheckInput{UserID: 7, ClientIP: "1.2.3.4"}
+
+	err := svc.CheckOrderAllowed(input)
+	if err != limited {
+		t.Fatalf("expected limiter error, got %v", err)
+	}
+	if limiter.calls != 1 || limiter.input != input {
+		t.Fatalf("expected one limiter call with input %+v, got calls=%d input=%+v", input, limiter.calls, limiter.input)
+	}
+	if limiter.config != config.OrderRateLimit {
+		t.Fatalf("expected rate limit config %+v, got %+v", config.OrderRateLimit, limiter.config)
 	}
 }
