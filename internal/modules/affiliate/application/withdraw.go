@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"strings"
@@ -8,43 +8,39 @@ import (
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/affiliate"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
 
-// AffiliateWithdrawApplyInput 兼容门面别名。
-type AffiliateWithdrawApplyInput = affiliate.WithdrawApplyInput
-
 // ApplyWithdraw 用户提交提现申请
-func (s *AffiliateService) ApplyWithdraw(userID uint, input AffiliateWithdrawApplyInput) (*affiliatedomain.WithdrawRequest, error) {
+func (s *Service) ApplyWithdraw(userID uint, input WithdrawApplyInput) (*affiliatedomain.WithdrawRequest, error) {
 	if userID == 0 || s.repo == nil {
-		return nil, ErrAffiliateNotOpened
+		return nil, ErrNotOpened
 	}
-	setting, err := s.settingService.GetAffiliateSetting()
+	setting, err := s.settings.GetAffiliateSetting()
 	if err != nil {
 		return nil, err
 	}
 	if !setting.Enabled {
-		return nil, ErrAffiliateDisabled
+		return nil, ErrDisabled
 	}
 
 	amount := input.Amount.Round(2)
 	if amount.LessThanOrEqual(decimal.Zero) {
-		return nil, ErrAffiliateWithdrawAmountInvalid
+		return nil, ErrWithdrawAmountInvalid
 	}
 	minAmount := decimal.NewFromFloat(setting.MinWithdrawAmount).Round(2)
 	if amount.LessThan(minAmount) {
-		return nil, ErrAffiliateWithdrawAmountInvalid
+		return nil, ErrWithdrawAmountInvalid
 	}
 	channel := strings.TrimSpace(input.Channel)
 	account := strings.TrimSpace(input.Account)
 	if channel == "" || account == "" {
-		return nil, ErrAffiliateWithdrawChannelInvalid
+		return nil, ErrWithdrawChannelInvalid
 	}
 	if len(setting.WithdrawChannels) > 0 && !containsWithdrawChannel(setting.WithdrawChannels, channel) {
-		return nil, ErrAffiliateWithdrawChannelInvalid
+		return nil, ErrWithdrawChannelInvalid
 	}
 	if err := s.ConfirmDueCommissions(time.Now()); err != nil {
 		return nil, err
@@ -57,10 +53,10 @@ func (s *AffiliateService) ApplyWithdraw(userID uint, input AffiliateWithdrawApp
 			return err
 		}
 		if profile == nil {
-			return ErrAffiliateNotOpened
+			return ErrNotOpened
 		}
 		if strings.TrimSpace(profile.Status) != constants.AffiliateProfileStatusActive {
-			return ErrAffiliateNotOpened
+			return ErrNotOpened
 		}
 
 		commissions, err := repoTx.ListAvailableCommissionsForUpdate(profile.ID)
@@ -112,7 +108,7 @@ func (s *AffiliateService) ApplyWithdraw(userID uint, input AffiliateWithdrawApp
 			break
 		}
 		if remaining.GreaterThan(decimal.Zero) {
-			return ErrAffiliateWithdrawInsufficient
+			return ErrWithdrawInsufficient
 		}
 
 		req := &affiliatedomain.WithdrawRequest{
@@ -143,13 +139,13 @@ func (s *AffiliateService) ApplyWithdraw(userID uint, input AffiliateWithdrawApp
 }
 
 // ReviewWithdraw 管理端审核提现申请
-func (s *AffiliateService) ReviewWithdraw(adminID, withdrawID uint, action, rejectReason string) (*affiliatedomain.WithdrawRequest, error) {
+func (s *Service) ReviewWithdraw(adminID, withdrawID uint, action, rejectReason string) (*affiliatedomain.WithdrawRequest, error) {
 	if withdrawID == 0 || s.repo == nil {
 		return nil, ErrNotFound
 	}
 	act := strings.ToLower(strings.TrimSpace(action))
 	if act != constants.AffiliateWithdrawActionReject && act != constants.AffiliateWithdrawActionPay {
-		return nil, ErrAffiliateWithdrawStatusInvalid
+		return nil, ErrWithdrawStatusInvalid
 	}
 	rejectReason = strings.TrimSpace(rejectReason)
 
@@ -162,7 +158,7 @@ func (s *AffiliateService) ReviewWithdraw(adminID, withdrawID uint, action, reje
 			return ErrNotFound
 		}
 		if req.Status != constants.AffiliateWithdrawStatusPendingReview {
-			return ErrAffiliateWithdrawStatusInvalid
+			return ErrWithdrawStatusInvalid
 		}
 
 		commissions, err := repoTx.ListCommissionsByWithdrawIDForUpdate(withdrawID)

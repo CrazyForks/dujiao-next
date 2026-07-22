@@ -129,6 +129,20 @@ var completedMigrationPaths = []string{
 	"internal/models/affiliate_commission.go",
 	"internal/models/affiliate_withdraw_request.go",
 	"internal/repository/affiliate_repository.go",
+	"internal/service/affiliate_service.go",
+	"internal/service/affiliate_attribution.go",
+	"internal/service/affiliate_commission.go",
+	"internal/service/affiliate_profile.go",
+	"internal/service/affiliate_query.go",
+	"internal/service/affiliate_withdraw.go",
+	"internal/service/affiliate_service_test.go",
+	"internal/transport/http/affiliate",
+	"internal/wiring/affiliate",
+	"internal/modules/affiliate/errors.go",
+	"internal/modules/affiliate/types.go",
+	"internal/dto/affiliate.go",
+	"internal/dto/affiliate_test.go",
+	"internal/integration/affiliate",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {
@@ -182,6 +196,12 @@ func TestAffiliateModuleOwnsDomainAndPersistence(t *testing.T) {
 	storeRoot := filepath.Join(repositoryRoot, "internal", "modules", "affiliate", "infrastructure", "gormstore")
 	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "store.go"), []string{"Store"})
 	assertDirectoryGoFileBudget(t, storeRoot, 2)
+
+	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "affiliate")
+	production, total := countDirectGoFiles(t, moduleRoot)
+	if production != 0 || total != 0 {
+		t.Fatalf("affiliate module root must remain structural only, got production=%d total=%d", production, total)
+	}
 }
 
 func TestLegacyHorizontalRootsCanOnlyShrink(t *testing.T) {

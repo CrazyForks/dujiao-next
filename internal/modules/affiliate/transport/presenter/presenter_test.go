@@ -1,4 +1,4 @@
-package dto
+package presenter
 
 import (
 	"encoding/json"
@@ -7,9 +7,12 @@ import (
 	"time"
 
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+	"github.com/dujiao-next/internal/shared/money"
+
+	"github.com/shopspring/decimal"
 )
 
-func TestAffiliateProfileRespOmitsSensitiveFields(t *testing.T) {
+func TestProfileOmitsSensitiveFields(t *testing.T) {
 	profile := &affiliatedomain.Profile{
 		ID:            1,
 		UserID:        99,
@@ -19,7 +22,7 @@ func TestAffiliateProfileRespOmitsSensitiveFields(t *testing.T) {
 		UpdatedAt:     time.Now(),
 	}
 
-	resp := NewAffiliateProfileResp(profile)
+	resp := NewProfile(profile)
 	data, _ := json.Marshal(resp)
 	jsonStr := string(data)
 
@@ -34,7 +37,7 @@ func TestAffiliateProfileRespOmitsSensitiveFields(t *testing.T) {
 	}
 }
 
-func TestAffiliateCommissionRespOmitsSensitiveFields(t *testing.T) {
+func TestCommissionOmitsSensitiveFields(t *testing.T) {
 	commission := &affiliatedomain.Commission{
 		ID:                 1,
 		AffiliateProfileID: 5,
@@ -47,7 +50,7 @@ func TestAffiliateCommissionRespOmitsSensitiveFields(t *testing.T) {
 		CreatedAt:          time.Now(),
 	}
 
-	resp := NewAffiliateCommissionResp(commission)
+	resp := NewCommission(commission)
 	data, _ := json.Marshal(resp)
 	jsonStr := string(data)
 
@@ -63,7 +66,7 @@ func TestAffiliateCommissionRespOmitsSensitiveFields(t *testing.T) {
 	}
 }
 
-func TestAffiliateWithdrawRespOmitsSensitiveFields(t *testing.T) {
+func TestWithdrawOmitsSensitiveFields(t *testing.T) {
 	withdraw := &affiliatedomain.WithdrawRequest{
 		ID:                 1,
 		AffiliateProfileID: 5,
@@ -75,7 +78,7 @@ func TestAffiliateWithdrawRespOmitsSensitiveFields(t *testing.T) {
 		CreatedAt:          time.Now(),
 	}
 
-	resp := NewAffiliateWithdrawResp(withdraw)
+	resp := NewWithdraw(withdraw)
 	data, _ := json.Marshal(resp)
 	jsonStr := string(data)
 
@@ -92,4 +95,8 @@ func TestAffiliateWithdrawRespOmitsSensitiveFields(t *testing.T) {
 
 func ptrUint(v uint) *uint {
 	return &v
+}
+
+func newMoney(raw string) money.Amount {
+	return money.FromDecimal(decimal.RequireFromString(raw))
 }

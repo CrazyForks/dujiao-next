@@ -4,7 +4,9 @@ import (
 	"github.com/dujiao-next/internal/authz"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/modules/adproxy"
+	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
+	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/apicredential"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	"github.com/dujiao-next/internal/modules/captcha"
@@ -136,7 +138,8 @@ type Container struct {
 	NotificationLogService        *notification.LogService
 	DashboardService              *dashboard.Service
 	NotificationService           *notification.Service
-	AffiliateService              *service.AffiliateService
+	AffiliateService              *affiliateapp.Service
+	AffiliateRefundHandler        *affiliategormstore.RefundHandler
 	ResellerDomainResolver        *reseller.DomainResolver
 	ResellerPricingResolver       *service.ResellerPricingResolver
 	ResellerManagementService     *reseller.ManagementService

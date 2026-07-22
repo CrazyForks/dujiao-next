@@ -6,6 +6,8 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
+	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/compliance"
 	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
@@ -86,6 +88,7 @@ func (c *Container) initIdentityAndCatalogServices() {
 	c.TelegramAuthService = telegramauthapp.NewService(c.Config.TelegramAuth, telegramauthcache.Options()...)
 	c.UserAuthService = userauthapp.NewService(c.Config, c.UserStore, c.ExternalIdentityStore, c.EmailVerificationStore, c.SettingService, c.EmailService, c.TelegramAuthService)
 	c.UploadService = upload.NewService(c.Config)
-	c.AffiliateService = service.NewAffiliateService(c.AffiliateRepo, c.UserStore, c.OrderRepo, c.ProductRepo, c.SettingService)
+	c.AffiliateService = affiliateapp.NewService(c.AffiliateRepo, c.UserStore, c.OrderRepo, c.ProductRepo, c.SettingService)
+	c.AffiliateRefundHandler = affiliategormstore.NewRefundHandler(c.AffiliateService)
 	c.ProductService = service.NewProductService(c.ProductRepo, c.ProductSKURepo, c.CardSecretRepo, c.CardSecretBatchRepo, c.CategoryRepo, c.MemberLevelPriceRepo, c.CartRepo, c.ProductMappingRepo, c.OrderRepo, c.PaymentChannelRepo)
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 
@@ -56,9 +57,10 @@ func setupWalletServiceTest(t *testing.T) (*WalletService, *gorm.DB) {
 	orderRepo := repository.NewOrderRepository(db)
 	refundRecordRepo := repository.NewOrderRefundRecordRepository(db)
 	userRepo := userstore.New(db)
-	affiliateSvc := NewAffiliateService(affiliategormstore.New(db), nil, nil, nil, nil)
+	affiliateSvc := affiliateapp.NewService(affiliategormstore.New(db), nil, nil, nil, nil)
+	affiliateRefund := affiliategormstore.NewRefundHandler(affiliateSvc)
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
-	return NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, affiliateSvc, settingSvc), db
+	return NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, affiliateRefund, settingSvc), db
 }
 
 func createTestUser(t *testing.T, db *gorm.DB, id uint) {

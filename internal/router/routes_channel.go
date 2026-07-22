@@ -1,8 +1,8 @@
 package router
 
 import (
+	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	"github.com/dujiao-next/internal/provider"
-	affiliatetransport "github.com/dujiao-next/internal/transport/http/affiliate"
 	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
 	giftcardtransport "github.com/dujiao-next/internal/transport/http/giftcard"
 	memberleveltransport "github.com/dujiao-next/internal/transport/http/memberlevel"

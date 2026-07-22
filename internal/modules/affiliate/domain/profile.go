@@ -1,10 +1,23 @@
 package domain
 
 import (
+	"strings"
 	"time"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 )
+
+// NormalizeCode 归一化外部输入的推广码，并限制为持久化字段允许的长度。
+func NormalizeCode(raw string) string {
+	code := strings.TrimSpace(raw)
+	if code == "" {
+		return ""
+	}
+	if len(code) > 32 {
+		return code[:32]
+	}
+	return code
+}
 
 // Profile 推广返利用户档案
 type Profile struct {

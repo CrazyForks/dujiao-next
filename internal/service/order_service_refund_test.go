@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 
@@ -55,10 +56,11 @@ func setupOrderRefundServiceTest(t *testing.T) (*OrderRefundService, *gorm.DB) {
 
 	orderRepo := repository.NewOrderRepository(db)
 	orderRefundRecordRepo := repository.NewOrderRefundRecordRepository(db)
-	affiliateSvc := NewAffiliateService(affiliategormstore.New(db), nil, nil, nil, nil)
+	affiliateSvc := affiliateapp.NewService(affiliategormstore.New(db), nil, nil, nil, nil)
+	affiliateRefund := affiliategormstore.NewRefundHandler(affiliateSvc)
 	userRepo := userstore.New(db)
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
-	return NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateSvc, settingSvc), db
+	return NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateRefund, settingSvc), db
 }
 
 func createOrderRefundTestSiteConnection(t *testing.T, db *gorm.DB, id uint) *models.SiteConnection {

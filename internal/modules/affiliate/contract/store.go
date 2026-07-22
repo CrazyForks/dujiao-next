@@ -3,9 +3,26 @@ package contract
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate/domain"
+	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 	"github.com/shopspring/decimal"
 )
+
+// OrderReader 是 Affiliate 计算订单佣金所需的最小订单读取端口。
+type OrderReader interface {
+	GetByID(id uint) (*models.Order, error)
+}
+
+// ProductReader 是 Affiliate 计算可返利金额所需的最小商品读取端口。
+type ProductReader interface {
+	ListByIDs(ids []uint) ([]models.Product, error)
+}
+
+// SettingsReader 是 Affiliate 所需的动态设置读取端口。
+type SettingsReader interface {
+	GetAffiliateSetting() (settingsintegration.AffiliateSetting, error)
+}
 
 type ProfileListFilter struct {
 	Page     int

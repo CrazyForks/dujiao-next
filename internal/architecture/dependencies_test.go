@@ -321,7 +321,7 @@ func validateImport(file, importPath string) string {
 		if forbiddenLegacyImport(importPath) {
 			return "domain modules must not depend on legacy service, repository, HTTP, router, or provider packages"
 		}
-		if importMatches(importPath, "github.com/gin-gonic/gin") && !isHTTPTransport(file) {
+		if importMatches(importPath, "github.com/gin-gonic/gin") && !isHTTPTransport(file) && !isModuleIntegrationTest(file) {
 			return "HTTP transport belongs outside domain modules"
 		}
 		if strings.HasPrefix(importPath, "gorm.io/") && !isGormStore(file) && !isModuleIntegrationTest(file) {

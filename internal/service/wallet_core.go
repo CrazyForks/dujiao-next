@@ -9,7 +9,11 @@ import (
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 
+	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+
+	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
 )
 
 const (
@@ -22,9 +26,14 @@ type WalletService struct {
 	orderRepo             repository.OrderRepository
 	refundRecordRepo      repository.OrderRefundRecordRepository
 	userRepo              usercontract.Store
-	affiliateSvc          *AffiliateService
+	affiliateRefund       affiliateRefundProcessor
 	settingService        *settingsapp.Service
 	resellerAccountingSvc *ResellerAccountingService
+}
+
+// affiliateRefundProcessor 是钱包与退款流程调用推广返利回滚的事务端口。
+type affiliateRefundProcessor interface {
+	HandleOrderRefundedTx(tx *gorm.DB, order *models.Order, refundDelta, refundedBefore decimal.Decimal, reason string) error
 }
 
 // NewWalletService 创建钱包服务
@@ -33,7 +42,7 @@ func NewWalletService(
 	orderRepo repository.OrderRepository,
 	refundRecordRepo repository.OrderRefundRecordRepository,
 	userRepo usercontract.Store,
-	affiliateSvc *AffiliateService,
+	affiliateRefund affiliateRefundProcessor,
 	settingService *settingsapp.Service,
 ) *WalletService {
 	return &WalletService{
@@ -41,7 +50,7 @@ func NewWalletService(
 		orderRepo:        orderRepo,
 		refundRecordRepo: refundRecordRepo,
 		userRepo:         userRepo,
-		affiliateSvc:     affiliateSvc,
+		affiliateRefund:  affiliateRefund,
 		settingService:   settingService,
 	}
 }

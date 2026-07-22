@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"strings"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 
@@ -80,18 +79,6 @@ func resolveProductOrderSKU(productSKURepo repository.ProductSKURepository, prod
 // buildOrderItemKey 构建商品与 SKU 的组合键。
 func buildOrderItemKey(productID, skuID uint) string {
 	return fmt.Sprintf("%d:%d", productID, skuID)
-}
-
-// normalizeAffiliateCode 统一归一化推广码输入。
-func normalizeAffiliateCode(raw string) string {
-	code := strings.TrimSpace(raw)
-	if code == "" {
-		return ""
-	}
-	if len(code) > 32 {
-		return code[:32]
-	}
-	return code
 }
 
 // normalizeOrderAmount 归一化金额精度与下限。

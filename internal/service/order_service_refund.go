@@ -57,7 +57,7 @@ type OrderRefundService struct {
 	orderRepo             repository.OrderRepository
 	userRepo              usercontract.Store
 	orderRefundRecordRepo repository.OrderRefundRecordRepository
-	affiliateSvc          *AffiliateService
+	affiliateRefund       affiliateRefundProcessor
 	settingService        *settingsapp.Service
 	resellerAccountingSvc *ResellerAccountingService
 }
@@ -97,14 +97,14 @@ func NewOrderRefundService(
 	orderRepo repository.OrderRepository,
 	userRepo usercontract.Store,
 	orderRefundRecordRepo repository.OrderRefundRecordRepository,
-	affiliateSvc *AffiliateService,
+	affiliateRefund affiliateRefundProcessor,
 	settingService *settingsapp.Service,
 ) *OrderRefundService {
 	return &OrderRefundService{
 		orderRepo:             orderRepo,
 		userRepo:              userRepo,
 		orderRefundRecordRepo: orderRefundRecordRepo,
-		affiliateSvc:          affiliateSvc,
+		affiliateRefund:       affiliateRefund,
 		settingService:        settingService,
 	}
 }
@@ -302,8 +302,8 @@ func (s *OrderRefundService) AdminManualRefund(input AdminManualRefundInput) (*m
 			return err
 		}
 		createdRecord = record
-		if s.affiliateSvc != nil && order.UserID > 0 {
-			if err := s.affiliateSvc.HandleOrderRefundedTx(
+		if s.affiliateRefund != nil && order.UserID > 0 {
+			if err := s.affiliateRefund.HandleOrderRefundedTx(
 				tx,
 				&order,
 				amount,

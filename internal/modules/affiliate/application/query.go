@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"math"
@@ -8,24 +8,14 @@ import (
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/affiliate"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
 
-// 兼容门面别名。
-type (
-	AffiliateDashboard                 = affiliate.Dashboard
-	AffiliateStats                     = affiliate.Stats
-	AffiliateAdminUserItem             = affiliate.AdminUserItem
-	AffiliateAdminCommissionListFilter = affiliate.AdminCommissionListFilter
-	AffiliateAdminWithdrawListFilter   = affiliate.AdminWithdrawListFilter
-)
-
 // GetUserDashboard 获取用户返利中心数据
-func (s *AffiliateService) GetUserDashboard(userID uint) (AffiliateDashboard, error) {
-	dashboard := AffiliateDashboard{
+func (s *Service) GetUserDashboard(userID uint) (Dashboard, error) {
+	dashboard := Dashboard{
 		Opened:              false,
 		PendingCommission:   money.FromDecimal(decimal.Zero),
 		AvailableCommission: money.FromDecimal(decimal.Zero),
@@ -59,7 +49,7 @@ func (s *AffiliateService) GetUserDashboard(userID uint) (AffiliateDashboard, er
 }
 
 // ListUserCommissions 查询用户佣金记录
-func (s *AffiliateService) ListUserCommissions(userID uint, page, pageSize int, status string) ([]affiliatedomain.Commission, int64, error) {
+func (s *Service) ListUserCommissions(userID uint, page, pageSize int, status string) ([]affiliatedomain.Commission, int64, error) {
 	if userID == 0 || s.repo == nil {
 		return []affiliatedomain.Commission{}, 0, nil
 	}
@@ -79,7 +69,7 @@ func (s *AffiliateService) ListUserCommissions(userID uint, page, pageSize int, 
 }
 
 // ListUserWithdraws 查询用户提现记录
-func (s *AffiliateService) ListUserWithdraws(userID uint, page, pageSize int, status string) ([]affiliatedomain.WithdrawRequest, int64, error) {
+func (s *Service) ListUserWithdraws(userID uint, page, pageSize int, status string) ([]affiliatedomain.WithdrawRequest, int64, error) {
 	if userID == 0 || s.repo == nil {
 		return []affiliatedomain.WithdrawRequest{}, 0, nil
 	}
@@ -99,11 +89,18 @@ func (s *AffiliateService) ListUserWithdraws(userID uint, page, pageSize int, st
 }
 
 // ListAdminUsers 后台查询推广用户列表
-func (s *AffiliateService) ListAdminUsers(filter affiliatecontract.ProfileListFilter) ([]AffiliateAdminUserItem, int64, error) {
+func (s *Service) ListAdminUsers(filter AdminProfileListFilter) ([]AdminUserItem, int64, error) {
 	if s.repo == nil {
-		return []AffiliateAdminUserItem{}, 0, nil
+		return []AdminUserItem{}, 0, nil
 	}
-	rows, total, err := s.repo.ListProfiles(filter)
+	rows, total, err := s.repo.ListProfiles(affiliatecontract.ProfileListFilter{
+		Page:     filter.Page,
+		PageSize: filter.PageSize,
+		UserID:   filter.UserID,
+		Status:   strings.TrimSpace(filter.Status),
+		Code:     strings.TrimSpace(filter.Code),
+		Keyword:  strings.TrimSpace(filter.Keyword),
+	})
 	if err != nil {
 		return nil, 0, err
 	}
@@ -118,10 +115,10 @@ func (s *AffiliateService) ListAdminUsers(filter affiliatecontract.ProfileListFi
 	if err != nil {
 		return nil, 0, err
 	}
-	result := make([]AffiliateAdminUserItem, 0, len(rows))
+	result := make([]AdminUserItem, 0, len(rows))
 	for _, row := range rows {
 		agg := statsMap[row.ID]
-		stats := AffiliateStats{
+		stats := Stats{
 			ClickCount:          agg.ClickCount,
 			ValidOrderCount:     agg.ValidOrderCount,
 			ConversionRate:      calcAffiliateConversion(agg.ValidOrderCount, agg.ClickCount),
@@ -129,7 +126,7 @@ func (s *AffiliateService) ListAdminUsers(filter affiliatecontract.ProfileListFi
 			AvailableCommission: money.FromDecimal(agg.AvailableCommission.Round(2)),
 			WithdrawnCommission: money.FromDecimal(agg.WithdrawnCommission.Round(2)),
 		}
-		result = append(result, AffiliateAdminUserItem{
+		result = append(result, AdminUserItem{
 			Profile: row,
 			Stats:   stats,
 		})
@@ -138,7 +135,7 @@ func (s *AffiliateService) ListAdminUsers(filter affiliatecontract.ProfileListFi
 }
 
 // ListAdminCommissions 后台查询佣金记录
-func (s *AffiliateService) ListAdminCommissions(filter AffiliateAdminCommissionListFilter) ([]affiliatedomain.Commission, int64, error) {
+func (s *Service) ListAdminCommissions(filter AdminCommissionListFilter) ([]affiliatedomain.Commission, int64, error) {
 	if s.repo == nil {
 		return []affiliatedomain.Commission{}, 0, nil
 	}
@@ -153,7 +150,7 @@ func (s *AffiliateService) ListAdminCommissions(filter AffiliateAdminCommissionL
 }
 
 // ListAdminWithdraws 后台查询提现申请
-func (s *AffiliateService) ListAdminWithdraws(filter AffiliateAdminWithdrawListFilter) ([]affiliatedomain.WithdrawRequest, int64, error) {
+func (s *Service) ListAdminWithdraws(filter AdminWithdrawListFilter) ([]affiliatedomain.WithdrawRequest, int64, error) {
 	if s.repo == nil {
 		return []affiliatedomain.WithdrawRequest{}, 0, nil
 	}
@@ -166,8 +163,8 @@ func (s *AffiliateService) ListAdminWithdraws(filter AffiliateAdminWithdrawListF
 	})
 }
 
-func (s *AffiliateService) buildProfileStats(profileID uint) (AffiliateStats, error) {
-	stats := AffiliateStats{
+func (s *Service) buildProfileStats(profileID uint) (Stats, error) {
+	stats := Stats{
 		PendingCommission:   money.FromDecimal(decimal.Zero),
 		AvailableCommission: money.FromDecimal(decimal.Zero),
 		WithdrawnCommission: money.FromDecimal(decimal.Zero),

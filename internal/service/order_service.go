@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/coupon"
 	"github.com/dujiao-next/internal/modules/orderrisk"
@@ -45,7 +46,7 @@ type OrderService struct {
 	settingService          *settingsapp.Service
 	defaultEmailConfig      config.EmailConfig
 	walletService           *WalletService
-	affiliateSvc            *AffiliateService
+	affiliateSvc            AffiliateOrderLifecycle
 	memberLevelService      OrderMemberLevelService
 	resellerPricingResolver *ResellerPricingResolver
 	resellerAccountingSvc   *ResellerAccountingService
@@ -57,6 +58,13 @@ type OrderService struct {
 type OrderMemberLevelService interface {
 	ResolveMemberPrice(levelID, productID, skuID uint, basePrice decimal.Decimal) (decimal.Decimal, decimal.Decimal)
 	OnOrderPaid(userID uint, amount decimal.Decimal) error
+}
+
+// AffiliateOrderLifecycle 是订单域调用推广返利用例的最小端口。
+type AffiliateOrderLifecycle interface {
+	ResolveOrderAffiliateSnapshot(userID uint, rawCode, rawVisitorKey string) (*uint, string, error)
+	HandleOrderPaid(orderID uint) error
+	HandleOrderCanceled(orderID uint, reason string) error
 }
 
 type orderCouponRepository interface {
@@ -92,7 +100,7 @@ type OrderServiceOptions struct {
 	SettingService            *settingsapp.Service
 	DefaultEmailConfig        config.EmailConfig
 	WalletService             *WalletService
-	AffiliateService          *AffiliateService
+	AffiliateService          AffiliateOrderLifecycle
 	MemberLevelService        OrderMemberLevelService
 	ResellerPricingResolver   *ResellerPricingResolver
 	ResellerAccountingService *ResellerAccountingService
@@ -466,7 +474,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 		}
 	}
 
-	affiliateCode := normalizeAffiliateCode(input.AffiliateCode)
+	affiliateCode := affiliatedomain.NormalizeCode(input.AffiliateCode)
 	affiliateVisitorKey := strings.TrimSpace(input.AffiliateVisitorKey)
 	var affiliateProfileID *uint
 	if pricingCtx != nil {

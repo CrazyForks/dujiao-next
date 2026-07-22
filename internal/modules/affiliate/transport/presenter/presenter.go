@@ -1,4 +1,4 @@
-package dto
+package presenter
 
 import (
 	"time"
@@ -8,17 +8,17 @@ import (
 	"github.com/dujiao-next/internal/shared/money"
 )
 
-// AffiliateProfileResp 推广用户资料响应
-type AffiliateProfileResp struct {
+// Profile 推广用户资料响应
+type Profile struct {
 	ID            uint      `json:"id"`
 	AffiliateCode string    `json:"code"`
 	Status        string    `json:"status"`
 	CreatedAt     time.Time `json:"created_at"`
 }
 
-// NewAffiliateProfileResp 从 affiliatedomain.Profile 构造响应
-func NewAffiliateProfileResp(p *affiliatedomain.Profile) AffiliateProfileResp {
-	return AffiliateProfileResp{
+// NewProfile 从 affiliatedomain.Profile 构造响应
+func NewProfile(p *affiliatedomain.Profile) Profile {
+	return Profile{
 		ID:            p.ID,
 		AffiliateCode: p.AffiliateCode,
 		Status:        p.Status,
@@ -27,8 +27,8 @@ func NewAffiliateProfileResp(p *affiliatedomain.Profile) AffiliateProfileResp {
 	// 排除：UserID、User、UpdatedAt
 }
 
-// AffiliateCommissionResp 佣金记录响应
-type AffiliateCommissionResp struct {
+// Commission 佣金记录响应
+type Commission struct {
 	ID               uint         `json:"id"`
 	CommissionType   string       `json:"commission_type"`
 	CommissionAmount money.Amount `json:"commission_amount"`
@@ -38,9 +38,9 @@ type AffiliateCommissionResp struct {
 	CreatedAt        time.Time    `json:"created_at"`
 }
 
-// NewAffiliateCommissionResp 从 affiliatedomain.Commission 构造响应
-func NewAffiliateCommissionResp(c *affiliatedomain.Commission) AffiliateCommissionResp {
-	return AffiliateCommissionResp{
+// NewCommission 从 affiliatedomain.Commission 构造响应
+func NewCommission(c *affiliatedomain.Commission) Commission {
+	return Commission{
 		ID:               c.ID,
 		CommissionType:   c.CommissionType,
 		CommissionAmount: c.CommissionAmount,
@@ -53,17 +53,17 @@ func NewAffiliateCommissionResp(c *affiliatedomain.Commission) AffiliateCommissi
 	// WithdrawRequestID、InvalidReason、UpdatedAt、关联 Order/AffiliateProfile/WithdrawRequest
 }
 
-// NewAffiliateCommissionRespList 批量转换佣金列表
-func NewAffiliateCommissionRespList(commissions []affiliatedomain.Commission) []AffiliateCommissionResp {
-	result := make([]AffiliateCommissionResp, 0, len(commissions))
+// NewCommissionList 批量转换佣金列表
+func NewCommissionList(commissions []affiliatedomain.Commission) []Commission {
+	result := make([]Commission, 0, len(commissions))
 	for i := range commissions {
-		result = append(result, NewAffiliateCommissionResp(&commissions[i]))
+		result = append(result, NewCommission(&commissions[i]))
 	}
 	return result
 }
 
-// AffiliateWithdrawResp 提现记录响应
-type AffiliateWithdrawResp struct {
+// Withdraw 提现记录响应
+type Withdraw struct {
 	ID           uint         `json:"id"`
 	Amount       money.Amount `json:"amount"`
 	Channel      string       `json:"channel"`
@@ -73,9 +73,9 @@ type AffiliateWithdrawResp struct {
 	CreatedAt    time.Time    `json:"created_at"`
 }
 
-// NewAffiliateWithdrawResp 从 affiliatedomain.WithdrawRequest 构造响应
-func NewAffiliateWithdrawResp(w *affiliatedomain.WithdrawRequest) AffiliateWithdrawResp {
-	return AffiliateWithdrawResp{
+// NewWithdraw 从 affiliatedomain.WithdrawRequest 构造响应
+func NewWithdraw(w *affiliatedomain.WithdrawRequest) Withdraw {
+	return Withdraw{
 		ID:           w.ID,
 		Amount:       w.Amount,
 		Channel:      w.Channel,
@@ -87,11 +87,11 @@ func NewAffiliateWithdrawResp(w *affiliatedomain.WithdrawRequest) AffiliateWithd
 	// 排除：AffiliateProfileID、ProcessedBy、ProcessedAt、UpdatedAt、关联
 }
 
-// NewAffiliateWithdrawRespList 批量转换提现列表
-func NewAffiliateWithdrawRespList(withdraws []affiliatedomain.WithdrawRequest) []AffiliateWithdrawResp {
-	result := make([]AffiliateWithdrawResp, 0, len(withdraws))
+// NewWithdrawList 批量转换提现列表
+func NewWithdrawList(withdraws []affiliatedomain.WithdrawRequest) []Withdraw {
+	result := make([]Withdraw, 0, len(withdraws))
 	for i := range withdraws {
-		result = append(result, NewAffiliateWithdrawResp(&withdraws[i]))
+		result = append(result, NewWithdraw(&withdraws[i]))
 	}
 	return result
 }

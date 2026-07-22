@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 
@@ -68,8 +69,9 @@ func setupAdminOrderRefundHandlerTest(t *testing.T) (*ordertransport.AdminRefund
 	orderRepo := repository.NewOrderRepository(db)
 	orderRefundRecordRepo := repository.NewOrderRefundRecordRepository(db)
 	userRepo := userstore.New(db)
-	affiliateSvc := service.NewAffiliateService(affiliategormstore.New(db), nil, nil, nil, nil)
-	orderRefundService := service.NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateSvc, nil)
+	affiliateSvc := affiliateapp.NewService(affiliategormstore.New(db), nil, nil, nil, nil)
+	affiliateRefund := affiliategormstore.NewRefundHandler(affiliateSvc)
+	orderRefundService := service.NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateRefund, nil)
 
 	return orderwiring.NewAdminRefundHandler(&provider.Container{
 		OrderRefundService: orderRefundService,

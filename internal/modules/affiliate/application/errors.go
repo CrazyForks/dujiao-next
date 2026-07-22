@@ -1,8 +1,9 @@
-package affiliate
+package application
 
 import "errors"
 
 var (
+	ErrNotFound               = errors.New("affiliate resource not found")
 	ErrDisabled               = errors.New("affiliate disabled")
 	ErrNotOpened              = errors.New("affiliate not opened")
 	ErrCodeInvalid            = errors.New("affiliate code invalid")

@@ -31,7 +31,7 @@ type PaymentService struct {
 	settingService          *settingsapp.Service
 	defaultEmailConfig      config.EmailConfig
 	expireMinutes           int
-	affiliateSvc            *AffiliateService
+	affiliateSvc            AffiliatePaymentLifecycle
 	notificationSvc         *notification.Service
 	procurementSvc          ProcurementCreator
 	downstreamCallbackSvc   *downstreamcallback.Service
@@ -47,6 +47,11 @@ type MemberLevelProgressor interface {
 
 type ProcurementCreator interface {
 	CreateForOrder(orderID uint) error
+}
+
+// AffiliatePaymentLifecycle 是支付成功回调所需的推广返利用例端口。
+type AffiliatePaymentLifecycle interface {
+	HandleOrderPaid(orderID uint) error
 }
 
 // SetProcurementService 设置采购单服务（解决循环依赖）
@@ -79,7 +84,7 @@ type PaymentServiceOptions struct {
 	SettingService            *settingsapp.Service
 	DefaultEmailConfig        config.EmailConfig
 	ExpireMinutes             int
-	AffiliateService          *AffiliateService
+	AffiliateService          AffiliatePaymentLifecycle
 	NotificationService       *notification.Service
 	PaymentProviderRegistry   *provider.Registry
 	ResellerAccountingService *ResellerAccountingService

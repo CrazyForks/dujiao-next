@@ -1,4 +1,4 @@
-package affiliate
+package application
 
 import (
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"

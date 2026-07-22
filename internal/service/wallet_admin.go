@@ -162,8 +162,8 @@ func (s *WalletService) AdminRefundToWallet(input AdminRefundToWalletInput) (*mo
 				return ErrOrderUpdateFailed
 			}
 		}
-		if s.affiliateSvc != nil {
-			if err := s.affiliateSvc.HandleOrderRefundedTx(
+		if s.affiliateRefund != nil {
+			if err := s.affiliateRefund.HandleOrderRefundedTx(
 				tx,
 				&order,
 				amount,

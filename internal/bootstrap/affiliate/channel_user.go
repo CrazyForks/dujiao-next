@@ -1,11 +1,11 @@
-package affiliatewiring
+package affiliatebootstrap
 
 import (
+	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
-	affiliatetransport "github.com/dujiao-next/internal/transport/http/affiliate"
 )
 
-// affiliateChannelUserAdapter 将 UserAuthService 适配为渠道推广身份开通端口。
+// affiliateChannelUserAdapter 连接身份模块与 Affiliate 渠道 transport。
 type affiliateChannelUserAdapter struct {
 	auth *userauthapp.Service
 }

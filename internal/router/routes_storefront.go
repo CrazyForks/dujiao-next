@@ -1,11 +1,12 @@
 package router
 
 import (
+	affiliatebootstrap "github.com/dujiao-next/internal/bootstrap/affiliate"
 	captchabootstrap "github.com/dujiao-next/internal/bootstrap/captchahttp"
 	"github.com/dujiao-next/internal/config"
+	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	captchatransport "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/provider"
-	affiliatetransport "github.com/dujiao-next/internal/transport/http/affiliate"
 	apicredentialtransport "github.com/dujiao-next/internal/transport/http/apicredential"
 	auditlogtransport "github.com/dujiao-next/internal/transport/http/auditlog"
 	carttransport "github.com/dujiao-next/internal/transport/http/cart"
@@ -20,7 +21,6 @@ import (
 	resellertransport "github.com/dujiao-next/internal/transport/http/reseller"
 	userauthtransport "github.com/dujiao-next/internal/transport/http/userauth"
 	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
-	affiliatewiring "github.com/dujiao-next/internal/wiring/affiliate"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -62,7 +62,7 @@ func registerStorefrontRoutes(
 ) {
 	storefront := apiV1.Group("")
 	storefront.Use(ResellerTenantMiddleware(c.ResellerDomainResolver))
-	affiliateHandler := affiliatewiring.NewStorefrontHandler(c)
+	affiliateHandler := affiliatebootstrap.NewStorefrontHandler(c)
 
 	// 公开接口
 	public := storefront.Group("/public")

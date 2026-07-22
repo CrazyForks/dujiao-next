@@ -1,8 +1,9 @@
-package affiliate_test
+package integrationtest
 
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -24,15 +25,13 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/affiliate"
+	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
+	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
-	"github.com/dujiao-next/internal/repository"
-	"github.com/dujiao-next/internal/service"
-	affiliatetransport "github.com/dujiao-next/internal/transport/http/affiliate"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -47,36 +46,24 @@ type channelAffiliateTestResponse struct {
 	ErrorCode  string         `json:"error_code"`
 }
 
-type channelAffiliateServiceAdapter struct {
-	svc *service.AffiliateService
-}
-
-func (a channelAffiliateServiceAdapter) TrackClick(input affiliate.TrackClickInput) error {
-	return a.svc.TrackClick(input)
-}
-
-func (a channelAffiliateServiceAdapter) OpenAffiliate(userID uint) (*affiliatedomain.Profile, error) {
-	return a.svc.OpenAffiliate(userID)
-}
-
-func (a channelAffiliateServiceAdapter) GetUserDashboard(userID uint) (affiliate.Dashboard, error) {
-	return a.svc.GetUserDashboard(userID)
-}
-
-func (a channelAffiliateServiceAdapter) ListUserCommissions(userID uint, page, pageSize int, status string) ([]affiliatedomain.Commission, int64, error) {
-	return a.svc.ListUserCommissions(userID, page, pageSize, status)
-}
-
-func (a channelAffiliateServiceAdapter) ListUserWithdraws(userID uint, page, pageSize int, status string) ([]affiliatedomain.WithdrawRequest, int64, error) {
-	return a.svc.ListUserWithdraws(userID, page, pageSize, status)
-}
-
-func (a channelAffiliateServiceAdapter) ApplyWithdraw(userID uint, input affiliate.WithdrawApplyInput) (*affiliatedomain.WithdrawRequest, error) {
-	return a.svc.ApplyWithdraw(userID, input)
-}
-
 type channelAffiliateUserAdapter struct {
 	auth *userauthapp.Service
+}
+
+type channelAffiliateOrderReader struct {
+	db *gorm.DB
+}
+
+func (r channelAffiliateOrderReader) GetByID(id uint) (*models.Order, error) {
+	var order models.Order
+	err := r.db.Preload("Items").Preload("Children").Preload("Children.Items").First(&order, id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
 }
 
 func (a channelAffiliateUserAdapter) ProvisionUserID(identity affiliatetransport.ChannelIdentity) (uint, error) {
@@ -91,7 +78,7 @@ func (a channelAffiliateUserAdapter) ProvisionUserID(identity affiliatetransport
 		return 0, err
 	}
 	if user == nil {
-		return 0, service.ErrNotFound
+		return 0, userauthapp.ErrNotFound
 	}
 	return user.ID, nil
 }
@@ -125,7 +112,6 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 	identityRepo := externalidentitystore.New(db)
 	emailVerifyRepo := emailverificationstore.New(db)
 	settingRepo := settingsstore.New(db)
-	orderRepo := repository.NewOrderRepository(db)
 	affiliateRepo := affiliategormstore.New(db)
 
 	settingSvc := settingsapp.NewService(settingRepo)
@@ -139,10 +125,10 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 		t.Fatalf("enable affiliate setting failed: %v", err)
 	}
 
-	affiliateSvc := service.NewAffiliateService(affiliateRepo, userRepo, orderRepo, nil, settingSvc)
+	affiliateSvc := affiliateapp.NewService(affiliateRepo, userRepo, channelAffiliateOrderReader{db: db}, nil, settingSvc)
 	userAuthSvc := userauthapp.NewService(&config.Config{}, userRepo, identityRepo, emailVerifyRepo, nil, nil, nil)
 	handler := affiliatetransport.NewChannelHandler(
-		channelAffiliateServiceAdapter{svc: affiliateSvc},
+		affiliateSvc,
 		channelAffiliateUserAdapter{auth: userAuthSvc},
 		settingSvc,
 	)

@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"crypto/rand"
@@ -12,13 +12,13 @@ import (
 )
 
 // UpdateAffiliateProfileStatus 管理端更新返利用户状态
-func (s *AffiliateService) UpdateAffiliateProfileStatus(profileID uint, rawStatus string) (*affiliatedomain.Profile, error) {
+func (s *Service) UpdateAffiliateProfileStatus(profileID uint, rawStatus string) (*affiliatedomain.Profile, error) {
 	if profileID == 0 || s.repo == nil {
 		return nil, ErrNotFound
 	}
 	nextStatus := strings.TrimSpace(rawStatus)
 	if nextStatus != constants.AffiliateProfileStatusActive && nextStatus != constants.AffiliateProfileStatusDisabled {
-		return nil, ErrAffiliateProfileStatusInvalid
+		return nil, ErrProfileStatusInvalid
 	}
 
 	profile, err := s.repo.GetProfileByID(profileID)
@@ -38,13 +38,13 @@ func (s *AffiliateService) UpdateAffiliateProfileStatus(profileID uint, rawStatu
 }
 
 // BatchUpdateAffiliateProfileStatus 管理端批量更新返利用户状态
-func (s *AffiliateService) BatchUpdateAffiliateProfileStatus(profileIDs []uint, rawStatus string) (int64, error) {
+func (s *Service) BatchUpdateAffiliateProfileStatus(profileIDs []uint, rawStatus string) (int64, error) {
 	if s.repo == nil {
 		return 0, ErrNotFound
 	}
 	nextStatus := strings.TrimSpace(rawStatus)
 	if nextStatus != constants.AffiliateProfileStatusActive && nextStatus != constants.AffiliateProfileStatusDisabled {
-		return 0, ErrAffiliateProfileStatusInvalid
+		return 0, ErrProfileStatusInvalid
 	}
 	normalizedIDs := normalizeAffiliateProfileIDs(profileIDs)
 	if len(normalizedIDs) == 0 {
@@ -54,19 +54,19 @@ func (s *AffiliateService) BatchUpdateAffiliateProfileStatus(profileIDs []uint, 
 }
 
 // OpenAffiliate 为用户开通推广返利
-func (s *AffiliateService) OpenAffiliate(userID uint) (*affiliatedomain.Profile, error) {
+func (s *Service) OpenAffiliate(userID uint) (*affiliatedomain.Profile, error) {
 	if userID == 0 {
 		return nil, ErrUserDisabled
 	}
 	if s.repo == nil || s.userRepo == nil {
 		return nil, ErrNotFound
 	}
-	setting, err := s.settingService.GetAffiliateSetting()
+	setting, err := s.settings.GetAffiliateSetting()
 	if err != nil {
 		return nil, err
 	}
 	if !setting.Enabled {
-		return nil, ErrAffiliateDisabled
+		return nil, ErrDisabled
 	}
 
 	user, err := s.userRepo.GetByID(userID)
@@ -114,7 +114,7 @@ func (s *AffiliateService) OpenAffiliate(userID uint) (*affiliatedomain.Profile,
 		}
 		return profile, nil
 	}
-	return nil, ErrAffiliateCodeInvalid
+	return nil, ErrCodeInvalid
 }
 
 func normalizeAffiliateProfileIDs(ids []uint) []uint {

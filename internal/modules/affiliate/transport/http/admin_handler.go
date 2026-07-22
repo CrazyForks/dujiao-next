@@ -7,8 +7,7 @@ import (
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/affiliate"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -17,9 +16,9 @@ import (
 
 // AdminService 是后台推广返利管理端口。
 type AdminService interface {
-	ListAdminUsers(filter affiliate.AdminProfileListFilter) ([]affiliate.AdminUserItem, int64, error)
-	ListAdminCommissions(filter affiliate.AdminCommissionListFilter) ([]affiliatedomain.Commission, int64, error)
-	ListAdminWithdraws(filter affiliate.AdminWithdrawListFilter) ([]affiliatedomain.WithdrawRequest, int64, error)
+	ListAdminUsers(filter affiliateapp.AdminProfileListFilter) ([]affiliateapp.AdminUserItem, int64, error)
+	ListAdminCommissions(filter affiliateapp.AdminCommissionListFilter) ([]affiliatedomain.Commission, int64, error)
+	ListAdminWithdraws(filter affiliateapp.AdminWithdrawListFilter) ([]affiliatedomain.WithdrawRequest, int64, error)
 	UpdateAffiliateProfileStatus(profileID uint, status string) (*affiliatedomain.Profile, error)
 	BatchUpdateAffiliateProfileStatus(profileIDs []uint, status string) (int64, error)
 	ReviewWithdraw(adminID, withdrawID uint, action, reason string) (*affiliatedomain.WithdrawRequest, error)
@@ -55,7 +54,7 @@ func (h *AdminHandler) ListAffiliateUsers(c *gin.Context) {
 	page, pageSize := ginutil.ParsePagination(c)
 	userID, _ := ginutil.ParseQueryUint(c.Query("user_id"), false)
 
-	rows, total, err := h.svc.ListAdminUsers(affiliate.AdminProfileListFilter{
+	rows, total, err := h.svc.ListAdminUsers(affiliateapp.AdminProfileListFilter{
 		Page:     page,
 		PageSize: pageSize,
 		UserID:   userID,
@@ -75,7 +74,7 @@ func (h *AdminHandler) ListAffiliateCommissions(c *gin.Context) {
 	page, pageSize := ginutil.ParsePagination(c)
 	profileID, _ := ginutil.ParseQueryUint(c.Query("affiliate_profile_id"), false)
 
-	rows, total, err := h.svc.ListAdminCommissions(affiliate.AdminCommissionListFilter{
+	rows, total, err := h.svc.ListAdminCommissions(affiliateapp.AdminCommissionListFilter{
 		Page:               page,
 		PageSize:           pageSize,
 		AffiliateProfileID: profileID,
@@ -95,7 +94,7 @@ func (h *AdminHandler) ListAffiliateWithdraws(c *gin.Context) {
 	page, pageSize := ginutil.ParsePagination(c)
 	profileID, _ := ginutil.ParseQueryUint(c.Query("affiliate_profile_id"), false)
 
-	rows, total, err := h.svc.ListAdminWithdraws(affiliate.AdminWithdrawListFilter{
+	rows, total, err := h.svc.ListAdminWithdraws(affiliateapp.AdminWithdrawListFilter{
 		Page:               page,
 		PageSize:           pageSize,
 		AffiliateProfileID: profileID,
@@ -126,9 +125,9 @@ func (h *AdminHandler) UpdateAffiliateUserStatus(c *gin.Context) {
 	row, err := h.svc.UpdateAffiliateProfileStatus(id, strings.TrimSpace(req.Status))
 	if err != nil {
 		switch {
-		case errors.Is(err, catalogproduct.ErrNotFound):
+		case errors.Is(err, affiliateapp.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
-		case errors.Is(err, affiliate.ErrProfileStatusInvalid):
+		case errors.Is(err, affiliateapp.ErrProfileStatusInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
@@ -152,7 +151,7 @@ func (h *AdminHandler) BatchUpdateAffiliateUserStatus(c *gin.Context) {
 	updated, err := h.svc.BatchUpdateAffiliateProfileStatus(req.ProfileIDs, strings.TrimSpace(req.Status))
 	if err != nil {
 		switch {
-		case errors.Is(err, affiliate.ErrProfileStatusInvalid):
+		case errors.Is(err, affiliateapp.ErrProfileStatusInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
@@ -182,9 +181,9 @@ func (h *AdminHandler) RejectAffiliateWithdraw(c *gin.Context) {
 	row, err := h.svc.ReviewWithdraw(adminID, id, constants.AffiliateWithdrawActionReject, req.Reason)
 	if err != nil {
 		switch {
-		case errors.Is(err, catalogproduct.ErrNotFound):
+		case errors.Is(err, affiliateapp.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
-		case errors.Is(err, affiliate.ErrWithdrawStatusInvalid):
+		case errors.Is(err, affiliateapp.ErrWithdrawStatusInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
@@ -208,9 +207,9 @@ func (h *AdminHandler) PayAffiliateWithdraw(c *gin.Context) {
 	row, err := h.svc.ReviewWithdraw(adminID, id, constants.AffiliateWithdrawActionPay, "")
 	if err != nil {
 		switch {
-		case errors.Is(err, catalogproduct.ErrNotFound):
+		case errors.Is(err, affiliateapp.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.bad_request", nil)
-		case errors.Is(err, affiliate.ErrWithdrawStatusInvalid):
+		case errors.Is(err, affiliateapp.ErrWithdrawStatusInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)

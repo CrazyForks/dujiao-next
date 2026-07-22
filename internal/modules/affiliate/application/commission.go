@@ -1,27 +1,26 @@
-package service
+package application
 
 import (
 	"strconv"
 	"strings"
 	"time"
 
+	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
 )
 
 // HandleOrderPaid 处理订单支付成功后的佣金生成
-func (s *AffiliateService) HandleOrderPaid(orderID uint) error {
+func (s *Service) HandleOrderPaid(orderID uint) error {
 	if orderID == 0 || s.repo == nil || s.orderRepo == nil {
 		return nil
 	}
-	setting, err := s.settingService.GetAffiliateSetting()
+	setting, err := s.settings.GetAffiliateSetting()
 	if err != nil {
 		return err
 	}
@@ -102,7 +101,7 @@ func (s *AffiliateService) HandleOrderPaid(orderID uint) error {
 }
 
 // ConfirmDueCommissions 将到期佣金转可提现
-func (s *AffiliateService) ConfirmDueCommissions(now time.Time) error {
+func (s *Service) ConfirmDueCommissions(now time.Time) error {
 	if s.repo == nil {
 		return nil
 	}
@@ -111,7 +110,7 @@ func (s *AffiliateService) ConfirmDueCommissions(now time.Time) error {
 }
 
 // HandleOrderCanceled 处理订单取消/退款后的佣金逆向
-func (s *AffiliateService) HandleOrderCanceled(orderID uint, reason string) error {
+func (s *Service) HandleOrderCanceled(orderID uint, reason string) error {
 	if orderID == 0 || s.repo == nil {
 		return nil
 	}
@@ -147,15 +146,15 @@ func (s *AffiliateService) HandleOrderCanceled(orderID uint, reason string) erro
 	return nil
 }
 
-// HandleOrderRefundedTx 在事务内处理订单退款后的佣金回滚
-func (s *AffiliateService) HandleOrderRefundedTx(
-	tx *gorm.DB,
+// HandleOrderRefunded 使用调用方提供的事务 Store 处理退款后的佣金回滚。
+func (s *Service) HandleOrderRefunded(
+	repoTx affiliatecontract.Store,
 	order *models.Order,
 	refundDelta decimal.Decimal,
 	refundedBefore decimal.Decimal,
 	reason string,
 ) error {
-	if tx == nil || order == nil || order.ID == 0 || s.repo == nil {
+	if repoTx == nil || order == nil || order.ID == 0 {
 		return nil
 	}
 	delta := refundDelta.Round(2)
@@ -181,7 +180,6 @@ func (s *AffiliateService) HandleOrderRefundedTx(
 		delta = remaining
 	}
 
-	repoTx := affiliategormstore.New(tx)
 	rows, err := repoTx.ListCommissionsByOrderForUpdate(order.ID, []string{
 		constants.AffiliateCommissionStatusPendingConfirm,
 		constants.AffiliateCommissionStatusAvailable,
@@ -250,7 +248,7 @@ func (s *AffiliateService) HandleOrderRefundedTx(
 	return nil
 }
 
-func (s *AffiliateService) resolveAffiliateProfileForOrder(order *models.Order) (*affiliatedomain.Profile, error) {
+func (s *Service) resolveAffiliateProfileForOrder(order *models.Order) (*affiliatedomain.Profile, error) {
 	if order == nil || s.repo == nil {
 		return nil, nil
 	}
@@ -263,7 +261,7 @@ func (s *AffiliateService) resolveAffiliateProfileForOrder(order *models.Order) 
 	return nil, nil
 }
 
-func (s *AffiliateService) calculateCommissionBaseAmount(order *models.Order) (decimal.Decimal, error) {
+func (s *Service) calculateCommissionBaseAmount(order *models.Order) (decimal.Decimal, error) {
 	if order == nil || s.productRepo == nil {
 		return decimal.Zero, nil
 	}

@@ -1,10 +1,12 @@
-package service
+package integrationtest
 
 import (
 	"fmt"
 	"testing"
 	"time"
 
+	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
+	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 
@@ -23,7 +25,7 @@ import (
 )
 
 func TestResolveOrderAffiliateSnapshotPreferLatestVisitorClick(t *testing.T) {
-	svc, db := setupAffiliateServiceTest(t)
+	svc, db, _ := setupAffiliateServiceTest(t)
 
 	promoterA := createAffiliateTestUser(t, db, "affiliate-a@example.com")
 	promoterB := createAffiliateTestUser(t, db, "affiliate-b@example.com")
@@ -48,7 +50,7 @@ func TestResolveOrderAffiliateSnapshotPreferLatestVisitorClick(t *testing.T) {
 }
 
 func TestResolveOrderAffiliateSnapshotFallbackToCodeWhenNoVisitorClick(t *testing.T) {
-	svc, db := setupAffiliateServiceTest(t)
+	svc, db, _ := setupAffiliateServiceTest(t)
 
 	promoter := createAffiliateTestUser(t, db, "affiliate-fallback@example.com")
 	profile := createAffiliateTestProfile(t, db, promoter.ID, "AFFF0003", constants.AffiliateProfileStatusActive)
@@ -66,7 +68,7 @@ func TestResolveOrderAffiliateSnapshotFallbackToCodeWhenNoVisitorClick(t *testin
 }
 
 func TestResolveOrderAffiliateSnapshotRejectSelfByVisitorClick(t *testing.T) {
-	svc, db := setupAffiliateServiceTest(t)
+	svc, db, _ := setupAffiliateServiceTest(t)
 
 	promoter := createAffiliateTestUser(t, db, "affiliate-self@example.com")
 	profile := createAffiliateTestProfile(t, db, promoter.ID, "AFFS0004", constants.AffiliateProfileStatusActive)
@@ -82,7 +84,7 @@ func TestResolveOrderAffiliateSnapshotRejectSelfByVisitorClick(t *testing.T) {
 }
 
 func TestUpdateAffiliateProfileStatus(t *testing.T) {
-	svc, db := setupAffiliateServiceTest(t)
+	svc, db, _ := setupAffiliateServiceTest(t)
 
 	user := createAffiliateTestUser(t, db, "affiliate-status@example.com")
 	profile := createAffiliateTestProfile(t, db, user.ID, "AFFST001", constants.AffiliateProfileStatusActive)
@@ -105,7 +107,7 @@ func TestUpdateAffiliateProfileStatus(t *testing.T) {
 }
 
 func TestBatchUpdateAffiliateProfileStatus(t *testing.T) {
-	svc, db := setupAffiliateServiceTest(t)
+	svc, db, store := setupAffiliateServiceTest(t)
 
 	userA := createAffiliateTestUser(t, db, "affiliate-batch-a@example.com")
 	userB := createAffiliateTestUser(t, db, "affiliate-batch-b@example.com")
@@ -120,11 +122,11 @@ func TestBatchUpdateAffiliateProfileStatus(t *testing.T) {
 		t.Fatalf("expected updated 2, got %d", updated)
 	}
 
-	reloadedA, err := svc.repo.GetProfileByID(profileA.ID)
+	reloadedA, err := store.GetProfileByID(profileA.ID)
 	if err != nil || reloadedA == nil {
 		t.Fatalf("reload profileA failed: %v", err)
 	}
-	reloadedB, err := svc.repo.GetProfileByID(profileB.ID)
+	reloadedB, err := store.GetProfileByID(profileB.ID)
 	if err != nil || reloadedB == nil {
 		t.Fatalf("reload profileB failed: %v", err)
 	}
@@ -133,7 +135,7 @@ func TestBatchUpdateAffiliateProfileStatus(t *testing.T) {
 	}
 }
 
-func setupAffiliateServiceTest(t *testing.T) (*AffiliateService, *gorm.DB) {
+func setupAffiliateServiceTest(t *testing.T) (*affiliateapp.Service, *gorm.DB, affiliatecontract.Store) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:affiliate_service_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -155,7 +157,7 @@ func setupAffiliateServiceTest(t *testing.T) (*AffiliateService, *gorm.DB) {
 	}
 
 	affiliateRepo := affiliategormstore.New(db)
-	return NewAffiliateService(affiliateRepo, userstore.New(db), nil, nil, settingSvc), db
+	return affiliateapp.NewService(affiliateRepo, userstore.New(db), nil, nil, settingSvc), db, affiliateRepo
 }
 
 func createAffiliateTestUser(t *testing.T, db *gorm.DB, email string) userdomain.User {

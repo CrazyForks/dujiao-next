@@ -1,8 +1,10 @@
 package router
 
 import (
+	affiliatebootstrap "github.com/dujiao-next/internal/bootstrap/affiliate"
 	settingsbootstrap "github.com/dujiao-next/internal/bootstrap/settingshttp"
 	"github.com/dujiao-next/internal/config"
+	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	channelclienthttp "github.com/dujiao-next/internal/modules/channelclient/transport/http"
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	broadcasthttp "github.com/dujiao-next/internal/modules/telegram/broadcast/transport/http"
@@ -12,7 +14,6 @@ import (
 	adminauthztransport "github.com/dujiao-next/internal/transport/http/adminauthz"
 	adminusertransport "github.com/dujiao-next/internal/transport/http/adminuser"
 	adproxytransport "github.com/dujiao-next/internal/transport/http/adproxy"
-	affiliatetransport "github.com/dujiao-next/internal/transport/http/affiliate"
 	apicredentialtransport "github.com/dujiao-next/internal/transport/http/apicredential"
 	auditlogtransport "github.com/dujiao-next/internal/transport/http/auditlog"
 	cardsecrettransport "github.com/dujiao-next/internal/transport/http/cardsecret"
@@ -36,7 +37,6 @@ import (
 	uploadtransport "github.com/dujiao-next/internal/transport/http/upload"
 	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
 	adproxywiring "github.com/dujiao-next/internal/wiring/adproxy"
-	affiliatewiring "github.com/dujiao-next/internal/wiring/affiliate"
 	compliancewiring "github.com/dujiao-next/internal/wiring/compliance"
 	siteconnectionwiring "github.com/dujiao-next/internal/wiring/siteconnection"
 	uploadwiring "github.com/dujiao-next/internal/wiring/upload"
@@ -128,7 +128,7 @@ func registerAdminRoutes(
 	adminauthtransport.RegisterAdmin2FARoutes(authorized, admin2FAHandler)
 
 	// 推广返利
-	adminAffiliateHandler := affiliatewiring.NewAdminHandler(c)
+	adminAffiliateHandler := affiliatebootstrap.NewAdminHandler(c)
 	affiliatetransport.RegisterAdminRoutes(authorized, adminAffiliateHandler)
 	affiliatetransport.RegisterAdminFinanceRoutes(paymentProtected, adminAffiliateHandler)
 	resellertransport.RegisterAdminOperationsOverviewRoutes(authorized, adminResellerOperationsHandler)

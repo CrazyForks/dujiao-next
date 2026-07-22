@@ -1,4 +1,4 @@
-package service
+package application
 
 import (
 	"strings"
@@ -7,21 +7,17 @@ import (
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/affiliate"
 )
 
-// AffiliateTrackClickInput 兼容门面别名。
-type AffiliateTrackClickInput = affiliate.TrackClickInput
-
 // ResolveOrderAffiliateSnapshot 解析下单归因快照（最近30天最后一次有效点击优先）
-func (s *AffiliateService) ResolveOrderAffiliateSnapshot(userID uint, rawCode, rawVisitorKey string) (*uint, string, error) {
-	code := normalizeAffiliateCode(rawCode)
+func (s *Service) ResolveOrderAffiliateSnapshot(userID uint, rawCode, rawVisitorKey string) (*uint, string, error) {
+	code := affiliatedomain.NormalizeCode(rawCode)
 	visitorKey := strings.TrimSpace(rawVisitorKey)
 	if s.repo == nil {
 		return nil, "", nil
 	}
 
-	setting, err := s.settingService.GetAffiliateSetting()
+	setting, err := s.settings.GetAffiliateSetting()
 	if err != nil {
 		return nil, "", err
 	}
@@ -63,15 +59,15 @@ func (s *AffiliateService) ResolveOrderAffiliateSnapshot(userID uint, rawCode, r
 }
 
 // TrackClick 记录推广点击
-func (s *AffiliateService) TrackClick(input AffiliateTrackClickInput) error {
+func (s *Service) TrackClick(input TrackClickInput) error {
 	if s.repo == nil {
 		return nil
 	}
-	code := normalizeAffiliateCode(input.AffiliateCode)
+	code := affiliatedomain.NormalizeCode(input.AffiliateCode)
 	if code == "" {
 		return nil
 	}
-	setting, err := s.settingService.GetAffiliateSetting()
+	setting, err := s.settings.GetAffiliateSetting()
 	if err != nil {
 		return err
 	}

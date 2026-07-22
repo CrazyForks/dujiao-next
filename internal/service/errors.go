@@ -3,7 +3,6 @@ package service
 import (
 	"errors"
 
-	affiliatemodule "github.com/dujiao-next/internal/modules/affiliate"
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
@@ -22,7 +21,6 @@ var (
 	ErrNotFound                            = catalogproduct.ErrNotFound
 	ErrSlugExists                          = catalogproduct.ErrSlugExists
 	ErrProductCategoryInvalid              = catalogproduct.ErrProductCategoryInvalid
-	ErrUserDisabled                        = affiliatemodule.ErrUserDisabled
 	ErrInvalidEmail                        = errors.New("invalid email")
 	ErrEmailServiceDisabled                = errors.New("email service disabled")
 	ErrEmailServiceNotConfigured           = errors.New("email service not configured")
@@ -120,14 +118,6 @@ var (
 	ErrGiftCardBatchCreateFailed           = giftcard.ErrBatchCreateFailed
 	ErrQueueUnavailable                    = errors.New("queue unavailable")
 	ErrAffiliateConfigInvalid              = settingsintegration.ErrAffiliateConfigInvalid
-	ErrAffiliateDisabled                   = affiliatemodule.ErrDisabled
-	ErrAffiliateNotOpened                  = affiliatemodule.ErrNotOpened
-	ErrAffiliateCodeInvalid                = affiliatemodule.ErrCodeInvalid
-	ErrAffiliateProfileStatusInvalid       = affiliatemodule.ErrProfileStatusInvalid
-	ErrAffiliateWithdrawAmountInvalid      = affiliatemodule.ErrWithdrawAmountInvalid
-	ErrAffiliateWithdrawChannelInvalid     = affiliatemodule.ErrWithdrawChannelInvalid
-	ErrAffiliateWithdrawInsufficient       = affiliatemodule.ErrWithdrawInsufficient
-	ErrAffiliateWithdrawStatusInvalid      = affiliatemodule.ErrWithdrawStatusInvalid
 	ErrResellerAccountingUnavailable       = resellermodule.ErrAccountingUnavailable
 	ErrResellerLedgerInvalidSnapshot       = resellermodule.ErrLedgerInvalidSnapshot
 	ErrResellerDisabled                    = errors.New("reseller disabled")

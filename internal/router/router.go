@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/authz"
+	affiliatebootstrap "github.com/dujiao-next/internal/bootstrap/affiliate"
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
@@ -31,7 +32,6 @@ import (
 	adminauthwiring "github.com/dujiao-next/internal/wiring/adminauth"
 	adminauthzwiring "github.com/dujiao-next/internal/wiring/adminauthz"
 	adminuserwiring "github.com/dujiao-next/internal/wiring/adminuser"
-	affiliatewiring "github.com/dujiao-next/internal/wiring/affiliate"
 	cartwiring "github.com/dujiao-next/internal/wiring/cart"
 	catalogwiring "github.com/dujiao-next/internal/wiring/catalog"
 	channelwiring "github.com/dujiao-next/internal/wiring/channel"
@@ -135,7 +135,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 		c.GiftCardService,
 		channeluserwiring.NewSimpleProvisioner(c.UserAuthService),
 	)
-	channelAffiliateHandler := affiliatewiring.NewChannelHandler(c)
+	channelAffiliateHandler := affiliatebootstrap.NewChannelHandler(c)
 	channelTelegramBotHandler := telegramwiring.NewChannelBotHandler(c)
 	adminSettingsHandler := settingstransport.NewAdminHandler(c.SettingService)
 	adminPromotionHandler := promotiontransport.NewAdminHandler(c.PromotionAdminService)

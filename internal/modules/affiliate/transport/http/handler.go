@@ -8,9 +8,8 @@ import (
 
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 
-	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/modules/affiliate"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
+	affiliatepresenter "github.com/dujiao-next/internal/modules/affiliate/transport/presenter"
 	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
@@ -19,12 +18,12 @@ import (
 
 // Service 是前台推广返利端口。
 type Service interface {
-	TrackClick(input affiliate.TrackClickInput) error
+	TrackClick(input affiliateapp.TrackClickInput) error
 	OpenAffiliate(userID uint) (*affiliatedomain.Profile, error)
-	GetUserDashboard(userID uint) (affiliate.Dashboard, error)
+	GetUserDashboard(userID uint) (affiliateapp.Dashboard, error)
 	ListUserCommissions(userID uint, page, pageSize int, status string) ([]affiliatedomain.Commission, int64, error)
 	ListUserWithdraws(userID uint, page, pageSize int, status string) ([]affiliatedomain.WithdrawRequest, int64, error)
-	ApplyWithdraw(userID uint, input affiliate.WithdrawApplyInput) (*affiliatedomain.WithdrawRequest, error)
+	ApplyWithdraw(userID uint, input affiliateapp.WithdrawApplyInput) (*affiliatedomain.WithdrawRequest, error)
 }
 
 type trackClickRequest struct {
@@ -60,7 +59,7 @@ func (h *Handler) TrackAffiliateClick(c *gin.Context) {
 		return
 	}
 
-	if err := h.svc.TrackClick(affiliate.TrackClickInput{
+	if err := h.svc.TrackClick(affiliateapp.TrackClickInput{
 		AffiliateCode: req.AffiliateCode,
 		VisitorKey:    req.VisitorKey,
 		LandingPath:   req.LandingPath,
@@ -84,16 +83,16 @@ func (h *Handler) OpenAffiliate(c *gin.Context) {
 	profile, err := h.svc.OpenAffiliate(uid)
 	if err != nil {
 		switch {
-		case errors.Is(err, affiliate.ErrDisabled):
+		case errors.Is(err, affiliateapp.ErrDisabled):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.forbidden", nil)
-		case errors.Is(err, catalogproduct.ErrNotFound):
+		case errors.Is(err, affiliateapp.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 		}
 		return
 	}
-	response.Success(c, dto.NewAffiliateProfileResp(profile))
+	response.Success(c, affiliatepresenter.NewProfile(profile))
 }
 
 // GetAffiliateDashboard 获取推广返利看板
@@ -124,7 +123,7 @@ func (h *Handler) ListAffiliateCommissions(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
-	response.SuccessWithPage(c, dto.NewAffiliateCommissionRespList(rows), response.BuildPagination(page, pageSize, total))
+	response.SuccessWithPage(c, affiliatepresenter.NewCommissionList(rows), response.BuildPagination(page, pageSize, total))
 }
 
 // ListAffiliateWithdraws 查询我的提现申请记录
@@ -141,7 +140,7 @@ func (h *Handler) ListAffiliateWithdraws(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
-	response.SuccessWithPage(c, dto.NewAffiliateWithdrawRespList(rows), response.BuildPagination(page, pageSize, total))
+	response.SuccessWithPage(c, affiliatepresenter.NewWithdrawList(rows), response.BuildPagination(page, pageSize, total))
 }
 
 // ApplyAffiliateWithdraw 提交提现申请
@@ -162,27 +161,27 @@ func (h *Handler) ApplyAffiliateWithdraw(c *gin.Context) {
 		return
 	}
 
-	row, err := h.svc.ApplyWithdraw(uid, affiliate.WithdrawApplyInput{
+	row, err := h.svc.ApplyWithdraw(uid, affiliateapp.WithdrawApplyInput{
 		Amount:  amount,
 		Channel: req.Channel,
 		Account: req.Account,
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, affiliate.ErrDisabled):
+		case errors.Is(err, affiliateapp.ErrDisabled):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.forbidden", nil)
-		case errors.Is(err, affiliate.ErrNotOpened):
+		case errors.Is(err, affiliateapp.ErrNotOpened):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
-		case errors.Is(err, affiliate.ErrWithdrawAmountInvalid):
+		case errors.Is(err, affiliateapp.ErrWithdrawAmountInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
-		case errors.Is(err, affiliate.ErrWithdrawChannelInvalid):
+		case errors.Is(err, affiliateapp.ErrWithdrawChannelInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
-		case errors.Is(err, affiliate.ErrWithdrawInsufficient):
+		case errors.Is(err, affiliateapp.ErrWithdrawInsufficient):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.save_failed", err)
 		}
 		return
 	}
-	response.Success(c, dto.NewAffiliateWithdrawResp(row))
+	response.Success(c, affiliatepresenter.NewWithdraw(row))
 }

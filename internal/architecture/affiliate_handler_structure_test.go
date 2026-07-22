@@ -9,9 +9,10 @@ import (
 func TestAffiliateHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "affiliate")
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "affiliate")
+	applicationRoot := filepath.Join(moduleRoot, "application")
+	transportRoot := filepath.Join(moduleRoot, "transport", "http")
 
-	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "types.go"), []string{
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "types.go"), []string{
 		"TrackClickInput", "WithdrawApplyInput", "Dashboard",
 		"Stats", "AdminUserItem", "AdminProfileListFilter",
 		"AdminCommissionListFilter", "AdminWithdrawListFilter",
@@ -30,7 +31,10 @@ func TestAffiliateHTTPLivesInTransport(t *testing.T) {
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "channel_handler.go"), []string{
 		"ChannelHandler", "ChannelUserProvisioner", "AffiliateSettings",
 	})
-	assertDirectoryGoFileBudget(t, moduleRoot, 3)
+	production, total := countDirectGoFiles(t, moduleRoot)
+	if production != 0 || total != 0 {
+		t.Fatalf("affiliate module root must be structural only, got production=%d total=%d", production, total)
+	}
 	assertDirectoryGoFileBudget(t, transportRoot, 4)
 
 	for _, legacy := range []string{

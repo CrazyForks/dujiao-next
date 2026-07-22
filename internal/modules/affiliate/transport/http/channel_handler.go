@@ -8,10 +8,11 @@ import (
 
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/modules/affiliate"
-	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
+	"github.com/dujiao-next/internal/platform/http/channelresponse"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -89,53 +90,53 @@ type channelApplyWithdrawRequest struct {
 func (h *ChannelHandler) OpenAffiliate(c *gin.Context) {
 	var req channelIdentityRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.ChannelBindError(c, err)
+		channelresponse.BindError(c, err)
 		return
 	}
 
 	identity := buildChannelIdentity(req)
 	if strings.TrimSpace(identity.ChannelUserID) == "" {
-		shared.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
+		channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
 		return
 	}
 
 	userID, err := h.users.ProvisionUserID(identity)
 	if err != nil {
 		ginutil.RequestLog(c).Errorw("channel_affiliate_open_resolve_user", "channel_user_id", identity.ChannelUserID, "error", err)
-		shared.ChannelIdentityError(c, err)
+		respondChannelIdentityError(c, err)
 		return
 	}
 
 	profile, err := h.affiliate.OpenAffiliate(userID)
 	if err != nil {
 		switch {
-		case errors.Is(err, affiliate.ErrDisabled):
-			shared.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_disabled", "error.forbidden", nil)
-		case errors.Is(err, catalogproduct.ErrNotFound):
-			shared.ChannelError(c, http.StatusNotFound, response.CodeNotFound, "user_not_found", "error.user_not_found", nil)
-		case errors.Is(err, affiliate.ErrUserDisabled):
-			shared.ChannelError(c, http.StatusUnauthorized, response.CodeUnauthorized, "user_disabled", "error.user_disabled", nil)
+		case errors.Is(err, affiliateapp.ErrDisabled):
+			channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_disabled", "error.forbidden", nil)
+		case errors.Is(err, affiliateapp.ErrNotFound):
+			channelresponse.Error(c, http.StatusNotFound, response.CodeNotFound, "user_not_found", "error.user_not_found", nil)
+		case errors.Is(err, affiliateapp.ErrUserDisabled):
+			channelresponse.Error(c, http.StatusUnauthorized, response.CodeUnauthorized, "user_disabled", "error.user_disabled", nil)
 		default:
 			ginutil.RequestLog(c).Errorw("channel_affiliate_open_failed", "user_id", userID, "error", err)
-			shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_open_failed", "error.save_failed", err)
+			channelresponse.Error(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_open_failed", "error.save_failed", err)
 		}
 		return
 	}
 
-	shared.ChannelSuccess(c, buildChannelAffiliateProfileResponse(profile))
+	channelresponse.Success(c, buildChannelAffiliateProfileResponse(profile))
 }
 
 // TrackAffiliateClick POST /api/v1/channel/affiliate/click
 func (h *ChannelHandler) TrackAffiliateClick(c *gin.Context) {
 	var req channelTrackClickRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.ChannelBindError(c, err)
+		channelresponse.BindError(c, err)
 		return
 	}
 
-	channelUserID := shared.ChannelUserIDValue(req.ChannelUserID, req.TelegramUserID)
+	channelUserID := channelresponse.UserIDValue(req.ChannelUserID, req.TelegramUserID)
 	if channelUserID == "" {
-		shared.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
+		channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
 		return
 	}
 
@@ -144,7 +145,7 @@ func (h *ChannelHandler) TrackAffiliateClick(c *gin.Context) {
 		visitorKey = channelUserID
 	}
 
-	if err := h.affiliate.TrackClick(affiliate.TrackClickInput{
+	if err := h.affiliate.TrackClick(affiliateapp.TrackClickInput{
 		AffiliateCode: req.AffiliateCode,
 		VisitorKey:    visitorKey,
 		LandingPath:   strings.TrimSpace(req.LandingPath),
@@ -153,11 +154,11 @@ func (h *ChannelHandler) TrackAffiliateClick(c *gin.Context) {
 		UserAgent:     c.GetHeader("User-Agent"),
 	}); err != nil {
 		ginutil.RequestLog(c).Errorw("channel_affiliate_track_click_failed", "channel_user_id", channelUserID, "affiliate_code", req.AffiliateCode, "error", err)
-		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_track_click_failed", "error.save_failed", err)
+		channelresponse.Error(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_track_click_failed", "error.save_failed", err)
 		return
 	}
 
-	shared.ChannelSuccess(c, gin.H{"ok": true})
+	channelresponse.Success(c, gin.H{"ok": true})
 }
 
 // GetAffiliateDashboard GET /api/v1/channel/affiliate/dashboard
@@ -170,17 +171,17 @@ func (h *ChannelHandler) GetAffiliateDashboard(c *gin.Context) {
 	dashboard, err := h.affiliate.GetUserDashboard(userID)
 	if err != nil {
 		ginutil.RequestLog(c).Errorw("channel_affiliate_dashboard_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
-		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_dashboard_failed", "error.user_fetch_failed", err)
+		channelresponse.Error(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_dashboard_failed", "error.user_fetch_failed", err)
 		return
 	}
 	setting, settingErr := h.settings.GetAffiliateSetting()
 	if settingErr != nil {
 		ginutil.RequestLog(c).Errorw("channel_affiliate_dashboard_setting_failed", "user_id", userID, "channel_user_id", channelUserID, "error", settingErr)
-		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_dashboard_failed", "error.user_fetch_failed", settingErr)
+		channelresponse.Error(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_dashboard_failed", "error.user_fetch_failed", settingErr)
 		return
 	}
 
-	shared.ChannelSuccess(c, gin.H{
+	channelresponse.Success(c, gin.H{
 		"opened":               dashboard.Opened,
 		"affiliate_code":       dashboard.AffiliateCode,
 		"promotion_path":       dashboard.PromotionPath,
@@ -208,7 +209,7 @@ func (h *ChannelHandler) ListAffiliateCommissions(c *gin.Context) {
 	rows, total, err := h.affiliate.ListUserCommissions(userID, page, pageSize, status)
 	if err != nil {
 		ginutil.RequestLog(c).Errorw("channel_affiliate_commissions_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
-		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_commissions_failed", "error.user_fetch_failed", err)
+		channelresponse.Error(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_commissions_failed", "error.user_fetch_failed", err)
 		return
 	}
 
@@ -234,7 +235,7 @@ func (h *ChannelHandler) ListAffiliateCommissions(c *gin.Context) {
 		})
 	}
 
-	shared.ChannelSuccess(c, gin.H{
+	channelresponse.Success(c, gin.H{
 		"items":       items,
 		"page":        page,
 		"page_size":   pageSize,
@@ -256,7 +257,7 @@ func (h *ChannelHandler) ListAffiliateWithdraws(c *gin.Context) {
 	rows, total, err := h.affiliate.ListUserWithdraws(userID, page, pageSize, status)
 	if err != nil {
 		ginutil.RequestLog(c).Errorw("channel_affiliate_withdraws_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
-		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_withdraws_failed", "error.user_fetch_failed", err)
+		channelresponse.Error(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_withdraws_failed", "error.user_fetch_failed", err)
 		return
 	}
 
@@ -277,7 +278,7 @@ func (h *ChannelHandler) ListAffiliateWithdraws(c *gin.Context) {
 		})
 	}
 
-	shared.ChannelSuccess(c, gin.H{
+	channelresponse.Success(c, gin.H{
 		"items":       items,
 		"page":        page,
 		"page_size":   pageSize,
@@ -290,54 +291,54 @@ func (h *ChannelHandler) ListAffiliateWithdraws(c *gin.Context) {
 func (h *ChannelHandler) ApplyAffiliateWithdraw(c *gin.Context) {
 	var req channelApplyWithdrawRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.ChannelBindError(c, err)
+		channelresponse.BindError(c, err)
 		return
 	}
 
-	channelUserID := shared.ChannelUserIDValue(req.ChannelUserID, req.TelegramUserID)
+	channelUserID := channelresponse.UserIDValue(req.ChannelUserID, req.TelegramUserID)
 	if channelUserID == "" {
-		shared.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
+		channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
 		return
 	}
 
 	amount, err := decimal.NewFromString(strings.TrimSpace(req.Amount))
 	if err != nil {
-		shared.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_withdraw_amount_invalid", "error.bad_request", nil)
+		channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_withdraw_amount_invalid", "error.bad_request", nil)
 		return
 	}
 
 	userID, err := h.users.ProvisionUserID(ChannelIdentity{ChannelUserID: channelUserID})
 	if err != nil {
 		ginutil.RequestLog(c).Errorw("channel_affiliate_apply_withdraw_resolve_user", "channel_user_id", channelUserID, "error", err)
-		shared.ChannelIdentityError(c, err)
+		respondChannelIdentityError(c, err)
 		return
 	}
 
-	row, err := h.affiliate.ApplyWithdraw(userID, affiliate.WithdrawApplyInput{
+	row, err := h.affiliate.ApplyWithdraw(userID, affiliateapp.WithdrawApplyInput{
 		Amount:  amount,
 		Channel: strings.TrimSpace(req.Channel),
 		Account: strings.TrimSpace(req.Account),
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, affiliate.ErrDisabled):
-			shared.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_disabled", "error.forbidden", nil)
-		case errors.Is(err, affiliate.ErrNotOpened):
-			shared.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_not_opened", "error.bad_request", nil)
-		case errors.Is(err, affiliate.ErrWithdrawAmountInvalid):
-			shared.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_withdraw_amount_invalid", "error.bad_request", nil)
-		case errors.Is(err, affiliate.ErrWithdrawChannelInvalid):
-			shared.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_withdraw_channel_invalid", "error.bad_request", nil)
-		case errors.Is(err, affiliate.ErrWithdrawInsufficient):
-			shared.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_withdraw_insufficient", "error.bad_request", nil)
+		case errors.Is(err, affiliateapp.ErrDisabled):
+			channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_disabled", "error.forbidden", nil)
+		case errors.Is(err, affiliateapp.ErrNotOpened):
+			channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_not_opened", "error.bad_request", nil)
+		case errors.Is(err, affiliateapp.ErrWithdrawAmountInvalid):
+			channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_withdraw_amount_invalid", "error.bad_request", nil)
+		case errors.Is(err, affiliateapp.ErrWithdrawChannelInvalid):
+			channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_withdraw_channel_invalid", "error.bad_request", nil)
+		case errors.Is(err, affiliateapp.ErrWithdrawInsufficient):
+			channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "affiliate_withdraw_insufficient", "error.bad_request", nil)
 		default:
 			ginutil.RequestLog(c).Errorw("channel_affiliate_apply_withdraw_failed", "user_id", userID, "channel_user_id", channelUserID, "error", err)
-			shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_withdraw_apply_failed", "error.save_failed", err)
+			channelresponse.Error(c, http.StatusInternalServerError, response.CodeInternal, "affiliate_withdraw_apply_failed", "error.save_failed", err)
 		}
 		return
 	}
 
-	shared.ChannelSuccess(c, gin.H{
+	channelresponse.Success(c, gin.H{
 		"id":                   row.ID,
 		"affiliate_profile_id": row.AffiliateProfileID,
 		"amount":               row.Amount,
@@ -353,24 +354,47 @@ func (h *ChannelHandler) ApplyAffiliateWithdraw(c *gin.Context) {
 }
 
 func (h *ChannelHandler) resolveChannelAffiliateUserID(c *gin.Context) (uint, string, bool) {
-	channelUserID := shared.ChannelUserIDValue(c.Query("channel_user_id"), c.Query("telegram_user_id"))
+	channelUserID := channelresponse.UserIDValue(c.Query("channel_user_id"), c.Query("telegram_user_id"))
 	if channelUserID == "" {
-		shared.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
+		channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
 		return 0, "", false
 	}
 
 	userID, err := h.users.ProvisionUserID(ChannelIdentity{ChannelUserID: channelUserID})
 	if err != nil {
 		ginutil.RequestLog(c).Errorw("channel_affiliate_resolve_user", "channel_user_id", channelUserID, "error", err)
-		shared.ChannelIdentityError(c, err)
+		respondChannelIdentityError(c, err)
 		return 0, channelUserID, false
 	}
 	return userID, channelUserID, true
 }
 
+func respondChannelIdentityError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, telegramauthapp.ErrTelegramAuthPayloadInvalid),
+		errors.Is(err, userauthapp.ErrInvalidEmail):
+		channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
+	case errors.Is(err, userauthapp.ErrNotFound):
+		channelresponse.Error(c, http.StatusNotFound, response.CodeNotFound, "user_not_found", "error.user_not_found", nil)
+	case errors.Is(err, userauthapp.ErrVerifyCodeInvalid):
+		channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "verify_code_invalid", "error.verify_code_invalid", nil)
+	case errors.Is(err, userauthapp.ErrVerifyCodeExpired):
+		channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "verify_code_expired", "error.verify_code_expired", nil)
+	case errors.Is(err, userauthapp.ErrVerifyCodeAttemptsExceeded):
+		channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "verify_code_invalid", "error.verify_code_attempts_exceeded", nil)
+	case errors.Is(err, userauthapp.ErrUserDisabled):
+		channelresponse.Error(c, http.StatusUnauthorized, response.CodeUnauthorized, "user_disabled", "error.user_disabled", nil)
+	case errors.Is(err, userauthapp.ErrUserOAuthIdentityExists),
+		errors.Is(err, userauthapp.ErrUserOAuthAlreadyBound):
+		channelresponse.Error(c, http.StatusBadRequest, response.CodeBadRequest, "channel_identity_conflict", "error.telegram_bind_conflict", nil)
+	default:
+		channelresponse.Error(c, http.StatusInternalServerError, response.CodeInternal, "internal_error", "error.internal_error", err)
+	}
+}
+
 func buildChannelIdentity(req channelIdentityRequest) ChannelIdentity {
 	return ChannelIdentity{
-		ChannelUserID: shared.ChannelUserIDValue(req.ChannelUserID, req.TelegramUserID),
+		ChannelUserID: channelresponse.UserIDValue(req.ChannelUserID, req.TelegramUserID),
 		Username:      strings.TrimSpace(firstNonEmpty(req.Username, req.TelegramUser)),
 		FirstName:     strings.TrimSpace(req.FirstName),
 		LastName:      strings.TrimSpace(req.LastName),
