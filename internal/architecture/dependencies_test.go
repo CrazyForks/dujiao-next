@@ -26,6 +26,9 @@ func TestDependencyRules(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	targets := []string{
 		filepath.Join(repositoryRoot, "internal", "modules"),
+		filepath.Join(repositoryRoot, "internal", "workflows"),
+		filepath.Join(repositoryRoot, "internal", "platform"),
+		filepath.Join(repositoryRoot, "internal", "shared"),
 		filepath.Join(repositoryRoot, "internal", "transport", "http"),
 	}
 
@@ -132,6 +135,60 @@ func TestValidateImportRules(t *testing.T) {
 		{
 			name:          "nested catalog product gorm store can import gorm",
 			file:          "internal/modules/catalog/product/store/gormstore/product_store.go",
+			importPath:    "gorm.io/gorm",
+			wantViolation: false,
+		},
+		{
+			name:          "module infrastructure gorm store can import gorm",
+			file:          "internal/modules/order/infrastructure/gormstore/order_store.go",
+			importPath:    "gorm.io/gorm",
+			wantViolation: false,
+		},
+		{
+			name:          "module HTTP transport can import gin",
+			file:          "internal/modules/order/transport/http/create_handler.go",
+			importPath:    "github.com/gin-gonic/gin",
+			wantViolation: false,
+		},
+		{
+			name:          "module domain cannot import application",
+			file:          "internal/modules/order/domain/order.go",
+			importPath:    moduleImportPath + "/internal/modules/order/application",
+			wantViolation: true,
+		},
+		{
+			name:          "module application cannot import infrastructure",
+			file:          "internal/modules/order/application/create.go",
+			importPath:    moduleImportPath + "/internal/modules/order/infrastructure/gormstore",
+			wantViolation: true,
+		},
+		{
+			name:          "module transport cannot import infrastructure",
+			file:          "internal/modules/order/transport/http/create_handler.go",
+			importPath:    moduleImportPath + "/internal/modules/order/infrastructure/gormstore",
+			wantViolation: true,
+		},
+		{
+			name:          "platform cannot import a business module",
+			file:          "internal/platform/database/gormdb/database.go",
+			importPath:    moduleImportPath + "/internal/modules/order/domain",
+			wantViolation: true,
+		},
+		{
+			name:          "shared code cannot import platform",
+			file:          "internal/shared/money/money.go",
+			importPath:    moduleImportPath + "/internal/platform/database",
+			wantViolation: true,
+		},
+		{
+			name:          "workflow application cannot import gorm",
+			file:          "internal/workflows/checkout/application/checkout.go",
+			importPath:    "gorm.io/gorm",
+			wantViolation: true,
+		},
+		{
+			name:          "workflow gorm unit of work can import gorm",
+			file:          "internal/workflows/checkout/infrastructure/gormuow/unit_of_work.go",
 			importPath:    "gorm.io/gorm",
 			wantViolation: false,
 		},
@@ -258,11 +315,68 @@ func validateImport(file, importPath string) string {
 		if forbiddenLegacyImport(importPath) {
 			return "domain modules must not depend on legacy service, repository, HTTP, router, or provider packages"
 		}
-		if importMatches(importPath, "github.com/gin-gonic/gin") {
+		if importMatches(importPath, "github.com/gin-gonic/gin") && !isHTTPTransport(file) {
 			return "HTTP transport belongs outside domain modules"
 		}
 		if strings.HasPrefix(importPath, "gorm.io/") && !isGormStore(file) {
 			return "only a module's store/gormstore adapter may import GORM"
+		}
+		if isLayer(file, "domain") && importsAnyLayer(importPath, "application", "infrastructure", "store", "transport") {
+			return "domain code must not depend on application, infrastructure, store, or transport packages"
+		}
+		if isLayer(file, "application") {
+			if importMatches(importPath, "github.com/gin-gonic/gin") || strings.HasPrefix(importPath, "github.com/hibiken/asynq") {
+				return "application code must not depend on HTTP or job transport libraries"
+			}
+			if importsAnyLayer(importPath, "infrastructure", "store", "transport") || importMatches(importPath, moduleImportPath+"/internal/bootstrap") {
+				return "application code must depend on ports, not infrastructure, transport, or bootstrap packages"
+			}
+		}
+		if isLayer(file, "transport") && importsAnyLayer(importPath, "infrastructure", "store") {
+			return "transport code must depend on application contracts, not concrete stores or infrastructure"
+		}
+		if isLayer(file, "infrastructure") && (importsAnyLayer(importPath, "transport") || importMatches(importPath, moduleImportPath+"/internal/bootstrap")) {
+			return "infrastructure code must not depend on transport or bootstrap packages"
+		}
+	}
+
+	if pathWithin(file, "internal/workflows") {
+		if forbiddenLegacyImport(importPath) {
+			return "workflows must not depend on legacy service, repository, HTTP, router, or provider packages"
+		}
+		if strings.HasPrefix(importPath, "gorm.io/") && !isWorkflowGormUnitOfWork(file) {
+			return "only a workflow infrastructure/gormuow adapter may import GORM"
+		}
+		if isLayer(file, "application") && (importMatches(importPath, "github.com/gin-gonic/gin") || strings.HasPrefix(importPath, "github.com/hibiken/asynq") || importsAnyLayer(importPath, "infrastructure", "transport")) {
+			return "workflow application code must depend on contracts and ports, not transport or infrastructure"
+		}
+	}
+
+	if pathWithin(file, "internal/platform") {
+		for _, forbidden := range []string{
+			moduleImportPath + "/internal/modules",
+			moduleImportPath + "/internal/workflows",
+			moduleImportPath + "/internal/bootstrap",
+		} {
+			if importMatches(importPath, forbidden) {
+				return "platform code must not depend on business modules, workflows, or bootstrap"
+			}
+		}
+	}
+
+	if pathWithin(file, "internal/shared") {
+		for _, forbidden := range []string{
+			moduleImportPath + "/internal/modules",
+			moduleImportPath + "/internal/workflows",
+			moduleImportPath + "/internal/platform",
+			moduleImportPath + "/internal/bootstrap",
+		} {
+			if importMatches(importPath, forbidden) {
+				return "shared code must remain independent from modules, workflows, platform, and bootstrap"
+			}
+		}
+		if strings.HasPrefix(importPath, "gorm.io/") || importMatches(importPath, "github.com/gin-gonic/gin") || strings.HasPrefix(importPath, "github.com/hibiken/asynq") {
+			return "shared code must not depend on persistence or transport frameworks"
 		}
 	}
 
@@ -313,8 +427,50 @@ func isGormStore(file string) bool {
 		return false
 	}
 	for index := 2; index+1 < len(parts); index++ {
-		if parts[index] == "store" && parts[index+1] == "gormstore" {
+		if (parts[index] == "store" || parts[index] == "infrastructure") && parts[index+1] == "gormstore" {
 			return true
+		}
+	}
+	return false
+}
+
+func isHTTPTransport(file string) bool {
+	parts := strings.Split(filepath.ToSlash(file), "/")
+	for index := 0; index+1 < len(parts); index++ {
+		if parts[index] == "transport" && parts[index+1] == "http" {
+			return true
+		}
+	}
+	return false
+}
+
+func isWorkflowGormUnitOfWork(file string) bool {
+	parts := strings.Split(filepath.ToSlash(file), "/")
+	for index := 0; index+1 < len(parts); index++ {
+		if parts[index] == "infrastructure" && parts[index+1] == "gormuow" {
+			return true
+		}
+	}
+	return false
+}
+
+func isLayer(path, layer string) bool {
+	parts := strings.Split(filepath.ToSlash(path), "/")
+	for _, part := range parts {
+		if part == layer {
+			return true
+		}
+	}
+	return false
+}
+
+func importsAnyLayer(importPath string, layers ...string) bool {
+	parts := strings.Split(strings.Trim(importPath, "/"), "/")
+	for _, part := range parts {
+		for _, layer := range layers {
+			if part == layer {
+				return true
+			}
 		}
 	}
 	return false
