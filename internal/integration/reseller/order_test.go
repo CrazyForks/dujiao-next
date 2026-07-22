@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -54,10 +55,10 @@ func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (models.R
 		UserID:               999,
 		Status:               constants.OrderStatusPaid,
 		Currency:             "USD",
-		TotalAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString("130.00")),
+		TotalAmount:          money.FromDecimal(decimal.RequireFromString("130.00")),
 		ResellerID:           &profile.ID,
 		ResellerDomain:       "shop.example.test",
-		ResellerProfitAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("30.00")),
+		ResellerProfitAmount: money.FromDecimal(decimal.RequireFromString("30.00")),
 		PaidAt:               &paidAt,
 	}
 	if err := db.Create(&order).Error; err != nil {
@@ -70,9 +71,9 @@ func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (models.R
 		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
 		SKUSnapshotJSON: jsonmap.JSON{"规格": "A"},
 		Quantity:        2,
-		UnitPrice:       models.NewMoneyFromDecimal(decimal.RequireFromString("65.00")),
-		TotalPrice:      models.NewMoneyFromDecimal(decimal.RequireFromString("130.00")),
-		CostPrice:       models.NewMoneyFromDecimal(decimal.RequireFromString("1.00")),
+		UnitPrice:       money.FromDecimal(decimal.RequireFromString("65.00")),
+		TotalPrice:      money.FromDecimal(decimal.RequireFromString("130.00")),
+		CostPrice:       money.FromDecimal(decimal.RequireFromString("1.00")),
 	}
 	if err := db.Create(&item).Error; err != nil {
 		t.Fatalf("create order item failed: %v", err)
@@ -84,9 +85,9 @@ func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (models.R
 		Currency:          order.Currency,
 		ResellerUserID:    profile.UserID,
 		BuyerUserID:       order.UserID,
-		BaseAmount:        models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
-		ResellerAmount:    models.NewMoneyFromDecimal(decimal.RequireFromString("130.00")),
-		ProfitAmount:      models.NewMoneyFromDecimal(decimal.RequireFromString("30.00")),
+		BaseAmount:        money.FromDecimal(decimal.RequireFromString("100.00")),
+		ResellerAmount:    money.FromDecimal(decimal.RequireFromString("130.00")),
+		ProfitAmount:      money.FromDecimal(decimal.RequireFromString("30.00")),
 		ProfitEligible:    false,
 		ProfitBlockReason: "self_dealing_owner",
 		PricingSnapshotJSON: jsonmap.JSON{"items": []interface{}{
@@ -134,10 +135,10 @@ func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email str
 		UserID:               user.ID,
 		Status:               constants.OrderStatusPaid,
 		Currency:             "USD",
-		TotalAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString("150.00")),
+		TotalAmount:          money.FromDecimal(decimal.RequireFromString("150.00")),
 		ResellerID:           &profile.ID,
 		ResellerDomain:       "child-items.example.test",
-		ResellerProfitAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("30.00")),
+		ResellerProfitAmount: money.FromDecimal(decimal.RequireFromString("30.00")),
 		PaidAt:               &paidAt,
 	}
 	if err := db.Create(&parent).Error; err != nil {
@@ -152,10 +153,10 @@ func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email str
 			UserID:               user.ID,
 			Status:               constants.OrderStatusPaid,
 			Currency:             "USD",
-			TotalAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString(amount)),
+			TotalAmount:          money.FromDecimal(decimal.RequireFromString(amount)),
 			ResellerID:           &profile.ID,
 			ResellerDomain:       parent.ResellerDomain,
-			ResellerProfitAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("15.00")),
+			ResellerProfitAmount: money.FromDecimal(decimal.RequireFromString("15.00")),
 			PaidAt:               &paidAt,
 		}
 		if err := db.Create(&child).Error; err != nil {
@@ -168,9 +169,9 @@ func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email str
 			TitleJSON:       jsonmap.JSON{"zh-CN": fmt.Sprintf("子订单商品 %d", idx+1)},
 			SKUSnapshotJSON: jsonmap.JSON{"规格": fmt.Sprintf("S%d", idx+1)},
 			Quantity:        1,
-			UnitPrice:       models.NewMoneyFromDecimal(decimal.RequireFromString(amount)),
-			TotalPrice:      models.NewMoneyFromDecimal(decimal.RequireFromString(amount)),
-			CostPrice:       models.NewMoneyFromDecimal(decimal.RequireFromString("2.00")),
+			UnitPrice:       money.FromDecimal(decimal.RequireFromString(amount)),
+			TotalPrice:      money.FromDecimal(decimal.RequireFromString(amount)),
+			CostPrice:       money.FromDecimal(decimal.RequireFromString("2.00")),
 		}
 		if err := db.Create(&item).Error; err != nil {
 			t.Fatalf("create child item failed: %v", err)
@@ -184,9 +185,9 @@ func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email str
 		Currency:       parent.Currency,
 		ResellerUserID: profile.UserID,
 		BuyerUserID:    parent.UserID,
-		BaseAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("120.00")),
-		ResellerAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("150.00")),
-		ProfitAmount:   models.NewMoneyFromDecimal(decimal.RequireFromString("30.00")),
+		BaseAmount:     money.FromDecimal(decimal.RequireFromString("120.00")),
+		ResellerAmount: money.FromDecimal(decimal.RequireFromString("150.00")),
+		ProfitAmount:   money.FromDecimal(decimal.RequireFromString("30.00")),
 		ProfitEligible: true,
 		PricingSnapshotJSON: jsonmap.JSON{"items": []interface{}{
 			map[string]interface{}{
@@ -300,7 +301,7 @@ func TestResellerOrderServiceProfitStatusRequiresAvailableLedger(t *testing.T) {
 		ResellerID:     profile.ID,
 		OrderID:        &orderID,
 		Type:           models.ResellerLedgerTypeOrderProfit,
-		Amount:         models.NewMoneyFromDecimal(decimal.RequireFromString("30.00")),
+		Amount:         money.FromDecimal(decimal.RequireFromString("30.00")),
 		Currency:       "USD",
 		IdempotencyKey: "order-profit-status-pending",
 		Status:         models.ResellerLedgerStatusPendingConfirm,
@@ -344,7 +345,7 @@ func TestResellerOrderServicePartiallyRefundedOrderIsNeutralUnavailable(t *testi
 		ResellerID:     profile.ID,
 		OrderID:        &orderID,
 		Type:           models.ResellerLedgerTypeOrderProfit,
-		Amount:         models.NewMoneyFromDecimal(decimal.RequireFromString("30.00")),
+		Amount:         money.FromDecimal(decimal.RequireFromString("30.00")),
 		Currency:       "USD",
 		IdempotencyKey: "order-profit-status-partially-refunded",
 		Status:         models.ResellerLedgerStatusAvailable,

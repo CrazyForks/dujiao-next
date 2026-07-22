@@ -12,6 +12,7 @@ import (
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
@@ -255,8 +256,8 @@ func TestChannelAffiliateListsCommissionAndWithdrawRecords(t *testing.T) {
 		OrderNo:        "DJ-AFF-001",
 		Status:         constants.OrderStatusPaid,
 		Currency:       "CNY",
-		OriginalAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
-		TotalAmount:    models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
+		OriginalAmount: money.FromDecimal(decimal.RequireFromString("100.00")),
+		TotalAmount:    money.FromDecimal(decimal.RequireFromString("100.00")),
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
@@ -267,9 +268,9 @@ func TestChannelAffiliateListsCommissionAndWithdrawRecords(t *testing.T) {
 		AffiliateProfileID: profile.ID,
 		OrderID:            order.ID,
 		CommissionType:     constants.AffiliateCommissionTypeOrder,
-		BaseAmount:         models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
-		RatePercent:        models.NewMoneyFromDecimal(decimal.RequireFromString("10.00")),
-		CommissionAmount:   models.NewMoneyFromDecimal(decimal.RequireFromString("10.00")),
+		BaseAmount:         money.FromDecimal(decimal.RequireFromString("100.00")),
+		RatePercent:        money.FromDecimal(decimal.RequireFromString("10.00")),
+		CommissionAmount:   money.FromDecimal(decimal.RequireFromString("10.00")),
 		Status:             constants.AffiliateCommissionStatusAvailable,
 		CreatedAt:          time.Now(),
 		UpdatedAt:          time.Now(),
@@ -279,7 +280,7 @@ func TestChannelAffiliateListsCommissionAndWithdrawRecords(t *testing.T) {
 	}
 	withdraw := models.AffiliateWithdrawRequest{
 		AffiliateProfileID: profile.ID,
-		Amount:             models.NewMoneyFromDecimal(decimal.RequireFromString("10.00")),
+		Amount:             money.FromDecimal(decimal.RequireFromString("10.00")),
 		Channel:            "alipay",
 		Account:            "demo@pay.test",
 		Status:             constants.AffiliateWithdrawStatusPendingReview,
@@ -453,8 +454,8 @@ func TestChannelAffiliateApplyWithdraw(t *testing.T) {
 		OrderNo:        "DJ-AFF-WD-001",
 		Status:         constants.OrderStatusPaid,
 		Currency:       "CNY",
-		OriginalAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("200.00")),
-		TotalAmount:    models.NewMoneyFromDecimal(decimal.RequireFromString("200.00")),
+		OriginalAmount: money.FromDecimal(decimal.RequireFromString("200.00")),
+		TotalAmount:    money.FromDecimal(decimal.RequireFromString("200.00")),
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
@@ -465,9 +466,9 @@ func TestChannelAffiliateApplyWithdraw(t *testing.T) {
 		AffiliateProfileID: profile.ID,
 		OrderID:            order.ID,
 		CommissionType:     constants.AffiliateCommissionTypeOrder,
-		BaseAmount:         models.NewMoneyFromDecimal(decimal.RequireFromString("200.00")),
-		RatePercent:        models.NewMoneyFromDecimal(decimal.RequireFromString("10.00")),
-		CommissionAmount:   models.NewMoneyFromDecimal(decimal.RequireFromString("20.00")),
+		BaseAmount:         money.FromDecimal(decimal.RequireFromString("200.00")),
+		RatePercent:        money.FromDecimal(decimal.RequireFromString("10.00")),
+		CommissionAmount:   money.FromDecimal(decimal.RequireFromString("20.00")),
 		Status:             constants.AffiliateCommissionStatusAvailable,
 		CreatedAt:          time.Now(),
 		UpdatedAt:          time.Now(),

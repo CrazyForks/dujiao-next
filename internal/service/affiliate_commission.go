@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -87,9 +88,9 @@ func (s *AffiliateService) HandleOrderPaid(orderID uint) error {
 		AffiliateProfileID: profile.ID,
 		OrderID:            order.ID,
 		CommissionType:     commissionType,
-		BaseAmount:         models.NewMoneyFromDecimal(baseAmount),
-		RatePercent:        models.NewMoneyFromDecimal(rate),
-		CommissionAmount:   models.NewMoneyFromDecimal(commissionAmount),
+		BaseAmount:         money.FromDecimal(baseAmount),
+		RatePercent:        money.FromDecimal(rate),
+		CommissionAmount:   money.FromDecimal(commissionAmount),
 		Status:             status,
 		ConfirmAt:          confirmAt,
 		AvailableAt:        availableAt,
@@ -230,8 +231,8 @@ func (s *AffiliateService) HandleOrderRefundedTx(
 			}
 		}
 
-		item.CommissionAmount = models.NewMoneyFromDecimal(nextCommission)
-		item.BaseAmount = models.NewMoneyFromDecimal(nextBase)
+		item.CommissionAmount = money.FromDecimal(nextCommission)
+		item.BaseAmount = money.FromDecimal(nextBase)
 		item.UpdatedAt = now
 		if nextCommission.LessThanOrEqual(decimal.Zero) {
 			item.Status = constants.AffiliateCommissionStatusRejected

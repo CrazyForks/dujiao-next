@@ -14,6 +14,7 @@ import (
 	"github.com/dujiao-next/internal/modules/siteconnection"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/dujiao-next/internal/upstream"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -204,7 +205,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 		CategoryID:      1,
 		Slug:            "p",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "P"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
 		FulfillmentType: constants.FulfillmentTypeUpstream,
 		IsActive:        true,
 		IsMapped:        true,
@@ -213,7 +214,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 		t.Fatalf("create product failed: %v", err)
 	}
 	skuRepo := repository.NewProductSKURepository(db)
-	sku := models.ProductSKU{ProductID: product.ID, SKUCode: "SKU-A", PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)), IsActive: true}
+	sku := models.ProductSKU{ProductID: product.ID, SKUCode: "SKU-A", PriceAmount: money.FromDecimal(decimal.NewFromInt(10)), IsActive: true}
 	if err := skuRepo.Create(&sku); err != nil {
 		t.Fatalf("create sku failed: %v", err)
 	}
@@ -373,7 +374,7 @@ func TestSyncProductKeepsLocalWholesalePricesWhenUpstreamOmitsWholesalePrices(t 
 	defer cleanup()
 
 	localWholesalePrices := models.WholesalePriceTiers{
-		{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+		{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}
 	if err := db.Model(&models.Product{}).
 		Where("id = ?", mapping.LocalProductID).
@@ -415,7 +416,7 @@ func TestSyncProductRemapsUpstreamWholesaleSKUID(t *testing.T) {
 						{ID: 201, SKUCode: "SKU-A", PriceAmount: "10.00", IsActive: true, StockQuantity: 100},
 					},
 					WholesalePrices: models.WholesalePriceTiers{
-						{SKUID: 201, MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(8))},
+						{SKUID: 201, MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(8))},
 					},
 				},
 			})

@@ -6,6 +6,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -26,8 +27,8 @@ func (s *WriteService) syncSingleProductSKU(skuRepo SKURepository, productID uin
 			ProductID:         productID,
 			SKUCode:           models.DefaultSKUCode,
 			SpecValuesJSON:    jsonmap.JSON{},
-			PriceAmount:       models.NewMoneyFromDecimal(priceAmount),
-			CostPriceAmount:   models.NewMoneyFromDecimal(costPriceAmount),
+			PriceAmount:       money.FromDecimal(priceAmount),
+			CostPriceAmount:   money.FromDecimal(costPriceAmount),
 			ManualStockTotal:  manualStockTotal,
 			ManualStockLocked: 0,
 			ManualStockSold:   0,
@@ -41,8 +42,8 @@ func (s *WriteService) syncSingleProductSKU(skuRepo SKURepository, productID uin
 	}
 
 	target := skus[targetIndex]
-	target.PriceAmount = models.NewMoneyFromDecimal(priceAmount)
-	target.CostPriceAmount = models.NewMoneyFromDecimal(costPriceAmount)
+	target.PriceAmount = money.FromDecimal(priceAmount)
+	target.CostPriceAmount = money.FromDecimal(costPriceAmount)
 	target.ManualStockTotal = manualStockTotal
 	target.IsActive = true
 	if strings.TrimSpace(target.SKUCode) == "" {
@@ -94,8 +95,8 @@ type normalizedProductSKU struct {
 	ID               uint
 	SKUCode          string
 	SpecValuesJSON   jsonmap.JSON
-	PriceAmount      models.Money
-	CostPriceAmount  models.Money
+	PriceAmount      money.Amount
+	CostPriceAmount  money.Amount
 	ManualStockTotal int
 	IsActive         bool
 	SortOrder        int
@@ -159,8 +160,8 @@ func (s *WriteService) normalizeProductSKUInputs(inputs []ProductSKUInput, fulfi
 			ID:               input.ID,
 			SKUCode:          skuCode,
 			SpecValuesJSON:   specValues,
-			PriceAmount:      models.NewMoneyFromDecimal(priceAmount),
-			CostPriceAmount:  models.NewMoneyFromDecimal(costPriceAmount),
+			PriceAmount:      money.FromDecimal(priceAmount),
+			CostPriceAmount:  money.FromDecimal(costPriceAmount),
 			ManualStockTotal: manualTotal,
 			IsActive:         isActive,
 			SortOrder:        input.SortOrder,

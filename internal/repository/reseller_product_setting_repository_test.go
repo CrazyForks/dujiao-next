@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -41,8 +42,8 @@ func seedResellerProductSettingProfile(t *testing.T, db *gorm.DB, email string) 
 	profile := models.ResellerProfile{
 		UserID:               user.ID,
 		Status:               models.ResellerProfileStatusActive,
-		DefaultMarkupPercent: models.NewMoneyFromDecimal(decimal.RequireFromString("10.00")),
-		MaxMarkupPercent:     models.NewMoneyFromDecimal(decimal.RequireFromString("50.00")),
+		DefaultMarkupPercent: money.FromDecimal(decimal.RequireFromString("10.00")),
+		MaxMarkupPercent:     money.FromDecimal(decimal.RequireFromString("50.00")),
 		SettlementStatus:     models.ResellerSettlementStatusNormal,
 	}
 	if err := db.Create(&profile).Error; err != nil {
@@ -61,8 +62,8 @@ func seedResellerProductSettingProduct(t *testing.T, db *gorm.DB, slug string) (
 		CategoryID:      category.ID,
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": "商品 " + slug, "zh-TW": "商品 " + slug, "en-US": "Product " + slug},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
-		CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
+		PriceAmount:     money.FromDecimal(decimal.RequireFromString("100.00")),
+		CostPriceAmount: money.FromDecimal(decimal.RequireFromString("80.00")),
 		IsActive:        true,
 		SortOrder:       10,
 	}
@@ -74,8 +75,8 @@ func seedResellerProductSettingProduct(t *testing.T, db *gorm.DB, slug string) (
 			ProductID:       product.ID,
 			SKUCode:         "MONTH-1",
 			SpecValuesJSON:  jsonmap.JSON{"zh-CN": "1个月", "zh-TW": "1個月", "en-US": "1 month"},
-			PriceAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
-			CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
+			PriceAmount:     money.FromDecimal(decimal.RequireFromString("100.00")),
+			CostPriceAmount: money.FromDecimal(decimal.RequireFromString("80.00")),
 			IsActive:        true,
 			SortOrder:       20,
 		},
@@ -83,8 +84,8 @@ func seedResellerProductSettingProduct(t *testing.T, db *gorm.DB, slug string) (
 			ProductID:       product.ID,
 			SKUCode:         "MONTH-3",
 			SpecValuesJSON:  jsonmap.JSON{"zh-CN": "3个月", "zh-TW": "3個月", "en-US": "3 months"},
-			PriceAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("250.00")),
-			CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("180.00")),
+			PriceAmount:     money.FromDecimal(decimal.RequireFromString("250.00")),
+			CostPriceAmount: money.FromDecimal(decimal.RequireFromString("180.00")),
 			IsActive:        true,
 			SortOrder:       10,
 		},
@@ -107,9 +108,9 @@ func TestResellerProductSettingRepositoryUpsertRestoresSoftDeleted(t *testing.T)
 		SKUID:             skus[0].ID,
 		IsListed:          true,
 		PricingMode:       models.ResellerPricingModeFixedPrice,
-		FixedPriceAmount:  models.NewMoneyFromDecimal(decimal.RequireFromString("128.00")),
-		MarkupPercent:     models.NewMoneyFromDecimal(decimal.Zero),
-		FixedMarkupAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		FixedPriceAmount:  money.FromDecimal(decimal.RequireFromString("128.00")),
+		MarkupPercent:     money.FromDecimal(decimal.Zero),
+		FixedMarkupAmount: money.FromDecimal(decimal.Zero),
 	})
 	if err != nil {
 		t.Fatalf("upsert create failed: %v", err)
@@ -126,9 +127,9 @@ func TestResellerProductSettingRepositoryUpsertRestoresSoftDeleted(t *testing.T)
 		SKUID:             skus[0].ID,
 		IsListed:          true,
 		PricingMode:       models.ResellerPricingModeFixedMarkup,
-		FixedMarkupAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("15.00")),
-		MarkupPercent:     models.NewMoneyFromDecimal(decimal.Zero),
-		FixedPriceAmount:  models.NewMoneyFromDecimal(decimal.Zero),
+		FixedMarkupAmount: money.FromDecimal(decimal.RequireFromString("15.00")),
+		MarkupPercent:     money.FromDecimal(decimal.Zero),
+		FixedPriceAmount:  money.FromDecimal(decimal.Zero),
 	})
 	if err != nil {
 		t.Fatalf("upsert restore failed: %v", err)
@@ -153,9 +154,9 @@ func TestResellerProductSettingRepositoryEnforcesScopeUniqueness(t *testing.T) {
 		SKUID:             skus[0].ID,
 		IsListed:          true,
 		PricingMode:       models.ResellerPricingModeInherit,
-		MarkupPercent:     models.NewMoneyFromDecimal(decimal.RequireFromString("0.00")),
-		FixedMarkupAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("0.00")),
-		FixedPriceAmount:  models.NewMoneyFromDecimal(decimal.RequireFromString("0.00")),
+		MarkupPercent:     money.FromDecimal(decimal.RequireFromString("0.00")),
+		FixedMarkupAmount: money.FromDecimal(decimal.RequireFromString("0.00")),
+		FixedPriceAmount:  money.FromDecimal(decimal.RequireFromString("0.00")),
 	}); err != nil {
 		t.Fatalf("create initial setting failed: %v", err)
 	}
@@ -166,9 +167,9 @@ func TestResellerProductSettingRepositoryEnforcesScopeUniqueness(t *testing.T) {
 		SKUID:             skus[0].ID,
 		IsListed:          true,
 		PricingMode:       models.ResellerPricingModeFixedPrice,
-		MarkupPercent:     models.NewMoneyFromDecimal(decimal.RequireFromString("0.00")),
-		FixedMarkupAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("0.00")),
-		FixedPriceAmount:  models.NewMoneyFromDecimal(decimal.RequireFromString("150.00")),
+		MarkupPercent:     money.FromDecimal(decimal.RequireFromString("0.00")),
+		FixedMarkupAmount: money.FromDecimal(decimal.RequireFromString("0.00")),
+		FixedPriceAmount:  money.FromDecimal(decimal.RequireFromString("150.00")),
 	}).Error
 	if err == nil {
 		t.Fatal("expected duplicate active setting insert to fail")
@@ -187,8 +188,8 @@ func TestResellerProductSettingRepositoryListProductsWithSettings(t *testing.T) 
 		SKUID:            0,
 		IsListed:         true,
 		PricingMode:      models.ResellerPricingModeMarkupPercent,
-		MarkupPercent:    models.NewMoneyFromDecimal(decimal.RequireFromString("20.00")),
-		FixedPriceAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		MarkupPercent:    money.FromDecimal(decimal.RequireFromString("20.00")),
+		FixedPriceAmount: money.FromDecimal(decimal.Zero),
 	}); err != nil {
 		t.Fatalf("upsert product setting failed: %v", err)
 	}
@@ -198,7 +199,7 @@ func TestResellerProductSettingRepositoryListProductsWithSettings(t *testing.T) 
 		SKUID:            skus[0].ID,
 		IsListed:         true,
 		PricingMode:      models.ResellerPricingModeFixedPrice,
-		FixedPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("180.00")),
+		FixedPriceAmount: money.FromDecimal(decimal.RequireFromString("180.00")),
 	}); err != nil {
 		t.Fatalf("upsert other setting failed: %v", err)
 	}
@@ -235,7 +236,7 @@ func TestResellerProductSettingRepositoryGetProductSettings(t *testing.T) {
 		SKUID:            skus[1].ID,
 		IsListed:         true,
 		PricingMode:      models.ResellerPricingModeFixedPrice,
-		FixedPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("300.00")),
+		FixedPriceAmount: money.FromDecimal(decimal.RequireFromString("300.00")),
 	}); err != nil {
 		t.Fatalf("upsert setting failed: %v", err)
 	}

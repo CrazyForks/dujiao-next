@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/okpay"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -166,10 +166,10 @@ func (a *okpayAdapter) VerifyCallback(raw jsonmap.JSON, _ map[string][]string, b
 
 	// amount 解析：CallbackData.Amount 是 string，直接 decimal.NewFromString
 	// amount silent-fallback：wrapper 仅做适配，金额异常由业务层判定。
-	amount := models.Money{}
+	amount := money.Amount{}
 	if s := strings.TrimSpace(data.Amount); s != "" {
 		if d, parseErr := decimal.NewFromString(s); parseErr == nil {
-			amount = models.NewMoneyFromDecimal(d)
+			amount = money.FromDecimal(d)
 		}
 	}
 

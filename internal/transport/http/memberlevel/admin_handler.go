@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -88,9 +89,9 @@ func (h *AdminHandler) CreateMemberLevel(c *gin.Context) {
 		NameJSON:          req.NameJSON,
 		Slug:              req.Slug,
 		Icon:              req.Icon,
-		DiscountRate:      models.NewMoneyFromDecimal(decimal.NewFromFloat(req.DiscountRate)),
-		RechargeThreshold: models.NewMoneyFromDecimal(decimal.NewFromFloat(req.RechargeThreshold)),
-		SpendThreshold:    models.NewMoneyFromDecimal(decimal.NewFromFloat(req.SpendThreshold)),
+		DiscountRate:      money.FromDecimal(decimal.NewFromFloat(req.DiscountRate)),
+		RechargeThreshold: money.FromDecimal(decimal.NewFromFloat(req.RechargeThreshold)),
+		SpendThreshold:    money.FromDecimal(decimal.NewFromFloat(req.SpendThreshold)),
 		IsDefault:         req.IsDefault,
 		SortOrder:         req.SortOrder,
 		IsActive:          isActive,
@@ -138,9 +139,9 @@ func (h *AdminHandler) UpdateMemberLevel(c *gin.Context) {
 	existing.NameJSON = req.NameJSON
 	existing.Slug = req.Slug
 	existing.Icon = req.Icon
-	existing.DiscountRate = models.NewMoneyFromDecimal(decimal.NewFromFloat(req.DiscountRate))
-	existing.RechargeThreshold = models.NewMoneyFromDecimal(decimal.NewFromFloat(req.RechargeThreshold))
-	existing.SpendThreshold = models.NewMoneyFromDecimal(decimal.NewFromFloat(req.SpendThreshold))
+	existing.DiscountRate = money.FromDecimal(decimal.NewFromFloat(req.DiscountRate))
+	existing.RechargeThreshold = money.FromDecimal(decimal.NewFromFloat(req.RechargeThreshold))
+	existing.SpendThreshold = money.FromDecimal(decimal.NewFromFloat(req.SpendThreshold))
 	existing.IsDefault = req.IsDefault
 	existing.SortOrder = req.SortOrder
 	if req.IsActive != nil {
@@ -231,7 +232,7 @@ func (h *AdminHandler) BatchUpsertMemberLevelPrices(c *gin.Context) {
 			MemberLevelID: p.MemberLevelID,
 			ProductID:     p.ProductID,
 			SKUID:         p.SKUID,
-			PriceAmount:   models.NewMoneyFromDecimal(decimal.NewFromFloat(p.PriceAmount)),
+			PriceAmount:   money.FromDecimal(decimal.NewFromFloat(p.PriceAmount)),
 		})
 	}
 

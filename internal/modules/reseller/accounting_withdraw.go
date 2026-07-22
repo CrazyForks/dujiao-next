@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -96,14 +97,14 @@ func (s *AccountingWithdrawService) ApplyWithdraw(resellerID uint, input Withdra
 			}
 			lockAmount := remaining.Round(2)
 			remainAmount := rowAmount.Sub(lockAmount).Round(2)
-			row.Amount = models.NewMoneyFromDecimal(lockAmount)
+			row.Amount = money.FromDecimal(lockAmount)
 			row.UpdatedAt = now
 			if err := store.UpdateLedgerEntry(&row); err != nil {
 				return err
 			}
 			remainRow := row
 			remainRow.ID = 0
-			remainRow.Amount = models.NewMoneyFromDecimal(remainAmount)
+			remainRow.Amount = money.FromDecimal(remainAmount)
 			remainRow.Status = models.ResellerLedgerStatusAvailable
 			remainRow.WithdrawRequestID = nil
 			remainRow.IdempotencyKey = fmt.Sprintf("split:%d:%d", row.ID, now.UnixNano())
@@ -121,7 +122,7 @@ func (s *AccountingWithdrawService) ApplyWithdraw(resellerID uint, input Withdra
 		}
 		req := &models.ResellerWithdrawRequest{
 			ResellerID: resellerID,
-			Amount:     models.NewMoneyFromDecimal(amount),
+			Amount:     money.FromDecimal(amount),
 			Currency:   currency,
 			Channel:    channel,
 			Account:    account,

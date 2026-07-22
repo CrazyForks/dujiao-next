@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -27,19 +28,19 @@ func TestDecoratePublicProductDisplayPricePrefersFirstActiveSKU(t *testing.T) {
 	h := &PublicHandler{}
 	product := &models.Product{
 		ID:          1,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("59.90")),
+		PriceAmount: money.FromDecimal(decimal.RequireFromString("59.90")),
 		SKUs: []models.ProductSKU{
 			{
 				ID:          11,
 				IsActive:    true,
 				SortOrder:   100,
-				PriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("89.90")),
+				PriceAmount: money.FromDecimal(decimal.RequireFromString("89.90")),
 			},
 			{
 				ID:          12,
 				IsActive:    true,
 				SortOrder:   10,
-				PriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("49.90")),
+				PriceAmount: money.FromDecimal(decimal.RequireFromString("49.90")),
 			},
 		},
 	}
@@ -58,9 +59,9 @@ func TestDecoratePublicProductForTenantUsesResellerPricesAndHidesMainDiscounts(t
 	product := &models.Product{
 		ID:          1,
 		Slug:        "reseller-display",
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		WholesalePrices: models.WholesalePriceTiers{
-			{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 		},
 		SKUs: []models.ProductSKU{
 			{
@@ -69,7 +70,7 @@ func TestDecoratePublicProductForTenantUsesResellerPricesAndHidesMainDiscounts(t
 				SKUCode:     "VISIBLE",
 				IsActive:    true,
 				SortOrder:   100,
-				PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+				PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 			},
 			{
 				ID:          12,
@@ -77,7 +78,7 @@ func TestDecoratePublicProductForTenantUsesResellerPricesAndHidesMainDiscounts(t
 				SKUCode:     "HIDDEN",
 				IsActive:    true,
 				SortOrder:   10,
-				PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(90)),
+				PriceAmount: money.FromDecimal(decimal.NewFromInt(90)),
 			},
 		},
 	}
@@ -85,9 +86,9 @@ func TestDecoratePublicProductForTenantUsesResellerPricesAndHidesMainDiscounts(t
 		Visible:      true,
 		ProductID:    1,
 		DisplaySKUID: 11,
-		DisplayPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
-		SKUPrices: map[uint]models.Money{
-			11: models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
+		DisplayPrice: money.FromDecimal(decimal.NewFromInt(130)),
+		SKUPrices: map[uint]money.Amount{
+			11: money.FromDecimal(decimal.NewFromInt(130)),
 		},
 		HiddenSKUIDs: map[uint]bool{12: true},
 	}}}
@@ -119,9 +120,9 @@ func TestDecoratePublicProductForTenantHiddenProduct(t *testing.T) {
 	tenant := reseller.ResellerTenantContext("shop.example.test", 10, 99, "shop.example.test")
 	product := &models.Product{
 		ID:          1,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		SKUs: []models.ProductSKU{
-			{ID: 11, ProductID: 1, IsActive: true, PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100))},
+			{ID: 11, ProductID: 1, IsActive: true, PriceAmount: money.FromDecimal(decimal.NewFromInt(100))},
 		},
 	}
 
@@ -134,16 +135,16 @@ func TestDecoratePublicProductForTenantHiddenProduct(t *testing.T) {
 func TestDecoratePublicProductForTenantAllHiddenSKUsReturnsNotListed(t *testing.T) {
 	h := &PublicHandler{pricer: stubResellerDisplayPricer{result: &reseller.DisplayPriceResult{
 		Visible:      true,
-		DisplayPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		DisplayPrice: money.FromDecimal(decimal.NewFromInt(100)),
 		HiddenSKUIDs: map[uint]bool{11: true, 12: true},
 	}}}
 	tenant := reseller.ResellerTenantContext("shop.example.test", 10, 99, "shop.example.test")
 	product := &models.Product{
 		ID:          1,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		SKUs: []models.ProductSKU{
-			{ID: 11, ProductID: 1, IsActive: true, PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100))},
-			{ID: 12, ProductID: 1, IsActive: true, PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(120))},
+			{ID: 11, ProductID: 1, IsActive: true, PriceAmount: money.FromDecimal(decimal.NewFromInt(100))},
+			{ID: 12, ProductID: 1, IsActive: true, PriceAmount: money.FromDecimal(decimal.NewFromInt(120))},
 		},
 	}
 
@@ -170,9 +171,9 @@ func TestDecoratePublicProductForTenantInvalidDisplayPricingIsHidden(t *testing.
 			tenant := reseller.ResellerTenantContext("shop.example.test", 10, 99, "shop.example.test")
 			product := &models.Product{
 				ID:          1,
-				PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+				PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 				SKUs: []models.ProductSKU{
-					{ID: 11, ProductID: 1, IsActive: true, PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100))},
+					{ID: 11, ProductID: 1, IsActive: true, PriceAmount: money.FromDecimal(decimal.NewFromInt(100))},
 				},
 			}
 			_, err := h.decoratePublicProductForTenant(product, nil, tenant, &reseller.DisplayPricingBatch{})

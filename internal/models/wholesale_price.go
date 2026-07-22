@@ -3,16 +3,18 @@ package models
 import (
 	"database/sql/driver"
 	"encoding/json"
+
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // WholesalePriceTier 商品批发价阶梯。
 // SKUID/SKUCode 为空表示全 SKU 通用；MinQuantity 表示购买数量达到该值时，
 // UnitPrice 作为每件成交价参与下单计价。
 type WholesalePriceTier struct {
-	SKUID       uint   `json:"sku_id,omitempty"`
-	SKUCode     string `json:"sku_code,omitempty"`
-	MinQuantity int    `json:"min_quantity"`
-	UnitPrice   Money  `json:"unit_price"`
+	SKUID       uint         `json:"sku_id,omitempty"`
+	SKUCode     string       `json:"sku_code,omitempty"`
+	MinQuantity int          `json:"min_quantity"`
+	UnitPrice   money.Amount `json:"unit_price"`
 }
 
 // WholesalePriceTiers 商品批发价阶梯列表。

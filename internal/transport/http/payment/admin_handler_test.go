@@ -16,6 +16,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -145,7 +146,7 @@ func setupAdminPaymentHandlerTest(t *testing.T) (*AdminHandler, adminPaymentFixt
 			ProviderType:    constants.PaymentProviderOfficial,
 			ChannelType:     constants.PaymentChannelTypeAlipay,
 			InteractionMode: constants.PaymentInteractionQR,
-			Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+			Amount:          money.FromDecimal(decimal.NewFromInt(100)),
 			Currency:        "CNY",
 			Status:          constants.PaymentStatusPending,
 			ProviderRef:     "order_payment_ref_user1",
@@ -159,7 +160,7 @@ func setupAdminPaymentHandlerTest(t *testing.T) (*AdminHandler, adminPaymentFixt
 			ProviderType:    constants.PaymentProviderOfficial,
 			ChannelType:     constants.PaymentChannelTypeAlipay,
 			InteractionMode: constants.PaymentInteractionQR,
-			Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
+			Amount:          money.FromDecimal(decimal.NewFromInt(50)),
 			Currency:        "CNY",
 			Status:          constants.PaymentStatusPending,
 			ProviderRef:     "recharge_payment_ref_user1",
@@ -173,7 +174,7 @@ func setupAdminPaymentHandlerTest(t *testing.T) (*AdminHandler, adminPaymentFixt
 			ProviderType:    constants.PaymentProviderOfficial,
 			ChannelType:     constants.PaymentChannelTypeWechat,
 			InteractionMode: constants.PaymentInteractionQR,
-			Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(60)),
+			Amount:          money.FromDecimal(decimal.NewFromInt(60)),
 			Currency:        "CNY",
 			Status:          constants.PaymentStatusPending,
 			ProviderRef:     "recharge_payment_ref_user2",

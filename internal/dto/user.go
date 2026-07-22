@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // UserProfileResp 用户资料响应
@@ -15,8 +16,8 @@ type UserProfileResp struct {
 	EmailVerifiedAt    *time.Time   `json:"email_verified_at"`
 	Locale             string       `json:"locale"`
 	MemberLevelID      uint         `json:"member_level_id"`
-	TotalRecharged     models.Money `json:"total_recharged"`
-	TotalSpent         models.Money `json:"total_spent"`
+	TotalRecharged     money.Amount `json:"total_recharged"`
+	TotalSpent         money.Amount `json:"total_spent"`
 	EmailChangeMode    string       `json:"email_change_mode,omitempty"`
 	PasswordChangeMode string       `json:"password_change_mode,omitempty"`
 }

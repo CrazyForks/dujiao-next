@@ -6,8 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
-
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -55,7 +54,7 @@ func TestSQLiteConcurrentTransactionsDoNotDeadlock(t *testing.T) {
 			defer wg.Done()
 			_, _, recErr := svc.Recharge(WalletRechargeInput{
 				UserID:   userID,
-				Amount:   models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+				Amount:   money.FromDecimal(decimal.NewFromInt(100)),
 				Currency: "CNY",
 				Remark:   fmt.Sprintf("concurrency_smoke_%d", userID),
 			})

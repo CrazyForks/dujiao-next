@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -295,9 +296,9 @@ func normalizeProductSettingInput(profile *models.ResellerProfile, product *mode
 		SKUID:             input.SKUID,
 		IsListed:          input.IsListed,
 		PricingMode:       mode,
-		MarkupPercent:     models.NewMoneyFromDecimal(input.MarkupPercent.Round(2)),
-		FixedMarkupAmount: models.NewMoneyFromDecimal(input.FixedMarkupAmount.Round(2)),
-		FixedPriceAmount:  models.NewMoneyFromDecimal(input.FixedPriceAmount.Round(2)),
+		MarkupPercent:     money.FromDecimal(input.MarkupPercent.Round(2)),
+		FixedMarkupAmount: money.FromDecimal(input.FixedMarkupAmount.Round(2)),
+		FixedPriceAmount:  money.FromDecimal(input.FixedPriceAmount.Round(2)),
 		SortOrder:         input.SortOrder,
 	}
 	if !setting.IsListed {
@@ -446,9 +447,9 @@ func buildPreviewSetting(input ProductSettingInput) (models.ResellerProductSetti
 		SKUID:             input.SKUID,
 		IsListed:          input.IsListed,
 		PricingMode:       mode,
-		MarkupPercent:     models.NewMoneyFromDecimal(input.MarkupPercent.Round(2)),
-		FixedMarkupAmount: models.NewMoneyFromDecimal(input.FixedMarkupAmount.Round(2)),
-		FixedPriceAmount:  models.NewMoneyFromDecimal(input.FixedPriceAmount.Round(2)),
+		MarkupPercent:     money.FromDecimal(input.MarkupPercent.Round(2)),
+		FixedMarkupAmount: money.FromDecimal(input.FixedMarkupAmount.Round(2)),
+		FixedPriceAmount:  money.FromDecimal(input.FixedPriceAmount.Round(2)),
 		SortOrder:         input.SortOrder,
 	}, nil
 }

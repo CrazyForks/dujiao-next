@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/modules/coupon"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -58,9 +59,9 @@ func buildCreateCouponInputFromRequest(req CreateCouponRequest) (coupon.CreateCo
 	return coupon.CreateCouponInput{
 		Code:                   req.Code,
 		Type:                   req.Type,
-		Value:                  models.NewMoneyFromDecimal(decimal.NewFromFloat(req.Value)),
-		MinAmount:              models.NewMoneyFromDecimal(decimal.NewFromFloat(req.MinAmount)),
-		MaxDiscount:            models.NewMoneyFromDecimal(decimal.NewFromFloat(req.MaxDiscount)),
+		Value:                  money.FromDecimal(decimal.NewFromFloat(req.Value)),
+		MinAmount:              money.FromDecimal(decimal.NewFromFloat(req.MinAmount)),
+		MaxDiscount:            money.FromDecimal(decimal.NewFromFloat(req.MaxDiscount)),
 		UsageLimit:             req.UsageLimit,
 		PerUserLimit:           req.PerUserLimit,
 		DisabledWholesalePrice: req.DisabledWholesalePrice,

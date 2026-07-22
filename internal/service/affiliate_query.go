@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -25,9 +26,9 @@ type (
 func (s *AffiliateService) GetUserDashboard(userID uint) (AffiliateDashboard, error) {
 	dashboard := AffiliateDashboard{
 		Opened:              false,
-		PendingCommission:   models.NewMoneyFromDecimal(decimal.Zero),
-		AvailableCommission: models.NewMoneyFromDecimal(decimal.Zero),
-		WithdrawnCommission: models.NewMoneyFromDecimal(decimal.Zero),
+		PendingCommission:   money.FromDecimal(decimal.Zero),
+		AvailableCommission: money.FromDecimal(decimal.Zero),
+		WithdrawnCommission: money.FromDecimal(decimal.Zero),
 	}
 	if userID == 0 || s.repo == nil {
 		return dashboard, nil
@@ -123,9 +124,9 @@ func (s *AffiliateService) ListAdminUsers(filter repository.AffiliateProfileList
 			ClickCount:          agg.ClickCount,
 			ValidOrderCount:     agg.ValidOrderCount,
 			ConversionRate:      calcAffiliateConversion(agg.ValidOrderCount, agg.ClickCount),
-			PendingCommission:   models.NewMoneyFromDecimal(agg.PendingCommission.Round(2)),
-			AvailableCommission: models.NewMoneyFromDecimal(agg.AvailableCommission.Round(2)),
-			WithdrawnCommission: models.NewMoneyFromDecimal(agg.WithdrawnCommission.Round(2)),
+			PendingCommission:   money.FromDecimal(agg.PendingCommission.Round(2)),
+			AvailableCommission: money.FromDecimal(agg.AvailableCommission.Round(2)),
+			WithdrawnCommission: money.FromDecimal(agg.WithdrawnCommission.Round(2)),
 		}
 		result = append(result, AffiliateAdminUserItem{
 			Profile: row,
@@ -166,9 +167,9 @@ func (s *AffiliateService) ListAdminWithdraws(filter AffiliateAdminWithdrawListF
 
 func (s *AffiliateService) buildProfileStats(profileID uint) (AffiliateStats, error) {
 	stats := AffiliateStats{
-		PendingCommission:   models.NewMoneyFromDecimal(decimal.Zero),
-		AvailableCommission: models.NewMoneyFromDecimal(decimal.Zero),
-		WithdrawnCommission: models.NewMoneyFromDecimal(decimal.Zero),
+		PendingCommission:   money.FromDecimal(decimal.Zero),
+		AvailableCommission: money.FromDecimal(decimal.Zero),
+		WithdrawnCommission: money.FromDecimal(decimal.Zero),
 	}
 	if profileID == 0 || s.repo == nil {
 		return stats, nil
@@ -203,9 +204,9 @@ func (s *AffiliateService) buildProfileStats(profileID uint) (AffiliateStats, er
 	stats.ClickCount = clickCount
 	stats.ValidOrderCount = validOrders
 	stats.ConversionRate = calcAffiliateConversion(validOrders, clickCount)
-	stats.PendingCommission = models.NewMoneyFromDecimal(pendingAmount)
-	stats.AvailableCommission = models.NewMoneyFromDecimal(availableAmount)
-	stats.WithdrawnCommission = models.NewMoneyFromDecimal(withdrawnAmount)
+	stats.PendingCommission = money.FromDecimal(pendingAmount)
+	stats.AvailableCommission = money.FromDecimal(availableAmount)
+	stats.WithdrawnCommission = money.FromDecimal(withdrawnAmount)
 	return stats, nil
 }
 

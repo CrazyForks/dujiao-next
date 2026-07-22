@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -67,10 +68,10 @@ func TestWalletRepositoryListRechargeOrdersAdmin(t *testing.T) {
 			ProviderType:    constants.PaymentProviderOfficial,
 			ChannelType:     constants.PaymentChannelTypeAlipay,
 			InteractionMode: constants.PaymentInteractionRedirect,
-			Amount:          models.NewMoneyFromDecimal(decimal.RequireFromString("50.00")),
-			PayableAmount:   models.NewMoneyFromDecimal(decimal.RequireFromString("50.00")),
-			FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-			FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+			Amount:          money.FromDecimal(decimal.RequireFromString("50.00")),
+			PayableAmount:   money.FromDecimal(decimal.RequireFromString("50.00")),
+			FeeRate:         money.FromDecimal(decimal.Zero),
+			FeeAmount:       money.FromDecimal(decimal.Zero),
 			Currency:        "CNY",
 			Status:          constants.WalletRechargeStatusSuccess,
 			PaidAt:          &paidAt1,
@@ -85,10 +86,10 @@ func TestWalletRepositoryListRechargeOrdersAdmin(t *testing.T) {
 			ProviderType:    constants.PaymentProviderOfficial,
 			ChannelType:     constants.PaymentChannelTypeWechat,
 			InteractionMode: constants.PaymentInteractionQR,
-			Amount:          models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
-			PayableAmount:   models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
-			FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-			FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+			Amount:          money.FromDecimal(decimal.RequireFromString("80.00")),
+			PayableAmount:   money.FromDecimal(decimal.RequireFromString("80.00")),
+			FeeRate:         money.FromDecimal(decimal.Zero),
+			FeeAmount:       money.FromDecimal(decimal.Zero),
 			Currency:        "CNY",
 			Status:          constants.WalletRechargeStatusPending,
 			CreatedAt:       now.Add(-20 * time.Minute),
@@ -102,10 +103,10 @@ func TestWalletRepositoryListRechargeOrdersAdmin(t *testing.T) {
 			ProviderType:    constants.PaymentProviderOfficial,
 			ChannelType:     constants.PaymentChannelTypeAlipay,
 			InteractionMode: constants.PaymentInteractionRedirect,
-			Amount:          models.NewMoneyFromDecimal(decimal.RequireFromString("120.00")),
-			PayableAmount:   models.NewMoneyFromDecimal(decimal.RequireFromString("120.00")),
-			FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-			FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+			Amount:          money.FromDecimal(decimal.RequireFromString("120.00")),
+			PayableAmount:   money.FromDecimal(decimal.RequireFromString("120.00")),
+			FeeRate:         money.FromDecimal(decimal.Zero),
+			FeeAmount:       money.FromDecimal(decimal.Zero),
 			Currency:        "CNY",
 			Status:          constants.WalletRechargeStatusSuccess,
 			PaidAt:          &paidAt3,

@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -15,7 +16,7 @@ func TestResellerLedgerRespOmitsSensitiveSnapshotFields(t *testing.T) {
 		ResellerID:     99,
 		OrderID:        &orderID,
 		Type:           models.ResellerLedgerTypeOrderProfit,
-		Amount:         models.NewMoneyFromDecimal(decimal.RequireFromString("12.34")),
+		Amount:         money.FromDecimal(decimal.RequireFromString("12.34")),
 		Currency:       "USD",
 		IdempotencyKey: "order_profit:10",
 		MetadataJSON:   jsonmap.JSON{"pricing_snapshot_json": "hidden"},

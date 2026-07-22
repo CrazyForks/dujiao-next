@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/shopspring/decimal"
@@ -11,7 +12,7 @@ import (
 
 func TestConvertUpstreamWholesalePricesRemapsUpstreamSKUScope(t *testing.T) {
 	tiers := convertUpstreamWholesalePrices(models.WholesalePriceTiers{
-		{SKUID: 201, MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+		{SKUID: 201, MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}, decimal.NewFromInt(1), decimal.Zero, "none", buildUpstreamWholesaleSKUIndex(
 		[]models.ProductSKU{{ID: 11, SKUCode: "SKU-A"}},
 		[]upstream.UpstreamSKU{{ID: 201, SKUCode: "SKU-A"}},
@@ -28,7 +29,7 @@ func TestConvertUpstreamWholesalePricesRemapsUpstreamSKUScope(t *testing.T) {
 
 func TestConvertUpstreamWholesalePricesDropsUnmappedUpstreamSKUID(t *testing.T) {
 	tiers := convertUpstreamWholesalePrices(models.WholesalePriceTiers{
-		{SKUID: 201, MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+		{SKUID: 201, MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}, decimal.NewFromInt(1), decimal.Zero, "none")
 
 	if len(tiers) != 0 {

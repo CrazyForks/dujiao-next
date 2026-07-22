@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/bepusdt"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -58,7 +58,7 @@ func TestBepusdtAdapter_CreatePayment_QRModeUsesWalletAddress(t *testing.T) {
 	result, err := a.CreatePayment(context.Background(), validBepusdtConfig(server.URL), CreateInput{
 		OrderNo:     "ORDER-QR-1",
 		Subject:     "测试商品",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("28.88")),
 		ChannelType: constants.PaymentChannelTypeUsdtTrc20,
 		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},
 	})
@@ -92,7 +92,7 @@ func TestBepusdtAdapter_CreatePayment_RedirectModeKeepsCashierURL(t *testing.T) 
 	result, err := a.CreatePayment(context.Background(), validBepusdtConfig(server.URL), CreateInput{
 		OrderNo:     "ORDER-REDIRECT-1",
 		Subject:     "测试商品",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("28.88")),
 		ChannelType: constants.PaymentChannelTypeUsdtTrc20,
 		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
 	})
@@ -119,7 +119,7 @@ func TestBepusdtAdapter_CreatePayment_ProviderChannelUsesConfiguredTradeType(t *
 	result, err := a.CreatePayment(context.Background(), cfg, CreateInput{
 		OrderNo:     "ORDER-PROVIDER-CHANNEL-1",
 		Subject:     "测试商品",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("28.88")),
 		ChannelType: constants.PaymentProviderBepusdt,
 		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
 	})
@@ -145,7 +145,7 @@ func TestBepusdtAdapter_CreatePayment_MissingTradeTypeUsesLegacyDefault(t *testi
 	result, err := a.CreatePayment(context.Background(), cfg, CreateInput{
 		OrderNo:     "ORDER-LEGACY-CHANNEL-1",
 		Subject:     "测试商品",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("28.88")),
 		ChannelType: constants.PaymentChannelTypeTrx,
 		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
 	})
@@ -213,7 +213,7 @@ func TestBepusdtAdapter_CreatePayment_CashierModeUsesCreateOrder(t *testing.T) {
 	result, err := a.CreatePayment(context.Background(), cfg, CreateInput{
 		OrderNo:     "ORDER-CASHIER-1",
 		Subject:     "测试商品",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("28.88")),
 		ChannelType: constants.PaymentProviderBepusdt,
 		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
 	})
@@ -247,7 +247,7 @@ func TestBepusdtAdapter_CreatePayment_CashierModeRejectsQR(t *testing.T) {
 
 	_, err := a.CreatePayment(context.Background(), cfg, CreateInput{
 		OrderNo:     "ORDER-CASHIER-QR",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("28.88")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("28.88")),
 		ChannelType: constants.PaymentProviderBepusdt,
 		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},
 	})

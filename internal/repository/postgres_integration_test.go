@@ -17,6 +17,7 @@ import (
 	contentgormstore "github.com/dujiao-next/internal/modules/content/store/gormstore"
 	dashboardgormstore "github.com/dujiao-next/internal/modules/dashboard/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/driver/postgres"
@@ -91,7 +92,7 @@ func TestPostgresLocalizedJSONSearchRepositories(t *testing.T) {
 		Slug:             "pg-product-rocket",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "火箭会员"},
 		DescriptionJSON:  jsonmap.JSON{"en-US": "rocket booster package"},
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(99)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(99)),
 		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
 		ManualStockTotal: 10,
@@ -290,7 +291,7 @@ func TestPostgresDashboardQueries(t *testing.T) {
 		CategoryID:      category.ID,
 		Slug:            "pg-dashboard-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "仪表盘商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(120)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(120)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -304,9 +305,9 @@ func TestPostgresDashboardQueries(t *testing.T) {
 		UserID:         1,
 		Status:         constants.OrderStatusPaid,
 		Currency:       "USD",
-		OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(120)),
-		DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(120)),
+		OriginalAmount: money.FromDecimal(decimal.NewFromInt(120)),
+		DiscountAmount: money.FromDecimal(decimal.Zero),
+		TotalAmount:    money.FromDecimal(decimal.NewFromInt(120)),
 		CreatedAt:      now,
 	}
 	if err := db.Create(order).Error; err != nil {
@@ -317,11 +318,11 @@ func TestPostgresDashboardQueries(t *testing.T) {
 		OrderID:           order.ID,
 		ProductID:         product.ID,
 		TitleJSON:         jsonmap.JSON{"zh-CN": "仪表盘商品"},
-		UnitPrice:         models.NewMoneyFromDecimal(decimal.NewFromInt(120)),
+		UnitPrice:         money.FromDecimal(decimal.NewFromInt(120)),
 		Quantity:          2,
-		TotalPrice:        models.NewMoneyFromDecimal(decimal.NewFromInt(240)),
-		CouponDiscount:    models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
-		PromotionDiscount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		TotalPrice:        money.FromDecimal(decimal.NewFromInt(240)),
+		CouponDiscount:    money.FromDecimal(decimal.NewFromInt(20)),
+		PromotionDiscount: money.FromDecimal(decimal.NewFromInt(10)),
 		FulfillmentType:   constants.FulfillmentTypeManual,
 		CreatedAt:         now,
 		UpdatedAt:         now,
@@ -336,9 +337,9 @@ func TestPostgresDashboardQueries(t *testing.T) {
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeAlipay,
 		InteractionMode: constants.PaymentInteractionRedirect,
-		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(120)),
-		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+		Amount:          money.FromDecimal(decimal.NewFromInt(120)),
+		FeeRate:         money.FromDecimal(decimal.Zero),
+		FeeAmount:       money.FromDecimal(decimal.Zero),
 		Currency:        "USD",
 		Status:          constants.PaymentStatusSuccess,
 		CreatedAt:       now,

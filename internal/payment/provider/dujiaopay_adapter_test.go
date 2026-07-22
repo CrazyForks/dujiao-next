@@ -10,8 +10,8 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 func TestDujiaoPayAdapter_Type(t *testing.T) {
@@ -84,7 +84,7 @@ func TestDujiaoPayAdapter_CreatePaymentCashierRejectsQRMode(t *testing.T) {
 		"order_mode":     "cashier",
 	}, CreateInput{
 		OrderNo:     "PAY-2",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("10")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("10")),
 		Currency:    "USD",
 		ChannelType: "dujiaopay",
 		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},
@@ -112,7 +112,7 @@ func TestDujiaoPayAdapter_CreatePaymentCashierRedirect(t *testing.T) {
 		"allowed_methods": "tron-usdt,base-usdc",
 	}, CreateInput{
 		OrderNo:     "PAY-2",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("10")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("10")),
 		Currency:    "USD",
 		ChannelType: "dujiaopay",
 		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionRedirect},
@@ -147,7 +147,7 @@ func TestDujiaoPayAdapter_CreatePaymentQRCodeModeUsesWalletAddress(t *testing.T)
 		"fiat_currency":  "USD",
 	}, CreateInput{
 		OrderNo:        "PAY-1",
-		Amount:         models.NewMoneyFromDecimal(decimal.RequireFromString("10")),
+		Amount:         money.FromDecimal(decimal.RequireFromString("10")),
 		Currency:       "USD",
 		ChannelType:    "tron-usdt",
 		ReturnURLQuery: map[string]string{"biz_type": "order", "order_no": "ORDER-1"},

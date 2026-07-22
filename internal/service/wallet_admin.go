@@ -6,6 +6,7 @@ import (
 	"time"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -17,7 +18,7 @@ import (
 // WalletRechargeInput 用户充值输入
 type WalletRechargeInput struct {
 	UserID   uint
-	Amount   models.Money
+	Amount   money.Amount
 	Currency string
 	Remark   string
 }
@@ -25,7 +26,7 @@ type WalletRechargeInput struct {
 // WalletAdjustInput 管理员余额调整输入
 type WalletAdjustInput struct {
 	UserID   uint
-	Delta    models.Money
+	Delta    money.Amount
 	Currency string
 	Remark   string
 }
@@ -33,7 +34,7 @@ type WalletAdjustInput struct {
 // AdminRefundToWalletInput 管理员退款到余额输入
 type AdminRefundToWalletInput struct {
 	OrderID uint
-	Amount  models.Money
+	Amount  money.Amount
 	Remark  string
 }
 
@@ -126,7 +127,7 @@ func (s *WalletService) AdminRefundToWallet(input AdminRefundToWalletInput) (*mo
 		}
 		before := account.Balance.Decimal.Round(2)
 		after := before.Add(amount).Round(2)
-		account.Balance = models.NewMoneyFromDecimal(after)
+		account.Balance = money.FromDecimal(after)
 		account.UpdatedAt = time.Now()
 		if err := repo.UpdateAccount(account); err != nil {
 			return ErrWalletAccountUpdateFailed
@@ -135,7 +136,7 @@ func (s *WalletService) AdminRefundToWallet(input AdminRefundToWalletInput) (*mo
 		newRefunded := refundedBefore.Add(amount).Round(2)
 		now := time.Now()
 		updates := map[string]interface{}{
-			"refunded_amount": models.NewMoneyFromDecimal(newRefunded),
+			"refunded_amount": money.FromDecimal(newRefunded),
 			"updated_at":      now,
 		}
 		markRefunded := newRefunded.GreaterThanOrEqual(order.TotalAmount.Decimal.Round(2))
@@ -178,9 +179,9 @@ func (s *WalletService) AdminRefundToWallet(input AdminRefundToWalletInput) (*mo
 			OrderID:       &order.ID,
 			Type:          constants.WalletTxnTypeAdminRefund,
 			Direction:     constants.WalletTxnDirectionIn,
-			Amount:        models.NewMoneyFromDecimal(amount),
-			BalanceBefore: models.NewMoneyFromDecimal(before),
-			BalanceAfter:  models.NewMoneyFromDecimal(after),
+			Amount:        money.FromDecimal(amount),
+			BalanceBefore: money.FromDecimal(before),
+			BalanceAfter:  money.FromDecimal(after),
 			Currency:      normalizeWalletCurrency(order.Currency),
 			Reference:     reference,
 			Remark:        remark,
@@ -195,7 +196,7 @@ func (s *WalletService) AdminRefundToWallet(input AdminRefundToWalletInput) (*mo
 			GuestEmail: order.GuestEmail,
 			OrderID:    order.ID,
 			Type:       constants.OrderRefundTypeWallet,
-			Amount:     models.NewMoneyFromDecimal(amount),
+			Amount:     money.FromDecimal(amount),
 			Currency:   normalizeWalletCurrency(order.Currency),
 			Remark:     recordRemark,
 			CreatedAt:  now,

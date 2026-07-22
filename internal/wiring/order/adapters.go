@@ -15,6 +15,7 @@ import (
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/money"
 	ordertransport "github.com/dujiao-next/internal/transport/http/order"
 )
 
@@ -217,7 +218,7 @@ func (a orderAdminRefundAdapter) GetAdminRefundItem(id uint) (*ordertransport.Ad
 	return &mapped, nil
 }
 
-func (a orderAdminRefundAdapter) ParseRefundAmount(raw string) (models.Money, error) {
+func (a orderAdminRefundAdapter) ParseRefundAmount(raw string) (money.Amount, error) {
 	amount, err := a.refunds.ParseRefundAmount(raw)
 	return amount, mapOrderTransportError(err)
 }

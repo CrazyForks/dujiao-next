@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonslice"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -20,8 +21,8 @@ func TestGetAvailableChannelsFilters(t *testing.T) {
 		Name:               "guest-order-in-range",
 		IsActive:           true,
 		HideAmountOutRange: true,
-		MinAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString("10.00")),
-		MaxAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
+		MinAmount:          money.FromDecimal(decimal.RequireFromString("10.00")),
+		MaxAmount:          money.FromDecimal(decimal.RequireFromString("100.00")),
 		PaymentRoles:       jsonslice.Strings{constants.PaymentRoleGuest},
 		PaymentTypes:       jsonslice.Strings{constants.PaymentTypeOrder},
 	})
@@ -29,8 +30,8 @@ func TestGetAvailableChannelsFilters(t *testing.T) {
 		Name:               "guest-order-out-range",
 		IsActive:           true,
 		HideAmountOutRange: true,
-		MinAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
-		MaxAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString("200.00")),
+		MinAmount:          money.FromDecimal(decimal.RequireFromString("100.00")),
+		MaxAmount:          money.FromDecimal(decimal.RequireFromString("200.00")),
 		PaymentRoles:       jsonslice.Strings{constants.PaymentRoleGuest},
 		PaymentTypes:       jsonslice.Strings{constants.PaymentTypeOrder},
 	})
@@ -71,7 +72,7 @@ func TestGetAvailableChannelsFilters(t *testing.T) {
 		t.Fatalf("mark inactive channel failed: %v", err)
 	}
 
-	amount50 := models.NewMoneyFromDecimal(decimal.RequireFromString("50.00"))
+	amount50 := money.FromDecimal(decimal.RequireFromString("50.00"))
 	memberLv2 := &models.User{MemberLevelID: 2}
 	memberLv3 := &models.User{MemberLevelID: 3}
 
@@ -162,16 +163,16 @@ func createAvailableChannelFixture(t *testing.T, db *gorm.DB, channel models.Pay
 		channel.InteractionMode = constants.PaymentInteractionRedirect
 	}
 	if channel.FeeRate.Decimal.Equal(decimal.Zero) {
-		channel.FeeRate = models.NewMoneyFromDecimal(decimal.Zero)
+		channel.FeeRate = money.FromDecimal(decimal.Zero)
 	}
 	if channel.FixedFee.Decimal.Equal(decimal.Zero) {
-		channel.FixedFee = models.NewMoneyFromDecimal(decimal.Zero)
+		channel.FixedFee = money.FromDecimal(decimal.Zero)
 	}
 	if channel.MinAmount.Decimal.Equal(decimal.Zero) {
-		channel.MinAmount = models.NewMoneyFromDecimal(decimal.Zero)
+		channel.MinAmount = money.FromDecimal(decimal.Zero)
 	}
 	if channel.MaxAmount.Decimal.Equal(decimal.Zero) {
-		channel.MaxAmount = models.NewMoneyFromDecimal(decimal.Zero)
+		channel.MaxAmount = money.FromDecimal(decimal.Zero)
 	}
 	if !channel.IsActive {
 		// 显式传 false 用于测试时，保持原值。

@@ -12,8 +12,8 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/models"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -130,8 +130,8 @@ func TestBuildOrderStatusContent(t *testing.T) {
 			input := OrderStatusEmailInput{
 				OrderNo:         pickOrderNo(tt.status),
 				Status:          tt.status,
-				Amount:          models.NewMoneyFromDecimal(decimal.NewFromFloat(19.8)),
-				RefundAmount:    models.NewMoneyFromDecimal(decimal.NewFromFloat(8.8)),
+				Amount:          money.FromDecimal(decimal.NewFromFloat(19.8)),
+				RefundAmount:    money.FromDecimal(decimal.NewFromFloat(8.8)),
 				RefundReason:    "manual refund",
 				Currency:        "USD",
 				SiteName:        "Example Site",
@@ -247,7 +247,7 @@ func TestBuildOrderStatusContentFromTemplateIncludesSiteBrand(t *testing.T) {
 	input := OrderStatusEmailInput{
 		OrderNo:         "DJ-SITE-001",
 		Status:          "paid",
-		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		Amount:          money.FromDecimal(decimal.NewFromInt(10)),
 		Currency:        "CNY",
 		SiteName:        " 示例站点 ",
 		SiteURL:         " https://example.com/shop ",

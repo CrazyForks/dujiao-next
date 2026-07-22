@@ -22,6 +22,7 @@ import (
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	resellerhttp "github.com/dujiao-next/internal/transport/http/reseller"
 
 	"github.com/gin-gonic/gin"
@@ -312,8 +313,8 @@ func TestAdminResellerManagementGetProfileDetailAggregatesOperationalData(t *tes
 		SKUID:             skus[0].ID,
 		IsListed:          false,
 		PricingMode:       models.ResellerPricingModeFixedPrice,
-		FixedPriceAmount:  models.NewMoneyFromDecimal(decimal.RequireFromString("129.00")),
-		FixedMarkupAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		FixedPriceAmount:  money.FromDecimal(decimal.RequireFromString("129.00")),
+		FixedMarkupAmount: money.FromDecimal(decimal.Zero),
 	}); err != nil {
 		t.Fatalf("upsert setting failed: %v", err)
 	}
@@ -322,11 +323,11 @@ func TestAdminResellerManagementGetProfileDetailAggregatesOperationalData(t *tes
 		Status:               constants.OrderStatusPaid,
 		Currency:             "CNY",
 		GuestEmail:           "buyer@example.test",
-		TotalAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString("129.00")),
-		OriginalAmount:       models.NewMoneyFromDecimal(decimal.RequireFromString("129.00")),
+		TotalAmount:          money.FromDecimal(decimal.RequireFromString("129.00")),
+		OriginalAmount:       money.FromDecimal(decimal.RequireFromString("129.00")),
 		ResellerID:           &profile.ID,
 		ResellerDomain:       "r1.shop.example.test",
-		ResellerProfitAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("29.00")),
+		ResellerProfitAmount: money.FromDecimal(decimal.RequireFromString("29.00")),
 		PaidAt:               &now,
 	}
 	if err := db.Create(&order).Error; err != nil {
@@ -337,11 +338,11 @@ func TestAdminResellerManagementGetProfileDetailAggregatesOperationalData(t *tes
 		ProductID:       product.ID,
 		SKUID:           skus[0].ID,
 		Quantity:        1,
-		UnitPrice:       models.NewMoneyFromDecimal(decimal.RequireFromString("129.00")),
-		TotalPrice:      models.NewMoneyFromDecimal(decimal.RequireFromString("129.00")),
+		UnitPrice:       money.FromDecimal(decimal.RequireFromString("129.00")),
+		TotalPrice:      money.FromDecimal(decimal.RequireFromString("129.00")),
 		TitleJSON:       jsonmap.JSON{"zh-CN": "后台商品"},
 		SKUSnapshotJSON: jsonmap.JSON{"sku_code": "A"},
-		CostPrice:       models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
+		CostPrice:       money.FromDecimal(decimal.RequireFromString("80.00")),
 	}
 	if err := db.Create(&orderItem).Error; err != nil {
 		t.Fatalf("create order item failed: %v", err)
@@ -352,23 +353,23 @@ func TestAdminResellerManagementGetProfileDetailAggregatesOperationalData(t *tes
 		Domain:         "r1.shop.example.test",
 		Currency:       "CNY",
 		ResellerUserID: profile.UserID,
-		BaseAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
-		ResellerAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("129.00")),
-		ProfitAmount:   models.NewMoneyFromDecimal(decimal.RequireFromString("29.00")),
+		BaseAmount:     money.FromDecimal(decimal.RequireFromString("100.00")),
+		ResellerAmount: money.FromDecimal(decimal.RequireFromString("129.00")),
+		ProfitAmount:   money.FromDecimal(decimal.RequireFromString("29.00")),
 		ProfitEligible: true,
 	}
 	if err := db.Create(&snapshot).Error; err != nil {
 		t.Fatalf("create snapshot failed: %v", err)
 	}
-	ledger := models.ResellerLedgerEntry{ResellerID: profile.ID, OrderID: &order.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: models.NewMoneyFromDecimal(decimal.RequireFromString("29.00")), Currency: "CNY", IdempotencyKey: "ledger-detail-1", Status: models.ResellerLedgerStatusAvailable}
+	ledger := models.ResellerLedgerEntry{ResellerID: profile.ID, OrderID: &order.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.RequireFromString("29.00")), Currency: "CNY", IdempotencyKey: "ledger-detail-1", Status: models.ResellerLedgerStatusAvailable}
 	if err := db.Create(&ledger).Error; err != nil {
 		t.Fatalf("create ledger failed: %v", err)
 	}
-	balance := models.ResellerBalanceAccount{ResellerID: profile.ID, Currency: "CNY", Status: models.ResellerBalanceStatusNormal, AvailableAmountCache: models.NewMoneyFromDecimal(decimal.RequireFromString("29.00"))}
+	balance := models.ResellerBalanceAccount{ResellerID: profile.ID, Currency: "CNY", Status: models.ResellerBalanceStatusNormal, AvailableAmountCache: money.FromDecimal(decimal.RequireFromString("29.00"))}
 	if err := db.Create(&balance).Error; err != nil {
 		t.Fatalf("create balance failed: %v", err)
 	}
-	withdraw := models.ResellerWithdrawRequest{ResellerID: profile.ID, Amount: models.NewMoneyFromDecimal(decimal.RequireFromString("10.00")), Currency: "CNY", Channel: "bank", Account: "**** 1234", Status: models.ResellerWithdrawStatusPending}
+	withdraw := models.ResellerWithdrawRequest{ResellerID: profile.ID, Amount: money.FromDecimal(decimal.RequireFromString("10.00")), Currency: "CNY", Channel: "bank", Account: "**** 1234", Status: models.ResellerWithdrawStatusPending}
 	if err := db.Create(&withdraw).Error; err != nil {
 		t.Fatalf("create withdraw failed: %v", err)
 	}
@@ -502,15 +503,15 @@ func seedResellerProductSettingProductForAdminHandler(t *testing.T, db *gorm.DB)
 		CategoryID:      category.ID,
 		Slug:            fmt.Sprintf("admin-setting-product-%d", time.Now().UnixNano()),
 		TitleJSON:       jsonmap.JSON{"zh-CN": "后台商品", "zh-TW": "後台商品", "en-US": "Admin Product"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
-		CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
+		PriceAmount:     money.FromDecimal(decimal.RequireFromString("100.00")),
+		CostPriceAmount: money.FromDecimal(decimal.RequireFromString("80.00")),
 		IsActive:        true,
 	}
 	if err := db.Create(&product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
 	skus := []models.ProductSKU{
-		{ProductID: product.ID, SKUCode: "A", PriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")), CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")), IsActive: true},
+		{ProductID: product.ID, SKUCode: "A", PriceAmount: money.FromDecimal(decimal.RequireFromString("100.00")), CostPriceAmount: money.FromDecimal(decimal.RequireFromString("80.00")), IsActive: true},
 	}
 	if err := db.Create(&skus).Error; err != nil {
 		t.Fatalf("create skus failed: %v", err)

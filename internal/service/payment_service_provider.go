@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -122,7 +123,7 @@ func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *m
 	}
 	if strings.TrimSpace(result.AmountSent) != "" {
 		if d, parseErr := decimal.NewFromString(result.AmountSent); parseErr == nil {
-			payment.Amount = models.Money{Decimal: d}
+			payment.Amount = money.Amount{Decimal: d}
 		}
 	}
 	payment.Status = constants.PaymentStatusPending

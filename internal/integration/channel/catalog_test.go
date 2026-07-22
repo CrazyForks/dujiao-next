@@ -17,6 +17,7 @@ import (
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -68,7 +69,7 @@ func TestGetCategoriesIncludesParentIDAndVisibleParent(t *testing.T) {
 		CategoryID:  child.ID,
 		Slug:        "steam-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "Steam Product"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
 	if err := db.Create(&product).Error; err != nil {
@@ -166,7 +167,7 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 		Slug:                "stock-display-product",
 		TitleJSON:           jsonmap.JSON{"zh-CN": "库存展示商品"},
 		ContentJSON:         jsonmap.JSON{"zh-CN": "商品详情"},
-		PriceAmount:         models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:         money.FromDecimal(decimal.NewFromInt(10)),
 		FulfillmentType:     constants.FulfillmentTypeManual,
 		StockDisplayMode:    constants.ProductStockDisplayRange,
 		ManualStockTotal:    42,
@@ -183,7 +184,7 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 		ProductID:        product.ID,
 		SKUCode:          "vip-year",
 		SpecValuesJSON:   jsonmap.JSON{"zh-CN": "年卡"},
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(10)),
 		ManualStockTotal: 42,
 		ManualStockSold:  0,
 		IsActive:         true,

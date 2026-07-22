@@ -17,6 +17,7 @@ import (
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/hibiken/asynq"
 	"github.com/shopspring/decimal"
@@ -96,8 +97,8 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	profile := models.ResellerProfile{
 		UserID:               owner.ID,
 		Status:               models.ResellerProfileStatusActive,
-		DefaultMarkupPercent: models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
-		MaxMarkupPercent:     models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
+		DefaultMarkupPercent: money.FromDecimal(decimal.NewFromInt(20)),
+		MaxMarkupPercent:     money.FromDecimal(decimal.NewFromInt(80)),
 	}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
@@ -106,8 +107,8 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		CategoryID:      category.ID,
 		Slug:            "reseller-order-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "reseller-order-product"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		WholesalePrices: models.WholesalePriceTiers{{MinQuantity: 2, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))}},
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
+		WholesalePrices: models.WholesalePriceTiers{{MinQuantity: 2, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))}},
 		PurchaseType:    constants.ProductPurchaseGuest,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -120,8 +121,8 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	sku := models.ProductSKU{
 		ProductID:        product.ID,
 		SKUCode:          models.DefaultSKUCode,
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		CostPriceAmount:  models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(100)),
+		CostPriceAmount:  money.FromDecimal(decimal.NewFromInt(50)),
 		ManualStockTotal: constants.ManualStockUnlimited,
 		IsActive:         true,
 		CreatedAt:        time.Now(),
@@ -136,7 +137,7 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		SKUID:            sku.ID,
 		IsListed:         true,
 		PricingMode:      models.ResellerPricingModeFixedPrice,
-		FixedPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
+		FixedPriceAmount: money.FromDecimal(decimal.NewFromInt(130)),
 	}
 	if err := db.Create(&setting).Error; err != nil {
 		t.Fatalf("create reseller setting failed: %v", err)
@@ -148,8 +149,8 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		ScopeType:  constants.ScopeTypeProduct,
 		ScopeRefID: product.ID,
 		Type:       constants.PromotionTypeFixed,
-		Value:      models.NewMoneyFromDecimal(decimal.NewFromInt(40)),
-		MinAmount:  models.NewMoneyFromDecimal(decimal.Zero),
+		Value:      money.FromDecimal(decimal.NewFromInt(40)),
+		MinAmount:  money.FromDecimal(decimal.Zero),
 		IsActive:   true,
 		StartsAt:   &startsAt,
 		EndsAt:     &endsAt,
@@ -197,7 +198,7 @@ func (f orderResellerSnapshotFixture) addResellerSnapshotProduct(t *testing.T, s
 		CategoryID:      f.product.CategoryID,
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": slug},
-		PriceAmount:     models.NewMoneyFromDecimal(base),
+		PriceAmount:     money.FromDecimal(base),
 		PurchaseType:    constants.ProductPurchaseGuest,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -210,8 +211,8 @@ func (f orderResellerSnapshotFixture) addResellerSnapshotProduct(t *testing.T, s
 	sku := models.ProductSKU{
 		ProductID:        product.ID,
 		SKUCode:          models.DefaultSKUCode,
-		PriceAmount:      models.NewMoneyFromDecimal(base),
-		CostPriceAmount:  models.NewMoneyFromDecimal(cost),
+		PriceAmount:      money.FromDecimal(base),
+		CostPriceAmount:  money.FromDecimal(cost),
 		ManualStockTotal: constants.ManualStockUnlimited,
 		IsActive:         true,
 		CreatedAt:        time.Now(),
@@ -227,7 +228,7 @@ func (f orderResellerSnapshotFixture) addResellerSnapshotProduct(t *testing.T, s
 			SKUID:             0,
 			IsListed:          true,
 			PricingMode:       models.ResellerPricingModeFixedMarkup,
-			FixedMarkupAmount: models.NewMoneyFromDecimal(fixedMarkup),
+			FixedMarkupAmount: money.FromDecimal(fixedMarkup),
 		}
 		if err := f.db.Create(&setting).Error; err != nil {
 			t.Fatalf("create extra product-level setting failed: %v", err)
@@ -513,9 +514,9 @@ func TestOrderServiceTenantScopedUserQueries(t *testing.T) {
 		UserID:           f.buyer.ID,
 		Status:           constants.OrderStatusPendingPayment,
 		Currency:         constants.SiteCurrencyDefault,
-		OriginalAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		TotalAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		OnlinePaidAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		OriginalAmount:   money.FromDecimal(decimal.NewFromInt(100)),
+		TotalAmount:      money.FromDecimal(decimal.NewFromInt(100)),
+		OnlinePaidAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
@@ -525,9 +526,9 @@ func TestOrderServiceTenantScopedUserQueries(t *testing.T) {
 		UserID:           f.buyer.ID,
 		Status:           constants.OrderStatusPendingPayment,
 		Currency:         constants.SiteCurrencyDefault,
-		OriginalAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
-		TotalAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
-		OnlinePaidAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
+		OriginalAmount:   money.FromDecimal(decimal.NewFromInt(130)),
+		TotalAmount:      money.FromDecimal(decimal.NewFromInt(130)),
+		OnlinePaidAmount: money.FromDecimal(decimal.NewFromInt(130)),
 		ResellerID:       &resellerID,
 		CreatedAt:        now,
 		UpdatedAt:        now,
@@ -575,9 +576,9 @@ func TestOrderServiceTenantScopedGuestQueries(t *testing.T) {
 		GuestPassword:    "pw",
 		Status:           constants.OrderStatusPendingPayment,
 		Currency:         constants.SiteCurrencyDefault,
-		OriginalAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		TotalAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		OnlinePaidAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		OriginalAmount:   money.FromDecimal(decimal.NewFromInt(100)),
+		TotalAmount:      money.FromDecimal(decimal.NewFromInt(100)),
+		OnlinePaidAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
@@ -587,9 +588,9 @@ func TestOrderServiceTenantScopedGuestQueries(t *testing.T) {
 		GuestPassword:    "pw",
 		Status:           constants.OrderStatusPendingPayment,
 		Currency:         constants.SiteCurrencyDefault,
-		OriginalAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
-		TotalAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
-		OnlinePaidAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
+		OriginalAmount:   money.FromDecimal(decimal.NewFromInt(130)),
+		TotalAmount:      money.FromDecimal(decimal.NewFromInt(130)),
+		OnlinePaidAmount: money.FromDecimal(decimal.NewFromInt(130)),
 		ResellerID:       &resellerID,
 		CreatedAt:        now,
 		UpdatedAt:        now,

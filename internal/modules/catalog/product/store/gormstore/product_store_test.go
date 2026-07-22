@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -52,7 +53,7 @@ func createManualProduct(t *testing.T, repo *ProductStore, slug string, total in
 		CategoryID:        1,
 		Slug:              slug,
 		TitleJSON:         jsonmap.JSON{"zh-CN": "测试商品"},
-		PriceAmount:       models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:       money.FromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:      constants.ProductPurchaseMember,
 		FulfillmentType:   constants.FulfillmentTypeManual,
 		ManualStockTotal:  total,
@@ -71,7 +72,7 @@ func createManualSKU(t *testing.T, db *gorm.DB, productID uint, code string, tot
 	sku := &models.ProductSKU{
 		ProductID:         productID,
 		SKUCode:           code,
-		PriceAmount:       models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:       money.FromDecimal(decimal.NewFromInt(100)),
 		ManualStockTotal:  total,
 		ManualStockLocked: locked,
 		ManualStockSold:   sold,
@@ -96,7 +97,7 @@ func createAutoProduct(t *testing.T, repo *ProductStore, slug string) *models.Pr
 		CategoryID:      1,
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": "自动发货商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -352,7 +353,7 @@ func TestProductRepositoryListSortOrderDescending(t *testing.T) {
 		CategoryID:  1,
 		Slug:        "high-sort-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "high"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 		SortOrder:   100,
 	}
@@ -360,7 +361,7 @@ func TestProductRepositoryListSortOrderDescending(t *testing.T) {
 		CategoryID:  1,
 		Slug:        "low-sort-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "low"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 		SortOrder:   1,
 	}
@@ -397,7 +398,7 @@ func TestProductRepositoryListSupportsNumericIDSearch(t *testing.T) {
 		CategoryID:      1,
 		Slug:            "numeric-id-search-target",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "数字搜索目标"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -410,7 +411,7 @@ func TestProductRepositoryListSupportsNumericIDSearch(t *testing.T) {
 		CategoryID:      1,
 		Slug:            "numeric-id-search-other",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "另一个商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -452,8 +453,8 @@ func TestProductRepositoryListFiltersWholesalePrices(t *testing.T) {
 		CategoryID:      1,
 		Slug:            "with-wholesale",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "有批发价"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		WholesalePrices: models.WholesalePriceTiers{{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))}},
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
+		WholesalePrices: models.WholesalePriceTiers{{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))}},
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -466,7 +467,7 @@ func TestProductRepositoryListFiltersWholesalePrices(t *testing.T) {
 		CategoryID:      1,
 		Slug:            "without-wholesale",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "无批发价"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,

@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 )
@@ -34,8 +35,8 @@ type upstreamProduct struct {
 	Title            jsonmap.JSON               `json:"title"`
 	Description      jsonmap.JSON               `json:"description"`
 	Content          jsonmap.JSON               `json:"content"`
-	Images           jsonslice.Strings         `json:"images"`
-	Tags             jsonslice.Strings         `json:"tags"`
+	Images           jsonslice.Strings          `json:"images"`
+	Tags             jsonslice.Strings          `json:"tags"`
 	PriceAmount      string                     `json:"price_amount"`
 	OriginalPrice    string                     `json:"original_price,omitempty"`
 	MemberPrice      string                     `json:"member_price,omitempty"`
@@ -265,7 +266,7 @@ func (h *Handler) toUpstreamProductWithMemberPrice(p models.Product, memberLevel
 			mp, _ := h.MemberLevels.ResolveMemberPrice(memberLevelID, p.ID, s.ID, s.PriceAmount.Decimal)
 			if mp.LessThan(s.PriceAmount.Decimal) {
 				si.OriginalPrice = si.PriceAmount
-				si.MemberPrice = models.NewMoneyFromDecimal(mp).StringFixed(2)
+				si.MemberPrice = money.FromDecimal(mp).StringFixed(2)
 				si.PriceAmount = si.MemberPrice // price_amount 是实际售价（会员价）
 			}
 		}
@@ -302,7 +303,7 @@ func (h *Handler) toUpstreamProductWithMemberPrice(p models.Product, memberLevel
 		mp, _ := h.MemberLevels.ResolveMemberPrice(memberLevelID, p.ID, 0, p.PriceAmount.Decimal)
 		if mp.LessThan(p.PriceAmount.Decimal) {
 			result.OriginalPrice = result.PriceAmount
-			result.MemberPrice = models.NewMoneyFromDecimal(mp).StringFixed(2)
+			result.MemberPrice = money.FromDecimal(mp).StringFixed(2)
 			result.PriceAmount = result.MemberPrice
 		}
 	}

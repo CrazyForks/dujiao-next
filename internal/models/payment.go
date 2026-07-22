@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"gorm.io/gorm"
 )
 
@@ -15,10 +16,10 @@ type Payment struct {
 	ProviderType       string         `gorm:"not null" json:"provider_type"`                           // 提供方类型（official/epay）
 	ChannelType        string         `gorm:"not null" json:"channel_type"`                            // 渠道类型（wechat/alipay/qqpay/paypal）
 	InteractionMode    string         `gorm:"not null" json:"interaction_mode"`                        // 交互方式（qr/redirect）
-	Amount             Money          `gorm:"type:decimal(20,2);not null" json:"amount"`               // 支付金额（含手续费）
-	FeeRate            Money          `gorm:"type:decimal(6,2);not null;default:0" json:"fee_rate"`    // 手续费比例（百分比）
-	FixedFee           Money          `gorm:"type:decimal(6,2);not null;default:0" json:"fixed_fee"`   // 固定手续费
-	FeeAmount          Money          `gorm:"type:decimal(20,2);not null;default:0" json:"fee_amount"` // 手续费金额
+	Amount             money.Amount   `gorm:"type:decimal(20,2);not null" json:"amount"`               // 支付金额（含手续费）
+	FeeRate            money.Amount   `gorm:"type:decimal(6,2);not null;default:0" json:"fee_rate"`    // 手续费比例（百分比）
+	FixedFee           money.Amount   `gorm:"type:decimal(6,2);not null;default:0" json:"fixed_fee"`   // 固定手续费
+	FeeAmount          money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"fee_amount"` // 手续费金额
 	Currency           string         `gorm:"not null" json:"currency"`                                // 币种
 	Status             string         `gorm:"index;not null" json:"status"`                            // 支付状态
 	ProviderRef        string         `gorm:"index" json:"provider_ref"`                               // 第三方流水号

@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -15,7 +16,7 @@ import (
 // WalletCreditInput 事务内入账输入
 type WalletCreditInput struct {
 	UserID    uint
-	Amount    models.Money
+	Amount    money.Amount
 	Currency  string
 	TxnType   string
 	Reference string
@@ -71,7 +72,7 @@ func (s *WalletService) CreditInTx(tx *gorm.DB, input WalletCreditInput) (*model
 	}
 	before := account.Balance.Decimal.Round(2)
 	after := before.Add(amount).Round(2)
-	account.Balance = models.NewMoneyFromDecimal(after)
+	account.Balance = money.FromDecimal(after)
 	account.UpdatedAt = now
 	if err := repo.UpdateAccount(account); err != nil {
 		return nil, nil, ErrWalletAccountUpdateFailed
@@ -82,9 +83,9 @@ func (s *WalletService) CreditInTx(tx *gorm.DB, input WalletCreditInput) (*model
 		OrderID:       input.OrderID,
 		Type:          txnType,
 		Direction:     constants.WalletTxnDirectionIn,
-		Amount:        models.NewMoneyFromDecimal(amount),
-		BalanceBefore: models.NewMoneyFromDecimal(before),
-		BalanceAfter:  models.NewMoneyFromDecimal(after),
+		Amount:        money.FromDecimal(amount),
+		BalanceBefore: money.FromDecimal(before),
+		BalanceAfter:  money.FromDecimal(after),
 		Currency:      normalizeWalletCurrency(input.Currency),
 		Reference:     reference,
 		Remark:        remark,
@@ -120,7 +121,7 @@ func (s *WalletService) changeBalance(userID uint, delta decimal.Decimal, txnTyp
 			amount = delta.Abs().Round(2)
 		}
 
-		account.Balance = models.NewMoneyFromDecimal(after)
+		account.Balance = money.FromDecimal(after)
 		account.UpdatedAt = now
 		if err := repo.UpdateAccount(account); err != nil {
 			return ErrWalletAccountUpdateFailed
@@ -131,9 +132,9 @@ func (s *WalletService) changeBalance(userID uint, delta decimal.Decimal, txnTyp
 			OrderID:       orderID,
 			Type:          txnType,
 			Direction:     direction,
-			Amount:        models.NewMoneyFromDecimal(amount),
-			BalanceBefore: models.NewMoneyFromDecimal(before),
-			BalanceAfter:  models.NewMoneyFromDecimal(after),
+			Amount:        money.FromDecimal(amount),
+			BalanceBefore: money.FromDecimal(before),
+			BalanceAfter:  money.FromDecimal(after),
 			Currency:      normalizeWalletCurrency(currency),
 			Reference:     strings.TrimSpace(reference),
 			Remark:        remark,
@@ -163,7 +164,7 @@ func (s *WalletService) ensureAccountForUpdate(repo *repository.GormWalletReposi
 	}
 	account = &models.WalletAccount{
 		UserID:    userID,
-		Balance:   models.NewMoneyFromDecimal(decimal.Zero),
+		Balance:   money.FromDecimal(decimal.Zero),
 		CreatedAt: now,
 		UpdatedAt: now,
 	}

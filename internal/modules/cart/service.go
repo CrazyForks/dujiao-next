@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/promotion"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 var (
@@ -27,8 +28,8 @@ type ItemDetail struct {
 	SKUID           uint               `json:"sku_id"`
 	Quantity        int                `json:"quantity"`
 	FulfillmentType string             `json:"fulfillment_type"`
-	UnitPrice       models.Money       `json:"unit_price"`
-	OriginalPrice   models.Money       `json:"original_price"`
+	UnitPrice       money.Amount       `json:"unit_price"`
+	OriginalPrice   money.Amount       `json:"original_price"`
 	Currency        string             `json:"currency"`
 	Product         *models.Product    `json:"product"`
 	SKU             *models.ProductSKU `json:"sku"`

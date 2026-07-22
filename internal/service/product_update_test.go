@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -26,7 +27,7 @@ func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T)
 		CategoryID:       category.ID,
 		Slug:             "mapped-product",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "mapped-product"},
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeUpstream,
 		ManualStockTotal: 0,
@@ -41,7 +42,7 @@ func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T)
 		ProductID:      product.ID,
 		SKUCode:        models.DefaultSKUCode,
 		SpecValuesJSON: jsonmap.JSON{},
-		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:    money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
 	}
 	if err := db.Create(&sku).Error; err != nil {
@@ -96,7 +97,7 @@ func TestProductServiceUpdateFiltersUnavailablePaymentChannels(t *testing.T) {
 		CategoryID:        category.ID,
 		Slug:              "payment-channel-update",
 		TitleJSON:         jsonmap.JSON{"zh-CN": "payment-channel-update"},
-		PriceAmount:       models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:       money.FromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:      constants.ProductPurchaseMember,
 		FulfillmentType:   constants.FulfillmentTypeAuto,
 		PaymentChannelIDs: EncodeChannelIDs([]uint{deletedChannel.ID}),

@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/bepusdt"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -277,11 +277,11 @@ func (a *bepusdtAdapter) VerifyCallback(raw jsonmap.JSON, _ map[string][]string,
 	status := bepusdt.ToPaymentStatus(data.Status)
 
 	// amount 解析失败时返回零值：wrapper 仅做适配，金额异常由业务层判定。
-	amount := models.Money{}
+	amount := money.Amount{}
 	if data.Amount != nil {
 		amountFloat := data.GetAmount()
 		if amountFloat > 0 {
-			amount = models.NewMoneyFromDecimal(decimal.NewFromFloat(amountFloat))
+			amount = money.FromDecimal(decimal.NewFromFloat(amountFloat))
 		}
 	}
 

@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	"github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -47,9 +48,9 @@ func createMemberLevelFixture(
 			"zh-CN": slug,
 		},
 		Slug:              slug,
-		DiscountRate:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		RechargeThreshold: models.NewMoneyFromDecimal(decimal.Zero),
-		SpendThreshold:    models.NewMoneyFromDecimal(decimal.RequireFromString(spendThreshold)),
+		DiscountRate:      money.FromDecimal(decimal.NewFromInt(100)),
+		RechargeThreshold: money.FromDecimal(decimal.Zero),
+		SpendThreshold:    money.FromDecimal(decimal.RequireFromString(spendThreshold)),
 		IsDefault:         isDefault,
 		SortOrder:         sortOrder,
 		IsActive:          true,
@@ -68,8 +69,8 @@ func createUserFixture(t *testing.T, db *gorm.DB, email string, memberLevelID ui
 		PasswordHash:   "test-hash",
 		Status:         "active",
 		MemberLevelID:  memberLevelID,
-		TotalRecharged: models.NewMoneyFromDecimal(decimal.Zero),
-		TotalSpent:     models.NewMoneyFromDecimal(decimal.Zero),
+		TotalRecharged: money.FromDecimal(decimal.Zero),
+		TotalSpent:     money.FromDecimal(decimal.Zero),
 	}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user fixture failed: %v", err)
@@ -222,9 +223,9 @@ func TestMemberLevelServiceCreateLevelRejectsActiveSortOrderConflict(t *testing.
 	err := svc.CreateLevel(&models.MemberLevel{
 		NameJSON:          jsonmap.JSON{"zh-CN": "sort-conflict"},
 		Slug:              "sort-conflict",
-		DiscountRate:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		RechargeThreshold: models.NewMoneyFromDecimal(decimal.Zero),
-		SpendThreshold:    models.NewMoneyFromDecimal(decimal.NewFromInt(1)),
+		DiscountRate:      money.FromDecimal(decimal.NewFromInt(100)),
+		RechargeThreshold: money.FromDecimal(decimal.Zero),
+		SpendThreshold:    money.FromDecimal(decimal.NewFromInt(1)),
 		IsDefault:         false,
 		SortOrder:         10,
 		IsActive:          true,

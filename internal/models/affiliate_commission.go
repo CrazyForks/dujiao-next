@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/money"
 	"gorm.io/gorm"
 )
 
@@ -13,9 +14,9 @@ type AffiliateCommission struct {
 	OrderID            uint           `gorm:"not null;index;index:idx_affiliate_commission_unique,unique" json:"order_id"`                                   // 订单ID
 	OrderItemID        *uint          `gorm:"index" json:"order_item_id,omitempty"`                                                                          // 订单项ID
 	CommissionType     string         `gorm:"type:varchar(20);not null;default:'order';index:idx_affiliate_commission_unique,unique" json:"commission_type"` // 佣金类型
-	BaseAmount         Money          `gorm:"type:decimal(20,2);not null;default:0" json:"base_amount"`                                                      // 佣金基数金额
-	RatePercent        Money          `gorm:"type:decimal(10,2);not null;default:0" json:"rate_percent"`                                                     // 佣金比例（百分比）
-	CommissionAmount   Money          `gorm:"type:decimal(20,2);not null;default:0" json:"commission_amount"`                                                // 佣金金额
+	BaseAmount         money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"base_amount"`                                                      // 佣金基数金额
+	RatePercent        money.Amount   `gorm:"type:decimal(10,2);not null;default:0" json:"rate_percent"`                                                     // 佣金比例（百分比）
+	CommissionAmount   money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"commission_amount"`                                                // 佣金金额
 	Status             string         `gorm:"type:varchar(32);not null;index" json:"status"`                                                                 // 佣金状态
 	ConfirmAt          *time.Time     `gorm:"index" json:"confirm_at,omitempty"`                                                                             // 待确认到期时间
 	AvailableAt        *time.Time     `gorm:"index" json:"available_at,omitempty"`                                                                           // 转可提现时间

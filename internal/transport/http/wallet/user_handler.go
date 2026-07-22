@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -49,7 +50,7 @@ type WalletService interface {
 
 // PaymentService 是用户钱包充值支付所需的最小端口。
 type PaymentService interface {
-	GetAvailableWalletRechargeChannels(amount models.Money, user *models.User) ([]map[string]interface{}, error)
+	GetAvailableWalletRechargeChannels(amount money.Amount, user *models.User) ([]map[string]interface{}, error)
 	CreateWalletRechargePayment(input CreateRechargePaymentInput) (*CreateRechargePaymentResult, error)
 	GetPayment(id uint) (*models.Payment, error)
 	CapturePayment(input CapturePaymentInput) (*models.Payment, error)
@@ -68,7 +69,7 @@ type SiteCurrencyReader interface {
 type CreateRechargePaymentInput struct {
 	UserID        uint
 	ChannelID     uint
-	Amount        models.Money
+	Amount        money.Amount
 	Currency      string
 	Remark        string
 	ClientIP      string
@@ -132,7 +133,7 @@ func (h *UserHandler) GetPaymentChannels(c *gin.Context) {
 		return
 	}
 	user, _ := h.users.GetByID(uid)
-	channels, err := h.payments.GetAvailableWalletRechargeChannels(models.NewMoneyFromDecimal(amount), user)
+	channels, err := h.payments.GetAvailableWalletRechargeChannels(money.FromDecimal(amount), user)
 	if err != nil {
 		ginutil.RespondError(c, response.CodeInternal, "error.payment_fetch_failed", err)
 		return
@@ -189,7 +190,7 @@ func (h *UserHandler) Recharge(c *gin.Context) {
 		}
 	}
 	result, err := h.payments.CreateWalletRechargePayment(CreateRechargePaymentInput{
-		UserID: uid, ChannelID: req.ChannelID, Amount: models.NewMoneyFromDecimal(amount), Currency: currency,
+		UserID: uid, ChannelID: req.ChannelID, Amount: money.FromDecimal(amount), Currency: currency,
 		Remark: strings.TrimSpace(req.Remark), ClientIP: c.ClientIP(), Context: c.Request.Context(), RequestScheme: requestSchemeFromContext(c),
 	})
 	if err != nil {

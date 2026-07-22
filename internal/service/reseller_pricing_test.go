@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
@@ -250,8 +251,8 @@ func testResellerProfile() *models.ResellerProfile {
 		ID:                   10,
 		UserID:               99,
 		Status:               models.ResellerProfileStatusActive,
-		DefaultMarkupPercent: models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
-		MaxMarkupPercent:     models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
+		DefaultMarkupPercent: money.FromDecimal(decimal.NewFromInt(20)),
+		MaxMarkupPercent:     money.FromDecimal(decimal.NewFromInt(50)),
 	}
 }
 
@@ -272,8 +273,8 @@ func testOrderBuildResult(items ...struct {
 		sku := &models.ProductSKU{
 			ID:              item.skuID,
 			ProductID:       item.productID,
-			PriceAmount:     models.NewMoneyFromDecimal(item.base),
-			CostPriceAmount: models.NewMoneyFromDecimal(item.cost),
+			PriceAmount:     money.FromDecimal(item.base),
+			CostPriceAmount: money.FromDecimal(item.cost),
 			IsActive:        true,
 		}
 		baseTotal := item.base.Mul(decimal.NewFromInt(int64(item.quantity))).Round(2)
@@ -282,12 +283,12 @@ func testOrderBuildResult(items ...struct {
 			SKUID:              item.skuID,
 			TitleJSON:          product.TitleJSON,
 			SKUSnapshotJSON:    jsonmap.JSON{"sku_id": item.skuID},
-			OriginalUnitPrice:  models.NewMoneyFromDecimal(item.base),
-			UnitPrice:          models.NewMoneyFromDecimal(item.base),
-			CostPrice:          models.NewMoneyFromDecimal(item.cost),
+			OriginalUnitPrice:  money.FromDecimal(item.base),
+			UnitPrice:          money.FromDecimal(item.base),
+			CostPrice:          money.FromDecimal(item.cost),
 			Quantity:           item.quantity,
-			OriginalTotalPrice: models.NewMoneyFromDecimal(baseTotal),
-			TotalPrice:         models.NewMoneyFromDecimal(baseTotal),
+			OriginalTotalPrice: money.FromDecimal(baseTotal),
+			TotalPrice:         money.FromDecimal(baseTotal),
 			FulfillmentType:    constants.FulfillmentTypeManual,
 		}
 		plans = append(plans, childOrderPlan{
@@ -348,8 +349,8 @@ func TestResellerPricingResolverAppliesPriorityAndDefaultMarkup(t *testing.T) {
 				SKUID:            0,
 				IsListed:         true,
 				PricingMode:      models.ResellerPricingModeMarkupPercent,
-				MarkupPercent:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-				FixedPriceAmount: models.NewMoneyFromDecimal(decimal.Zero),
+				MarkupPercent:    money.FromDecimal(decimal.NewFromInt(10)),
+				FixedPriceAmount: money.FromDecimal(decimal.Zero),
 			},
 			{
 				ID:               2,
@@ -358,7 +359,7 @@ func TestResellerPricingResolverAppliesPriorityAndDefaultMarkup(t *testing.T) {
 				SKUID:            11,
 				IsListed:         true,
 				PricingMode:      models.ResellerPricingModeFixedPrice,
-				FixedPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
+				FixedPriceAmount: money.FromDecimal(decimal.NewFromInt(130)),
 			},
 			{
 				ID:                3,
@@ -367,7 +368,7 @@ func TestResellerPricingResolverAppliesPriorityAndDefaultMarkup(t *testing.T) {
 				SKUID:             22,
 				IsListed:          true,
 				PricingMode:       models.ResellerPricingModeFixedMarkup,
-				FixedMarkupAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(25)),
+				FixedMarkupAmount: money.FromDecimal(decimal.NewFromInt(25)),
 			},
 		},
 		related: map[uint]bool{},
@@ -444,7 +445,7 @@ func TestResellerPricingResolverRuntimePrioritySnapshotSources(t *testing.T) {
 				SKUID:         0,
 				IsListed:      true,
 				PricingMode:   models.ResellerPricingModeMarkupPercent,
-				MarkupPercent: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+				MarkupPercent: money.FromDecimal(decimal.NewFromInt(10)),
 			},
 			{
 				ID:               2,
@@ -453,7 +454,7 @@ func TestResellerPricingResolverRuntimePrioritySnapshotSources(t *testing.T) {
 				SKUID:            11,
 				IsListed:         true,
 				PricingMode:      models.ResellerPricingModeFixedPrice,
-				FixedPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
+				FixedPriceAmount: money.FromDecimal(decimal.NewFromInt(130)),
 			},
 			{
 				ID:                3,
@@ -462,7 +463,7 @@ func TestResellerPricingResolverRuntimePrioritySnapshotSources(t *testing.T) {
 				SKUID:             0,
 				IsListed:          true,
 				PricingMode:       models.ResellerPricingModeFixedMarkup,
-				FixedMarkupAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(25)),
+				FixedMarkupAmount: money.FromDecimal(decimal.NewFromInt(25)),
 			},
 		},
 		related: map[uint]bool{},
@@ -597,7 +598,7 @@ func TestResellerPricingResolverValidatesPriceRules(t *testing.T) {
 				SKUID:            11,
 				IsListed:         true,
 				PricingMode:      models.ResellerPricingModeFixedPrice,
-				FixedPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(99)),
+				FixedPriceAmount: money.FromDecimal(decimal.NewFromInt(99)),
 			},
 			wantErr: ErrResellerPriceBelowBase,
 		},
@@ -611,7 +612,7 @@ func TestResellerPricingResolverValidatesPriceRules(t *testing.T) {
 				SKUID:             11,
 				IsListed:          true,
 				PricingMode:       models.ResellerPricingModeFixedMarkup,
-				FixedMarkupAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(-1)),
+				FixedMarkupAmount: money.FromDecimal(decimal.NewFromInt(-1)),
 			},
 			wantErr: ErrResellerPriceBelowBase,
 		},
@@ -625,7 +626,7 @@ func TestResellerPricingResolverValidatesPriceRules(t *testing.T) {
 				SKUID:         11,
 				IsListed:      true,
 				PricingMode:   models.ResellerPricingModeMarkupPercent,
-				MarkupPercent: models.NewMoneyFromDecimal(decimal.NewFromInt(60)),
+				MarkupPercent: money.FromDecimal(decimal.NewFromInt(60)),
 			},
 			wantErr: ErrResellerMarkupExceeded,
 		},
@@ -639,7 +640,7 @@ func TestResellerPricingResolverValidatesPriceRules(t *testing.T) {
 				SKUID:            11,
 				IsListed:         true,
 				PricingMode:      models.ResellerPricingModeFixedPrice,
-				FixedPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(151)),
+				FixedPriceAmount: money.FromDecimal(decimal.NewFromInt(151)),
 			},
 			wantErr: ErrResellerMarkupExceeded,
 		},
@@ -653,7 +654,7 @@ func TestResellerPricingResolverValidatesPriceRules(t *testing.T) {
 				SKUID:             11,
 				IsListed:          true,
 				PricingMode:       models.ResellerPricingModeFixedMarkup,
-				FixedMarkupAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(51)),
+				FixedMarkupAmount: money.FromDecimal(decimal.NewFromInt(51)),
 			},
 			wantErr: ErrResellerMarkupExceeded,
 		},
@@ -746,7 +747,7 @@ func TestResellerPricingResolverDisplayBatchUsesSingleSettingsLookup(t *testing.
 				SKUID:            11,
 				IsListed:         true,
 				PricingMode:      models.ResellerPricingModeFixedPrice,
-				FixedPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
+				FixedPriceAmount: money.FromDecimal(decimal.NewFromInt(130)),
 			},
 			{
 				ID:          2,
@@ -762,16 +763,16 @@ func TestResellerPricingResolverDisplayBatchUsesSingleSettingsLookup(t *testing.
 	products := []models.Product{
 		{
 			ID:          1,
-			PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+			PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 			SKUs: []models.ProductSKU{
-				{ID: 11, ProductID: 1, PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)), CostPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(50)), IsActive: true},
+				{ID: 11, ProductID: 1, PriceAmount: money.FromDecimal(decimal.NewFromInt(100)), CostPriceAmount: money.FromDecimal(decimal.NewFromInt(50)), IsActive: true},
 			},
 		},
 		{
 			ID:          2,
-			PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
+			PriceAmount: money.FromDecimal(decimal.NewFromInt(80)),
 			SKUs: []models.ProductSKU{
-				{ID: 22, ProductID: 2, PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(80)), CostPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(40)), IsActive: true},
+				{ID: 22, ProductID: 2, PriceAmount: money.FromDecimal(decimal.NewFromInt(80)), CostPriceAmount: money.FromDecimal(decimal.NewFromInt(40)), IsActive: true},
 			},
 		},
 	}
@@ -807,18 +808,18 @@ func TestResellerPricingResolverDisplayHidesInvalidSKUWithoutFailing(t *testing.
 	repo := &resellerPricingRepoStub{
 		profile: testResellerProfile(),
 		settings: []models.ResellerProductSetting{
-			{ID: 1, ResellerID: 10, ProductID: 1, SKUID: 11, IsListed: true, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(130))},
-			{ID: 2, ResellerID: 10, ProductID: 1, SKUID: 12, IsListed: true, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+			{ID: 1, ResellerID: 10, ProductID: 1, SKUID: 11, IsListed: true, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: money.FromDecimal(decimal.NewFromInt(130))},
+			{ID: 2, ResellerID: 10, ProductID: 1, SKUID: 12, IsListed: true, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: money.FromDecimal(decimal.NewFromInt(80))},
 		},
 	}
 	resolver := NewResellerPricingResolver(repo)
 	products := []models.Product{
 		{
 			ID:          1,
-			PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+			PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 			SKUs: []models.ProductSKU{
-				{ID: 11, ProductID: 1, PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)), CostPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(50)), IsActive: true},
-				{ID: 12, ProductID: 1, PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)), CostPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(50)), IsActive: true},
+				{ID: 11, ProductID: 1, PriceAmount: money.FromDecimal(decimal.NewFromInt(100)), CostPriceAmount: money.FromDecimal(decimal.NewFromInt(50)), IsActive: true},
+				{ID: 12, ProductID: 1, PriceAmount: money.FromDecimal(decimal.NewFromInt(100)), CostPriceAmount: money.FromDecimal(decimal.NewFromInt(50)), IsActive: true},
 			},
 		},
 	}

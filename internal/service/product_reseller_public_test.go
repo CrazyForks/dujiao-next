@@ -11,6 +11,7 @@ import (
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -65,7 +66,7 @@ func seedResellerPublicProduct(t *testing.T, db *gorm.DB, categoryID uint, slug 
 		CategoryID:      categoryID,
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": slug},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -81,8 +82,8 @@ func seedResellerPublicProduct(t *testing.T, db *gorm.DB, categoryID uint, slug 
 		sku := models.ProductSKU{
 			ProductID:        product.ID,
 			SKUCode:          fmt.Sprintf("%s-sku-%d", slug, i+1),
-			PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(int64(100 + i))),
-			CostPriceAmount:  models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
+			PriceAmount:      money.FromDecimal(decimal.NewFromInt(int64(100 + i))),
+			CostPriceAmount:  money.FromDecimal(decimal.NewFromInt(50)),
 			ManualStockTotal: constants.ManualStockUnlimited,
 			IsActive:         true,
 			SortOrder:        skuCount - i,

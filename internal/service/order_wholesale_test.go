@@ -17,6 +17,7 @@ import (
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -68,7 +69,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 		level := models.MemberLevel{
 			NameJSON:     jsonmap.JSON{"zh-CN": "批发会员"},
 			Slug:         name + "-level",
-			DiscountRate: models.NewMoneyFromDecimal(*memberRate),
+			DiscountRate: money.FromDecimal(*memberRate),
 			IsActive:     true,
 			CreatedAt:    now,
 			UpdatedAt:    now,
@@ -93,7 +94,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 		CategoryID:      category.ID,
 		Slug:            name + "-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "批发测试商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		WholesalePrices: wholesalePrices,
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
@@ -108,7 +109,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 	sku := models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -123,8 +124,8 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 			ScopeType:  constants.ScopeTypeProduct,
 			ScopeRefID: product.ID,
 			Type:       constants.PromotionTypePercent,
-			Value:      models.NewMoneyFromDecimal(*promotionPercent),
-			MinAmount:  models.NewMoneyFromDecimal(decimal.Zero),
+			Value:      money.FromDecimal(*promotionPercent),
+			MinAmount:  money.FromDecimal(decimal.Zero),
 			IsActive:   true,
 			CreatedAt:  now,
 			UpdatedAt:  now,
@@ -161,9 +162,9 @@ func createWholesaleOrderCouponFixture(t *testing.T, db *gorm.DB, productIDs []u
 	coupon := models.Coupon{
 		Code:                   "STACK10",
 		Type:                   constants.CouponTypePercent,
-		Value:                  models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-		MinAmount:              models.NewMoneyFromDecimal(decimal.Zero),
-		MaxDiscount:            models.NewMoneyFromDecimal(decimal.Zero),
+		Value:                  money.FromDecimal(decimal.NewFromInt(10)),
+		MinAmount:              money.FromDecimal(decimal.Zero),
+		MaxDiscount:            money.FromDecimal(decimal.Zero),
 		ScopeType:              constants.ScopeTypeProduct,
 		ScopeRefIDs:            string(scopeIDs),
 		DisabledWholesalePrice: disabledWholesalePrice,
@@ -179,7 +180,7 @@ func createWholesaleOrderCouponFixture(t *testing.T, db *gorm.DB, productIDs []u
 
 func TestBuildOrderResultPrefersWholesaleOverPromotion(t *testing.T) {
 	wholesalePrices := models.WholesalePriceTiers{
-		{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+		{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}
 	promotionPercent := decimal.NewFromInt(10) // 活动价 90，批发价 80 更便宜。
 	fixture := setupWholesaleOrderFixture(t, "wholesale_over_promotion", wholesalePrices, &promotionPercent, nil)
@@ -211,7 +212,7 @@ func TestBuildOrderResultPrefersWholesaleOverPromotion(t *testing.T) {
 
 func TestBuildOrderResultPrefersPromotionOverWholesale(t *testing.T) {
 	wholesalePrices := models.WholesalePriceTiers{
-		{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+		{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}
 	promotionPercent := decimal.NewFromInt(30) // 活动价 70，批发价 80 不生效。
 	fixture := setupWholesaleOrderFixture(t, "promotion_over_wholesale", wholesalePrices, &promotionPercent, nil)
@@ -274,15 +275,15 @@ func TestBuildOrderResultAppliesCouponAfterBestPromotionOrWholesalePrice(t *test
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			wholesalePrices := models.WholesalePriceTiers{
-				{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+				{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 			}
 			fixture := setupWholesaleOrderFixture(t, strings.ReplaceAll(tc.name, " ", "_"), wholesalePrices, &tc.promotionPercent, nil)
 			coupon := models.Coupon{
 				Code:        "STACK10",
 				Type:        constants.CouponTypePercent,
-				Value:       models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-				MinAmount:   models.NewMoneyFromDecimal(decimal.Zero),
-				MaxDiscount: models.NewMoneyFromDecimal(decimal.Zero),
+				Value:       money.FromDecimal(decimal.NewFromInt(10)),
+				MinAmount:   money.FromDecimal(decimal.Zero),
+				MaxDiscount: money.FromDecimal(decimal.Zero),
 				ScopeType:   constants.ScopeTypeProduct,
 				ScopeRefIDs: fmt.Sprintf("[%d]", fixture.product.ID),
 				IsActive:    true,
@@ -328,7 +329,7 @@ func TestBuildOrderResultAppliesCouponAfterBestPromotionOrWholesalePrice(t *test
 
 func TestBuildOrderResultRejectsCouponWhenDisabledForAllWholesaleItems(t *testing.T) {
 	wholesalePrices := models.WholesalePriceTiers{
-		{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+		{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}
 	promotionPercent := decimal.NewFromInt(10) // 活动价 90，批发价 80 更便宜并实际生效。
 	fixture := setupWholesaleOrderFixture(t, "coupon_disabled_all_wholesale", wholesalePrices, &promotionPercent, nil)
@@ -347,7 +348,7 @@ func TestBuildOrderResultRejectsCouponWhenDisabledForAllWholesaleItems(t *testin
 
 func TestBuildOrderResultExcludesWholesaleItemsWhenCouponDisabledWholesalePrice(t *testing.T) {
 	wholesalePrices := models.WholesalePriceTiers{
-		{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+		{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}
 	promotionPercent := decimal.NewFromInt(10) // 商品 A 批发价 80 胜出，应被优惠券排除。
 	fixture := setupWholesaleOrderFixture(t, "coupon_disabled_mixed_wholesale", wholesalePrices, &promotionPercent, nil)
@@ -356,7 +357,7 @@ func TestBuildOrderResultExcludesWholesaleItemsWhenCouponDisabledWholesalePrice(
 		CategoryID:      fixture.product.CategoryID,
 		Slug:            "coupon-disabled-mixed-product-b",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "非批发商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -369,7 +370,7 @@ func TestBuildOrderResultExcludesWholesaleItemsWhenCouponDisabledWholesalePrice(
 	skuB := models.ProductSKU{
 		ProductID:   productB.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -415,7 +416,7 @@ func TestBuildOrderResultExcludesWholesaleItemsWhenCouponDisabledWholesalePrice(
 
 func TestBuildOrderResultAppliesMemberDiscountAfterWholesale(t *testing.T) {
 	wholesalePrices := models.WholesalePriceTiers{
-		{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+		{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}
 	memberRate := decimal.NewFromInt(80) // 批发价 80 后再打 8 折，最终 64。
 	fixture := setupWholesaleOrderFixture(t, "member_after_wholesale", wholesalePrices, nil, &memberRate)
@@ -445,14 +446,14 @@ func TestBuildOrderResultAppliesMemberDiscountAfterWholesale(t *testing.T) {
 
 func TestBuildOrderResultMatchesWholesaleByProductQuantityAcrossSKUs(t *testing.T) {
 	wholesalePrices := models.WholesalePriceTiers{
-		{MinQuantity: 10, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+		{MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}
 	fixture := setupWholesaleOrderFixture(t, "wholesale_across_skus", wholesalePrices, nil, nil)
 
 	skuB := models.ProductSKU{
 		ProductID:   fixture.product.ID,
 		SKUCode:     "SKU-B",
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -495,7 +496,7 @@ func TestBuildOrderResultMatchesWholesaleByProductQuantityAcrossSKUs(t *testing.
 // 底价已低于档位价的 SKU 不会被批发价拉高，各行只计算自己的优惠。
 func TestBuildOrderResultSkipsWholesaleForCheaperSKU(t *testing.T) {
 	wholesalePrices := models.WholesalePriceTiers{
-		{MinQuantity: 10, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+		{MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 	}
 	// 默认 SKU 底价 100（高于档位价 80），新增 SKU 底价 50（低于档位价 80）。
 	fixture := setupWholesaleOrderFixture(t, "wholesale_skip_cheaper_sku", wholesalePrices, nil, nil)
@@ -503,7 +504,7 @@ func TestBuildOrderResultSkipsWholesaleForCheaperSKU(t *testing.T) {
 	cheaperSKU := models.ProductSKU{
 		ProductID:   fixture.product.ID,
 		SKUCode:     "SKU-CHEAP",
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(50)),
 		IsActive:    true,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -554,7 +555,7 @@ func TestBuildOrderResultAppliesDifferentWholesalePricesPerSKU(t *testing.T) {
 	skuB := models.ProductSKU{
 		ProductID:   fixture.product.ID,
 		SKUCode:     "SKU-B",
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -564,8 +565,8 @@ func TestBuildOrderResultAppliesDifferentWholesalePricesPerSKU(t *testing.T) {
 	}
 
 	wholesalePrices := models.WholesalePriceTiers{
-		{SKUID: fixture.sku.ID, SKUCode: fixture.sku.SKUCode, MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(70))},
-		{SKUID: skuB.ID, SKUCode: skuB.SKUCode, MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(60))},
+		{SKUID: fixture.sku.ID, SKUCode: fixture.sku.SKUCode, MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(70))},
+		{SKUID: skuB.ID, SKUCode: skuB.SKUCode, MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(60))},
 	}
 	if err := fixture.db.Model(&models.Product{}).Where("id = ?", fixture.product.ID).Update("wholesale_prices", wholesalePrices).Error; err != nil {
 		t.Fatalf("update wholesale prices failed: %v", err)
@@ -607,7 +608,7 @@ func TestBuildOrderResultSKUWholesaleDoesNotFallbackToUniversalTier(t *testing.T
 	skuB := models.ProductSKU{
 		ProductID:   fixture.product.ID,
 		SKUCode:     "SKU-B",
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
@@ -617,8 +618,8 @@ func TestBuildOrderResultSKUWholesaleDoesNotFallbackToUniversalTier(t *testing.T
 	}
 
 	wholesalePrices := models.WholesalePriceTiers{
-		{MinQuantity: 10, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
-		{SKUID: fixture.sku.ID, SKUCode: fixture.sku.SKUCode, MinQuantity: 10, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(70))},
+		{MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
+		{SKUID: fixture.sku.ID, SKUCode: fixture.sku.SKUCode, MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(70))},
 	}
 	if err := fixture.db.Model(&models.Product{}).Where("id = ?", fixture.product.ID).Update("wholesale_prices", wholesalePrices).Error; err != nil {
 		t.Fatalf("update wholesale prices failed: %v", err)

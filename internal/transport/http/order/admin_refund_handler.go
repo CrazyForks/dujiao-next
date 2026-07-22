@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 )
@@ -48,14 +49,14 @@ type AdminRefundItem struct {
 // AdminRefundToWalletInput 管理端退款到余额输入。
 type AdminRefundToWalletInput struct {
 	OrderID uint
-	Amount  models.Money
+	Amount  money.Amount
 	Remark  string
 }
 
 // AdminManualRefundInput 管理端手动退款输入。
 type AdminManualRefundInput struct {
 	OrderID uint
-	Amount  models.Money
+	Amount  money.Amount
 	Remark  string
 }
 
@@ -67,7 +68,7 @@ type AdminRefundReader interface {
 
 // AdminRefundWriter 管理端退款写端口（金额解析 + 手动退款）。
 type AdminRefundWriter interface {
-	ParseRefundAmount(raw string) (models.Money, error)
+	ParseRefundAmount(raw string) (money.Amount, error)
 	AdminManualRefund(input AdminManualRefundInput) (*models.Order, *models.OrderRefundRecord, error)
 }
 

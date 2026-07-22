@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/paypal"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -91,7 +91,7 @@ func TestPaypalAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 		OrderNo:  "ORDER-PP-AUDIT",
 		Subject:  "audit field test",
 		Currency: "CNY",
-		Amount:   models.NewMoneyFromDecimal(decimal.NewFromInt(1)),
+		Amount:   money.FromDecimal(decimal.NewFromInt(1)),
 	}
 
 	result, err := a.CreatePayment(context.Background(), raw, input)

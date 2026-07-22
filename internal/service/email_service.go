@@ -17,8 +17,8 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/dujiao-next/internal/telegramidentity"
 )
 
@@ -73,8 +73,8 @@ func (s *EmailService) SendVerifyCode(toEmail, code, purpose, locale string) err
 type OrderStatusEmailInput struct {
 	OrderNo           string
 	Status            string
-	Amount            models.Money
-	RefundAmount      models.Money
+	Amount            money.Amount
+	RefundAmount      money.Amount
 	RefundReason      string
 	Currency          string
 	SiteName          string

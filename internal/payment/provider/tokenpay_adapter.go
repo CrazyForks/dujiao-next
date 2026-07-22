@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/tokenpay"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -122,10 +122,10 @@ func (a *tokenpayAdapter) VerifyCallback(raw jsonmap.JSON, _ map[string][]string
 	// 金额口径必须是法币（与订单 payment.Amount 一致）：TokenPay 回调里 ActualAmount 是法币金额，
 	// 而 Amount 是法币换算后的加密货币数量。业务层会用回调金额与 payment.Amount 严格比对，故取 ActualAmount。
 	// amount silent-fallback：失败时返回零值，wrapper 仅做适配，金额异常由业务层判定
-	amount := models.Money{}
+	amount := money.Amount{}
 	if s := strings.TrimSpace(data.ActualAmount); s != "" {
 		if d, parseErr := decimal.NewFromString(s); parseErr == nil {
-			amount = models.NewMoneyFromDecimal(d)
+			amount = money.FromDecimal(d)
 		}
 	}
 

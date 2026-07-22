@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/models"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
@@ -19,6 +18,7 @@ import (
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 )
@@ -91,13 +91,13 @@ type CreateOrderRequest struct {
 
 // CreateGuestOrderRequest 游客订单预览请求体。
 type CreateGuestOrderRequest struct {
-	Email               string                       `json:"email" binding:"required"`
-	OrderPassword       string                       `json:"order_password" binding:"required"`
-	Items               []OrderItemRequest           `json:"items" binding:"required"`
-	CouponCode          string                       `json:"coupon_code"`
-	AffiliateCode       string                       `json:"affiliate_code"`
-	AffiliateVisitorKey string                       `json:"affiliate_visitor_key"`
-	ManualFormData      map[string]jsonmap.JSON      `json:"manual_form_data"`
+	Email               string                            `json:"email" binding:"required"`
+	OrderPassword       string                            `json:"order_password" binding:"required"`
+	Items               []OrderItemRequest                `json:"items" binding:"required"`
+	CouponCode          string                            `json:"coupon_code"`
+	AffiliateCode       string                            `json:"affiliate_code"`
+	AffiliateVisitorKey string                            `json:"affiliate_visitor_key"`
+	ManualFormData      map[string]jsonmap.JSON           `json:"manual_form_data"`
 	CaptchaPayload      captchahttp.CaptchaPayloadRequest `json:"captcha_payload"`
 }
 
@@ -138,32 +138,32 @@ type CreateGuestOrderInput struct {
 // OrderPreview 订单金额预览。
 type OrderPreview struct {
 	Currency                string             `json:"currency"`
-	OriginalAmount          models.Money       `json:"original_amount"`
-	MemberDiscountAmount    models.Money       `json:"member_discount_amount"`
-	DiscountAmount          models.Money       `json:"discount_amount"`
-	PromotionDiscountAmount models.Money       `json:"promotion_discount_amount"`
-	WholesaleDiscountAmount models.Money       `json:"wholesale_discount_amount"`
-	TotalAmount             models.Money       `json:"total_amount"`
+	OriginalAmount          money.Amount       `json:"original_amount"`
+	MemberDiscountAmount    money.Amount       `json:"member_discount_amount"`
+	DiscountAmount          money.Amount       `json:"discount_amount"`
+	PromotionDiscountAmount money.Amount       `json:"promotion_discount_amount"`
+	WholesaleDiscountAmount money.Amount       `json:"wholesale_discount_amount"`
+	TotalAmount             money.Amount       `json:"total_amount"`
 	Items                   []OrderPreviewItem `json:"items"`
 }
 
 // OrderPreviewItem 订单项金额预览。
 type OrderPreviewItem struct {
-	ProductID          uint               `json:"product_id"`
-	SKUID              uint               `json:"sku_id"`
-	TitleJSON          jsonmap.JSON       `json:"title"`
-	SKUSnapshotJSON    jsonmap.JSON       `json:"sku_snapshot"`
+	ProductID          uint              `json:"product_id"`
+	SKUID              uint              `json:"sku_id"`
+	TitleJSON          jsonmap.JSON      `json:"title"`
+	SKUSnapshotJSON    jsonmap.JSON      `json:"sku_snapshot"`
 	Tags               jsonslice.Strings `json:"tags"`
-	OriginalUnitPrice  models.Money       `json:"original_unit_price"`
-	UnitPrice          models.Money       `json:"unit_price"`
-	Quantity           int                `json:"quantity"`
-	OriginalTotalPrice models.Money       `json:"original_total_price"`
-	TotalPrice         models.Money       `json:"total_price"`
-	MemberDiscount     models.Money       `json:"member_discount_amount"`
-	CouponDiscount     models.Money       `json:"coupon_discount_amount"`
-	PromotionDiscount  models.Money       `json:"promotion_discount_amount"`
-	WholesaleDiscount  models.Money       `json:"wholesale_discount_amount"`
-	FulfillmentType    string             `json:"fulfillment_type"`
+	OriginalUnitPrice  money.Amount      `json:"original_unit_price"`
+	UnitPrice          money.Amount      `json:"unit_price"`
+	Quantity           int               `json:"quantity"`
+	OriginalTotalPrice money.Amount      `json:"original_total_price"`
+	TotalPrice         money.Amount      `json:"total_price"`
+	MemberDiscount     money.Amount      `json:"member_discount_amount"`
+	CouponDiscount     money.Amount      `json:"coupon_discount_amount"`
+	PromotionDiscount  money.Amount      `json:"promotion_discount_amount"`
+	WholesaleDiscount  money.Amount      `json:"wholesale_discount_amount"`
+	FulfillmentType    string            `json:"fulfillment_type"`
 }
 
 // OrderPreviewService 订单金额预览端口。

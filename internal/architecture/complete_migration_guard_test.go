@@ -95,6 +95,7 @@ var completedMigrationPaths = []string{
 	"internal/models/init_test.go",
 	"internal/repository/admin_repository.go",
 	"internal/repository/admin_repository_test.go",
+	"internal/models/money.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {
@@ -118,6 +119,14 @@ func TestSettingsModuleRootContainsNoGoFiles(t *testing.T) {
 	if production != 0 || total != 0 {
 		t.Fatalf("settings module root must remain structural only, got production=%d total=%d", production, total)
 	}
+}
+
+func TestSharedMoneyOwnsMonetaryValueObject(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	moneyRoot := filepath.Join(repositoryRoot, "internal", "shared", "money")
+	assertFileDeclaresTypes(t, filepath.Join(moneyRoot, "amount.go"), []string{"Amount"})
+	assertFileDeclaresFunctions(t, filepath.Join(moneyRoot, "amount.go"), []string{"FromDecimal"})
+	assertDirectoryGoFileBudget(t, moneyRoot, 2)
 }
 
 func TestLegacyHorizontalRootsCanOnlyShrink(t *testing.T) {

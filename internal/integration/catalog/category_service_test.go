@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/modules/catalog"
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -52,7 +53,7 @@ func createProductFixture(t *testing.T, db *gorm.DB, categoryID uint, slug strin
 		CategoryID:  categoryID,
 		Slug:        slug,
 		TitleJSON:   jsonmap.JSON{"zh-CN": slug},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
 	if err := db.Create(&product).Error; err != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -124,8 +125,8 @@ func TestNormalizeWholesalePriceInputsAllowsSameQuantityForDifferentSKUs(t *test
 func TestResolveWholesaleUnitPriceMatchesBestTier(t *testing.T) {
 	product := &models.Product{
 		WholesalePrices: models.WholesalePriceTiers{
-			{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
-			{MinQuantity: 10, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(70))},
+			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
+			{MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(70))},
 		},
 	}
 
@@ -144,7 +145,7 @@ func TestResolveWholesaleUnitPriceMatchesBestTier(t *testing.T) {
 func TestResolveWholesaleUnitPriceDoesNotMatchBelowQuantity(t *testing.T) {
 	product := &models.Product{
 		WholesalePrices: models.WholesalePriceTiers{
-			{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 		},
 	}
 
@@ -160,8 +161,8 @@ func TestResolveWholesaleUnitPriceDoesNotMatchBelowQuantity(t *testing.T) {
 func TestResolveWholesaleUnitPriceForSKUPrefersSpecificTier(t *testing.T) {
 	product := &models.Product{
 		WholesalePrices: models.WholesalePriceTiers{
-			{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
-			{SKUID: 11, SKUCode: "SKU-A", MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(70))},
+			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
+			{SKUID: 11, SKUCode: "SKU-A", MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(70))},
 		},
 	}
 
@@ -180,7 +181,7 @@ func TestResolveWholesaleUnitPriceForSKUPrefersSpecificTier(t *testing.T) {
 func TestResolveWholesaleUnitPriceForSKURequiresIDAndCodeToMatch(t *testing.T) {
 	product := &models.Product{
 		WholesalePrices: models.WholesalePriceTiers{
-			{SKUID: 11, SKUCode: "SKU-A", MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(70))},
+			{SKUID: 11, SKUCode: "SKU-A", MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(70))},
 		},
 	}
 
@@ -195,8 +196,8 @@ func TestResolveWholesaleUnitPriceForSKURequiresIDAndCodeToMatch(t *testing.T) {
 func TestResolveWholesaleUnitPriceForSKUDoesNotFallbackWhenSpecificTierExists(t *testing.T) {
 	product := &models.Product{
 		WholesalePrices: models.WholesalePriceTiers{
-			{MinQuantity: 10, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
-			{SKUID: 11, SKUCode: "SKU-A", MinQuantity: 10, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(70))},
+			{MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
+			{SKUID: 11, SKUCode: "SKU-A", MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(70))},
 		},
 	}
 
@@ -212,7 +213,7 @@ func TestResolveWholesaleUnitPriceForSKUDoesNotFallbackWhenSpecificTierExists(t 
 func TestResolveWholesaleUnitPriceForSKUUsesProductQuantityForUniversalTier(t *testing.T) {
 	product := &models.Product{
 		WholesalePrices: models.WholesalePriceTiers{
-			{MinQuantity: 10, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+			{MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 		},
 	}
 
@@ -233,8 +234,8 @@ func TestResolveWholesaleUnitPriceForSKUUsesProductQuantityForUniversalTier(t *t
 func TestResolveWholesaleUnitPricePicksCheapestTierForLegacyData(t *testing.T) {
 	product := &models.Product{
 		WholesalePrices: models.WholesalePriceTiers{
-			{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
-			{MinQuantity: 10, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(90))},
+			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
+			{MinQuantity: 10, UnitPrice: money.FromDecimal(decimal.NewFromInt(90))},
 		},
 	}
 
@@ -254,7 +255,7 @@ func TestResolveWholesaleUnitPricePicksCheapestTierForLegacyData(t *testing.T) {
 func TestResolveWholesaleUnitPriceIgnoresHigherTierPrice(t *testing.T) {
 	product := &models.Product{
 		WholesalePrices: models.WholesalePriceTiers{
-			{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(120))},
+			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(120))},
 		},
 	}
 
@@ -352,8 +353,8 @@ func TestProductServiceUpdateWholesalePricesOnlyTouchesWholesaleField(t *testing
 		CategoryID:       category.ID,
 		Slug:             "wholesale-narrow-product",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "原商品名"},
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		CostPriceAmount:  models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(100)),
+		CostPriceAmount:  money.FromDecimal(decimal.NewFromInt(30)),
 		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
 		ManualStockTotal: 8,
@@ -400,9 +401,9 @@ func TestProductServiceUpdateWholesalePricesClearsTiers(t *testing.T) {
 		CategoryID:  1,
 		Slug:        "wholesale-clear-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "wholesale-clear-product"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		WholesalePrices: models.WholesalePriceTiers{
-			{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 		},
 		IsActive: true,
 	}
@@ -426,9 +427,9 @@ func TestProductServiceUpdateWholesalePricesRejectsInvalidInputs(t *testing.T) {
 		CategoryID:  1,
 		Slug:        "wholesale-invalid-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "wholesale-invalid-product"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		WholesalePrices: models.WholesalePriceTiers{
-			{MinQuantity: 5, UnitPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(80))},
+			{MinQuantity: 5, UnitPrice: money.FromDecimal(decimal.NewFromInt(80))},
 		},
 		IsActive: true,
 	}
@@ -473,7 +474,7 @@ func TestProductServiceUpdateWholesalePricesValidatesSKUBelonging(t *testing.T) 
 		CategoryID:  1,
 		Slug:        "wholesale-sku-owner-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "wholesale-sku-owner-product"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 	}
 	if err := db.Create(&product).Error; err != nil {
@@ -482,7 +483,7 @@ func TestProductServiceUpdateWholesalePricesValidatesSKUBelonging(t *testing.T) 
 	skuA := models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     "SKU-A",
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 		SortOrder:   1,
 	}
@@ -494,7 +495,7 @@ func TestProductServiceUpdateWholesalePricesValidatesSKUBelonging(t *testing.T) 
 		CategoryID:  1,
 		Slug:        "wholesale-sku-owner-other",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "wholesale-sku-owner-other"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 	}
 	if err := db.Create(&otherProduct).Error; err != nil {
@@ -503,7 +504,7 @@ func TestProductServiceUpdateWholesalePricesValidatesSKUBelonging(t *testing.T) 
 	foreignSKU := models.ProductSKU{
 		ProductID:   otherProduct.ID,
 		SKUCode:     "SKU-X",
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 		SortOrder:   1,
 	}

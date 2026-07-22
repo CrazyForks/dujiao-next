@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // OrderSummary 订单列表响应（精简字段）
@@ -14,11 +15,11 @@ type OrderSummary struct {
 	OrderNo                 string          `json:"order_no"`
 	Status                  string          `json:"status"`
 	Currency                string          `json:"currency"`
-	DiscountAmount          models.Money    `json:"discount_amount"`
-	MemberDiscountAmount    models.Money    `json:"member_discount_amount"`
-	PromotionDiscountAmount models.Money    `json:"promotion_discount_amount"`
-	WholesaleDiscountAmount models.Money    `json:"wholesale_discount_amount"`
-	TotalAmount             models.Money    `json:"total_amount"`
+	DiscountAmount          money.Amount    `json:"discount_amount"`
+	MemberDiscountAmount    money.Amount    `json:"member_discount_amount"`
+	PromotionDiscountAmount money.Amount    `json:"promotion_discount_amount"`
+	WholesaleDiscountAmount money.Amount    `json:"wholesale_discount_amount"`
+	TotalAmount             money.Amount    `json:"total_amount"`
 	CreatedAt               time.Time       `json:"created_at"`
 	Items                   []OrderItemResp `json:"items,omitempty"`
 	Children                []OrderSummary  `json:"children,omitempty"`
@@ -65,15 +66,15 @@ type OrderDetail struct {
 	GuestLocale              string            `json:"guest_locale,omitempty"`
 	Status                   string            `json:"status"`
 	Currency                 string            `json:"currency"`
-	OriginalAmount           models.Money      `json:"original_amount"`
-	DiscountAmount           models.Money      `json:"discount_amount"`
-	MemberDiscountAmount     models.Money      `json:"member_discount_amount"`
-	PromotionDiscountAmount  models.Money      `json:"promotion_discount_amount"`
-	WholesaleDiscountAmount  models.Money      `json:"wholesale_discount_amount"`
-	TotalAmount              models.Money      `json:"total_amount"`
-	WalletPaidAmount         models.Money      `json:"wallet_paid_amount"`
-	OnlinePaidAmount         models.Money      `json:"online_paid_amount"`
-	RefundedAmount           models.Money      `json:"refunded_amount"`
+	OriginalAmount           money.Amount      `json:"original_amount"`
+	DiscountAmount           money.Amount      `json:"discount_amount"`
+	MemberDiscountAmount     money.Amount      `json:"member_discount_amount"`
+	PromotionDiscountAmount  money.Amount      `json:"promotion_discount_amount"`
+	WholesaleDiscountAmount  money.Amount      `json:"wholesale_discount_amount"`
+	TotalAmount              money.Amount      `json:"total_amount"`
+	WalletPaidAmount         money.Amount      `json:"wallet_paid_amount"`
+	OnlinePaidAmount         money.Amount      `json:"online_paid_amount"`
+	RefundedAmount           money.Amount      `json:"refunded_amount"`
 	ExpiresAt                *time.Time        `json:"expires_at"`
 	PaidAt                   *time.Time        `json:"paid_at"`
 	CanceledAt               *time.Time        `json:"canceled_at"`
@@ -88,7 +89,7 @@ type OrderDetail struct {
 // OrderRefundResp 用户侧订单退款记录响应
 type OrderRefundResp struct {
 	Type      string       `json:"type"`
-	Amount    models.Money `json:"amount"`
+	Amount    money.Amount `json:"amount"`
 	Currency  string       `json:"currency"`
 	Remark    string       `json:"remark,omitempty"`
 	CreatedAt time.Time    `json:"created_at"`
@@ -153,21 +154,21 @@ func truncateFulfillment(d *OrderDetail) {
 
 // OrderItemResp 订单项响应
 type OrderItemResp struct {
-	Title                    jsonmap.JSON       `json:"title"`
-	SKUSnapshot              jsonmap.JSON       `json:"sku_snapshot"`
+	Title                    jsonmap.JSON      `json:"title"`
+	SKUSnapshot              jsonmap.JSON      `json:"sku_snapshot"`
 	Tags                     jsonslice.Strings `json:"tags"`
-	Quantity                 int                `json:"quantity"`
-	OriginalUnitPrice        models.Money       `json:"original_unit_price"`
-	UnitPrice                models.Money       `json:"unit_price"`
-	OriginalTotalPrice       models.Money       `json:"original_total_price"`
-	TotalPrice               models.Money       `json:"total_price"`
-	CouponDiscountAmount     models.Money       `json:"coupon_discount_amount"`
-	MemberDiscountAmount     models.Money       `json:"member_discount_amount"`
-	PromotionDiscountAmount  models.Money       `json:"promotion_discount_amount"`
-	WholesaleDiscountAmount  models.Money       `json:"wholesale_discount_amount"`
-	FulfillmentType          string             `json:"fulfillment_type"`
-	ManualFormSchemaSnapshot jsonmap.JSON       `json:"manual_form_schema_snapshot"`
-	ManualFormSubmission     jsonmap.JSON       `json:"manual_form_submission"`
+	Quantity                 int               `json:"quantity"`
+	OriginalUnitPrice        money.Amount      `json:"original_unit_price"`
+	UnitPrice                money.Amount      `json:"unit_price"`
+	OriginalTotalPrice       money.Amount      `json:"original_total_price"`
+	TotalPrice               money.Amount      `json:"total_price"`
+	CouponDiscountAmount     money.Amount      `json:"coupon_discount_amount"`
+	MemberDiscountAmount     money.Amount      `json:"member_discount_amount"`
+	PromotionDiscountAmount  money.Amount      `json:"promotion_discount_amount"`
+	WholesaleDiscountAmount  money.Amount      `json:"wholesale_discount_amount"`
+	FulfillmentType          string            `json:"fulfillment_type"`
+	ManualFormSchemaSnapshot jsonmap.JSON      `json:"manual_form_schema_snapshot"`
+	ManualFormSubmission     jsonmap.JSON      `json:"manual_form_submission"`
 	// Instructions 交付使用说明（多语言 raw JSON，与 Title 字段契约一致，由前端按 locale 解析）。
 	// 仅在订单已付款时填充，未付款订单会在 NewOrderDetail 中置 nil；列表场景（NewOrderSummary）永远为 nil。
 	// 注意：渠道 API（channel_order.go）为服务端消费者（如 Telegram Bot），那里返回已按 locale 解析的字符串而非 raw JSON。

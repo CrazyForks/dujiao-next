@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -36,7 +37,7 @@ type UserOrderQuery interface {
 
 // AvailablePaymentChannelFilter 可用支付渠道过滤。
 type AvailablePaymentChannelFilter struct {
-	TargetAmount *models.Money
+	TargetAmount *money.Amount
 	User         *models.User
 	PaymentType  string
 }
@@ -230,7 +231,7 @@ func (h *UserHandler) GetOrderPaymentChannels(c *gin.Context) {
 		return
 	}
 	channels, err := h.payments.GetAvailableChannels(AvailablePaymentChannelFilter{
-		TargetAmount: &models.Money{Decimal: amount},
+		TargetAmount: &money.Amount{Decimal: amount},
 		User:         user,
 		PaymentType:  constants.PaymentTypeOrder,
 	})

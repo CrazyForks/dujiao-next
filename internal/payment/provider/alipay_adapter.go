@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/alipay"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -168,10 +168,10 @@ func (a *alipayAdapter) VerifyCallback(raw jsonmap.JSON, form map[string][]strin
 	}
 
 	// amount 解析失败时返回零值：wrapper 仅做适配，金额异常的语义边界由业务层判定。
-	amount := models.Money{}
+	amount := money.Amount{}
 	if s := strings.TrimSpace(amountStr); s != "" {
 		if d, parseErr := decimal.NewFromString(s); parseErr == nil {
-			amount = models.NewMoneyFromDecimal(d)
+			amount = money.FromDecimal(d)
 		}
 	}
 

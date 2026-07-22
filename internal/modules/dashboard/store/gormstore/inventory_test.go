@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -19,7 +20,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 		CategoryID:       category.ID,
 		Slug:             "manual-low-stock",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "多 SKU 手动商品"},
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(99)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(99)),
 		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
 		ManualStockTotal: 999,
@@ -29,9 +30,9 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 		t.Fatalf("create low stock product failed: %v", err)
 	}
 	for idx, sku := range []models.ProductSKU{
-		{ProductID: lowStockProduct.ID, SKUCode: "A", PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(99)), ManualStockTotal: 2, IsActive: true},
-		{ProductID: lowStockProduct.ID, SKUCode: "B", PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(99)), ManualStockTotal: 3, IsActive: true},
-		{ProductID: lowStockProduct.ID, SKUCode: "DISABLED", PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(99)), ManualStockTotal: 100, IsActive: false},
+		{ProductID: lowStockProduct.ID, SKUCode: "A", PriceAmount: money.FromDecimal(decimal.NewFromInt(99)), ManualStockTotal: 2, IsActive: true},
+		{ProductID: lowStockProduct.ID, SKUCode: "B", PriceAmount: money.FromDecimal(decimal.NewFromInt(99)), ManualStockTotal: 3, IsActive: true},
+		{ProductID: lowStockProduct.ID, SKUCode: "DISABLED", PriceAmount: money.FromDecimal(decimal.NewFromInt(99)), ManualStockTotal: 100, IsActive: false},
 	} {
 		row := sku
 		if err := db.Create(&row).Error; err != nil {
@@ -48,7 +49,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 		CategoryID:       category.ID,
 		Slug:             "manual-unlimited-sku",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "无限库存商品"},
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(88)),
 		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
 		ManualStockTotal: 0,
@@ -60,7 +61,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 	unlimitedSKU := &models.ProductSKU{
 		ProductID:        unlimitedProduct.ID,
 		SKUCode:          "UNLIMITED",
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(88)),
 		ManualStockTotal: constants.ManualStockUnlimited,
 		IsActive:         true,
 	}
@@ -72,7 +73,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 		CategoryID:       category.ID,
 		Slug:             "manual-fallback-zero",
 		TitleJSON:        jsonmap.JSON{"zh-CN": "回退零库存商品"},
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(77)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(77)),
 		PurchaseType:     constants.ProductPurchaseMember,
 		FulfillmentType:  constants.FulfillmentTypeManual,
 		ManualStockTotal: 0,
@@ -108,7 +109,7 @@ func TestGetInventoryAlertItemsFallsBackToProductLevelWhenOnlyInactiveAutoSKUHas
 		CategoryID:      category.ID,
 		Slug:            "dashboard-auto-legacy-stock",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "自动发货商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(99)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(99)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -120,14 +121,14 @@ func TestGetInventoryAlertItemsFallsBackToProductLevelWhenOnlyInactiveAutoSKUHas
 	legacySKU := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(99)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(99)),
 		IsActive:    false,
 		SortOrder:   0,
 	}
 	activeSKU := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     "SKU-2",
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(99)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(99)),
 		IsActive:    true,
 		SortOrder:   1,
 	}

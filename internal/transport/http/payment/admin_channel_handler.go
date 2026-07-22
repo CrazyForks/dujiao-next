@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,10 +40,10 @@ type CreatePaymentChannelRequest struct {
 	ProviderType       string                 `json:"provider_type" binding:"required"`
 	ChannelType        string                 `json:"channel_type" binding:"required"`
 	InteractionMode    string                 `json:"interaction_mode" binding:"required"`
-	FeeRate            *models.Money          `json:"fee_rate"`
-	FixedFee           *models.Money          `json:"fixed_fee"`
-	MinAmount          *models.Money          `json:"min_amount"`
-	MaxAmount          *models.Money          `json:"max_amount"`
+	FeeRate            *money.Amount          `json:"fee_rate"`
+	FixedFee           *money.Amount          `json:"fixed_fee"`
+	MinAmount          *money.Amount          `json:"min_amount"`
+	MaxAmount          *money.Amount          `json:"max_amount"`
 	HideAmountOutRange *bool                  `json:"hide_amount_out_range"`
 	PaymentRoles       []string               `json:"payment_roles"`
 	MemberLevels       []uint                 `json:"member_levels"`
@@ -59,10 +60,10 @@ type UpdatePaymentChannelRequest struct {
 	ProviderType       string                 `json:"provider_type"`
 	ChannelType        string                 `json:"channel_type"`
 	InteractionMode    string                 `json:"interaction_mode"`
-	FeeRate            *models.Money          `json:"fee_rate"`
-	FixedFee           *models.Money          `json:"fixed_fee"`
-	MinAmount          *models.Money          `json:"min_amount"`
-	MaxAmount          *models.Money          `json:"max_amount"`
+	FeeRate            *money.Amount          `json:"fee_rate"`
+	FixedFee           *money.Amount          `json:"fixed_fee"`
+	MinAmount          *money.Amount          `json:"min_amount"`
+	MaxAmount          *money.Amount          `json:"max_amount"`
 	HideAmountOutRange *bool                  `json:"hide_amount_out_range"`
 	PaymentRoles       []string               `json:"payment_roles"`
 	MemberLevels       []uint                 `json:"member_levels"`

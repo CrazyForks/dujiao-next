@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -39,7 +40,7 @@ type ResellerDisplayPricer interface {
 // ProductPromotionDecorator 是公开商品促销装饰端口。
 type ProductPromotionDecorator interface {
 	GetProductPromotions(productID uint) ([]models.Promotion, error)
-	ApplyPromotion(product *models.Product, quantity int) (*models.Promotion, models.Money, error)
+	ApplyPromotion(product *models.Product, quantity int) (*models.Promotion, money.Amount, error)
 }
 
 // MemberLevelPricing 是公开商品会员价装饰端口。

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"gorm.io/gorm"
 )
 
@@ -18,8 +19,8 @@ type ProductSKU struct {
 	ProductID          uint           `gorm:"not null;index;uniqueIndex:idx_product_sku_code" json:"product_id"`                          // 商品ID
 	SKUCode            string         `gorm:"column:sku_code;type:varchar(64);not null;uniqueIndex:idx_product_sku_code" json:"sku_code"` // SKU编码（同商品内唯一）
 	SpecValuesJSON     jsonmap.JSON   `gorm:"type:json" json:"spec_values"`                                                               // 规格值（如颜色/版本）
-	PriceAmount        Money          `gorm:"type:decimal(20,2);not null;default:0" json:"price_amount"`                                  // SKU价格
-	CostPriceAmount    Money          `gorm:"type:decimal(20,2);not null;default:0" json:"cost_price_amount"`                             // 成本价
+	PriceAmount        money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"price_amount"`                                  // SKU价格
+	CostPriceAmount    money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"cost_price_amount"`                             // 成本价
 	ManualStockTotal   int            `gorm:"not null;default:0" json:"manual_stock_total"`                                               // 手动剩余库存（-1 表示无限库存，>=0 表示当前可售数量）
 	ManualStockLocked  int            `gorm:"not null;default:0" json:"manual_stock_locked"`                                              // 手动库存占用量（待支付）
 	ManualStockSold    int            `gorm:"not null;default:0" json:"manual_stock_sold"`                                                // 手动库存已售量（支付成功后累加）

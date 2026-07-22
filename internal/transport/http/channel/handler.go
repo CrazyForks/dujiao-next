@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -81,11 +82,11 @@ type CreateOrderInput struct {
 
 type OrderPreview struct {
 	Currency                string
-	OriginalAmount          models.Money
-	DiscountAmount          models.Money
-	PromotionDiscountAmount models.Money
-	WholesaleDiscountAmount models.Money
-	TotalAmount             models.Money
+	OriginalAmount          money.Amount
+	DiscountAmount          money.Amount
+	PromotionDiscountAmount money.Amount
+	WholesaleDiscountAmount money.Amount
+	TotalAmount             money.Amount
 	Items                   []OrderPreviewItem
 }
 
@@ -93,14 +94,14 @@ type OrderPreviewItem struct {
 	ProductID, SKUID   uint
 	TitleJSON          jsonmap.JSON
 	SKUSnapshotJSON    jsonmap.JSON
-	OriginalUnitPrice  models.Money
-	UnitPrice          models.Money
+	OriginalUnitPrice  money.Amount
+	UnitPrice          money.Amount
 	Quantity           int
-	OriginalTotalPrice models.Money
-	TotalPrice         models.Money
-	CouponDiscount     models.Money
-	PromotionDiscount  models.Money
-	WholesaleDiscount  models.Money
+	OriginalTotalPrice money.Amount
+	TotalPrice         money.Amount
+	CouponDiscount     money.Amount
+	PromotionDiscount  money.Amount
+	WholesaleDiscount  money.Amount
 	FulfillmentType    string
 }
 
@@ -126,8 +127,8 @@ type CreatePaymentResult struct {
 	Payment          *models.Payment
 	Channel          *models.PaymentChannel
 	OrderPaid        bool
-	WalletPaidAmount models.Money
-	OnlinePayAmount  models.Money
+	WalletPaidAmount money.Amount
+	OnlinePayAmount  money.Amount
 }
 
 type CategoryService interface {

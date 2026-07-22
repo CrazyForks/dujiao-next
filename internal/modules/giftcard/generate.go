@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -39,7 +40,7 @@ func (s *Service) Generate(input GenerateInput) (*models.GiftCardBatch, int, err
 	batch := &models.GiftCardBatch{
 		BatchNo:   generateBatchNo(now),
 		Name:      name,
-		Amount:    models.NewMoneyFromDecimal(amount),
+		Amount:    money.FromDecimal(amount),
 		Currency:  currency,
 		Quantity:  input.Quantity,
 		ExpiresAt: normalizeExpireAt(input.ExpiresAt),
@@ -53,7 +54,7 @@ func (s *Service) Generate(input GenerateInput) (*models.GiftCardBatch, int, err
 		cards = append(cards, models.GiftCard{
 			Name:      name,
 			Code:      generateCode(now, i),
-			Amount:    models.NewMoneyFromDecimal(amount),
+			Amount:    money.FromDecimal(amount),
 			Currency:  currency,
 			Status:    models.GiftCardStatusActive,
 			ExpiresAt: normalizeExpireAt(input.ExpiresAt),

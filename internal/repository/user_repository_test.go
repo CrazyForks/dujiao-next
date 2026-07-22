@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -35,7 +36,7 @@ func createTestUser(t *testing.T, db *gorm.DB, email string, createdAt time.Time
 
 func createTestWalletAccount(t *testing.T, db *gorm.DB, userID uint, balance int64) {
 	t.Helper()
-	w := &models.WalletAccount{UserID: userID, Balance: models.NewMoneyFromDecimal(decimal.NewFromInt(balance))}
+	w := &models.WalletAccount{UserID: userID, Balance: money.FromDecimal(decimal.NewFromInt(balance))}
 	if err := db.Create(w).Error; err != nil {
 		t.Fatalf("create wallet account for user %d failed: %v", userID, err)
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -173,7 +174,7 @@ func (s *AccountingLedgerService) HandleRefundDeduct(
 		ResellerID:  snapshot.ResellerID,
 		OrderID:     &orderID,
 		Type:        models.ResellerLedgerTypeRefundDeduct,
-		Amount:      models.NewMoneyFromDecimal(deduct.Neg()),
+		Amount:      money.FromDecimal(deduct.Neg()),
 		Currency:    strings.TrimSpace(snapshot.Currency),
 		Status:      deductStatus,
 		AvailableAt: deductAvailableAt,

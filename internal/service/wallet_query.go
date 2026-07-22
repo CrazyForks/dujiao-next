@@ -4,6 +4,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	walletmodule "github.com/dujiao-next/internal/modules/wallet"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 func (s *WalletService) queries() *walletmodule.QueryService {
@@ -46,6 +47,6 @@ func (s *WalletService) GetRechargeOrderByPaymentIDAndUser(paymentID uint, userI
 }
 
 // GetBalancesByUserIDs is retained as a compatibility facade.
-func (s *WalletService) GetBalancesByUserIDs(userIDs []uint) (map[uint]models.Money, error) {
+func (s *WalletService) GetBalancesByUserIDs(userIDs []uint) (map[uint]money.Amount, error) {
 	return s.queries().GetBalancesByUserIDs(userIDs)
 }

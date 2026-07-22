@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -47,7 +48,7 @@ func (s *WriteService) Update(id string, input CreateProductInput) (*models.Prod
 	product.ContentJSON = jsonmap.JSON(input.ContentJSON)
 	product.InstructionsJSON = jsonmap.JSON(input.InstructionsJSON)
 	product.ManualFormSchemaJSON = jsonmap.JSON{}
-	product.PriceAmount = models.NewMoneyFromDecimal(priceAmount)
+	product.PriceAmount = money.FromDecimal(priceAmount)
 	product.SortOrder = input.SortOrder
 	product.Images = jsonslice.Strings(input.Images)
 	product.Tags = jsonslice.Strings(input.Tags)
@@ -134,11 +135,11 @@ func (s *WriteService) Update(id string, input CreateProductInput) (*models.Prod
 		}
 	}
 
-	product.PriceAmount = models.NewMoneyFromDecimal(priceAmount)
+	product.PriceAmount = money.FromDecimal(priceAmount)
 	if len(normalizedSKUs) > 0 {
-		product.CostPriceAmount = models.NewMoneyFromDecimal(minActiveCostPrice(normalizedSKUs))
+		product.CostPriceAmount = money.FromDecimal(minActiveCostPrice(normalizedSKUs))
 	} else {
-		product.CostPriceAmount = models.NewMoneyFromDecimal(input.CostPriceAmount.Round(2))
+		product.CostPriceAmount = money.FromDecimal(input.CostPriceAmount.Round(2))
 	}
 	product.ManualStockTotal = manualStockTotal
 

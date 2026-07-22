@@ -4,6 +4,7 @@ import (
 	"time"
 
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"gorm.io/gorm"
 )
@@ -12,7 +13,7 @@ import (
 type AffiliateWithdrawRequest struct {
 	ID                 uint           `gorm:"primarykey" json:"id"`                                // 主键
 	AffiliateProfileID uint           `gorm:"not null;index" json:"affiliate_profile_id"`          // 推广用户ID
-	Amount             Money          `gorm:"type:decimal(20,2);not null;default:0" json:"amount"` // 申请金额
+	Amount             money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"amount"` // 申请金额
 	Channel            string         `gorm:"type:varchar(50);not null" json:"channel"`            // 提现渠道
 	Account            string         `gorm:"type:varchar(255);not null" json:"account"`           // 提现账号
 	Status             string         `gorm:"type:varchar(32);not null;index" json:"status"`       // 提现状态

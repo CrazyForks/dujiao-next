@@ -14,6 +14,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/shopspring/decimal"
@@ -145,8 +146,8 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 		DescriptionJSON:      upProduct.Description,
 		ContentJSON:          localContent,
 		ManualFormSchemaJSON: upProduct.ManualFormSchema,
-		PriceAmount:          models.NewMoneyFromDecimal(priceAmount.Round(2)),
-		CostPriceAmount:      models.NewMoneyFromDecimal(costPriceAmount.Round(2)),
+		PriceAmount:          money.FromDecimal(priceAmount.Round(2)),
+		CostPriceAmount:      money.FromDecimal(costPriceAmount.Round(2)),
 		WholesalePrices:      models.WholesalePriceTiers{},
 		Images:               jsonslice.Strings(localImages),
 		Tags:                 jsonslice.Strings(upProduct.Tags),
@@ -183,8 +184,8 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 				ProductID:       product.ID,
 				SKUCode:         upSKU.SKUCode,
 				SpecValuesJSON:  upSKU.SpecValues,
-				PriceAmount:     models.NewMoneyFromDecimal(localPrice.Round(2)),
-				CostPriceAmount: models.NewMoneyFromDecimal(convertCurrency(skuPrice, exchangeRate).Round(2)), // 成本价 = 上游价格 × 汇率（本地币种）
+				PriceAmount:     money.FromDecimal(localPrice.Round(2)),
+				CostPriceAmount: money.FromDecimal(convertCurrency(skuPrice, exchangeRate).Round(2)), // 成本价 = 上游价格 × 汇率（本地币种）
 				IsActive:        upSKU.IsActive,
 				SortOrder:       0,
 			}
@@ -200,7 +201,7 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 				ProductID:      product.ID,
 				SKUCode:        models.DefaultSKUCode,
 				SpecValuesJSON: jsonmap.JSON{},
-				PriceAmount:    models.NewMoneyFromDecimal(priceAmount.Round(2)),
+				PriceAmount:    money.FromDecimal(priceAmount.Round(2)),
 				IsActive:       true,
 				SortOrder:      0,
 			}
@@ -306,7 +307,7 @@ func createSKUMappings(
 			ProductMappingID: mappingID,
 			LocalSKUID:       localSKU.ID,
 			UpstreamSKUID:    upSKU.ID,
-			UpstreamPrice:    models.NewMoneyFromDecimal(upPrice.Round(2)),
+			UpstreamPrice:    money.FromDecimal(upPrice.Round(2)),
 			UpstreamIsActive: upSKU.IsActive,
 			UpstreamStock:    upSKU.StockQuantity,
 			StockSyncedAt:    &now,

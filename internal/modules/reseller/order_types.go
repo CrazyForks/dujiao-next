@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 const (
@@ -30,9 +31,9 @@ type OrderListItem struct {
 	OrderNo      string
 	Status       string
 	Currency     string
-	TotalAmount  models.Money
-	BaseAmount   models.Money
-	ProfitAmount models.Money
+	TotalAmount  money.Amount
+	BaseAmount   money.Amount
+	ProfitAmount money.Amount
 	ProfitStatus string
 	Domain       string
 	BuyerLabel   string
@@ -46,8 +47,8 @@ type OrderItemDetail struct {
 	Title               jsonmap.JSON
 	SKUSnapshot         jsonmap.JSON
 	Quantity            int
-	UnitPrice           models.Money
-	TotalPrice          models.Money
+	UnitPrice           money.Amount
+	TotalPrice          money.Amount
 	BaseUnitAmount      string
 	ResellerUnitAmount  string
 	BaseTotalAmount     string

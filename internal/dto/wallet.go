@@ -4,11 +4,12 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // WalletAccountResp 钱包账户响应
 type WalletAccountResp struct {
-	Balance models.Money `json:"balance"`
+	Balance money.Amount `json:"balance"`
 }
 
 // NewWalletAccountResp 从 models.WalletAccount 构造响应
@@ -23,8 +24,8 @@ type WalletTransactionResp struct {
 	ID           uint         `json:"id"`
 	Type         string       `json:"type"`
 	Direction    string       `json:"direction"`
-	Amount       models.Money `json:"amount"`
-	BalanceAfter models.Money `json:"balance_after"`
+	Amount       money.Amount `json:"amount"`
+	BalanceAfter money.Amount `json:"balance_after"`
 	Remark       string       `json:"remark"`
 	CreatedAt    time.Time    `json:"created_at"`
 }
@@ -56,10 +57,10 @@ func NewWalletTransactionRespList(txns []models.WalletTransaction) []WalletTrans
 type WalletRechargeResp struct {
 	ID            uint         `json:"id"`
 	RechargeNo    string       `json:"recharge_no"`
-	Amount        models.Money `json:"amount"`
-	PayableAmount models.Money `json:"payable_amount"`
-	FeeRate       models.Money `json:"fee_rate"`
-	FeeAmount     models.Money `json:"fee_amount"`
+	Amount        money.Amount `json:"amount"`
+	PayableAmount money.Amount `json:"payable_amount"`
+	FeeRate       money.Amount `json:"fee_rate"`
+	FeeAmount     money.Amount `json:"fee_amount"`
 	Currency      string       `json:"currency"`
 	Status        string       `json:"status"`
 	Remark        string       `json:"remark"`

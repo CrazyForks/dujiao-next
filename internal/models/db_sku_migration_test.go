@@ -7,6 +7,7 @@ import (
 
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -44,7 +45,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		CategoryID:        1,
 		Slug:              "sku-migration-legacy",
 		TitleJSON:         jsonmap.JSON{"zh-CN": "历史商品"},
-		PriceAmount:       NewMoneyFromDecimal(decimal.NewFromInt(128)),
+		PriceAmount:       money.FromDecimal(decimal.NewFromInt(128)),
 		PurchaseType:      "member",
 		FulfillmentType:   "manual",
 		ManualStockTotal:  20,

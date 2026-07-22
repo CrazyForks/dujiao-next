@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 )
@@ -58,7 +59,7 @@ func channelOrderPaidAmount(order *models.Order) string {
 	if order == nil {
 		return "0.00"
 	}
-	return models.NewMoneyFromDecimal(order.WalletPaidAmount.Decimal.Add(order.OnlinePaidAmount.Decimal)).StringFixed(2)
+	return money.FromDecimal(order.WalletPaidAmount.Decimal.Add(order.OnlinePaidAmount.Decimal)).StringFixed(2)
 }
 
 func formatChannelNullableTime(value *time.Time) *string {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
@@ -16,8 +17,8 @@ func seedResellerOperationsOrder(t *testing.T, db *gorm.DB, profile models.Resel
 		OrderNo:              orderNo,
 		Status:               status,
 		Currency:             "USD",
-		TotalAmount:          models.NewMoneyFromDecimal(decimal.RequireFromString(amount)),
-		ResellerProfitAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("0")),
+		TotalAmount:          money.FromDecimal(decimal.RequireFromString(amount)),
+		ResellerProfitAmount: money.FromDecimal(decimal.RequireFromString("0")),
 		ResellerID:           &profile.ID,
 		CreatedAt:            createdAt,
 	}
@@ -96,7 +97,7 @@ func TestResellerOperationsRepositoryFinanceSplitsPeriodAndCurrentCurrencyRows(t
 	if err := db.Create(&models.ResellerLedgerEntry{
 		ResellerID:     profile.ID,
 		Type:           models.ResellerLedgerTypeOrderProfit,
-		Amount:         models.NewMoneyFromDecimal(decimal.RequireFromString("30.00")),
+		Amount:         money.FromDecimal(decimal.RequireFromString("30.00")),
 		Currency:       "USD",
 		IdempotencyKey: "ops-profit-1",
 		Status:         models.ResellerLedgerStatusAvailable,
@@ -107,7 +108,7 @@ func TestResellerOperationsRepositoryFinanceSplitsPeriodAndCurrentCurrencyRows(t
 	if err := db.Create(&models.ResellerLedgerEntry{
 		ResellerID:     profile.ID,
 		Type:           models.ResellerLedgerTypeRefundDeduct,
-		Amount:         models.NewMoneyFromDecimal(decimal.RequireFromString("-4.00")),
+		Amount:         money.FromDecimal(decimal.RequireFromString("-4.00")),
 		Currency:       "USD",
 		IdempotencyKey: "ops-refund-1",
 		Status:         models.ResellerLedgerStatusAvailable,
@@ -119,16 +120,16 @@ func TestResellerOperationsRepositoryFinanceSplitsPeriodAndCurrentCurrencyRows(t
 		ResellerID:           profile.ID,
 		Currency:             "USD",
 		Status:               models.ResellerBalanceStatusNormal,
-		AvailableAmountCache: models.NewMoneyFromDecimal(decimal.RequireFromString("26.00")),
-		LockedAmountCache:    models.NewMoneyFromDecimal(decimal.RequireFromString("8.00")),
-		NegativeAmountCache:  models.NewMoneyFromDecimal(decimal.Zero),
+		AvailableAmountCache: money.FromDecimal(decimal.RequireFromString("26.00")),
+		LockedAmountCache:    money.FromDecimal(decimal.RequireFromString("8.00")),
+		NegativeAmountCache:  money.FromDecimal(decimal.Zero),
 		LastLedgerEntryID:    0,
 	}).Error; err != nil {
 		t.Fatalf("create balance failed: %v", err)
 	}
 	if err := db.Create(&models.ResellerWithdrawRequest{
 		ResellerID: profile.ID,
-		Amount:     models.NewMoneyFromDecimal(decimal.RequireFromString("8.00")),
+		Amount:     money.FromDecimal(decimal.RequireFromString("8.00")),
 		Currency:   "USD",
 		Channel:    "USDT",
 		Account:    "Tops",

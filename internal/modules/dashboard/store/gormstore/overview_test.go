@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -20,9 +21,9 @@ func TestGetOverviewUsesOrderCreationWindowForPaidGMV(t *testing.T) {
 		UserID:         1,
 		Status:         constants.OrderStatusPaid,
 		Currency:       "CNY",
-		OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		OriginalAmount: money.FromDecimal(decimal.NewFromInt(100)),
+		DiscountAmount: money.FromDecimal(decimal.Zero),
+		TotalAmount:    money.FromDecimal(decimal.NewFromInt(100)),
 		CreatedAt:      now,
 		PaidAt:         &paidOutsideWindow,
 	}
@@ -36,9 +37,9 @@ func TestGetOverviewUsesOrderCreationWindowForPaidGMV(t *testing.T) {
 		UserID:         1,
 		Status:         constants.OrderStatusPaid,
 		Currency:       "CNY",
-		OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(60)),
-		DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(60)),
+		OriginalAmount: money.FromDecimal(decimal.NewFromInt(60)),
+		DiscountAmount: money.FromDecimal(decimal.Zero),
+		TotalAmount:    money.FromDecimal(decimal.NewFromInt(60)),
 		CreatedAt:      now.Add(-48 * time.Hour),
 		PaidAt:         &paidInsideWindow,
 	}

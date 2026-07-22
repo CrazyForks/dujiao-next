@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -32,7 +33,7 @@ func TestSKUStoreListByProductSortOrderDescending(t *testing.T) {
 	high := &models.ProductSKU{
 		ProductID:      1,
 		SKUCode:        "HIGH",
-		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:    money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:       true,
 		SortOrder:      100,
 		SpecValuesJSON: jsonmap.JSON{},
@@ -40,7 +41,7 @@ func TestSKUStoreListByProductSortOrderDescending(t *testing.T) {
 	low := &models.ProductSKU{
 		ProductID:      1,
 		SKUCode:        "LOW",
-		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:    money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:       true,
 		SortOrder:      1,
 		SpecValuesJSON: jsonmap.JSON{},
@@ -69,7 +70,7 @@ func TestProductSKUManualStockLifecycleMatchesProductSemantics(t *testing.T) {
 	sku := &models.ProductSKU{
 		ProductID:        1,
 		SKUCode:          "STOCK-LIFECYCLE",
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(100)),
 		ManualStockTotal: 10,
 		IsActive:         true,
 	}
@@ -105,7 +106,7 @@ func TestProductSKUManualStockLifecycleMatchesProductSemantics(t *testing.T) {
 	unlimited := &models.ProductSKU{
 		ProductID:        1,
 		SKUCode:          "STOCK-UNLIMITED",
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(100)),
 		ManualStockTotal: constants.ManualStockUnlimited,
 		IsActive:         true,
 	}

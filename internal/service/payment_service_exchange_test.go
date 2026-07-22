@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -83,10 +84,10 @@ func createExchangePaymentFixture(t *testing.T, db *gorm.DB, originalAmount deci
 		UserID:           user.ID,
 		Status:           constants.OrderStatusPendingPayment,
 		Currency:         originalCurrency,
-		OriginalAmount:   models.NewMoneyFromDecimal(originalAmount),
-		TotalAmount:      models.NewMoneyFromDecimal(originalAmount),
-		OnlinePaidAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		WalletPaidAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		OriginalAmount:   money.FromDecimal(originalAmount),
+		TotalAmount:      money.FromDecimal(originalAmount),
+		OnlinePaidAmount: money.FromDecimal(decimal.Zero),
+		WalletPaidAmount: money.FromDecimal(decimal.Zero),
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
@@ -100,11 +101,11 @@ func createExchangePaymentFixture(t *testing.T, db *gorm.DB, originalAmount deci
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeAlipay,
 		InteractionMode: constants.PaymentInteractionQR,
-		Amount:          models.NewMoneyFromDecimal(convertedAmount),
+		Amount:          money.FromDecimal(convertedAmount),
 		Currency:        convertedCurrency,
-		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		FixedFee:        models.NewMoneyFromDecimal(decimal.Zero),
-		FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+		FeeRate:         money.FromDecimal(decimal.Zero),
+		FixedFee:        money.FromDecimal(decimal.Zero),
+		FeeAmount:       money.FromDecimal(decimal.Zero),
 		Status:          constants.PaymentStatusPending,
 		ProviderRef:     fmt.Sprintf("PAY-%d", now.UnixNano()),
 		GatewayOrderNo:  order.OrderNo,
@@ -139,7 +140,7 @@ func TestCallbackMatchesConvertedAmount(t *testing.T) {
 		ChannelID:   payment.ChannelID,
 		Status:      constants.PaymentStatusSuccess,
 		ProviderRef: "ALIPAY-SUCCESS-001",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("72")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("72")),
 		Currency:    "CNY",
 		PaidAt:      &now,
 	})
@@ -167,7 +168,7 @@ func TestCallbackRejectsOriginalAmountWhenConverted(t *testing.T) {
 		ChannelID:   payment.ChannelID,
 		Status:      constants.PaymentStatusSuccess,
 		ProviderRef: "ALIPAY-FAIL-001",
-		Amount:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)), // original USD amount
+		Amount:      money.FromDecimal(decimal.NewFromInt(10)), // original USD amount
 		Currency:    "CNY",
 		PaidAt:      &now,
 	})
@@ -191,7 +192,7 @@ func TestCallbackRejectsCurrencyMismatchAfterConversion(t *testing.T) {
 		ChannelID:   payment.ChannelID,
 		Status:      constants.PaymentStatusSuccess,
 		ProviderRef: "REF-001",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("72")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("72")),
 		Currency:    "USD", // wrong currency
 		PaidAt:      &now,
 	})
@@ -215,7 +216,7 @@ func TestCallbackSkipsAmountCheckWhenZero(t *testing.T) {
 		ChannelID:   payment.ChannelID,
 		Status:      constants.PaymentStatusSuccess,
 		ProviderRef: "REF-002",
-		Amount:      models.NewMoneyFromDecimal(decimal.Zero), // zero = skip check
+		Amount:      money.FromDecimal(decimal.Zero), // zero = skip check
 		Currency:    "CNY",
 		PaidAt:      &now,
 	})
@@ -242,7 +243,7 @@ func TestCallbackSkipsCurrencyCheckWhenEmpty(t *testing.T) {
 		ChannelID:   payment.ChannelID,
 		Status:      constants.PaymentStatusSuccess,
 		ProviderRef: "REF-003",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("72")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("72")),
 		Currency:    "", // empty = skip check
 		PaidAt:      &now,
 	})
@@ -268,10 +269,10 @@ func TestCallbackNoConversionPaymentStillWorks(t *testing.T) {
 	order := &models.Order{
 		OrderNo: fmt.Sprintf("DJNOCONV%d", now.UnixNano()), UserID: user.ID,
 		Status: constants.OrderStatusPendingPayment, Currency: "USD",
-		OriginalAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(25)),
-		TotalAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(25)),
-		OnlinePaidAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		WalletPaidAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		OriginalAmount:   money.FromDecimal(decimal.NewFromInt(25)),
+		TotalAmount:      money.FromDecimal(decimal.NewFromInt(25)),
+		OnlinePaidAmount: money.FromDecimal(decimal.Zero),
+		WalletPaidAmount: money.FromDecimal(decimal.Zero),
 		CreatedAt:        now, UpdatedAt: now,
 	}
 	if err := db.Create(order).Error; err != nil {
@@ -281,9 +282,9 @@ func TestCallbackNoConversionPaymentStillWorks(t *testing.T) {
 		OrderID: order.ID, ChannelID: 1,
 		ProviderType: constants.PaymentProviderOfficial, ChannelType: constants.PaymentChannelTypeStripe,
 		InteractionMode: constants.PaymentInteractionRedirect,
-		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(25)), Currency: "USD",
-		FeeRate: models.NewMoneyFromDecimal(decimal.Zero), FixedFee: models.NewMoneyFromDecimal(decimal.Zero),
-		FeeAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		Amount:          money.FromDecimal(decimal.NewFromInt(25)), Currency: "USD",
+		FeeRate: money.FromDecimal(decimal.Zero), FixedFee: money.FromDecimal(decimal.Zero),
+		FeeAmount: money.FromDecimal(decimal.Zero),
 		Status:    constants.PaymentStatusPending, ProviderRef: "pi_test",
 		GatewayOrderNo: order.OrderNo, CreatedAt: now, UpdatedAt: now,
 	}
@@ -294,7 +295,7 @@ func TestCallbackNoConversionPaymentStillWorks(t *testing.T) {
 	updated, err := svc.HandleCallback(PaymentCallbackInput{
 		PaymentID: payment.ID, OrderNo: order.OrderNo, ChannelID: payment.ChannelID,
 		Status: constants.PaymentStatusSuccess, ProviderRef: "pi_test",
-		Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(25)), Currency: "USD", PaidAt: &now,
+		Amount: money.FromDecimal(decimal.NewFromInt(25)), Currency: "USD", PaidAt: &now,
 	})
 	if err != nil {
 		t.Fatalf("callback without conversion should succeed: %v", err)
@@ -318,10 +319,10 @@ func TestCallbackRejectsAmountMismatchWithoutConversion(t *testing.T) {
 	order := &models.Order{
 		OrderNo: fmt.Sprintf("DJMISMATCH%d", now.UnixNano()), UserID: user.ID,
 		Status: constants.OrderStatusPendingPayment, Currency: "USD",
-		OriginalAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(25)),
-		TotalAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(25)),
-		OnlinePaidAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		WalletPaidAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		OriginalAmount:   money.FromDecimal(decimal.NewFromInt(25)),
+		TotalAmount:      money.FromDecimal(decimal.NewFromInt(25)),
+		OnlinePaidAmount: money.FromDecimal(decimal.Zero),
+		WalletPaidAmount: money.FromDecimal(decimal.Zero),
 		CreatedAt:        now, UpdatedAt: now,
 	}
 	if err := db.Create(order).Error; err != nil {
@@ -331,9 +332,9 @@ func TestCallbackRejectsAmountMismatchWithoutConversion(t *testing.T) {
 		OrderID: order.ID, ChannelID: 1,
 		ProviderType: constants.PaymentProviderOfficial, ChannelType: constants.PaymentChannelTypeStripe,
 		InteractionMode: constants.PaymentInteractionRedirect,
-		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(25)), Currency: "USD",
-		FeeRate: models.NewMoneyFromDecimal(decimal.Zero), FixedFee: models.NewMoneyFromDecimal(decimal.Zero),
-		FeeAmount: models.NewMoneyFromDecimal(decimal.Zero),
+		Amount:          money.FromDecimal(decimal.NewFromInt(25)), Currency: "USD",
+		FeeRate: money.FromDecimal(decimal.Zero), FixedFee: money.FromDecimal(decimal.Zero),
+		FeeAmount: money.FromDecimal(decimal.Zero),
 		Status:    constants.PaymentStatusPending, ProviderRef: "pi_test2",
 		GatewayOrderNo: order.OrderNo, CreatedAt: now, UpdatedAt: now,
 	}
@@ -344,7 +345,7 @@ func TestCallbackRejectsAmountMismatchWithoutConversion(t *testing.T) {
 	_, err := svc.HandleCallback(PaymentCallbackInput{
 		PaymentID: payment.ID, OrderNo: order.OrderNo, ChannelID: payment.ChannelID,
 		Status: constants.PaymentStatusSuccess, ProviderRef: "pi_test2",
-		Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)), Currency: "USD", PaidAt: &now,
+		Amount: money.FromDecimal(decimal.NewFromInt(10)), Currency: "USD", PaidAt: &now,
 	})
 	if err != ErrPaymentAmountMismatch {
 		t.Fatalf("callback with mismatched amount should fail, got: %v", err)
@@ -371,7 +372,7 @@ func TestCallbackIdempotentSuccessWithConvertedAmount(t *testing.T) {
 		ChannelID:   payment.ChannelID,
 		Status:      constants.PaymentStatusSuccess,
 		ProviderRef: "ALIPAY-IDEM-001",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("72")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("72")),
 		Currency:    "CNY",
 		PaidAt:      &paidAt,
 	})
@@ -471,7 +472,7 @@ func TestExchangeConversionScenarios(t *testing.T) {
 				ChannelID:   payment.ChannelID,
 				Status:      constants.PaymentStatusSuccess,
 				ProviderRef: fmt.Sprintf("REF-%d", now.UnixNano()),
-				Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString(tt.callbackAmount)),
+				Amount:      money.FromDecimal(decimal.RequireFromString(tt.callbackAmount)),
 				Currency:    tt.callbackCurrency,
 				PaidAt:      &now,
 			})
@@ -506,7 +507,7 @@ func TestProviderPayloadRetainsOriginalAfterConversion(t *testing.T) {
 		ChannelID:   payment.ChannelID,
 		Status:      constants.PaymentStatusSuccess,
 		ProviderRef: "AUDIT-001",
-		Amount:      models.NewMoneyFromDecimal(decimal.RequireFromString("72")),
+		Amount:      money.FromDecimal(decimal.RequireFromString("72")),
 		Currency:    "CNY",
 		PaidAt:      &now,
 	})

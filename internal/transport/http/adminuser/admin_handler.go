@@ -14,6 +14,7 @@ import (
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -59,7 +60,7 @@ type EmailNormalizer interface {
 
 // WalletBalances 钱包余额查询端口。
 type WalletBalances interface {
-	GetBalancesByUserIDs(userIDs []uint) (map[uint]models.Money, error)
+	GetBalancesByUserIDs(userIDs []uint) (map[uint]money.Amount, error)
 	GetAccount(userID uint) (*models.WalletAccount, error)
 }
 
@@ -185,7 +186,7 @@ type UserCouponUsageItem struct {
 	CouponCode     string                   `json:"coupon_code"`
 	CouponType     string                   `json:"coupon_type"`
 	OrderID        uint                     `json:"order_id"`
-	DiscountAmount models.Money             `json:"discount_amount"`
+	DiscountAmount money.Amount             `json:"discount_amount"`
 	CreatedAt      time.Time                `json:"created_at"`
 	ScopeRefIDs    []uint                   `json:"scope_ref_ids"`
 	ScopeProducts  []UserCouponUsageProduct `json:"scope_products"`
@@ -194,7 +195,7 @@ type UserCouponUsageItem struct {
 // AdminUserListItem 管理端用户列表项。
 type AdminUserListItem struct {
 	models.User
-	WalletBalance models.Money `json:"wallet_balance"`
+	WalletBalance money.Amount `json:"wallet_balance"`
 }
 
 // AdminUserOAuthIdentityItem 管理端用户第三方身份项。
@@ -211,7 +212,7 @@ type AdminUserOAuthIdentityItem struct {
 // AdminUserDetail 管理端用户详情。
 type AdminUserDetail struct {
 	models.User
-	WalletBalance   models.Money                 `json:"wallet_balance"`
+	WalletBalance   money.Amount                 `json:"wallet_balance"`
 	OAuthIdentities []AdminUserOAuthIdentityItem `json:"oauth_identities"`
 }
 
@@ -269,7 +270,7 @@ func (h *AdminHandler) GetAdminUsers(c *gin.Context) {
 	for _, user := range users {
 		balance, ok := balanceMap[user.ID]
 		if !ok {
-			balance = models.NewMoneyFromDecimal(decimal.Zero)
+			balance = money.FromDecimal(decimal.Zero)
 		}
 		items = append(items, AdminUserListItem{
 			User:          user,

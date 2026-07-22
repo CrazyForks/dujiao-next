@@ -16,6 +16,7 @@ import (
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	paymentcallback "github.com/dujiao-next/internal/transport/http/payment/callback"
 
 	"github.com/gin-gonic/gin"
@@ -88,13 +89,13 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 		UserID:                  user.ID,
 		Status:                  constants.OrderStatusPendingPayment,
 		Currency:                "CNY",
-		OriginalAmount:          models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
-		DiscountAmount:          models.NewMoneyFromDecimal(decimal.Zero),
-		PromotionDiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		TotalAmount:             models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
-		WalletPaidAmount:        models.NewMoneyFromDecimal(decimal.Zero),
-		OnlinePaidAmount:        models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
-		RefundedAmount:          models.NewMoneyFromDecimal(decimal.Zero),
+		OriginalAmount:          money.FromDecimal(decimal.NewFromInt(88)),
+		DiscountAmount:          money.FromDecimal(decimal.Zero),
+		PromotionDiscountAmount: money.FromDecimal(decimal.Zero),
+		TotalAmount:             money.FromDecimal(decimal.NewFromInt(88)),
+		WalletPaidAmount:        money.FromDecimal(decimal.Zero),
+		OnlinePaidAmount:        money.FromDecimal(decimal.NewFromInt(88)),
+		RefundedAmount:          money.FromDecimal(decimal.Zero),
 		CreatedAt:               now,
 		UpdatedAt:               now,
 	}
@@ -106,7 +107,7 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 		ProviderType:    constants.PaymentProviderOkpay,
 		ChannelType:     constants.PaymentChannelTypeUsdt,
 		InteractionMode: constants.PaymentInteractionQR,
-		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
+		FeeRate:         money.FromDecimal(decimal.Zero),
 		ConfigJSON: jsonmap.JSON{
 			"merchant_id":    "shop-1",
 			"merchant_token": "token-1",
@@ -129,9 +130,9 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 		ProviderType:    channel.ProviderType,
 		ChannelType:     channel.ChannelType,
 		InteractionMode: channel.InteractionMode,
-		Amount:          models.NewMoneyFromDecimal(decimal.NewFromFloat(616)),
-		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+		Amount:          money.FromDecimal(decimal.NewFromFloat(616)),
+		FeeRate:         money.FromDecimal(decimal.Zero),
+		FeeAmount:       money.FromDecimal(decimal.Zero),
 		Currency:        "USDT",
 		Status:          constants.PaymentStatusPending,
 		ProviderRef:     "OKPAY-ORDER-1",

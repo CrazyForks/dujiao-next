@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/money"
 	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
 )
 
@@ -86,7 +87,7 @@ func (a walletTransportAdapter) GetRechargeOrderByPaymentIDAndUser(paymentID uin
 	return order, mapWalletTransportError(err)
 }
 
-func (a walletTransportAdapter) GetAvailableWalletRechargeChannels(amount models.Money, user *models.User) ([]map[string]interface{}, error) {
+func (a walletTransportAdapter) GetAvailableWalletRechargeChannels(amount money.Amount, user *models.User) ([]map[string]interface{}, error) {
 	channels, err := a.payments.GetAvailableChannels(service.AvailablePaymentChannelFilter{
 		TargetAmount: &amount, User: user, PaymentType: constants.PaymentTypeWallet,
 	})

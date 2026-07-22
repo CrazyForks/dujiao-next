@@ -11,6 +11,7 @@ import (
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
@@ -139,7 +140,7 @@ func TestRedeemGiftCardChannelHandlerSuccess(t *testing.T) {
 	card := seedChannelGiftCard(t, db, models.GiftCard{
 		Name:      "Telegram 礼品卡",
 		Code:      "GC-CHANNEL-SUCCESS-001",
-		Amount:    models.NewMoneyFromDecimal(decimal.RequireFromString("88.80")),
+		Amount:    money.FromDecimal(decimal.RequireFromString("88.80")),
 		Currency:  "CNY",
 		Status:    models.GiftCardStatusActive,
 		CreatedAt: time.Now(),
@@ -224,7 +225,7 @@ func TestRedeemGiftCardChannelHandlerReturnsMappedRedeemedError(t *testing.T) {
 	seedChannelGiftCard(t, db, models.GiftCard{
 		Name:           "已兑换礼品卡",
 		Code:           "GC-CHANNEL-REDEEMED-001",
-		Amount:         models.NewMoneyFromDecimal(decimal.RequireFromString("50.00")),
+		Amount:         money.FromDecimal(decimal.RequireFromString("50.00")),
 		Currency:       "CNY",
 		Status:         models.GiftCardStatusRedeemed,
 		RedeemedAt:     &redeemedAt,

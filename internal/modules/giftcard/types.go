@@ -3,14 +3,14 @@ package giftcard
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // GenerateInput 生成礼品卡输入。
 type GenerateInput struct {
 	Name      string
 	Quantity  int
-	Amount    models.Money
+	Amount    money.Amount
 	ExpiresAt *time.Time
 	CreatedBy *uint
 }

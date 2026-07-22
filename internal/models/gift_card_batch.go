@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/money"
 	"gorm.io/gorm"
 )
 
@@ -11,7 +12,7 @@ type GiftCardBatch struct {
 	ID        uint           `gorm:"primarykey" json:"id"`                                                  // 主键
 	BatchNo   string         `gorm:"type:varchar(48);uniqueIndex;not null" json:"batch_no"`                 // 批次号
 	Name      string         `gorm:"type:varchar(120);not null" json:"name"`                                // 批次名称
-	Amount    Money          `gorm:"type:decimal(20,2);not null" json:"amount"`                             // 面额
+	Amount    money.Amount   `gorm:"type:decimal(20,2);not null" json:"amount"`                             // 面额
 	Currency  string         `gorm:"type:varchar(16);not null;default:'CNY'" json:"currency"`               // 币种
 	Quantity  int            `gorm:"not null;default:0" json:"quantity"`                                    // 生成数量
 	ExpiresAt *time.Time     `gorm:"index" json:"expires_at"`                                               // 过期时间（为空表示永久有效）

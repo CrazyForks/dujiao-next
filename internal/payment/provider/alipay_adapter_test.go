@@ -13,9 +13,9 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/alipay"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -134,7 +134,7 @@ func TestAlipayAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 		OrderNo:   "ORDER-ALIPAY-USD-10",
 		Subject:   "audit field test",
 		Currency:  "USD",
-		Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		Amount:    money.FromDecimal(decimal.NewFromInt(10)),
 		Extra:     jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},
 		NotifyURL: "https://example.com/api/v1/payments/callback",
 	}

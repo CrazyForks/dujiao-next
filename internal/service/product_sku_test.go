@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -25,7 +26,7 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 		CategoryID:      category.ID,
 		Slug:            "auto-card-secret-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "auto-card-secret-product"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -38,7 +39,7 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 		ProductID:      product.ID,
 		SKUCode:        "SKU-STOCK",
 		SpecValuesJSON: jsonmap.JSON{"zh-CN": "有库存"},
-		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:    money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
 		SortOrder:      2,
 	}
@@ -46,7 +47,7 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 		ProductID:      product.ID,
 		SKUCode:        "SKU-SPARE",
 		SpecValuesJSON: jsonmap.JSON{"zh-CN": "无库存"},
-		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:    money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
 		SortOrder:      1,
 	}

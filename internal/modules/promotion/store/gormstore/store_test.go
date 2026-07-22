@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/promotion"
 	"github.com/dujiao-next/internal/modules/promotion/store/gormstore"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -34,7 +35,7 @@ func createTestPromotion(t *testing.T, repo *gormstore.Store, name string) {
 		ScopeType:  constants.ScopeTypeProduct,
 		ScopeRefID: 1,
 		Type:       constants.PromotionTypePercent,
-		Value:      models.NewMoneyFromDecimal(decimal.NewFromInt(90)),
+		Value:      money.FromDecimal(decimal.NewFromInt(90)),
 		IsActive:   true,
 	}
 	if err := repo.Create(promo); err != nil {

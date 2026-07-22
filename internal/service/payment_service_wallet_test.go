@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -99,13 +100,13 @@ func TestCreatePaymentWalletFullAmountCreatesPaymentRecord(t *testing.T) {
 		UserID:                  user.ID,
 		Status:                  constants.OrderStatusPendingPayment,
 		Currency:                "CNY",
-		OriginalAmount:          models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
-		DiscountAmount:          models.NewMoneyFromDecimal(decimal.Zero),
-		PromotionDiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		TotalAmount:             models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
-		WalletPaidAmount:        models.NewMoneyFromDecimal(decimal.Zero),
-		OnlinePaidAmount:        models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
-		RefundedAmount:          models.NewMoneyFromDecimal(decimal.Zero),
+		OriginalAmount:          money.FromDecimal(decimal.NewFromInt(50)),
+		DiscountAmount:          money.FromDecimal(decimal.Zero),
+		PromotionDiscountAmount: money.FromDecimal(decimal.Zero),
+		TotalAmount:             money.FromDecimal(decimal.NewFromInt(50)),
+		WalletPaidAmount:        money.FromDecimal(decimal.Zero),
+		OnlinePaidAmount:        money.FromDecimal(decimal.NewFromInt(50)),
+		RefundedAmount:          money.FromDecimal(decimal.Zero),
 		CreatedAt:               now,
 		UpdatedAt:               now,
 	}
@@ -115,7 +116,7 @@ func TestCreatePaymentWalletFullAmountCreatesPaymentRecord(t *testing.T) {
 
 	account := &models.WalletAccount{
 		UserID:    user.ID,
-		Balance:   models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		Balance:   money.FromDecimal(decimal.NewFromInt(100)),
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -272,9 +273,9 @@ func TestExpireWalletRechargePaymentSkipsOrderPayment(t *testing.T) {
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeWechat,
 		InteractionMode: constants.PaymentInteractionQR,
-		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+		Amount:          money.FromDecimal(decimal.NewFromInt(100)),
+		FeeRate:         money.FromDecimal(decimal.Zero),
+		FeeAmount:       money.FromDecimal(decimal.Zero),
 		Currency:        "CNY",
 		Status:          constants.PaymentStatusPending,
 		CreatedAt:       now,
@@ -498,9 +499,9 @@ func createWalletRechargeFixture(t *testing.T, db *gorm.DB, paymentStatus string
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeWechat,
 		InteractionMode: constants.PaymentInteractionQR,
-		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
-		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+		Amount:          money.FromDecimal(decimal.NewFromInt(88)),
+		FeeRate:         money.FromDecimal(decimal.Zero),
+		FeeAmount:       money.FromDecimal(decimal.Zero),
 		Currency:        "CNY",
 		Status:          paymentStatus,
 		ProviderRef:     fmt.Sprintf("RECHARGE-PAY-%d", now.UnixNano()),
@@ -522,10 +523,10 @@ func createWalletRechargeFixture(t *testing.T, db *gorm.DB, paymentStatus string
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeWechat,
 		InteractionMode: constants.PaymentInteractionQR,
-		Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
-		PayableAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
-		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-		FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+		Amount:          money.FromDecimal(decimal.NewFromInt(88)),
+		PayableAmount:   money.FromDecimal(decimal.NewFromInt(88)),
+		FeeRate:         money.FromDecimal(decimal.Zero),
+		FeeAmount:       money.FromDecimal(decimal.Zero),
 		Currency:        "CNY",
 		Status:          rechargeStatus,
 		Remark:          "test",

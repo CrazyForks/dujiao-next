@@ -5,6 +5,7 @@ import (
 
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"gorm.io/gorm"
 )
 
@@ -65,8 +66,8 @@ type ResellerProfile struct {
 	Status               string         `gorm:"type:varchar(32);index;not null;default:'pending_review'" json:"status"`
 	ApplyReason          string         `gorm:"type:text" json:"apply_reason,omitempty"`
 	RejectReason         string         `gorm:"type:text" json:"reject_reason,omitempty"`
-	DefaultMarkupPercent Money          `gorm:"type:decimal(10,2);not null;default:0" json:"default_markup_percent"`
-	MaxMarkupPercent     Money          `gorm:"type:decimal(10,2);not null;default:0" json:"max_markup_percent"`
+	DefaultMarkupPercent money.Amount   `gorm:"type:decimal(10,2);not null;default:0" json:"default_markup_percent"`
+	MaxMarkupPercent     money.Amount   `gorm:"type:decimal(10,2);not null;default:0" json:"max_markup_percent"`
 	SettlementStatus     string         `gorm:"type:varchar(32);index;not null;default:'normal'" json:"settlement_status"`
 	ReviewedBy           *uint          `gorm:"index" json:"reviewed_by,omitempty"`
 	ReviewedAt           *time.Time     `gorm:"index" json:"reviewed_at,omitempty"`
@@ -129,9 +130,9 @@ type ResellerProductSetting struct {
 	SKUID             uint           `gorm:"column:sku_id;not null;default:0;index;uniqueIndex:idx_reseller_product_setting_scope,priority:3,where:deleted_at IS NULL" json:"sku_id"`
 	IsListed          bool           `gorm:"not null;default:true" json:"is_listed"`
 	PricingMode       string         `gorm:"type:varchar(32);not null;default:'inherit'" json:"pricing_mode"`
-	MarkupPercent     Money          `gorm:"type:decimal(10,2);not null;default:0" json:"markup_percent"`
-	FixedMarkupAmount Money          `gorm:"type:decimal(20,2);not null;default:0" json:"fixed_markup_amount"`
-	FixedPriceAmount  Money          `gorm:"type:decimal(20,2);not null;default:0" json:"fixed_price_amount"`
+	MarkupPercent     money.Amount   `gorm:"type:decimal(10,2);not null;default:0" json:"markup_percent"`
+	FixedMarkupAmount money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"fixed_markup_amount"`
+	FixedPriceAmount  money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"fixed_price_amount"`
 	SortOrder         int            `gorm:"not null;default:0;index" json:"sort_order"`
 	CreatedAt         time.Time      `gorm:"index" json:"created_at"`
 	UpdatedAt         time.Time      `gorm:"index" json:"updated_at"`
@@ -152,9 +153,9 @@ type ResellerOrderSnapshot struct {
 	Currency            string         `gorm:"type:varchar(16);not null" json:"currency"`
 	ResellerUserID      uint           `gorm:"not null;index" json:"reseller_user_id"`
 	BuyerUserID         uint           `gorm:"not null;default:0;index" json:"buyer_user_id"`
-	BaseAmount          Money          `gorm:"type:decimal(20,2);not null;default:0" json:"base_amount"`
-	ResellerAmount      Money          `gorm:"type:decimal(20,2);not null;default:0" json:"reseller_amount"`
-	ProfitAmount        Money          `gorm:"type:decimal(20,2);not null;default:0" json:"profit_amount"`
+	BaseAmount          money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"base_amount"`
+	ResellerAmount      money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"reseller_amount"`
+	ProfitAmount        money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"profit_amount"`
 	ProfitEligible      bool           `gorm:"not null;default:true;index" json:"profit_eligible"`
 	ProfitBlockReason   string         `gorm:"type:varchar(64);index" json:"profit_block_reason"`
 	PricingSnapshotJSON jsonmap.JSON   `gorm:"type:json" json:"pricing_snapshot_json"`
@@ -174,7 +175,7 @@ type ResellerLedgerEntry struct {
 	ResellerID        uint           `gorm:"not null;index" json:"reseller_id"`
 	OrderID           *uint          `gorm:"index" json:"order_id,omitempty"`
 	Type              string         `gorm:"type:varchar(32);not null;index" json:"type"`
-	Amount            Money          `gorm:"type:decimal(20,2);not null;default:0" json:"amount"`
+	Amount            money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"amount"`
 	Currency          string         `gorm:"type:varchar(16);not null;index" json:"currency"`
 	IdempotencyKey    string         `gorm:"type:varchar(160);not null;uniqueIndex" json:"idempotency_key"`
 	MetadataJSON      jsonmap.JSON   `gorm:"type:json" json:"metadata_json"`
@@ -196,7 +197,7 @@ func (ResellerLedgerEntry) TableName() string { return "reseller_ledger_entries"
 type ResellerWithdrawRequest struct {
 	ID           uint           `gorm:"primarykey" json:"id"`
 	ResellerID   uint           `gorm:"not null;index" json:"reseller_id"`
-	Amount       Money          `gorm:"type:decimal(20,2);not null;default:0" json:"amount"`
+	Amount       money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"amount"`
 	Currency     string         `gorm:"type:varchar(16);not null;index" json:"currency"`
 	Channel      string         `gorm:"type:varchar(64);not null" json:"channel"`
 	Account      string         `gorm:"type:varchar(255);not null" json:"account"`
@@ -220,9 +221,9 @@ type ResellerBalanceAccount struct {
 	ResellerID           uint           `gorm:"not null;index" json:"reseller_id"`
 	Currency             string         `gorm:"type:varchar(16);not null;index" json:"currency"`
 	Status               string         `gorm:"type:varchar(32);not null;index;default:'normal'" json:"status"`
-	AvailableAmountCache Money          `gorm:"type:decimal(20,2);not null;default:0" json:"available_amount_cache"`
-	LockedAmountCache    Money          `gorm:"type:decimal(20,2);not null;default:0" json:"locked_amount_cache"`
-	NegativeAmountCache  Money          `gorm:"type:decimal(20,2);not null;default:0" json:"negative_amount_cache"`
+	AvailableAmountCache money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"available_amount_cache"`
+	LockedAmountCache    money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"locked_amount_cache"`
+	NegativeAmountCache  money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"negative_amount_cache"`
 	LastLedgerEntryID    uint           `gorm:"not null;default:0" json:"last_ledger_entry_id"`
 	RiskNote             string         `gorm:"type:text" json:"risk_note,omitempty"`
 	CreatedAt            time.Time      `gorm:"index" json:"created_at"`

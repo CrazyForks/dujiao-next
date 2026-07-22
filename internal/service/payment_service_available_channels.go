@@ -4,11 +4,12 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // AvailablePaymentChannelFilter 可用支付渠道过滤参数
 type AvailablePaymentChannelFilter struct {
-	TargetAmount *models.Money
+	TargetAmount *money.Amount
 	User         *models.User
 	PaymentType  string
 }
@@ -60,7 +61,7 @@ func (s *PaymentService) GetAvailableChannels(filter AvailablePaymentChannelFilt
 	return availableChannels, nil
 }
 
-func matchesChannelAmount(channel models.PaymentChannel, targetAmount *models.Money) bool {
+func matchesChannelAmount(channel models.PaymentChannel, targetAmount *money.Amount) bool {
 	if targetAmount == nil || !channel.HideAmountOutRange {
 		return true
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -53,7 +54,7 @@ func seedResellerPricingProduct(t *testing.T, db *gorm.DB, slug string, activeSK
 		CategoryID:      category.ID,
 		Slug:            slug,
 		TitleJSON:       jsonmap.JSON{"zh-CN": slug},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -68,8 +69,8 @@ func seedResellerPricingProduct(t *testing.T, db *gorm.DB, slug string, activeSK
 		sku := models.ProductSKU{
 			ProductID:        product.ID,
 			SKUCode:          fmt.Sprintf("%s-sku-%d", slug, i+1),
-			PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(100 + int64(i))),
-			CostPriceAmount:  models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
+			PriceAmount:      money.FromDecimal(decimal.NewFromInt(100 + int64(i))),
+			CostPriceAmount:  money.FromDecimal(decimal.NewFromInt(50)),
 			ManualStockTotal: constants.ManualStockUnlimited,
 			IsActive:         true,
 			SortOrder:        activeSKUCount - i,
@@ -103,7 +104,7 @@ func TestResellerPricingRepositoryProductSettingsAndHiddenProducts(t *testing.T)
 			SKUID:         0,
 			IsListed:      true,
 			PricingMode:   models.ResellerPricingModeMarkupPercent,
-			MarkupPercent: models.NewMoneyFromDecimal(decimal.NewFromInt(15)),
+			MarkupPercent: money.FromDecimal(decimal.NewFromInt(15)),
 		},
 		{
 			ResellerID:       profile.ID,
@@ -111,7 +112,7 @@ func TestResellerPricingRepositoryProductSettingsAndHiddenProducts(t *testing.T)
 			SKUID:            listedSKUs[0].ID,
 			IsListed:         true,
 			PricingMode:      models.ResellerPricingModeFixedPrice,
-			FixedPriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
+			FixedPriceAmount: money.FromDecimal(decimal.NewFromInt(130)),
 		},
 		{
 			ResellerID:  profile.ID,
@@ -169,7 +170,7 @@ func TestResellerPricingRepositoryProductSettingsAndHiddenProducts(t *testing.T)
 		SKUID:         listedSKUs[1].ID,
 		IsListed:      true,
 		PricingMode:   models.ResellerPricingModeMarkupPercent,
-		MarkupPercent: models.NewMoneyFromDecimal(decimal.NewFromInt(99)),
+		MarkupPercent: money.FromDecimal(decimal.NewFromInt(99)),
 	}
 	if err := db.Select("*").Create(&softDeleted).Error; err != nil {
 		t.Fatalf("create soft-deleted setting failed: %v", err)
@@ -268,7 +269,7 @@ func TestResellerPricingRepositoryRelatedAccountAndSnapshot(t *testing.T) {
 		UserID:      activeUser.ID,
 		Status:      constants.OrderStatusPendingPayment,
 		Currency:    "USD",
-		TotalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
+		TotalAmount: money.FromDecimal(decimal.NewFromInt(130)),
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
@@ -282,9 +283,9 @@ func TestResellerPricingRepositoryRelatedAccountAndSnapshot(t *testing.T) {
 		Currency:            "USD",
 		ResellerUserID:      profile.UserID,
 		BuyerUserID:         activeUser.ID,
-		BaseAmount:          models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		ResellerAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
-		ProfitAmount:        models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		BaseAmount:          money.FromDecimal(decimal.NewFromInt(100)),
+		ResellerAmount:      money.FromDecimal(decimal.NewFromInt(130)),
+		ProfitAmount:        money.FromDecimal(decimal.NewFromInt(30)),
 		ProfitEligible:      true,
 		PricingSnapshotJSON: jsonmap.JSON{"items": []interface{}{map[string]interface{}{"order_item_id": float64(0)}}},
 		RiskSnapshotJSON:    jsonmap.JSON{"profit_eligible": true},

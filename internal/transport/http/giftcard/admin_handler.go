@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/modules/giftcard"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -98,7 +99,7 @@ func (h *AdminHandler) Generate(c *gin.Context) {
 	batch, created, err := h.cards.GenerateGiftCards(giftcard.GenerateInput{
 		Name:      req.Name,
 		Quantity:  req.Quantity,
-		Amount:    models.NewMoneyFromDecimal(amount),
+		Amount:    money.FromDecimal(amount),
 		ExpiresAt: expiresAt,
 		CreatedBy: &adminID,
 	})

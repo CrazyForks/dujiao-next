@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -87,7 +88,7 @@ func (s *AffiliateService) ApplyWithdraw(userID uint, input AffiliateWithdrawApp
 			// 最后一条记录金额大于申请剩余金额时，拆分记录避免超额冻结。
 			boundAmount := remaining.Round(2)
 			remainAmount := rowAmount.Sub(boundAmount).Round(2)
-			commission.CommissionAmount = models.NewMoneyFromDecimal(boundAmount)
+			commission.CommissionAmount = money.FromDecimal(boundAmount)
 			commission.UpdatedAt = now
 			if err := repoTx.UpdateCommission(&commission); err != nil {
 				return err
@@ -96,7 +97,7 @@ func (s *AffiliateService) ApplyWithdraw(userID uint, input AffiliateWithdrawApp
 			remainCommission := commission
 			remainCommission.ID = 0
 			remainCommission.CommissionType = buildSplitCommissionType(commission.ID)
-			remainCommission.CommissionAmount = models.NewMoneyFromDecimal(remainAmount)
+			remainCommission.CommissionAmount = money.FromDecimal(remainAmount)
 			remainCommission.WithdrawRequestID = nil
 			remainCommission.Status = constants.AffiliateCommissionStatusAvailable
 			remainCommission.InvalidReason = ""
@@ -116,7 +117,7 @@ func (s *AffiliateService) ApplyWithdraw(userID uint, input AffiliateWithdrawApp
 
 		req := &models.AffiliateWithdrawRequest{
 			AffiliateProfileID: profile.ID,
-			Amount:             models.NewMoneyFromDecimal(amount),
+			Amount:             money.FromDecimal(amount),
 			Channel:            channel,
 			Account:            account,
 			Status:             constants.AffiliateWithdrawStatusPendingReview,

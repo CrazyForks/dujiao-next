@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // ReapplyMarkup 对指定连接的所有映射商品重新应用加价规则
@@ -34,8 +35,8 @@ func (s *Service) ReapplyMarkup(connectionID uint) (int, error) {
 			if err != nil || localSKU == nil {
 				continue
 			}
-			localSKU.PriceAmount = models.NewMoneyFromDecimal(newLocalPrice.Round(2))
-			localSKU.CostPriceAmount = models.NewMoneyFromDecimal(convertCurrency(sm.UpstreamPrice.Decimal, conn.ExchangeRate).Round(2)) // 成本价 = 上游价格 × 汇率（本地币种）
+			localSKU.PriceAmount = money.FromDecimal(newLocalPrice.Round(2))
+			localSKU.CostPriceAmount = money.FromDecimal(convertCurrency(sm.UpstreamPrice.Decimal, conn.ExchangeRate).Round(2)) // 成本价 = 上游价格 × 汇率（本地币种）
 			_ = s.skus.Update(localSKU)
 		}
 
@@ -66,7 +67,7 @@ func (s *Service) recalcProductPrice(product *models.Product) {
 			minCostPrice = sku.CostPriceAmount.Decimal
 		}
 	}
-	product.PriceAmount = models.NewMoneyFromDecimal(minPrice.Round(2))
-	product.CostPriceAmount = models.NewMoneyFromDecimal(minCostPrice.Round(2))
+	product.PriceAmount = money.FromDecimal(minPrice.Round(2))
+	product.CostPriceAmount = money.FromDecimal(minCostPrice.Round(2))
 	_ = s.products.Update(product)
 }

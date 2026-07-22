@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/memberlevel"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
@@ -53,7 +54,7 @@ func (r *UserStore) incrementMoneyColumn(userID uint, column string, amount deci
 	return r.db.Model(&models.User{}).
 		Where("id = ?", userID).
 		Updates(map[string]interface{}{
-			column:       gorm.Expr(column+" + ?", models.NewMoneyFromDecimal(amount)),
+			column:       gorm.Expr(column+" + ?", money.FromDecimal(amount)),
 			"updated_at": time.Now(),
 		}).Error
 }

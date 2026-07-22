@@ -15,6 +15,7 @@ import (
 	"github.com/dujiao-next/internal/modules/sitemap"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -137,7 +138,7 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 		CategoryID:      activeCategory.ID,
 		Slug:            "visible-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "p"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -150,7 +151,7 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 		CategoryID:      activeCategory.ID,
 		Slug:            "draft-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "p"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        false,
@@ -163,7 +164,7 @@ func TestSitemapServiceIncludesActiveContent(t *testing.T) {
 		CategoryID:      inactiveCategory.ID,
 		Slug:            "in-hidden-category",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "p"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,

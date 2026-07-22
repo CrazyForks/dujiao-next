@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -65,7 +66,7 @@ func (s *WalletService) ApplyOrderBalance(tx *gorm.DB, order *models.Order, useB
 	if after.LessThan(decimal.Zero) {
 		return decimal.Zero, ErrWalletInsufficientBalance
 	}
-	account.Balance = models.NewMoneyFromDecimal(after)
+	account.Balance = money.FromDecimal(after)
 	account.UpdatedAt = now
 	if err := repo.UpdateAccount(account); err != nil {
 		return decimal.Zero, ErrWalletAccountUpdateFailed
@@ -76,9 +77,9 @@ func (s *WalletService) ApplyOrderBalance(tx *gorm.DB, order *models.Order, useB
 		OrderID:       &order.ID,
 		Type:          constants.WalletTxnTypeOrderPay,
 		Direction:     constants.WalletTxnDirectionOut,
-		Amount:        models.NewMoneyFromDecimal(deduct),
-		BalanceBefore: models.NewMoneyFromDecimal(before),
-		BalanceAfter:  models.NewMoneyFromDecimal(after),
+		Amount:        money.FromDecimal(deduct),
+		BalanceBefore: money.FromDecimal(before),
+		BalanceAfter:  money.FromDecimal(after),
 		Currency:      normalizeWalletCurrency(order.Currency),
 		Reference:     reference,
 		Remark:        "订单余额支付",
@@ -91,14 +92,14 @@ func (s *WalletService) ApplyOrderBalance(tx *gorm.DB, order *models.Order, useB
 
 	onlineAmount := normalizeOrderAmount(order.TotalAmount.Decimal.Sub(deduct))
 	if err := s.orderRepo.WithTx(tx).UpdateFields(order.ID, map[string]interface{}{
-		"wallet_paid_amount": models.NewMoneyFromDecimal(deduct),
-		"online_paid_amount": models.NewMoneyFromDecimal(onlineAmount),
+		"wallet_paid_amount": money.FromDecimal(deduct),
+		"online_paid_amount": money.FromDecimal(onlineAmount),
 		"updated_at":         now,
 	}); err != nil {
 		return decimal.Zero, ErrOrderUpdateFailed
 	}
-	order.WalletPaidAmount = models.NewMoneyFromDecimal(deduct)
-	order.OnlinePaidAmount = models.NewMoneyFromDecimal(onlineAmount)
+	order.WalletPaidAmount = money.FromDecimal(deduct)
+	order.OnlinePaidAmount = money.FromDecimal(onlineAmount)
 	order.UpdatedAt = now
 	return deduct, nil
 }
@@ -128,8 +129,8 @@ func (s *WalletService) ReleaseOrderBalance(tx *gorm.DB, order *models.Order, tx
 	}
 
 	affected, err := s.orderRepo.WithTx(tx).UpdateFieldsWhereWalletPaid(order.ID, map[string]interface{}{
-		"wallet_paid_amount": models.NewMoneyFromDecimal(decimal.Zero),
-		"online_paid_amount": models.NewMoneyFromDecimal(order.TotalAmount.Decimal.Round(2)),
+		"wallet_paid_amount": money.FromDecimal(decimal.Zero),
+		"online_paid_amount": money.FromDecimal(order.TotalAmount.Decimal.Round(2)),
 		"updated_at":         now,
 	})
 	if err != nil {
@@ -145,7 +146,7 @@ func (s *WalletService) ReleaseOrderBalance(tx *gorm.DB, order *models.Order, tx
 	}
 	before := account.Balance.Decimal.Round(2)
 	after := before.Add(amount).Round(2)
-	account.Balance = models.NewMoneyFromDecimal(after)
+	account.Balance = money.FromDecimal(after)
 	account.UpdatedAt = now
 	if err := repo.UpdateAccount(account); err != nil {
 		return decimal.Zero, ErrWalletAccountUpdateFailed
@@ -156,9 +157,9 @@ func (s *WalletService) ReleaseOrderBalance(tx *gorm.DB, order *models.Order, tx
 		OrderID:       &order.ID,
 		Type:          txnType,
 		Direction:     constants.WalletTxnDirectionIn,
-		Amount:        models.NewMoneyFromDecimal(amount),
-		BalanceBefore: models.NewMoneyFromDecimal(before),
-		BalanceAfter:  models.NewMoneyFromDecimal(after),
+		Amount:        money.FromDecimal(amount),
+		BalanceBefore: money.FromDecimal(before),
+		BalanceAfter:  money.FromDecimal(after),
 		Currency:      normalizeWalletCurrency(order.Currency),
 		Reference:     reference,
 		Remark:        cleanWalletRemark(remark, "订单余额退回"),
@@ -169,8 +170,8 @@ func (s *WalletService) ReleaseOrderBalance(tx *gorm.DB, order *models.Order, tx
 		return decimal.Zero, ErrWalletTransactionCreateFailed
 	}
 
-	order.WalletPaidAmount = models.NewMoneyFromDecimal(decimal.Zero)
-	order.OnlinePaidAmount = models.NewMoneyFromDecimal(order.TotalAmount.Decimal.Round(2))
+	order.WalletPaidAmount = money.FromDecimal(decimal.Zero)
+	order.OnlinePaidAmount = money.FromDecimal(order.TotalAmount.Decimal.Round(2))
 	order.UpdatedAt = now
 	return amount, nil
 }

@@ -15,8 +15,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // CreateInput 统一支付创建输入。各 adapter wrapper 把它转成自己的 native 输入。
@@ -25,7 +25,7 @@ type CreateInput struct {
 	OrderID        uint
 	OrderNo        string
 	Subject        string
-	Amount         models.Money
+	Amount         money.Amount
 	Currency       string
 	NotifyURL      string
 	ReturnURL      string
@@ -50,7 +50,7 @@ type CreateResult struct {
 type QueryResult struct {
 	ProviderRef string
 	Status      string
-	Amount      models.Money
+	Amount      money.Amount
 	Currency    string
 	PaidAt      *time.Time
 	Payload     jsonmap.JSON
@@ -61,7 +61,7 @@ type CallbackResult struct {
 	OrderNo     string
 	ProviderRef string
 	Status      string
-	Amount      models.Money
+	Amount      money.Amount
 	Currency    string
 	PaidAt      *time.Time
 	Payload     jsonmap.JSON

@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -41,7 +42,7 @@ func (s *WalletService) ApplyRechargePayment(tx *gorm.DB, recharge *models.Walle
 	}
 	before := account.Balance.Decimal.Round(2)
 	after := before.Add(amount).Round(2)
-	account.Balance = models.NewMoneyFromDecimal(after)
+	account.Balance = money.FromDecimal(after)
 	account.UpdatedAt = now
 	if err := repo.UpdateAccount(account); err != nil {
 		return nil, ErrWalletAccountUpdateFailed
@@ -52,9 +53,9 @@ func (s *WalletService) ApplyRechargePayment(tx *gorm.DB, recharge *models.Walle
 		OrderID:       nil,
 		Type:          constants.WalletTxnTypeRecharge,
 		Direction:     constants.WalletTxnDirectionIn,
-		Amount:        models.NewMoneyFromDecimal(amount),
-		BalanceBefore: models.NewMoneyFromDecimal(before),
-		BalanceAfter:  models.NewMoneyFromDecimal(after),
+		Amount:        money.FromDecimal(amount),
+		BalanceBefore: money.FromDecimal(before),
+		BalanceAfter:  money.FromDecimal(after),
 		Currency:      normalizeWalletCurrency(recharge.Currency),
 		Reference:     reference,
 		Remark:        cleanWalletRemark(recharge.Remark, "在线充值到账"),

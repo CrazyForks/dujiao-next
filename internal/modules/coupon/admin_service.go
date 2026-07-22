@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonslice"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -26,9 +27,9 @@ func NewAdminService(repo Repository) *AdminService {
 type CreateCouponInput struct {
 	Code                   string
 	Type                   string
-	Value                  models.Money
-	MinAmount              models.Money
-	MaxDiscount            models.Money
+	Value                  money.Amount
+	MinAmount              money.Amount
+	MaxDiscount            money.Amount
 	UsageLimit             int
 	PerUserLimit           int
 	DisabledWholesalePrice *bool
@@ -45,9 +46,9 @@ type CreateCouponInput struct {
 type UpdateCouponInput struct {
 	Code                   string
 	Type                   string
-	Value                  models.Money
-	MinAmount              models.Money
-	MaxDiscount            models.Money
+	Value                  money.Amount
+	MinAmount              money.Amount
+	MaxDiscount            money.Amount
 	UsageLimit             int
 	PerUserLimit           int
 	DisabledWholesalePrice *bool

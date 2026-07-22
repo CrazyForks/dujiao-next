@@ -19,6 +19,7 @@ import (
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/hibiken/asynq"
 	"github.com/shopspring/decimal"
@@ -289,32 +290,32 @@ type orderCreateParams struct {
 // OrderPreview 订单金额预览
 type OrderPreview struct {
 	Currency                string             `json:"currency"`
-	OriginalAmount          models.Money       `json:"original_amount"`
-	MemberDiscountAmount    models.Money       `json:"member_discount_amount"`
-	DiscountAmount          models.Money       `json:"discount_amount"`
-	PromotionDiscountAmount models.Money       `json:"promotion_discount_amount"`
-	WholesaleDiscountAmount models.Money       `json:"wholesale_discount_amount"`
-	TotalAmount             models.Money       `json:"total_amount"`
+	OriginalAmount          money.Amount       `json:"original_amount"`
+	MemberDiscountAmount    money.Amount       `json:"member_discount_amount"`
+	DiscountAmount          money.Amount       `json:"discount_amount"`
+	PromotionDiscountAmount money.Amount       `json:"promotion_discount_amount"`
+	WholesaleDiscountAmount money.Amount       `json:"wholesale_discount_amount"`
+	TotalAmount             money.Amount       `json:"total_amount"`
 	Items                   []OrderPreviewItem `json:"items"`
 }
 
 // OrderPreviewItem 订单项金额预览
 type OrderPreviewItem struct {
-	ProductID          uint               `json:"product_id"`
-	SKUID              uint               `json:"sku_id"`
-	TitleJSON          jsonmap.JSON       `json:"title"`
-	SKUSnapshotJSON    jsonmap.JSON       `json:"sku_snapshot"`
+	ProductID          uint              `json:"product_id"`
+	SKUID              uint              `json:"sku_id"`
+	TitleJSON          jsonmap.JSON      `json:"title"`
+	SKUSnapshotJSON    jsonmap.JSON      `json:"sku_snapshot"`
 	Tags               jsonslice.Strings `json:"tags"`
-	OriginalUnitPrice  models.Money       `json:"original_unit_price"`
-	UnitPrice          models.Money       `json:"unit_price"`
-	Quantity           int                `json:"quantity"`
-	OriginalTotalPrice models.Money       `json:"original_total_price"`
-	TotalPrice         models.Money       `json:"total_price"`
-	MemberDiscount     models.Money       `json:"member_discount_amount"`
-	CouponDiscount     models.Money       `json:"coupon_discount_amount"`
-	PromotionDiscount  models.Money       `json:"promotion_discount_amount"`
-	WholesaleDiscount  models.Money       `json:"wholesale_discount_amount"`
-	FulfillmentType    string             `json:"fulfillment_type"`
+	OriginalUnitPrice  money.Amount      `json:"original_unit_price"`
+	UnitPrice          money.Amount      `json:"unit_price"`
+	Quantity           int               `json:"quantity"`
+	OriginalTotalPrice money.Amount      `json:"original_total_price"`
+	TotalPrice         money.Amount      `json:"total_price"`
+	MemberDiscount     money.Amount      `json:"member_discount_amount"`
+	CouponDiscount     money.Amount      `json:"coupon_discount_amount"`
+	PromotionDiscount  money.Amount      `json:"promotion_discount_amount"`
+	WholesaleDiscount  money.Amount      `json:"wholesale_discount_amount"`
+	FulfillmentType    string            `json:"fulfillment_type"`
 }
 
 type orderBuildResult struct {
@@ -403,12 +404,12 @@ func (s *OrderService) previewOrder(input orderCreateParams) (*OrderPreview, err
 	}
 	return &OrderPreview{
 		Currency:                result.Currency,
-		OriginalAmount:          models.NewMoneyFromDecimal(result.OriginalAmount),
-		MemberDiscountAmount:    models.NewMoneyFromDecimal(result.MemberDiscountAmount),
-		DiscountAmount:          models.NewMoneyFromDecimal(result.DiscountAmount),
-		PromotionDiscountAmount: models.NewMoneyFromDecimal(result.PromotionDiscountAmount),
-		WholesaleDiscountAmount: models.NewMoneyFromDecimal(result.WholesaleDiscountAmount),
-		TotalAmount:             models.NewMoneyFromDecimal(result.TotalAmount),
+		OriginalAmount:          money.FromDecimal(result.OriginalAmount),
+		MemberDiscountAmount:    money.FromDecimal(result.MemberDiscountAmount),
+		DiscountAmount:          money.FromDecimal(result.DiscountAmount),
+		PromotionDiscountAmount: money.FromDecimal(result.PromotionDiscountAmount),
+		WholesaleDiscountAmount: money.FromDecimal(result.WholesaleDiscountAmount),
+		TotalAmount:             money.FromDecimal(result.TotalAmount),
 		Items:                   items,
 	}, nil
 }
@@ -502,15 +503,15 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 		GuestLocale:             input.GuestLocale,
 		Status:                  constants.OrderStatusPendingPayment,
 		Currency:                result.Currency,
-		OriginalAmount:          models.NewMoneyFromDecimal(result.OriginalAmount),
-		MemberDiscountAmount:    models.NewMoneyFromDecimal(result.MemberDiscountAmount),
-		DiscountAmount:          models.NewMoneyFromDecimal(result.DiscountAmount),
-		PromotionDiscountAmount: models.NewMoneyFromDecimal(result.PromotionDiscountAmount),
-		WholesaleDiscountAmount: models.NewMoneyFromDecimal(result.WholesaleDiscountAmount),
-		TotalAmount:             models.NewMoneyFromDecimal(result.TotalAmount),
-		WalletPaidAmount:        models.NewMoneyFromDecimal(decimal.Zero),
-		OnlinePaidAmount:        models.NewMoneyFromDecimal(result.TotalAmount),
-		RefundedAmount:          models.NewMoneyFromDecimal(decimal.Zero),
+		OriginalAmount:          money.FromDecimal(result.OriginalAmount),
+		MemberDiscountAmount:    money.FromDecimal(result.MemberDiscountAmount),
+		DiscountAmount:          money.FromDecimal(result.DiscountAmount),
+		PromotionDiscountAmount: money.FromDecimal(result.PromotionDiscountAmount),
+		WholesaleDiscountAmount: money.FromDecimal(result.WholesaleDiscountAmount),
+		TotalAmount:             money.FromDecimal(result.TotalAmount),
+		WalletPaidAmount:        money.FromDecimal(decimal.Zero),
+		OnlinePaidAmount:        money.FromDecimal(result.TotalAmount),
+		RefundedAmount:          money.FromDecimal(decimal.Zero),
 		MemberLevelID:           result.MemberLevelID,
 		CouponID:                nil,
 		PromotionID:             result.OrderPromotionID,
@@ -525,7 +526,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 		resellerID := pricingCtx.ResellerID
 		order.ResellerID = &resellerID
 		order.ResellerDomain = pricingCtx.Domain
-		order.ResellerProfitAmount = models.NewMoneyFromDecimal(pricingCtx.EffectiveProfit)
+		order.ResellerProfitAmount = money.FromDecimal(pricingCtx.EffectiveProfit)
 	}
 
 	if result.AppliedCoupon != nil {
@@ -557,15 +558,15 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 				GuestLocale:             order.GuestLocale,
 				Status:                  constants.OrderStatusPendingPayment,
 				Currency:                plan.Currency,
-				OriginalAmount:          models.NewMoneyFromDecimal(plan.TotalAmount),
-				MemberDiscountAmount:    models.NewMoneyFromDecimal(plan.MemberDiscount),
-				DiscountAmount:          models.NewMoneyFromDecimal(plan.CouponDiscount),
-				PromotionDiscountAmount: models.NewMoneyFromDecimal(plan.PromotionDiscount),
-				WholesaleDiscountAmount: models.NewMoneyFromDecimal(plan.WholesaleDiscount),
-				TotalAmount:             models.NewMoneyFromDecimal(normalizeOrderAmount(plan.TotalAmount.Sub(plan.CouponDiscount))),
-				WalletPaidAmount:        models.NewMoneyFromDecimal(decimal.Zero),
-				OnlinePaidAmount:        models.NewMoneyFromDecimal(normalizeOrderAmount(plan.TotalAmount.Sub(plan.CouponDiscount))),
-				RefundedAmount:          models.NewMoneyFromDecimal(decimal.Zero),
+				OriginalAmount:          money.FromDecimal(plan.TotalAmount),
+				MemberDiscountAmount:    money.FromDecimal(plan.MemberDiscount),
+				DiscountAmount:          money.FromDecimal(plan.CouponDiscount),
+				PromotionDiscountAmount: money.FromDecimal(plan.PromotionDiscount),
+				WholesaleDiscountAmount: money.FromDecimal(plan.WholesaleDiscount),
+				TotalAmount:             money.FromDecimal(normalizeOrderAmount(plan.TotalAmount.Sub(plan.CouponDiscount))),
+				WalletPaidAmount:        money.FromDecimal(decimal.Zero),
+				OnlinePaidAmount:        money.FromDecimal(normalizeOrderAmount(plan.TotalAmount.Sub(plan.CouponDiscount))),
+				RefundedAmount:          money.FromDecimal(decimal.Zero),
 				CouponID:                nil,
 				PromotionID:             plan.Item.PromotionID,
 				AffiliateProfileID:      affiliateProfileID,
@@ -579,7 +580,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 				resellerID := pricingCtx.ResellerID
 				childOrder.ResellerID = &resellerID
 				childOrder.ResellerDomain = pricingCtx.Domain
-				childOrder.ResellerProfitAmount = models.NewMoneyFromDecimal(childProfit)
+				childOrder.ResellerProfitAmount = money.FromDecimal(childProfit)
 			}
 			if result.AppliedCoupon != nil && plan.CouponDiscount.GreaterThan(decimal.Zero) {
 				childOrder.CouponID = &result.AppliedCoupon.ID
@@ -640,7 +641,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 				CouponID:       result.AppliedCoupon.ID,
 				UserID:         input.UserID,
 				OrderID:        order.ID,
-				DiscountAmount: models.NewMoneyFromDecimal(result.DiscountAmount),
+				DiscountAmount: money.FromDecimal(result.DiscountAmount),
 				CreatedAt:      now,
 			}
 			if err := usageRepo.Create(usage); err != nil {

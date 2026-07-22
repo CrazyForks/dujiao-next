@@ -10,9 +10,9 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/okpay"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 func TestOkpayAdapter_Type(t *testing.T) {
@@ -80,7 +80,7 @@ func TestOkpayAdapter_CreatePayment_ExchangeRate_C4Regression(t *testing.T) {
 		Subject:     "test order",
 		ChannelType: "usdt",
 		Currency:    "CNY",
-		Amount:      models.NewMoneyFromDecimal(originalAmountDec),
+		Amount:      money.FromDecimal(originalAmountDec),
 		ReturnURL:   "https://shop.example.com/pay",
 	}
 
@@ -144,7 +144,7 @@ func TestOkpayAdapter_CreatePayment_NoExchangeRate_AmountSentEqualsOriginal(t *t
 		Subject:     "test",
 		ChannelType: "usdt",
 		Currency:    "USDT",
-		Amount:      models.NewMoneyFromDecimal(decimal.NewFromFloat(10)),
+		Amount:      money.FromDecimal(decimal.NewFromFloat(10)),
 		ReturnURL:   "https://shop.example.com/pay",
 	}
 
@@ -192,7 +192,7 @@ func TestOkpayAdapter_CreatePayment_ExchangeRateOneUsesCoinCurrency(t *testing.T
 		Subject:     "test",
 		ChannelType: "usdt",
 		Currency:    "USD",
-		Amount:      models.NewMoneyFromDecimal(decimal.NewFromFloat(1)),
+		Amount:      money.FromDecimal(decimal.NewFromFloat(1)),
 		ReturnURL:   "https://shop.example.com/pay",
 	}
 
@@ -234,7 +234,7 @@ func TestOkpayAdapter_CreatePayment_ExchangeRateOneResolvesTRXChannelCurrency(t 
 		Subject:     "test",
 		ChannelType: constants.PaymentChannelTypeTrx,
 		Currency:    "USD",
-		Amount:      models.NewMoneyFromDecimal(decimal.NewFromFloat(1)),
+		Amount:      money.FromDecimal(decimal.NewFromFloat(1)),
 		ReturnURL:   "https://shop.example.com/pay",
 	}
 

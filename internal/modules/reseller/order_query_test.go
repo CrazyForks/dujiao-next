@@ -5,13 +5,14 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
 func TestNeutralProfitStatusUnavailableWhenIneligible(t *testing.T) {
 	status := neutralProfitStatus(models.ResellerOrderSnapshot{
 		ProfitEligible: false,
-		ProfitAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		ProfitAmount:   money.FromDecimal(decimal.NewFromInt(10)),
 	}, models.Order{Status: constants.OrderStatusPaid}, nil)
 	if status != ProfitStatusUnavailable {
 		t.Fatalf("expected unavailable, got %s", status)

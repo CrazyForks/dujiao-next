@@ -19,6 +19,7 @@ import (
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -60,7 +61,7 @@ func TestBuildOrderNotificationPayloadIncludesCustomerAndItemSummary(t *testing.
 		UserID:      user.ID,
 		Currency:    "usd",
 		Status:      constants.OrderStatusPaid,
-		TotalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(99)),
+		TotalAmount: money.FromDecimal(decimal.NewFromInt(99)),
 		Items: []models.OrderItem{
 			{
 				TitleJSON: jsonmap.JSON{
@@ -141,7 +142,7 @@ func TestBuildOrderNotificationPayloadUsesDisplayChannelType(t *testing.T) {
 		OrderNo:     "DJ202603230002",
 		Currency:    "usd",
 		Status:      constants.OrderStatusPaid,
-		TotalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		TotalAmount: money.FromDecimal(decimal.NewFromInt(10)),
 	}
 	payment := &models.Payment{
 		ID:           10,
@@ -169,7 +170,7 @@ func TestBuildOrderNotificationPayloadKeepsBepusdtCashierChannel(t *testing.T) {
 		OrderNo:     "DJ202603230003",
 		Currency:    "usd",
 		Status:      constants.OrderStatusPaid,
-		TotalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		TotalAmount: money.FromDecimal(decimal.NewFromInt(10)),
 	}
 	payment := &models.Payment{
 		ID:           11,
@@ -228,7 +229,7 @@ func TestBuildOrderNotificationPayloadFallsBackToChildrenItems(t *testing.T) {
 		OrderNo:     "DJ202603230201",
 		Currency:    "usd",
 		Status:      constants.OrderStatusPaid,
-		TotalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(42)),
+		TotalAmount: money.FromDecimal(decimal.NewFromInt(42)),
 		Children: []models.Order{
 			{
 				ID: 2002,

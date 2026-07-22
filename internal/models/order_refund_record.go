@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/money"
 	"gorm.io/gorm"
 )
 
@@ -13,7 +14,7 @@ type OrderRefundRecord struct {
 	GuestEmail string         `gorm:"index;type:varchar(255)" json:"guest_email,omitempty"`
 	OrderID    uint           `gorm:"index;not null" json:"order_id"`
 	Type       string         `gorm:"index;type:varchar(32);not null" json:"type"`
-	Amount     Money          `gorm:"type:decimal(20,2);not null;default:0" json:"amount"`
+	Amount     money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"amount"`
 	Currency   string         `gorm:"type:varchar(16);not null;default:''" json:"currency"`
 	Remark     string         `gorm:"type:text" json:"remark,omitempty"`
 	CreatedAt  time.Time      `gorm:"index" json:"created_at"`

@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -55,8 +56,8 @@ type DisplayPriceResult struct {
 	Visible      bool
 	ProductID    uint
 	DisplaySKUID uint
-	DisplayPrice models.Money
-	SKUPrices    map[uint]models.Money
+	DisplayPrice money.Amount
+	SKUPrices    map[uint]money.Amount
 	HiddenSKUIDs map[uint]bool
 }
 
@@ -102,9 +103,9 @@ func (ctx *OrderPricingContext) BuildSnapshot(orderID uint, now time.Time) *mode
 		Currency:            ctx.Currency,
 		ResellerUserID:      ctx.ResellerUserID,
 		BuyerUserID:         ctx.BuyerUserID,
-		BaseAmount:          models.NewMoneyFromDecimal(ctx.BaseAmount),
-		ResellerAmount:      models.NewMoneyFromDecimal(ctx.ResellerAmount),
-		ProfitAmount:        models.NewMoneyFromDecimal(ctx.ProfitAmount),
+		BaseAmount:          money.FromDecimal(ctx.BaseAmount),
+		ResellerAmount:      money.FromDecimal(ctx.ResellerAmount),
+		ProfitAmount:        money.FromDecimal(ctx.ProfitAmount),
 		ProfitEligible:      ctx.ProfitEligible,
 		ProfitBlockReason:   ctx.ProfitBlockReason,
 		PricingSnapshotJSON: ctx.PricingSnapshot,

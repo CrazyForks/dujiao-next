@@ -12,13 +12,14 @@ import (
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
 	"github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // publicSKUView 内部 SKU 计算结构，用于装饰逻辑
 type publicSKUView struct {
 	models.ProductSKU
-	PromotionPriceAmount *models.Money
-	MemberPriceAmount    *models.Money
+	PromotionPriceAmount *money.Amount
+	MemberPriceAmount    *money.Amount
 }
 
 // publicProductView 内部商品计算结构，装饰完成后转换为 dto.ProductResp
@@ -27,7 +28,7 @@ type publicProductView struct {
 	PromotionID          *uint
 	PromotionName        string
 	PromotionType        string
-	PromotionPriceAmount *models.Money
+	PromotionPriceAmount *money.Amount
 	PromotionRules       []dto.PromotionRuleResp
 	MemberPrices         []dto.MemberLevelPrice
 	PublicSKUs           []publicSKUView
@@ -205,7 +206,7 @@ func (h *PublicHandler) decoratePublicProduct(product *models.Product, promotion
 	// 构建 SKU 列表并为每个 active SKU 计算促销价
 	skuViews := make([]publicSKUView, 0, len(item.Product.SKUs))
 	var displayPromotion *models.Promotion
-	var displayPromotionPrice *models.Money
+	var displayPromotionPrice *money.Amount
 
 	for _, sku := range item.Product.SKUs {
 		sv := publicSKUView{ProductSKU: sku}
@@ -214,7 +215,7 @@ func (h *PublicHandler) decoratePublicProduct(product *models.Product, promotion
 		if memberLevelID > 0 && h.memberLevels != nil && sku.IsActive {
 			memberPrice, _ := h.memberLevels.ResolveMemberPrice(memberLevelID, product.ID, sku.ID, sku.PriceAmount.Decimal)
 			if memberPrice.LessThan(sku.PriceAmount.Decimal) {
-				mp := models.NewMoneyFromDecimal(memberPrice)
+				mp := money.FromDecimal(memberPrice)
 				sv.MemberPriceAmount = &mp
 			}
 		}
@@ -307,9 +308,9 @@ func (h *PublicHandler) decoratePublicProductForTenant(
 	return item.toProductResp(), nil
 }
 
-func resolvePublicDisplayPrice(product *models.Product) models.Money {
+func resolvePublicDisplayPrice(product *models.Product) money.Amount {
 	if product == nil {
-		return models.Money{}
+		return money.Amount{}
 	}
 	for _, sku := range product.SKUs {
 		if !sku.IsActive {

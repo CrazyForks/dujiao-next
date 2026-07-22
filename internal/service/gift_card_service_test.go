@@ -8,6 +8,7 @@ import (
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -70,7 +71,7 @@ func TestGiftCardServiceGenerateGiftCards(t *testing.T) {
 	batch, created, err := svc.GenerateGiftCards(GenerateGiftCardsInput{
 		Name:      "测试礼品卡",
 		Quantity:  3,
-		Amount:    models.NewMoneyFromDecimal(decimal.RequireFromString("25.00")),
+		Amount:    money.FromDecimal(decimal.RequireFromString("25.00")),
 		CreatedBy: &adminID,
 	})
 	if err != nil {
@@ -106,7 +107,7 @@ func TestGiftCardServiceGenerateGiftCardsUsesSiteCurrency(t *testing.T) {
 	batch, created, err := svc.GenerateGiftCards(GenerateGiftCardsInput{
 		Name:     "站点币种礼品卡",
 		Quantity: 2,
-		Amount:   models.NewMoneyFromDecimal(decimal.RequireFromString("9.90")),
+		Amount:   money.FromDecimal(decimal.RequireFromString("9.90")),
 	})
 	if err != nil {
 		t.Fatalf("generate gift cards failed: %v", err)
@@ -143,7 +144,7 @@ func TestGiftCardServiceRedeemGiftCard(t *testing.T) {
 	batch, _, err := svc.GenerateGiftCards(GenerateGiftCardsInput{
 		Name:     "兑换测试卡",
 		Quantity: 1,
-		Amount:   models.NewMoneyFromDecimal(decimal.RequireFromString("59.90")),
+		Amount:   money.FromDecimal(decimal.RequireFromString("59.90")),
 	})
 	if err != nil {
 		t.Fatalf("generate gift card failed: %v", err)
@@ -197,7 +198,7 @@ func TestGiftCardServiceRedeemExpiredGiftCard(t *testing.T) {
 	card := models.GiftCard{
 		Name:      "过期礼品卡",
 		Code:      "GC-EXPIRED-001",
-		Amount:    models.NewMoneyFromDecimal(decimal.RequireFromString("10.00")),
+		Amount:    money.FromDecimal(decimal.RequireFromString("10.00")),
 		Currency:  "CNY",
 		Status:    models.GiftCardStatusActive,
 		ExpiresAt: &expiredAt,
@@ -226,7 +227,7 @@ func TestGiftCardServiceBatchUpdateStatusSkipsRedeemed(t *testing.T) {
 	activeCard := models.GiftCard{
 		Name:      "可变更礼品卡",
 		Code:      "GC-BATCH-ACTIVE-001",
-		Amount:    models.NewMoneyFromDecimal(decimal.RequireFromString("20.00")),
+		Amount:    money.FromDecimal(decimal.RequireFromString("20.00")),
 		Currency:  "CNY",
 		Status:    models.GiftCardStatusActive,
 		CreatedAt: now,
@@ -240,7 +241,7 @@ func TestGiftCardServiceBatchUpdateStatusSkipsRedeemed(t *testing.T) {
 	redeemedCard := models.GiftCard{
 		Name:           "已兑换礼品卡",
 		Code:           "GC-BATCH-REDEEMED-001",
-		Amount:         models.NewMoneyFromDecimal(decimal.RequireFromString("30.00")),
+		Amount:         money.FromDecimal(decimal.RequireFromString("30.00")),
 		Currency:       "CNY",
 		Status:         models.GiftCardStatusRedeemed,
 		RedeemedAt:     &redeemedAt,

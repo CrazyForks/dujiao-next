@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -95,7 +96,7 @@ func TestResellerDomainActiveUniqueAllowsSoftDeleteRecreate(t *testing.T) {
 
 func TestResellerMoneyFieldsRoundTrip(t *testing.T) {
 	db := openResellerModelTestDB(t)
-	amount := NewMoneyFromDecimal(decimal.RequireFromString("12.345"))
+	amount := money.FromDecimal(decimal.RequireFromString("12.345"))
 	entry := ResellerLedgerEntry{
 		ResellerID:     1,
 		Type:           ResellerLedgerTypeManualAdjust,

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -62,7 +63,7 @@ type AdminRechargeListFilter struct {
 // AdjustBalanceInput 管理端余额调整输入。
 type AdjustBalanceInput struct {
 	UserID   uint
-	Delta    models.Money
+	Delta    money.Amount
 	Currency string
 	Remark   string
 }
@@ -346,7 +347,7 @@ func (h *AdminHandler) AdjustUserWallet(c *gin.Context) {
 
 	account, txn, err := h.wallets.AdminAdjustBalance(AdjustBalanceInput{
 		UserID:   userID,
-		Delta:    models.NewMoneyFromDecimal(delta),
+		Delta:    money.FromDecimal(delta),
 		Currency: currency,
 		Remark:   strings.TrimSpace(req.Remark),
 	})

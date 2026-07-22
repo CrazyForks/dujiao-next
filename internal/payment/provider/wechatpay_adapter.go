@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/wechatpay"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -157,10 +157,10 @@ func (a *wechatpayAdapter) QueryPayment(ctx context.Context, raw jsonmap.JSON, p
 
 	// amount 解析失败时返回零值：wrapper 仅做适配，金额异常的语义边界(对账失败 / 网关返回脏数据)
 	// 留给上游业务层判定，wrapper 不擅自报错。
-	amount := models.Money{}
+	amount := money.Amount{}
 	if s := strings.TrimSpace(result.Amount); s != "" {
 		if parsed, parseErr := decimal.NewFromString(s); parseErr == nil {
-			amount = models.NewMoneyFromDecimal(parsed)
+			amount = money.FromDecimal(parsed)
 		}
 	}
 
@@ -188,10 +188,10 @@ func (a *wechatpayAdapter) ParseWebhook(ctx context.Context, raw jsonmap.JSON, h
 
 	// amount 解析失败时返回零值：wrapper 仅做适配，金额异常的语义边界(对账失败 / 网关返回脏数据)
 	// 留给上游业务层判定，wrapper 不擅自报错。
-	amount := models.Money{}
+	amount := money.Amount{}
 	if s := strings.TrimSpace(result.Amount); s != "" {
 		if parsed, parseErr := decimal.NewFromString(s); parseErr == nil {
-			amount = models.NewMoneyFromDecimal(parsed)
+			amount = money.FromDecimal(parsed)
 		}
 	}
 

@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -63,7 +64,7 @@ func TestResellerAccountingServiceListAdminWithdrawRequests(t *testing.T) {
 	profile := seedResellerAccountingProfile(t, db)
 	req := models.ResellerWithdrawRequest{
 		ResellerID: profile.ID,
-		Amount:     models.NewMoneyFromDecimal(decimal.NewFromInt(25)),
+		Amount:     money.FromDecimal(decimal.NewFromInt(25)),
 		Currency:   "USD",
 		Channel:    "USDT",
 		Account:    "TserviceWithdraw",
@@ -98,7 +99,7 @@ func TestResellerAccountingServiceGetUserFinanceDashboardScopesToUserProfile(t *
 		ResellerID:           profile.ID,
 		Currency:             "USD",
 		Status:               models.ResellerBalanceStatusNormal,
-		AvailableAmountCache: models.NewMoneyFromDecimal(decimal.RequireFromString("18.50")),
+		AvailableAmountCache: money.FromDecimal(decimal.RequireFromString("18.50")),
 	}).Error; err != nil {
 		t.Fatalf("create balance failed: %v", err)
 	}
@@ -106,7 +107,7 @@ func TestResellerAccountingServiceGetUserFinanceDashboardScopesToUserProfile(t *
 		ResellerID:           other.ID,
 		Currency:             "USD",
 		Status:               models.ResellerBalanceStatusNormal,
-		AvailableAmountCache: models.NewMoneyFromDecimal(decimal.RequireFromString("99.00")),
+		AvailableAmountCache: money.FromDecimal(decimal.RequireFromString("99.00")),
 	}).Error; err != nil {
 		t.Fatalf("create other balance failed: %v", err)
 	}
@@ -195,14 +196,14 @@ func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (mo
 		OrderNo:              fmt.Sprintf("DJ-RES-%d", now.UnixNano()),
 		UserID:               user.ID,
 		Status:               constants.OrderStatusPaid,
-		TotalAmount:          models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
-		OriginalAmount:       models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
+		TotalAmount:          money.FromDecimal(decimal.NewFromInt(130)),
+		OriginalAmount:       money.FromDecimal(decimal.NewFromInt(130)),
 		Currency:             "USD",
-		WalletPaidAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
-		OnlinePaidAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		WalletPaidAmount:     money.FromDecimal(decimal.NewFromInt(30)),
+		OnlinePaidAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		ResellerID:           &resellerID,
 		ResellerDomain:       "shop.example.test",
-		ResellerProfitAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		ResellerProfitAmount: money.FromDecimal(decimal.NewFromInt(30)),
 		PaidAt:               &now,
 		CreatedAt:            now,
 		UpdatedAt:            now,
@@ -223,7 +224,7 @@ func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (mo
 		OrderID:   order.ID,
 		ChannelID: channel.ID,
 		Status:    constants.PaymentStatusSuccess,
-		Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		Amount:    money.FromDecimal(decimal.NewFromInt(100)),
 		Currency:  "USD",
 		PaidAt:    &now,
 		CreatedAt: now,
@@ -239,9 +240,9 @@ func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (mo
 		Currency:          "USD",
 		ResellerUserID:    profile.UserID,
 		BuyerUserID:       user.ID,
-		BaseAmount:        models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		ResellerAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(130)),
-		ProfitAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		BaseAmount:        money.FromDecimal(decimal.NewFromInt(100)),
+		ResellerAmount:    money.FromDecimal(decimal.NewFromInt(130)),
+		ProfitAmount:      money.FromDecimal(decimal.NewFromInt(30)),
 		ProfitEligible:    eligible,
 		ProfitBlockReason: "",
 		PricingSnapshotJSON: jsonmap.JSON{
@@ -432,7 +433,7 @@ func TestResellerAccountingRefundDeductUsesSnapshotItems(t *testing.T) {
 		UserID:    order.UserID,
 		OrderID:   order.ID,
 		Type:      constants.OrderRefundTypeManual,
-		Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(65)),
+		Amount:    money.FromDecimal(decimal.NewFromInt(65)),
 		Currency:  "USD",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -470,7 +471,7 @@ func TestResellerAccountingRefundDeductIsIdempotent(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("post profit failed: %v", err)
 	}
-	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
+	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
 	if err := db.Create(&refundRecord).Error; err != nil {
 		t.Fatalf("create refund record failed: %v", err)
 	}
@@ -495,7 +496,7 @@ func TestResellerAccountingRefundDeductSkipsIneligibleSnapshot(t *testing.T) {
 	order, _, _ := seedPaidResellerOrderSnapshot(t, db, false)
 	repo := repository.NewResellerRepository(db)
 	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
-	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
+	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
 	if err := db.Create(&refundRecord).Error; err != nil {
 		t.Fatalf("create refund record failed: %v", err)
 	}
@@ -521,7 +522,7 @@ func TestResellerAccountingRefundDeductMissingSnapshotSkipsWithoutRollingBack(t 
 	}
 	repo := repository.NewResellerRepository(db)
 	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
-	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
+	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
 	if err := db.Create(&refundRecord).Error; err != nil {
 		t.Fatalf("create refund record failed: %v", err)
 	}
@@ -544,9 +545,9 @@ func TestResellerAccountingApplyWithdrawLocksSameCurrencyLedgers(t *testing.T) {
 	profile := seedResellerAccountingProfile(t, db)
 	now := time.Now()
 	rows := []models.ResellerLedgerEntry{
-		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:w-usd-1", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
-		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(15)), Currency: "USD", IdempotencyKey: "order_profit:w-usd-2", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
-		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(20)), Currency: "CNY", IdempotencyKey: "order_profit:w-cny-1", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
+		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:w-usd-1", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
+		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(15)), Currency: "USD", IdempotencyKey: "order_profit:w-usd-2", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
+		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(20)), Currency: "CNY", IdempotencyKey: "order_profit:w-cny-1", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
 	}
 	if err := db.Create(&rows).Error; err != nil {
 		t.Fatalf("seed ledger rows failed: %v", err)
@@ -590,7 +591,7 @@ func TestResellerAccountingRejectWithdrawUnlocksLedgers(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	profile := seedResellerAccountingProfile(t, db)
 	now := time.Now()
-	row := models.ResellerLedgerEntry{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:reject", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now}
+	row := models.ResellerLedgerEntry{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:reject", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now}
 	if err := db.Create(&row).Error; err != nil {
 		t.Fatalf("seed ledger failed: %v", err)
 	}
@@ -620,7 +621,7 @@ func TestResellerAccountingPayWithdrawMarksLedgersWithdrawn(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	profile := seedResellerAccountingProfile(t, db)
 	now := time.Now()
-	row := models.ResellerLedgerEntry{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:pay", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now}
+	row := models.ResellerLedgerEntry{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:pay", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now}
 	if err := db.Create(&row).Error; err != nil {
 		t.Fatalf("seed ledger failed: %v", err)
 	}
@@ -657,7 +658,7 @@ func TestResellerAccountingPayPartialWithdrawKeepsRemainingAvailableBalance(t *t
 	db := openResellerAccountingServiceTestDB(t)
 	profile := seedResellerAccountingProfile(t, db)
 	now := time.Now()
-	row := models.ResellerLedgerEntry{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(60)), Currency: "USD", IdempotencyKey: "order_profit:pay-partial", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now}
+	row := models.ResellerLedgerEntry{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(60)), Currency: "USD", IdempotencyKey: "order_profit:pay-partial", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now}
 	if err := db.Create(&row).Error; err != nil {
 		t.Fatalf("seed ledger failed: %v", err)
 	}
@@ -693,7 +694,7 @@ func TestResellerAccountingRefundDeductDefersWhileProfitPending(t *testing.T) {
 	}
 
 	// 确认窗口内发生退款（退一半 65/130），扣减利润 15。
-	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
+	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
 	if err := db.Create(&refundRecord).Error; err != nil {
 		t.Fatalf("create refund record failed: %v", err)
 	}
@@ -773,7 +774,7 @@ func TestResellerAccountingRefundDeductDoesNotOverDeductAcrossPartialRefunds(t *
 	}
 
 	// 第一次部分退款 52/130，扣减利润 30 * 0.4 = 12。
-	refund1 := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(52)), Currency: "USD"}
+	refund1 := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(52)), Currency: "USD"}
 	if err := db.Create(&refund1).Error; err != nil {
 		t.Fatalf("create refund1 failed: %v", err)
 	}
@@ -784,7 +785,7 @@ func TestResellerAccountingRefundDeductDoesNotOverDeductAcrossPartialRefunds(t *
 	}
 
 	// 第二次退款 78（剩余全部），refundedBefore=52，订单转为全额退款。
-	refund2 := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(78)), Currency: "USD"}
+	refund2 := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(78)), Currency: "USD"}
 	if err := db.Create(&refund2).Error; err != nil {
 		t.Fatalf("create refund2 failed: %v", err)
 	}
@@ -811,7 +812,7 @@ func TestResellerAccountingApplyWithdrawRejectsExceedingNetAvailable(t *testing.
 	now := time.Now()
 	if err := db.Create(&models.ResellerLedgerEntry{
 		ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit,
-		Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)), Currency: "USD",
+		Amount: money.FromDecimal(decimal.NewFromInt(100)), Currency: "USD",
 		IdempotencyKey: "test_profit_net", Status: models.ResellerLedgerStatusAvailable,
 		CreatedAt: now, UpdatedAt: now,
 	}).Error; err != nil {
@@ -819,7 +820,7 @@ func TestResellerAccountingApplyWithdrawRejectsExceedingNetAvailable(t *testing.
 	}
 	if err := db.Create(&models.ResellerLedgerEntry{
 		ResellerID: profile.ID, Type: models.ResellerLedgerTypeRefundDeduct,
-		Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(-50)), Currency: "USD",
+		Amount: money.FromDecimal(decimal.NewFromInt(-50)), Currency: "USD",
 		IdempotencyKey: "test_refund_net", Status: models.ResellerLedgerStatusAvailable,
 		CreatedAt: now, UpdatedAt: now,
 	}).Error; err != nil {

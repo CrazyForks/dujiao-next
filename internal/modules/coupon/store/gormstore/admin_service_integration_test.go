@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	couponmodule "github.com/dujiao-next/internal/modules/coupon"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -33,9 +34,9 @@ func validCouponAdminInput(code string) couponmodule.CreateCouponInput {
 	return couponmodule.CreateCouponInput{
 		Code:        code,
 		Type:        constants.CouponTypePercent,
-		Value:       models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-		MinAmount:   models.NewMoneyFromDecimal(decimal.Zero),
-		MaxDiscount: models.NewMoneyFromDecimal(decimal.Zero),
+		Value:       money.FromDecimal(decimal.NewFromInt(10)),
+		MinAmount:   money.FromDecimal(decimal.Zero),
+		MaxDiscount: money.FromDecimal(decimal.Zero),
 		ScopeRefIDs: []uint{1},
 	}
 }

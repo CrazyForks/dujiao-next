@@ -5,11 +5,11 @@ import (
 	"strings"
 
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -169,7 +169,7 @@ func (h *ChannelHandler) CreateWalletRecharge(c *gin.Context) {
 	result, err := h.payments.CreateWalletRechargePayment(CreateRechargePaymentInput{
 		UserID:    userID,
 		ChannelID: req.ChannelID,
-		Amount:    models.NewMoneyFromDecimal(amount),
+		Amount:    money.FromDecimal(amount),
 		Currency:  currency,
 		ClientIP:  c.ClientIP(),
 		Context:   c.Request.Context(),

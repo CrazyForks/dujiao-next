@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"gorm.io/gorm"
 )
 
@@ -17,9 +18,9 @@ type ProcurementOrder struct {
 	UpstreamOrderID          uint           `json:"-"`
 	UpstreamOrderNo          string         `gorm:"type:varchar(64);index" json:"upstream_order_no,omitempty"`
 	Status                   string         `gorm:"type:varchar(20);not null;default:'pending';index" json:"status"`
-	UpstreamAmount           Money          `gorm:"type:decimal(20,2);not null;default:0" json:"upstream_amount"`
+	UpstreamAmount           money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"upstream_amount"`
 	UpstreamCurrency         string         `gorm:"type:varchar(10);not null;default:''" json:"upstream_currency"` // 上游货币代码
-	LocalSellAmount          Money          `gorm:"type:decimal(20,2);not null;default:0" json:"local_sell_amount"`
+	LocalSellAmount          money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"local_sell_amount"`
 	Currency                 string         `gorm:"type:varchar(10);not null" json:"currency"` // 本地货币代码
 	ErrorMessage             string         `gorm:"type:text" json:"error_message,omitempty"`
 	RetryCount               int            `gorm:"not null;default:0" json:"retry_count"`

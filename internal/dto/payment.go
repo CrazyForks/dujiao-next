@@ -4,13 +4,14 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // CreatePaymentResp 创建支付响应
 type CreatePaymentResp struct {
 	OrderPaid        bool         `json:"order_paid"`
-	WalletPaidAmount models.Money `json:"wallet_paid_amount"`
-	OnlinePayAmount  models.Money `json:"online_pay_amount"`
+	WalletPaidAmount money.Amount `json:"wallet_paid_amount"`
+	OnlinePayAmount  money.Amount `json:"online_pay_amount"`
 	PaymentID        *uint        `json:"payment_id,omitempty"`
 	ChannelID        *uint        `json:"channel_id,omitempty"`
 	ProviderType     string       `json:"provider_type,omitempty"`
@@ -31,8 +32,8 @@ type CreatePaymentResultView struct {
 	Payment          *models.Payment
 	Channel          *models.PaymentChannel
 	OrderPaid        bool
-	WalletPaidAmount models.Money
-	OnlinePayAmount  models.Money
+	WalletPaidAmount money.Amount
+	OnlinePayAmount  money.Amount
 }
 
 // NewCreatePaymentResp 从创建支付结果视图构造响应

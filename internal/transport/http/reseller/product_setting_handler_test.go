@@ -9,11 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 
 	"github.com/gin-gonic/gin"
@@ -130,7 +131,7 @@ func TestAdminProductSettingHandlerRecordsAuditOnSave(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	detail := &resellermodule.ProductSettingDetail{
 		Product:  models.Product{ID: 3},
-		Settings: []models.ResellerProductSetting{{SKUID: 7, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("130.00"))}},
+		Settings: []models.ResellerProductSetting{{SKUID: 7, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: money.FromDecimal(decimal.RequireFromString("130.00"))}},
 	}
 	stub := &productSettingStub{detail: detail}
 	audit := &auditStub{}

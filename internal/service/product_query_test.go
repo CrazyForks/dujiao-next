@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -33,14 +34,14 @@ func TestProductServiceListPublicIncludesChildProductsForParentCategory(t *testi
 		CategoryID:  parent.ID,
 		Slug:        "parent-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "parent-product"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
 	childProduct := models.Product{
 		CategoryID:  child.ID,
 		Slug:        "child-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "child-product"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
 	if err := db.Create(&parentProduct).Error; err != nil {
@@ -78,7 +79,7 @@ func TestProductServiceListPublicSortOrderDescending(t *testing.T) {
 		CategoryID:  category.ID,
 		Slug:        "high-sort-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "high"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 		SortOrder:   100,
 	}
@@ -86,7 +87,7 @@ func TestProductServiceListPublicSortOrderDescending(t *testing.T) {
 		CategoryID:  category.ID,
 		Slug:        "low-sort-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "low"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 		SortOrder:   1,
 	}
@@ -128,7 +129,7 @@ func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 		CategoryID:  category.ID,
 		Slug:        "sku-order-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "sku-order-product"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 		SortOrder:   0,
 	}
@@ -140,7 +141,7 @@ func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 		ProductID:      product.ID,
 		SKUCode:        "HIGH",
 		SpecValuesJSON: jsonmap.JSON{},
-		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:    money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
 		SortOrder:      100,
 	}
@@ -148,7 +149,7 @@ func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 		ProductID:      product.ID,
 		SKUCode:        "LOW",
 		SpecValuesJSON: jsonmap.JSON{},
-		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:    money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
 		SortOrder:      1,
 	}
@@ -181,7 +182,7 @@ func TestProductServiceGetAdminByIDIncludesInactiveSKUs(t *testing.T) {
 		CategoryID:  1,
 		Slug:        "admin-all-skus-product",
 		TitleJSON:   jsonmap.JSON{"zh-CN": "admin-all-skus-product"},
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
 	if err := db.Create(&product).Error; err != nil {
@@ -192,7 +193,7 @@ func TestProductServiceGetAdminByIDIncludesInactiveSKUs(t *testing.T) {
 		ProductID:      product.ID,
 		SKUCode:        "ACTIVE",
 		SpecValuesJSON: jsonmap.JSON{},
-		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:    money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:       true,
 		SortOrder:      10,
 	}
@@ -200,7 +201,7 @@ func TestProductServiceGetAdminByIDIncludesInactiveSKUs(t *testing.T) {
 		ProductID:      product.ID,
 		SKUCode:        "INACTIVE",
 		SpecValuesJSON: jsonmap.JSON{},
-		PriceAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount:    money.FromDecimal(decimal.NewFromInt(20)),
 		IsActive:       false,
 		SortOrder:      1,
 	}

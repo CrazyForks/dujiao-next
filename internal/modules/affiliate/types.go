@@ -2,6 +2,7 @@ package affiliate
 
 import (
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -31,9 +32,9 @@ type Dashboard struct {
 	ClickCount          int64        `json:"click_count"`
 	ValidOrderCount     int64        `json:"valid_order_count"`
 	ConversionRate      float64      `json:"conversion_rate"`
-	PendingCommission   models.Money `json:"pending_commission"`
-	AvailableCommission models.Money `json:"available_commission"`
-	WithdrawnCommission models.Money `json:"withdrawn_commission"`
+	PendingCommission   money.Amount `json:"pending_commission"`
+	AvailableCommission money.Amount `json:"available_commission"`
+	WithdrawnCommission money.Amount `json:"withdrawn_commission"`
 }
 
 // Stats 推广统计数据。
@@ -41,9 +42,9 @@ type Stats struct {
 	ClickCount          int64
 	ValidOrderCount     int64
 	ConversionRate      float64
-	PendingCommission   models.Money
-	AvailableCommission models.Money
-	WithdrawnCommission models.Money
+	PendingCommission   money.Amount
+	AvailableCommission money.Amount
+	WithdrawnCommission money.Amount
 }
 
 // AdminUserItem 后台推广用户列表项。

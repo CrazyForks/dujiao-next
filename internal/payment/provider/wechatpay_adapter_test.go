@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/wechatpay"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -167,7 +167,7 @@ func TestWechatpayAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 		OrderNo:   "ORDER-WX-USD-10",
 		Subject:   "audit field test",
 		Currency:  "USD",
-		Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		Amount:    money.FromDecimal(decimal.NewFromInt(10)),
 		ClientIP:  "127.0.0.1",
 		Extra:     jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},
 		NotifyURL: "https://example.com/api/v1/payments/webhook/wechat",

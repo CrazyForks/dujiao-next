@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -43,8 +44,8 @@ func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (models.Us
 	profile := models.ResellerProfile{
 		UserID:               user.ID,
 		Status:               models.ResellerProfileStatusActive,
-		DefaultMarkupPercent: models.NewMoneyFromDecimal(decimal.RequireFromString("10.00")),
-		MaxMarkupPercent:     models.NewMoneyFromDecimal(decimal.RequireFromString("40.00")),
+		DefaultMarkupPercent: money.FromDecimal(decimal.RequireFromString("10.00")),
+		MaxMarkupPercent:     money.FromDecimal(decimal.RequireFromString("40.00")),
 		SettlementStatus:     models.ResellerSettlementStatusNormal,
 	}
 	if err := db.Create(&profile).Error; err != nil {
@@ -58,16 +59,16 @@ func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (models.Us
 		CategoryID:      category.ID,
 		Slug:            "service-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "服务商品", "zh-TW": "服務商品", "en-US": "Service Product"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")),
-		CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")),
+		PriceAmount:     money.FromDecimal(decimal.RequireFromString("100.00")),
+		CostPriceAmount: money.FromDecimal(decimal.RequireFromString("80.00")),
 		IsActive:        true,
 	}
 	if err := db.Create(&product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
 	skus := []models.ProductSKU{
-		{ProductID: product.ID, SKUCode: "A", PriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("100.00")), CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("80.00")), IsActive: true},
-		{ProductID: product.ID, SKUCode: "B", PriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("200.00")), CostPriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("120.00")), IsActive: true},
+		{ProductID: product.ID, SKUCode: "A", PriceAmount: money.FromDecimal(decimal.RequireFromString("100.00")), CostPriceAmount: money.FromDecimal(decimal.RequireFromString("80.00")), IsActive: true},
+		{ProductID: product.ID, SKUCode: "B", PriceAmount: money.FromDecimal(decimal.RequireFromString("200.00")), CostPriceAmount: money.FromDecimal(decimal.RequireFromString("120.00")), IsActive: true},
 	}
 	if err := db.Create(&skus).Error; err != nil {
 		t.Fatalf("create skus failed: %v", err)

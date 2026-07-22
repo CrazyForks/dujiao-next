@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -72,7 +73,7 @@ func (s *AccountingLedgerService) PostOrderProfit(store AccountingLedgerStore, o
 		ResellerID:     snapshot.ResellerID,
 		OrderID:        &orderID,
 		Type:           models.ResellerLedgerTypeOrderProfit,
-		Amount:         models.NewMoneyFromDecimal(profit),
+		Amount:         money.FromDecimal(profit),
 		Currency:       strings.TrimSpace(snapshot.Currency),
 		IdempotencyKey: fmt.Sprintf("order_profit:%d", order.ID),
 		MetadataJSON:   metadata,

@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -28,7 +29,7 @@ func TestProcurement_GetByID_DoesNotIncludeLocalRefundRecords(t *testing.T) {
 	localRecord := &models.OrderRefundRecord{
 		OrderID:    child.ID,
 		Type:       constants.OrderRefundTypeManual,
-		Amount:     models.NewMoneyFromDecimal(decimal.NewFromFloat(10.5)),
+		Amount:     money.FromDecimal(decimal.NewFromFloat(10.5)),
 		Currency:   "CNY",
 		Remark:     "local refund",
 		GuestEmail: "guest-local@example.com",
@@ -40,7 +41,7 @@ func TestProcurement_GetByID_DoesNotIncludeLocalRefundRecords(t *testing.T) {
 	parentRecord := &models.OrderRefundRecord{
 		OrderID:    parent.ID,
 		Type:       constants.OrderRefundTypeWallet,
-		Amount:     models.NewMoneyFromDecimal(decimal.NewFromFloat(7.25)),
+		Amount:     money.FromDecimal(decimal.NewFromFloat(7.25)),
 		Currency:   "CNY",
 		Remark:     "parent refund",
 		GuestEmail: "guest-parent@example.com",
@@ -69,7 +70,7 @@ func TestProcurement_FillParentOrderNo_BackfillsLocalRefundedAmountFromParent(t 
 
 	parent := createProcTestOrder(t, db, "PROC-PARENT-REFUND-001", constants.OrderStatusPartiallyRefunded, constants.FulfillmentTypeUpstream)
 	if err := db.Model(&models.Order{}).Where("id = ?", parent.ID).Updates(map[string]interface{}{
-		"refunded_amount": models.NewMoneyFromDecimal(decimal.NewFromFloat(12.34)),
+		"refunded_amount": money.FromDecimal(decimal.NewFromFloat(12.34)),
 	}).Error; err != nil {
 		t.Fatalf("set parent refunded_amount: %v", err)
 	}
@@ -106,7 +107,7 @@ func TestProcurement_List_BackfillsChildLocalRefundedAmountFromParent(t *testing
 
 	parent := createProcTestOrder(t, db, "PROC-LIST-PARENT-REFUND-001", constants.OrderStatusPartiallyRefunded, constants.FulfillmentTypeUpstream)
 	if err := db.Model(&models.Order{}).Where("id = ?", parent.ID).Updates(map[string]interface{}{
-		"refunded_amount": models.NewMoneyFromDecimal(decimal.NewFromFloat(8.88)),
+		"refunded_amount": money.FromDecimal(decimal.NewFromFloat(8.88)),
 	}).Error; err != nil {
 		t.Fatalf("set parent refunded_amount: %v", err)
 	}
@@ -151,7 +152,7 @@ func TestProcurement_List_DoesNotIncludeLocalRefundRecords(t *testing.T) {
 	record := &models.OrderRefundRecord{
 		OrderID:  order.ID,
 		Type:     constants.OrderRefundTypeManual,
-		Amount:   models.NewMoneyFromDecimal(decimal.NewFromInt(12)),
+		Amount:   money.FromDecimal(decimal.NewFromInt(12)),
 		Currency: "CNY",
 		Remark:   "list refund",
 		UserID:   1,

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // AffiliateProfileResp 推广用户资料响应
@@ -29,7 +30,7 @@ func NewAffiliateProfileResp(p *models.AffiliateProfile) AffiliateProfileResp {
 type AffiliateCommissionResp struct {
 	ID               uint         `json:"id"`
 	CommissionType   string       `json:"commission_type"`
-	CommissionAmount models.Money `json:"commission_amount"`
+	CommissionAmount money.Amount `json:"commission_amount"`
 	Status           string       `json:"status"`
 	ConfirmAt        *time.Time   `json:"confirm_at,omitempty"`
 	AvailableAt      *time.Time   `json:"available_at,omitempty"`
@@ -63,7 +64,7 @@ func NewAffiliateCommissionRespList(commissions []models.AffiliateCommission) []
 // AffiliateWithdrawResp 提现记录响应
 type AffiliateWithdrawResp struct {
 	ID           uint         `json:"id"`
-	Amount       models.Money `json:"amount"`
+	Amount       money.Amount `json:"amount"`
 	Channel      string       `json:"channel"`
 	Account      string       `json:"account"`
 	Status       string       `json:"status"`

@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -28,15 +29,15 @@ func (s *Service) GetProductPromotions(productID uint) ([]models.Promotion, erro
 }
 
 // ApplyPromotion 应用活动价规则（支持阶梯匹配）
-func (s *Service) ApplyPromotion(product *models.Product, quantity int) (*models.Promotion, models.Money, error) {
+func (s *Service) ApplyPromotion(product *models.Product, quantity int) (*models.Promotion, money.Amount, error) {
 	if product == nil || quantity <= 0 {
-		return nil, models.Money{}, ErrInvalid
+		return nil, money.Amount{}, ErrInvalid
 	}
 
 	now := time.Now()
 	promotions, err := s.promotionRepo.GetAllActiveByProduct(product.ID, now)
 	if err != nil {
-		return nil, models.Money{}, err
+		return nil, money.Amount{}, err
 	}
 	if len(promotions) == 0 {
 		return nil, product.PriceAmount, nil
@@ -63,16 +64,16 @@ func (s *Service) ApplyPromotion(product *models.Product, quantity int) (*models
 
 	unitPrice, err := s.calculateUnitPrice(product.PriceAmount, matched)
 	if err != nil {
-		return nil, models.Money{}, err
+		return nil, money.Amount{}, err
 	}
 
 	return matched, unitPrice, nil
 }
 
-func (s *Service) calculateUnitPrice(base models.Money, promotion *models.Promotion) (models.Money, error) {
+func (s *Service) calculateUnitPrice(base money.Amount, promotion *models.Promotion) (money.Amount, error) {
 	value := promotion.Value.Decimal
 	if value.LessThanOrEqual(decimal.Zero) {
-		return models.Money{}, ErrInvalid
+		return money.Amount{}, ErrInvalid
 	}
 
 	switch strings.ToLower(strings.TrimSpace(promotion.Type)) {
@@ -81,17 +82,17 @@ func (s *Service) calculateUnitPrice(base models.Money, promotion *models.Promot
 		if discounted.LessThan(decimal.Zero) {
 			discounted = decimal.Zero
 		}
-		return models.NewMoneyFromDecimal(discounted), nil
+		return money.FromDecimal(discounted), nil
 	case constants.PromotionTypePercent:
 		percent := decimal.NewFromInt(100).Sub(value)
 		if percent.LessThan(decimal.Zero) {
 			percent = decimal.Zero
 		}
 		discounted := base.Decimal.Mul(percent).Div(decimal.NewFromInt(100))
-		return models.NewMoneyFromDecimal(discounted), nil
+		return money.FromDecimal(discounted), nil
 	case constants.PromotionTypeSpecialPrice:
-		return models.NewMoneyFromDecimal(value), nil
+		return money.FromDecimal(value), nil
 	default:
-		return models.Money{}, ErrInvalid
+		return money.Amount{}, ErrInvalid
 	}
 }

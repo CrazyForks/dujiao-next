@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/notification"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/shopspring/decimal"
@@ -71,11 +72,11 @@ func compareOrder(job *models.ReconciliationJob, order *models.ProcurementOrder,
 	statusMismatch := checkStatus && !isStatusConsistent(order.Status, detail.Status)
 
 	amountMismatch := false
-	var upstreamAmount models.Money
+	var upstreamAmount money.Amount
 	if checkAmount && detail.Amount != "" {
 		value, err := decimal.NewFromString(detail.Amount)
 		if err == nil && value.IsPositive() && order.UpstreamAmount.IsPositive() {
-			upstreamAmount = models.NewMoneyFromDecimal(value)
+			upstreamAmount = money.FromDecimal(value)
 			amountMismatch = !order.UpstreamAmount.Equal(value)
 		}
 	}

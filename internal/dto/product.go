@@ -4,6 +4,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -17,10 +18,10 @@ type ProductResp struct {
 	Title                jsonmap.JSON         `json:"title"`
 	Description          jsonmap.JSON         `json:"description"`
 	Content              jsonmap.JSON         `json:"content"`
-	PriceAmount          models.Money         `json:"price_amount"`
+	PriceAmount          money.Amount         `json:"price_amount"`
 	WholesalePrices      []WholesalePriceResp `json:"wholesale_prices,omitempty"`
-	Images               jsonslice.Strings   `json:"images"`
-	Tags                 jsonslice.Strings   `json:"tags"`
+	Images               jsonslice.Strings    `json:"images"`
+	Tags                 jsonslice.Strings    `json:"tags"`
 	PurchaseType         string               `json:"purchase_type"`
 	MinPurchaseQuantity  int                  `json:"min_purchase_quantity"`
 	MaxPurchaseQuantity  int                  `json:"max_purchase_quantity"`
@@ -47,7 +48,7 @@ type ProductResp struct {
 	PromotionID          *uint               `json:"promotion_id,omitempty"`
 	PromotionName        string              `json:"promotion_name,omitempty"`
 	PromotionType        string              `json:"promotion_type,omitempty"`
-	PromotionPriceAmount *models.Money       `json:"promotion_price_amount,omitempty"`
+	PromotionPriceAmount *money.Amount       `json:"promotion_price_amount,omitempty"`
 	PromotionRules       []PromotionRuleResp `json:"promotion_rules,omitempty"`
 	MemberPrices         []MemberLevelPrice  `json:"member_prices,omitempty"`
 
@@ -88,7 +89,7 @@ type SKUResp struct {
 	ID                  uint         `json:"id"`
 	SKUCode             string       `json:"sku_code"`
 	SpecValues          jsonmap.JSON `json:"spec_values"`
-	PriceAmount         models.Money `json:"price_amount"`
+	PriceAmount         money.Amount `json:"price_amount"`
 	ManualStockTotal    int          `json:"manual_stock_total"`
 	ManualStockSold     int          `json:"manual_stock_sold"`
 	AutoStockAvailable  int64        `json:"auto_stock_available"`
@@ -103,8 +104,8 @@ type SKUResp struct {
 	IsActive            bool         `json:"is_active"`
 
 	// 促销/会员价附加
-	PromotionPriceAmount *models.Money `json:"promotion_price_amount,omitempty"`
-	MemberPriceAmount    *models.Money `json:"member_price_amount,omitempty"`
+	PromotionPriceAmount *money.Amount `json:"promotion_price_amount,omitempty"`
+	MemberPriceAmount    *money.Amount `json:"member_price_amount,omitempty"`
 }
 
 // CategoryResp 分类公共响应
@@ -143,15 +144,15 @@ type PromotionRuleResp struct {
 	ID        uint         `json:"id"`
 	Name      string       `json:"name"`
 	Type      string       `json:"type"`
-	Value     models.Money `json:"value"`
-	MinAmount models.Money `json:"min_amount"`
+	Value     money.Amount `json:"value"`
+	MinAmount money.Amount `json:"min_amount"`
 }
 
 // MemberLevelPrice 会员等级价格
 type MemberLevelPrice struct {
 	MemberLevelID uint         `json:"member_level_id"`
 	SKUID         uint         `json:"sku_id"`
-	PriceAmount   models.Money `json:"price_amount"`
+	PriceAmount   money.Amount `json:"price_amount"`
 }
 
 // MemberLevelResp 会员等级公共响应

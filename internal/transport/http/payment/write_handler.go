@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/i18n"
@@ -51,8 +52,8 @@ type CreatePaymentResult struct {
 	Payment          *models.Payment
 	Channel          *models.PaymentChannel
 	OrderPaid        bool
-	WalletPaidAmount models.Money
-	OnlinePayAmount  models.Money
+	WalletPaidAmount money.Amount
+	OnlinePayAmount  money.Amount
 }
 
 // CapturePaymentInput 捕获支付输入。

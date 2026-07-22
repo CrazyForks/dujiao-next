@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -27,7 +28,7 @@ func (s *QueryService) GetAccount(userID uint) (*models.WalletAccount, error) {
 	}
 	now := time.Now()
 	account = &models.WalletAccount{
-		UserID: userID, Balance: models.NewMoneyFromDecimal(decimal.Zero), CreatedAt: now, UpdatedAt: now,
+		UserID: userID, Balance: money.FromDecimal(decimal.Zero), CreatedAt: now, UpdatedAt: now,
 	}
 	if err := s.repo.CreateAccount(account); err != nil {
 		created, queryErr := s.repo.GetAccountByUserID(userID)
@@ -83,8 +84,8 @@ func (s *QueryService) GetRechargeOrderByPaymentIDAndUser(paymentID, userID uint
 	return nil, ErrRechargeNotFound
 }
 
-func (s *QueryService) GetBalancesByUserIDs(userIDs []uint) (map[uint]models.Money, error) {
-	result := make(map[uint]models.Money, len(userIDs))
+func (s *QueryService) GetBalancesByUserIDs(userIDs []uint) (map[uint]money.Amount, error) {
+	result := make(map[uint]money.Amount, len(userIDs))
 	if len(userIDs) == 0 {
 		return result, nil
 	}

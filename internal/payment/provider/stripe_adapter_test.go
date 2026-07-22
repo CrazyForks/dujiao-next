@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/stripe"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -90,7 +90,7 @@ func TestStripeAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 		OrderNo:   "ORDER-USD-10",
 		Subject:   "audit field test",
 		Currency:  "USD",
-		Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		Amount:    money.FromDecimal(decimal.NewFromInt(10)),
 		ReturnURL: "https://shop.example.com/pay",
 	}
 
@@ -141,7 +141,7 @@ func TestStripeAdapter_CreatePayment_NoExchangeRate_AmountSentEqualsOriginal(t *
 		OrderNo:   "ORDER-USD-NOCONV",
 		Subject:   "no conversion test",
 		Currency:  "USD",
-		Amount:    models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		Amount:    money.FromDecimal(decimal.NewFromInt(20)),
 		ReturnURL: "https://shop.example.com/pay",
 	}
 

@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -111,7 +112,7 @@ func applyProcurementLocalRefundedAmountFallback(localOrder *models.Order, paren
 	if parentRefunded.LessThanOrEqual(decimal.Zero) {
 		return
 	}
-	localOrder.RefundedAmount = models.NewMoneyFromDecimal(parentRefunded)
+	localOrder.RefundedAmount = money.FromDecimal(parentRefunded)
 }
 
 // shouldSyncUpstreamRefundStatus 判断当前采购单状态是否需要从上游拉取退款信息。

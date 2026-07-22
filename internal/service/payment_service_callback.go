@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"gorm.io/gorm"
 )
@@ -19,7 +20,7 @@ type PaymentCallbackInput struct {
 	ChannelID   uint
 	Status      string
 	ProviderRef string
-	Amount      models.Money
+	Amount      money.Amount
 	Currency    string
 	PaidAt      *time.Time
 	Payload     jsonmap.JSON
@@ -258,7 +259,7 @@ func (s *PaymentService) markOrderPaid(tx *gorm.DB, order *models.Order, now tim
 	onlineAmount := normalizeOrderAmount(order.TotalAmount.Decimal.Sub(order.WalletPaidAmount.Decimal))
 	orderUpdates := map[string]interface{}{
 		"paid_at":            now,
-		"online_paid_amount": models.NewMoneyFromDecimal(onlineAmount),
+		"online_paid_amount": money.FromDecimal(onlineAmount),
 		"updated_at":         now,
 	}
 	if err := orderRepo.UpdateStatus(order.ID, constants.OrderStatusPaid, orderUpdates); err != nil {
@@ -266,7 +267,7 @@ func (s *PaymentService) markOrderPaid(tx *gorm.DB, order *models.Order, now tim
 	}
 	order.Status = constants.OrderStatusPaid
 	order.PaidAt = &now
-	order.OnlinePaidAmount = models.NewMoneyFromDecimal(onlineAmount)
+	order.OnlinePaidAmount = money.FromDecimal(onlineAmount)
 	order.UpdatedAt = now
 
 	if len(order.Children) > 0 {
@@ -292,7 +293,7 @@ func (s *PaymentService) markOrderPaid(tx *gorm.DB, order *models.Order, now tim
 		parentStatus := calcParentStatus(order.Children, constants.OrderStatusPaid)
 		if parentStatus != "" && parentStatus != constants.OrderStatusPaid {
 			if err := orderRepo.UpdateStatus(order.ID, parentStatus, map[string]interface{}{
-				"online_paid_amount": models.NewMoneyFromDecimal(onlineAmount),
+				"online_paid_amount": money.FromDecimal(onlineAmount),
 				"updated_at":         now,
 			}); err != nil {
 				return ErrOrderUpdateFailed

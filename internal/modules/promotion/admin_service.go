@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -25,8 +26,8 @@ type CreatePromotionInput struct {
 	Name       string
 	Type       string
 	ScopeRefID uint
-	Value      models.Money
-	MinAmount  models.Money
+	Value      money.Amount
+	MinAmount  money.Amount
 	StartsAt   *time.Time
 	EndsAt     *time.Time
 	IsActive   *bool
@@ -37,8 +38,8 @@ type UpdatePromotionInput struct {
 	Name       string
 	Type       string
 	ScopeRefID uint
-	Value      models.Money
-	MinAmount  models.Money
+	Value      money.Amount
+	MinAmount  money.Amount
 	StartsAt   *time.Time
 	EndsAt     *time.Time
 	IsActive   *bool

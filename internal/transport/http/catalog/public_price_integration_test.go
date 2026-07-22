@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -29,8 +30,8 @@ func TestDecoratePublicProductPromotionUsesDisplayPrice(t *testing.T) {
 		ScopeType:  constants.ScopeTypeProduct,
 		ScopeRefID: 1,
 		Type:       constants.PromotionTypeFixed,
-		Value:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-		MinAmount:  models.NewMoneyFromDecimal(decimal.Zero),
+		Value:      money.FromDecimal(decimal.NewFromInt(10)),
+		MinAmount:  money.FromDecimal(decimal.Zero),
 		IsActive:   true,
 	}
 	if err := db.Create(&promotion).Error; err != nil {
@@ -40,19 +41,19 @@ func TestDecoratePublicProductPromotionUsesDisplayPrice(t *testing.T) {
 	h := &PublicHandler{}
 	product := &models.Product{
 		ID:          1,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("59.90")),
+		PriceAmount: money.FromDecimal(decimal.RequireFromString("59.90")),
 		SKUs: []models.ProductSKU{
 			{
 				ID:          21,
 				IsActive:    true,
 				SortOrder:   100,
-				PriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("89.90")),
+				PriceAmount: money.FromDecimal(decimal.RequireFromString("89.90")),
 			},
 			{
 				ID:          22,
 				IsActive:    true,
 				SortOrder:   10,
-				PriceAmount: models.NewMoneyFromDecimal(decimal.RequireFromString("49.90")),
+				PriceAmount: money.FromDecimal(decimal.RequireFromString("49.90")),
 			},
 		},
 	}

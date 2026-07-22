@@ -11,6 +11,7 @@ import (
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
@@ -22,7 +23,7 @@ func TestProductServiceQuickUpdateRejectsActivationWithoutCategory(t *testing.T)
 		CategoryID:      0,
 		Slug:            "uncategorized-imported-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "uncategorized-imported-product"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
 		FulfillmentType: constants.FulfillmentTypeUpstream,
 		IsMapped:        true,
 		IsActive:        false,
@@ -59,7 +60,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 		CategoryID:      cat.ID,
 		Slug:            "test-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "test-product"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}
@@ -72,7 +73,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	sku := models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     "DEFAULT",
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
 	if err := db.Create(&sku).Error; err != nil {
@@ -84,7 +85,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 		ProductID:     product.ID,
 		SKUID:         sku.ID,
 		MemberLevelID: 1,
-		PriceAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(8)),
+		PriceAmount:   money.FromDecimal(decimal.NewFromInt(8)),
 	}
 	if err := db.Create(&mlp).Error; err != nil {
 		t.Fatalf("create member level price: %v", err)
@@ -190,7 +191,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 		CategoryID:      1,
 		Slug:            "rollback-product-delete",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "rollback-product-delete"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
 	}
@@ -200,7 +201,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 	sku := models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:    true,
 	}
 	if err := db.Create(&sku).Error; err != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/models"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -131,8 +132,8 @@ func (s *ManagementService) ApproveProfile(ctx context.Context, adminID, profile
 		now := time.Now()
 		profile.Status = models.ResellerProfileStatusActive
 		profile.RejectReason = ""
-		profile.DefaultMarkupPercent = models.NewMoneyFromDecimal(input.DefaultMarkupPercent)
-		profile.MaxMarkupPercent = models.NewMoneyFromDecimal(input.MaxMarkupPercent)
+		profile.DefaultMarkupPercent = money.FromDecimal(input.DefaultMarkupPercent)
+		profile.MaxMarkupPercent = money.FromDecimal(input.MaxMarkupPercent)
 		profile.SettlementStatus = models.ResellerSettlementStatusNormal
 		profile.ReviewedBy = &adminID
 		profile.ReviewedAt = &now
@@ -289,8 +290,8 @@ func (s *ManagementService) UpdateProfileOperationalConfig(adminID, profileID ui
 			return catalogproduct.ErrNotFound
 		}
 		now := time.Now()
-		profile.DefaultMarkupPercent = models.NewMoneyFromDecimal(input.DefaultMarkupPercent)
-		profile.MaxMarkupPercent = models.NewMoneyFromDecimal(input.MaxMarkupPercent)
+		profile.DefaultMarkupPercent = money.FromDecimal(input.DefaultMarkupPercent)
+		profile.MaxMarkupPercent = money.FromDecimal(input.MaxMarkupPercent)
 		if settlementStatus != "" {
 			profile.SettlementStatus = settlementStatus
 		}

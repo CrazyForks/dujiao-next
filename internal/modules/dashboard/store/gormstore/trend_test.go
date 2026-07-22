@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -26,9 +27,9 @@ func TestTrendQueriesBucketByRequestedTimezone(t *testing.T) {
 			UserID:         1,
 			Status:         constants.OrderStatusPaid,
 			Currency:       "CNY",
-			OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
-			DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
-			TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
+			OriginalAmount: money.FromDecimal(decimal.NewFromInt(50)),
+			DiscountAmount: money.FromDecimal(decimal.Zero),
+			TotalAmount:    money.FromDecimal(decimal.NewFromInt(50)),
 			CreatedAt:      createdAt,
 		}
 		if err := db.Create(order).Error; err != nil {
@@ -41,7 +42,7 @@ func TestTrendQueriesBucketByRequestedTimezone(t *testing.T) {
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeAlipay,
 		InteractionMode: constants.PaymentInteractionRedirect,
-		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
+		FeeRate:         money.FromDecimal(decimal.Zero),
 		IsActive:        true,
 	}
 	if err := db.Create(channel).Error; err != nil {
@@ -61,9 +62,9 @@ func TestTrendQueriesBucketByRequestedTimezone(t *testing.T) {
 			ProviderType:    constants.PaymentProviderOfficial,
 			ChannelType:     constants.PaymentChannelTypeAlipay,
 			InteractionMode: constants.PaymentInteractionRedirect,
-			Amount:          models.NewMoneyFromDecimal(decimal.NewFromInt(item.amount)),
-			FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-			FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+			Amount:          money.FromDecimal(decimal.NewFromInt(item.amount)),
+			FeeRate:         money.FromDecimal(decimal.Zero),
+			FeeAmount:       money.FromDecimal(decimal.Zero),
 			Currency:        "CNY",
 			Status:          item.status,
 			CreatedAt:       item.createdAt,

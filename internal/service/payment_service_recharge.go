@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/queue"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -17,7 +18,7 @@ import (
 type CreateWalletRechargePaymentInput struct {
 	UserID        uint
 	ChannelID     uint
-	Amount        models.Money
+	Amount        money.Amount
 	Currency      string
 	Remark        string
 	ClientIP      string
@@ -97,10 +98,10 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 			ProviderType:    channel.ProviderType,
 			ChannelType:     channel.ChannelType,
 			InteractionMode: channel.InteractionMode,
-			Amount:          models.NewMoneyFromDecimal(payableAmount),
-			FeeRate:         models.NewMoneyFromDecimal(feeRate),
-			FixedFee:        models.NewMoneyFromDecimal(fixedFee),
-			FeeAmount:       models.NewMoneyFromDecimal(feeAmount),
+			Amount:          money.FromDecimal(payableAmount),
+			FeeRate:         money.FromDecimal(feeRate),
+			FixedFee:        money.FromDecimal(fixedFee),
+			FeeAmount:       money.FromDecimal(feeAmount),
 			Currency:        currency,
 			Status:          constants.PaymentStatusInitiated,
 			CreatedAt:       now,
@@ -119,10 +120,10 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 			ProviderType:    channel.ProviderType,
 			ChannelType:     channel.ChannelType,
 			InteractionMode: channel.InteractionMode,
-			Amount:          models.NewMoneyFromDecimal(amount),
-			PayableAmount:   models.NewMoneyFromDecimal(payableAmount),
-			FeeRate:         models.NewMoneyFromDecimal(feeRate),
-			FeeAmount:       models.NewMoneyFromDecimal(feeAmount),
+			Amount:          money.FromDecimal(amount),
+			PayableAmount:   money.FromDecimal(payableAmount),
+			FeeRate:         money.FromDecimal(feeRate),
+			FeeAmount:       money.FromDecimal(feeAmount),
 			Currency:        currency,
 			Status:          constants.WalletRechargeStatusPending,
 			Remark:          cleanWalletRemark(input.Remark, "余额充值"),

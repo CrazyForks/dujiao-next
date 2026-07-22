@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -89,16 +90,16 @@ func (r *ResellerPricingResolver) ApplyToOrderBuildResult(tenant TenantContext, 
 		resellerTotal := resellerUnit.Mul(quantity).Round(2)
 		profit := resellerTotal.Sub(baseTotal).Round(2)
 
-		zeroMoney := models.NewMoneyFromDecimal(decimal.Zero)
+		zeroMoney := money.FromDecimal(decimal.Zero)
 		plan.TotalAmount = resellerTotal
 		plan.CouponDiscount = decimal.Zero
 		plan.MemberDiscount = decimal.Zero
 		plan.PromotionDiscount = decimal.Zero
 		plan.WholesaleDiscount = decimal.Zero
-		plan.Item.OriginalUnitPrice = models.NewMoneyFromDecimal(resellerUnit)
-		plan.Item.UnitPrice = models.NewMoneyFromDecimal(resellerUnit)
-		plan.Item.OriginalTotalPrice = models.NewMoneyFromDecimal(resellerTotal)
-		plan.Item.TotalPrice = models.NewMoneyFromDecimal(resellerTotal)
+		plan.Item.OriginalUnitPrice = money.FromDecimal(resellerUnit)
+		plan.Item.UnitPrice = money.FromDecimal(resellerUnit)
+		plan.Item.OriginalTotalPrice = money.FromDecimal(resellerTotal)
+		plan.Item.TotalPrice = money.FromDecimal(resellerTotal)
 		plan.Item.MemberDiscount = zeroMoney
 		plan.Item.CouponDiscount = zeroMoney
 		plan.Item.PromotionDiscount = zeroMoney
@@ -193,7 +194,7 @@ func (r *ResellerPricingResolver) ResolveDisplayPrices(tenant TenantContext, pro
 	result := &ResellerDisplayPriceResult{
 		Visible:      false,
 		ProductID:    product.ID,
-		SKUPrices:    map[uint]models.Money{},
+		SKUPrices:    map[uint]money.Amount{},
 		HiddenSKUIDs: map[uint]bool{},
 	}
 	for _, sku := range product.SKUs {
@@ -221,7 +222,7 @@ func (r *ResellerPricingResolver) ResolveDisplayPrices(tenant TenantContext, pro
 			result.HiddenSKUIDs[sku.ID] = true
 			continue
 		}
-		money := models.NewMoneyFromDecimal(price)
+		money := money.FromDecimal(price)
 		result.SKUPrices[sku.ID] = money
 		if !result.Visible {
 			result.Visible = true
@@ -240,7 +241,7 @@ func (r *ResellerPricingResolver) ResolveDisplayPrices(tenant TenantContext, pro
 			return &ResellerDisplayPriceResult{Visible: false, ProductID: product.ID}, nil
 		}
 		result.Visible = true
-		result.DisplayPrice = models.NewMoneyFromDecimal(price)
+		result.DisplayPrice = money.FromDecimal(price)
 	}
 	return result, nil
 }

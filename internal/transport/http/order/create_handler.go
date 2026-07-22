@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 )
@@ -42,8 +43,8 @@ type CreatePaymentInput struct {
 type CreatePaymentResult struct {
 	Payment          *models.Payment
 	OrderPaid        bool
-	WalletPaidAmount models.Money
-	OnlinePayAmount  models.Money
+	WalletPaidAmount money.Amount
+	OnlinePayAmount  money.Amount
 }
 
 // OrderPaymentCreator 订单支付创建端口。
@@ -64,15 +65,15 @@ type CreateOrderAndPayRequest struct {
 
 // CreateGuestOrderAndPayRequest 游客创建订单并发起支付请求
 type CreateGuestOrderAndPayRequest struct {
-	Email               string                       `json:"email" binding:"required"`
-	OrderPassword       string                       `json:"order_password" binding:"required"`
-	Items               []OrderItemRequest           `json:"items" binding:"required"`
-	CouponCode          string                       `json:"coupon_code"`
-	AffiliateCode       string                       `json:"affiliate_code"`
-	AffiliateVisitorKey string                       `json:"affiliate_visitor_key"`
-	ManualFormData      map[string]jsonmap.JSON      `json:"manual_form_data"`
+	Email               string                            `json:"email" binding:"required"`
+	OrderPassword       string                            `json:"order_password" binding:"required"`
+	Items               []OrderItemRequest                `json:"items" binding:"required"`
+	CouponCode          string                            `json:"coupon_code"`
+	AffiliateCode       string                            `json:"affiliate_code"`
+	AffiliateVisitorKey string                            `json:"affiliate_visitor_key"`
+	ManualFormData      map[string]jsonmap.JSON           `json:"manual_form_data"`
 	CaptchaPayload      captchahttp.CaptchaPayloadRequest `json:"captcha_payload"`
-	ChannelID           uint                         `json:"channel_id"`
+	ChannelID           uint                              `json:"channel_id"`
 }
 
 // CreateHandler 处理前台订单创建与 create-and-pay HTTP。

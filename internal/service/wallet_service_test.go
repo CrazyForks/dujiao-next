@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -76,12 +77,12 @@ func createTestOrder(t *testing.T, db *gorm.DB, userID uint, orderNo string, tot
 		UserID:           userID,
 		Status:           constants.OrderStatusPendingPayment,
 		Currency:         "CNY",
-		OriginalAmount:   models.NewMoneyFromDecimal(total),
-		DiscountAmount:   models.NewMoneyFromDecimal(decimal.Zero),
-		TotalAmount:      models.NewMoneyFromDecimal(total),
-		WalletPaidAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		OnlinePaidAmount: models.NewMoneyFromDecimal(total),
-		RefundedAmount:   models.NewMoneyFromDecimal(decimal.Zero),
+		OriginalAmount:   money.FromDecimal(total),
+		DiscountAmount:   money.FromDecimal(decimal.Zero),
+		TotalAmount:      money.FromDecimal(total),
+		WalletPaidAmount: money.FromDecimal(decimal.Zero),
+		OnlinePaidAmount: money.FromDecimal(total),
+		RefundedAmount:   money.FromDecimal(decimal.Zero),
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
@@ -129,12 +130,12 @@ func createTestChildOrderWithFulfillmentType(
 		UserID:           parent.UserID,
 		Status:           status,
 		Currency:         parent.Currency,
-		OriginalAmount:   models.NewMoneyFromDecimal(total),
-		DiscountAmount:   models.NewMoneyFromDecimal(decimal.Zero),
-		TotalAmount:      models.NewMoneyFromDecimal(total),
-		WalletPaidAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		OnlinePaidAmount: models.NewMoneyFromDecimal(total),
-		RefundedAmount:   models.NewMoneyFromDecimal(decimal.Zero),
+		OriginalAmount:   money.FromDecimal(total),
+		DiscountAmount:   money.FromDecimal(decimal.Zero),
+		TotalAmount:      money.FromDecimal(total),
+		WalletPaidAmount: money.FromDecimal(decimal.Zero),
+		OnlinePaidAmount: money.FromDecimal(total),
+		RefundedAmount:   money.FromDecimal(decimal.Zero),
 		PaidAt:           parent.PaidAt,
 		CreatedAt:        now,
 		UpdatedAt:        now,
@@ -147,10 +148,10 @@ func createTestChildOrderWithFulfillmentType(
 		ProductID:       child.ID + 1000,
 		SKUID:           1,
 		TitleJSON:       jsonmap.JSON{"zh-CN": orderNo},
-		UnitPrice:       models.NewMoneyFromDecimal(total),
-		CostPrice:       models.NewMoneyFromDecimal(decimal.Zero),
+		UnitPrice:       money.FromDecimal(total),
+		CostPrice:       money.FromDecimal(decimal.Zero),
 		Quantity:        1,
-		TotalPrice:      models.NewMoneyFromDecimal(total),
+		TotalPrice:      money.FromDecimal(total),
 		FulfillmentType: fulfillmentType,
 		CreatedAt:       now,
 		UpdatedAt:       now,
@@ -209,7 +210,7 @@ func assertWalletMixedChildrenRefundStatus(t *testing.T, fixture walletMixedChil
 
 	updatedOrder, _, _, err := svc.AdminRefundToWallet(AdminRefundToWalletInput{
 		OrderID: parent.ID,
-		Amount:  models.NewMoneyFromDecimal(fixture.refundAmount),
+		Amount:  money.FromDecimal(fixture.refundAmount),
 		Remark:  fixture.remark,
 	})
 	if err != nil {
@@ -239,7 +240,7 @@ func TestWalletServiceRecharge(t *testing.T) {
 
 	account, txn, err := svc.Recharge(WalletRechargeInput{
 		UserID: 101,
-		Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(120)),
+		Amount: money.FromDecimal(decimal.NewFromInt(120)),
 		Remark: "测试充值",
 	})
 	if err != nil {
@@ -259,14 +260,14 @@ func TestWalletServiceAdminAdjustInsufficient(t *testing.T) {
 
 	if _, _, err := svc.Recharge(WalletRechargeInput{
 		UserID: 102,
-		Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		Amount: money.FromDecimal(decimal.NewFromInt(10)),
 	}); err != nil {
 		t.Fatalf("recharge failed: %v", err)
 	}
 
 	_, _, err := svc.AdminAdjustBalance(WalletAdjustInput{
 		UserID: 102,
-		Delta:  models.NewMoneyFromDecimal(decimal.NewFromInt(-20)),
+		Delta:  money.FromDecimal(decimal.NewFromInt(-20)),
 		Remark: "测试扣减",
 	})
 	if !errors.Is(err, ErrWalletInsufficientBalance) {
@@ -281,7 +282,7 @@ func TestWalletServiceApplyAndReleaseOrderBalance(t *testing.T) {
 
 	if _, _, err := svc.Recharge(WalletRechargeInput{
 		UserID: 103,
-		Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
+		Amount: money.FromDecimal(decimal.NewFromInt(50)),
 	}); err != nil {
 		t.Fatalf("recharge failed: %v", err)
 	}
@@ -362,9 +363,9 @@ func TestWalletServiceAdminRefundToWallet(t *testing.T) {
 		AffiliateProfileID: profile.ID,
 		OrderID:            order.ID,
 		CommissionType:     constants.AffiliateCommissionTypeOrder,
-		BaseAmount:         models.NewMoneyFromDecimal(decimal.NewFromInt(40)),
-		RatePercent:        models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
-		CommissionAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		BaseAmount:         money.FromDecimal(decimal.NewFromInt(40)),
+		RatePercent:        money.FromDecimal(decimal.NewFromInt(50)),
+		CommissionAmount:   money.FromDecimal(decimal.NewFromInt(20)),
 		Status:             constants.AffiliateCommissionStatusAvailable,
 		CreatedAt:          time.Now(),
 		UpdatedAt:          time.Now(),
@@ -375,7 +376,7 @@ func TestWalletServiceAdminRefundToWallet(t *testing.T) {
 
 	updatedOrder, txn, createdRecord, err := svc.AdminRefundToWallet(AdminRefundToWalletInput{
 		OrderID: order.ID,
-		Amount:  models.NewMoneyFromDecimal(decimal.NewFromInt(15)),
+		Amount:  money.FromDecimal(decimal.NewFromInt(15)),
 		Remark:  "测试退款",
 	})
 	if err != nil {
@@ -415,7 +416,7 @@ func TestWalletServiceAdminRefundToWallet(t *testing.T) {
 
 	_, _, _, err = svc.AdminRefundToWallet(AdminRefundToWalletInput{
 		OrderID: order.ID,
-		Amount:  models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		Amount:  money.FromDecimal(decimal.NewFromInt(30)),
 		Remark:  "超额退款",
 	})
 	if !errors.Is(err, ErrWalletRefundExceeded) {
@@ -433,7 +434,7 @@ func TestWalletServiceAdminRefundToWalletRejectUnpaidOrder(t *testing.T) {
 
 	_, _, _, err := svc.AdminRefundToWallet(AdminRefundToWalletInput{
 		OrderID: order.ID,
-		Amount:  models.NewMoneyFromDecimal(decimal.NewFromInt(15)),
+		Amount:  money.FromDecimal(decimal.NewFromInt(15)),
 		Remark:  "未支付退款",
 	})
 	if !errors.Is(err, ErrOrderStatusInvalid) {
@@ -455,7 +456,7 @@ func TestWalletServiceAdminRefundToWalletExpiredWindow(t *testing.T) {
 
 	_, _, _, err := svc.AdminRefundToWallet(AdminRefundToWalletInput{
 		OrderID: order.ID,
-		Amount:  models.NewMoneyFromDecimal(decimal.NewFromInt(15)),
+		Amount:  money.FromDecimal(decimal.NewFromInt(15)),
 		Remark:  "超时退款",
 	})
 	if !errors.Is(err, ErrOrderRefundExpired) {
@@ -483,7 +484,7 @@ func TestWalletServiceAdminRefundToWalletNoLimitWhenZero(t *testing.T) {
 
 	updatedOrder, txn, _, err := svc.AdminRefundToWallet(AdminRefundToWalletInput{
 		OrderID: order.ID,
-		Amount:  models.NewMoneyFromDecimal(decimal.NewFromInt(15)),
+		Amount:  money.FromDecimal(decimal.NewFromInt(15)),
 		Remark:  "0天不限制",
 	})
 	if err != nil {
@@ -514,7 +515,7 @@ func TestWalletServiceAdminRefundToWalletCompletedOrderPartialSetsPartiallyRefun
 		LocalOrderID:    order.ID,
 		LocalOrderNo:    order.OrderNo,
 		Status:          constants.ProcurementStatusFulfilled,
-		LocalSellAmount: models.NewMoneyFromDecimal(order.TotalAmount.Decimal),
+		LocalSellAmount: money.FromDecimal(order.TotalAmount.Decimal),
 		Currency:        order.Currency,
 		TraceID:         "wallet-refund-proc-sync",
 		CreatedAt:       time.Now(),
@@ -526,7 +527,7 @@ func TestWalletServiceAdminRefundToWalletCompletedOrderPartialSetsPartiallyRefun
 
 	updatedOrder, txn, _, err := svc.AdminRefundToWallet(AdminRefundToWalletInput{
 		OrderID: order.ID,
-		Amount:  models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		Amount:  money.FromDecimal(decimal.NewFromInt(10)),
 		Remark:  "已完成订单部分退款",
 	})
 	if err != nil {
@@ -567,12 +568,12 @@ func TestWalletServiceAdminRefundToWalletFullRefundUpdatesChildrenStatus(t *test
 		UserID:           parent.UserID,
 		Status:           constants.OrderStatusFulfilling,
 		Currency:         parent.Currency,
-		OriginalAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
-		DiscountAmount:   models.NewMoneyFromDecimal(decimal.Zero),
-		TotalAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
-		WalletPaidAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		OnlinePaidAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
-		RefundedAmount:   models.NewMoneyFromDecimal(decimal.Zero),
+		OriginalAmount:   money.FromDecimal(decimal.NewFromInt(30)),
+		DiscountAmount:   money.FromDecimal(decimal.Zero),
+		TotalAmount:      money.FromDecimal(decimal.NewFromInt(30)),
+		WalletPaidAmount: money.FromDecimal(decimal.Zero),
+		OnlinePaidAmount: money.FromDecimal(decimal.NewFromInt(30)),
+		RefundedAmount:   money.FromDecimal(decimal.Zero),
 		PaidAt:           &paidAt,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),
@@ -583,7 +584,7 @@ func TestWalletServiceAdminRefundToWalletFullRefundUpdatesChildrenStatus(t *test
 
 	_, _, _, err := svc.AdminRefundToWallet(AdminRefundToWalletInput{
 		OrderID: parent.ID,
-		Amount:  models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		Amount:  money.FromDecimal(decimal.NewFromInt(30)),
 		Remark:  "全额退款",
 	})
 	if err != nil {

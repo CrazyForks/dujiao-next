@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/money"
 	"gorm.io/gorm"
 )
 
@@ -13,9 +14,9 @@ type WalletTransaction struct {
 	OrderID       *uint          `gorm:"index" json:"order_id,omitempty"`                             // 关联订单ID
 	Type          string         `gorm:"type:varchar(40);index;not null" json:"type"`                 // 交易类型
 	Direction     string         `gorm:"type:varchar(16);index;not null" json:"direction"`            // 资金方向
-	Amount        Money          `gorm:"type:decimal(20,2);not null" json:"amount"`                   // 交易金额
-	BalanceBefore Money          `gorm:"type:decimal(20,2);not null;default:0" json:"balance_before"` // 变更前余额
-	BalanceAfter  Money          `gorm:"type:decimal(20,2);not null;default:0" json:"balance_after"`  // 变更后余额
+	Amount        money.Amount   `gorm:"type:decimal(20,2);not null" json:"amount"`                   // 交易金额
+	BalanceBefore money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"balance_before"` // 变更前余额
+	BalanceAfter  money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"balance_after"`  // 变更后余额
 	Currency      string         `gorm:"type:varchar(16);not null;default:'CNY'" json:"currency"`     // 币种
 	Reference     string         `gorm:"type:varchar(120);uniqueIndex" json:"reference"`              // 幂等参考号
 	Remark        string         `gorm:"type:varchar(255)" json:"remark"`                             // 备注

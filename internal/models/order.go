@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/dujiao-next/internal/shared/money"
 	"gorm.io/gorm"
 )
 
@@ -17,15 +18,15 @@ type Order struct {
 	GuestLocale             string         `gorm:"type:varchar(20)" json:"guest_locale,omitempty"`                         // 游客语言
 	Status                  string         `gorm:"index;not null" json:"status"`                                           // 订单状态
 	Currency                string         `gorm:"not null" json:"currency"`                                               // 币种
-	OriginalAmount          Money          `gorm:"type:decimal(20,2);not null;default:0" json:"original_amount"`           // 原始金额
-	DiscountAmount          Money          `gorm:"type:decimal(20,2);not null;default:0" json:"discount_amount"`           // 优惠金额
-	MemberDiscountAmount    Money          `gorm:"type:decimal(20,2);not null;default:0" json:"member_discount_amount"`    // 会员优惠金额
-	PromotionDiscountAmount Money          `gorm:"type:decimal(20,2);not null;default:0" json:"promotion_discount_amount"` // 活动价优惠金额
-	WholesaleDiscountAmount Money          `gorm:"type:decimal(20,2);not null;default:0" json:"wholesale_discount_amount"` // 批发价优惠金额
-	TotalAmount             Money          `gorm:"type:decimal(20,2);not null;default:0" json:"total_amount"`              // 实付金额
-	WalletPaidAmount        Money          `gorm:"type:decimal(20,2);not null;default:0" json:"wallet_paid_amount"`        // 钱包支付金额
-	OnlinePaidAmount        Money          `gorm:"type:decimal(20,2);not null;default:0" json:"online_paid_amount"`        // 在线支付金额
-	RefundedAmount          Money          `gorm:"type:decimal(20,2);not null;default:0" json:"refunded_amount"`           // 已退款金额（退回钱包）
+	OriginalAmount          money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"original_amount"`           // 原始金额
+	DiscountAmount          money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"discount_amount"`           // 优惠金额
+	MemberDiscountAmount    money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"member_discount_amount"`    // 会员优惠金额
+	PromotionDiscountAmount money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"promotion_discount_amount"` // 活动价优惠金额
+	WholesaleDiscountAmount money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"wholesale_discount_amount"` // 批发价优惠金额
+	TotalAmount             money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"total_amount"`              // 实付金额
+	WalletPaidAmount        money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"wallet_paid_amount"`        // 钱包支付金额
+	OnlinePaidAmount        money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"online_paid_amount"`        // 在线支付金额
+	RefundedAmount          money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"refunded_amount"`           // 已退款金额（退回钱包）
 	MemberLevelID           *uint          `gorm:"index" json:"member_level_id,omitempty"`                                 // 下单时等级快照
 	CouponID                *uint          `gorm:"index" json:"coupon_id,omitempty"`                                       // 优惠券ID
 	PromotionID             *uint          `gorm:"index" json:"promotion_id,omitempty"`                                    // 活动价ID（单品订单）
@@ -33,7 +34,7 @@ type Order struct {
 	AffiliateCode           string         `gorm:"type:varchar(32);index" json:"affiliate_code,omitempty"`                 // 推广返利联盟ID快照
 	ResellerID              *uint          `gorm:"index" json:"reseller_id,omitempty"`                                     // 分销商ID，主站订单为 NULL
 	ResellerDomain          string         `gorm:"type:varchar(255);index" json:"reseller_domain,omitempty"`               // 下单分销域名快照
-	ResellerProfitAmount    Money          `gorm:"type:decimal(20,2);not null;default:0" json:"reseller_profit_amount"`    // 分销差价快照
+	ResellerProfitAmount    money.Amount   `gorm:"type:decimal(20,2);not null;default:0" json:"reseller_profit_amount"`    // 分销差价快照
 	ClientIP                string         `gorm:"type:varchar(64)" json:"client_ip,omitempty"`                            // 下单客户端IP
 	ExpiresAt               *time.Time     `gorm:"index" json:"expires_at"`                                                // 过期时间
 	PaidAt                  *time.Time     `gorm:"index" json:"paid_at"`                                                   // 支付时间
@@ -56,7 +57,7 @@ func (Order) TableName() string {
 // StripCostPrice 清除订单项中的成本价信息，避免前台用户看到成本价。
 func (o *Order) StripCostPrice() {
 	for i := range o.Items {
-		o.Items[i].CostPrice = Money{}
+		o.Items[i].CostPrice = money.Amount{}
 	}
 	for i := range o.Children {
 		o.Children[i].StripCostPrice()

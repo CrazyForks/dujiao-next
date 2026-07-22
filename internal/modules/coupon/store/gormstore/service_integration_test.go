@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/modules/coupon"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonslice"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -47,10 +48,10 @@ func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T
 		{
 			ProductID:  100,
 			Quantity:   1,
-			TotalPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+			TotalPrice: money.FromDecimal(decimal.NewFromInt(100)),
 		},
 	}
-	subtotal := models.NewMoneyFromDecimal(decimal.NewFromInt(100))
+	subtotal := money.FromDecimal(decimal.NewFromInt(100))
 
 	testCases := []struct {
 		name          string
@@ -113,9 +114,9 @@ func TestCouponServiceApplyCoupon_RespectsPaymentRoleAndMemberLevel(t *testing.T
 			_ = createCouponFixture(t, db, models.Coupon{
 				Code:         tc.code,
 				Type:         constants.CouponTypeFixed,
-				Value:        models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-				MinAmount:    models.NewMoneyFromDecimal(decimal.Zero),
-				MaxDiscount:  models.NewMoneyFromDecimal(decimal.Zero),
+				Value:        money.FromDecimal(decimal.NewFromInt(10)),
+				MinAmount:    money.FromDecimal(decimal.Zero),
+				MaxDiscount:  money.FromDecimal(decimal.Zero),
 				ScopeType:    constants.ScopeTypeProduct,
 				ScopeRefIDs:  "[100]",
 				IsActive:     true,
@@ -141,17 +142,17 @@ func TestCouponServiceApplyCouponFixedPerItemDiscount(t *testing.T) {
 		{
 			ProductID:  100,
 			Quantity:   3,
-			TotalPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(375)),
+			TotalPrice: money.FromDecimal(decimal.NewFromInt(375)),
 		},
 	}
-	subtotal := models.NewMoneyFromDecimal(decimal.NewFromInt(375))
+	subtotal := money.FromDecimal(decimal.NewFromInt(375))
 
 	_ = createCouponFixture(t, db, models.Coupon{
 		Code:            "FIXED_ONCE",
 		Type:            constants.CouponTypeFixed,
-		Value:           models.NewMoneyFromDecimal(decimal.NewFromInt(5)),
-		MinAmount:       models.NewMoneyFromDecimal(decimal.Zero),
-		MaxDiscount:     models.NewMoneyFromDecimal(decimal.Zero),
+		Value:           money.FromDecimal(decimal.NewFromInt(5)),
+		MinAmount:       money.FromDecimal(decimal.Zero),
+		MaxDiscount:     money.FromDecimal(decimal.Zero),
 		ScopeType:       constants.ScopeTypeProduct,
 		ScopeRefIDs:     "[100]",
 		PerItemDiscount: false,
@@ -168,9 +169,9 @@ func TestCouponServiceApplyCouponFixedPerItemDiscount(t *testing.T) {
 	_ = createCouponFixture(t, db, models.Coupon{
 		Code:            "FIXED_PER_ITEM",
 		Type:            constants.CouponTypeFixed,
-		Value:           models.NewMoneyFromDecimal(decimal.NewFromInt(5)),
-		MinAmount:       models.NewMoneyFromDecimal(decimal.Zero),
-		MaxDiscount:     models.NewMoneyFromDecimal(decimal.Zero),
+		Value:           money.FromDecimal(decimal.NewFromInt(5)),
+		MinAmount:       money.FromDecimal(decimal.Zero),
+		MaxDiscount:     money.FromDecimal(decimal.Zero),
 		ScopeType:       constants.ScopeTypeProduct,
 		ScopeRefIDs:     "[100]",
 		PerItemDiscount: true,
@@ -191,17 +192,17 @@ func TestCouponServiceApplyCouponFixedPerItemDiscountRespectsMaxDiscount(t *test
 		{
 			ProductID:  100,
 			Quantity:   3,
-			TotalPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(375)),
+			TotalPrice: money.FromDecimal(decimal.NewFromInt(375)),
 		},
 	}
-	subtotal := models.NewMoneyFromDecimal(decimal.NewFromInt(375))
+	subtotal := money.FromDecimal(decimal.NewFromInt(375))
 
 	_ = createCouponFixture(t, db, models.Coupon{
 		Code:            "FIXED_PER_ITEM_CAP",
 		Type:            constants.CouponTypeFixed,
-		Value:           models.NewMoneyFromDecimal(decimal.NewFromInt(5)),
-		MinAmount:       models.NewMoneyFromDecimal(decimal.Zero),
-		MaxDiscount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		Value:           money.FromDecimal(decimal.NewFromInt(5)),
+		MinAmount:       money.FromDecimal(decimal.Zero),
+		MaxDiscount:     money.FromDecimal(decimal.NewFromInt(10)),
 		ScopeType:       constants.ScopeTypeProduct,
 		ScopeRefIDs:     "[100]",
 		PerItemDiscount: true,
@@ -223,23 +224,23 @@ func TestCouponServiceApplyCouponFixedPerItemDiscountExcludesWholesaleItems(t *t
 		{
 			ProductID:         100,
 			Quantity:          5,
-			TotalPrice:        models.NewMoneyFromDecimal(decimal.NewFromInt(600)),
-			WholesaleDiscount: models.NewMoneyFromDecimal(decimal.NewFromInt(25)),
+			TotalPrice:        money.FromDecimal(decimal.NewFromInt(600)),
+			WholesaleDiscount: money.FromDecimal(decimal.NewFromInt(25)),
 		},
 		{
 			ProductID:  101,
 			Quantity:   2,
-			TotalPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(250)),
+			TotalPrice: money.FromDecimal(decimal.NewFromInt(250)),
 		},
 	}
-	subtotal := models.NewMoneyFromDecimal(decimal.NewFromInt(850))
+	subtotal := money.FromDecimal(decimal.NewFromInt(850))
 
 	_ = createCouponFixture(t, db, models.Coupon{
 		Code:                   "FIXED_PER_ITEM_NO_WHOLESALE",
 		Type:                   constants.CouponTypeFixed,
-		Value:                  models.NewMoneyFromDecimal(decimal.NewFromInt(5)),
-		MinAmount:              models.NewMoneyFromDecimal(decimal.Zero),
-		MaxDiscount:            models.NewMoneyFromDecimal(decimal.Zero),
+		Value:                  money.FromDecimal(decimal.NewFromInt(5)),
+		MinAmount:              money.FromDecimal(decimal.Zero),
+		MaxDiscount:            money.FromDecimal(decimal.Zero),
 		ScopeType:              constants.ScopeTypeProduct,
 		ScopeRefIDs:            "[100,101]",
 		DisabledWholesalePrice: true,
@@ -262,17 +263,17 @@ func TestCouponServiceApplyCouponPercentIgnoresPerItemDiscount(t *testing.T) {
 		{
 			ProductID:  100,
 			Quantity:   3,
-			TotalPrice: models.NewMoneyFromDecimal(decimal.NewFromInt(300)),
+			TotalPrice: money.FromDecimal(decimal.NewFromInt(300)),
 		},
 	}
-	subtotal := models.NewMoneyFromDecimal(decimal.NewFromInt(300))
+	subtotal := money.FromDecimal(decimal.NewFromInt(300))
 
 	_ = createCouponFixture(t, db, models.Coupon{
 		Code:            "PERCENT_PER_ITEM_IGNORED",
 		Type:            constants.CouponTypePercent,
-		Value:           models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-		MinAmount:       models.NewMoneyFromDecimal(decimal.Zero),
-		MaxDiscount:     models.NewMoneyFromDecimal(decimal.Zero),
+		Value:           money.FromDecimal(decimal.NewFromInt(10)),
+		MinAmount:       money.FromDecimal(decimal.Zero),
+		MaxDiscount:     money.FromDecimal(decimal.Zero),
 		ScopeType:       constants.ScopeTypeProduct,
 		ScopeRefIDs:     "[100]",
 		PerItemDiscount: true,

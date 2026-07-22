@@ -13,9 +13,9 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/epay"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -86,7 +86,7 @@ func TestEpayAdapter_CreatePayment_ExchangeRate_AuditFields(t *testing.T) {
 		OrderNo:     "ORDER-EPAY-USD-10",
 		Subject:     "audit field test",
 		Currency:    "USD",
-		Amount:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		Amount:      money.FromDecimal(decimal.NewFromInt(10)),
 		ChannelType: "alipay", // epay 支持 alipay/wxpay/qqpay
 		ClientIP:    "127.0.0.1",
 		Extra:       jsonmap.JSON{"interaction_mode": constants.PaymentInteractionQR},

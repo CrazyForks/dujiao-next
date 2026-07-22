@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/hibiken/asynq"
 	"github.com/shopspring/decimal"
@@ -28,7 +29,7 @@ func TestResellerConfirmLedgerWorkerMarksDueEntriesAvailable(t *testing.T) {
 	row := models.ResellerLedgerEntry{
 		ResellerID:     1,
 		Type:           models.ResellerLedgerTypeOrderProfit,
-		Amount:         models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		Amount:         money.FromDecimal(decimal.NewFromInt(10)),
 		Currency:       "USD",
 		IdempotencyKey: "order_profit:worker",
 		Status:         models.ResellerLedgerStatusPendingConfirm,

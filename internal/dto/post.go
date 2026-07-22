@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // PostResp 文章/公告公共响应
@@ -25,7 +26,7 @@ type RelatedProductCard struct {
 	ID          uint         `json:"id"`
 	Slug        string       `json:"slug"`
 	Title       jsonmap.JSON `json:"title"`
-	PriceAmount models.Money `json:"price_amount"`
+	PriceAmount money.Amount `json:"price_amount"`
 	Image       string       `json:"image,omitempty"`
 }
 

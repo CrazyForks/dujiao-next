@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/promotion"
@@ -58,8 +59,8 @@ func buildCreatePromotionInputFromRequest(req CreatePromotionRequest) (promotion
 		Name:       req.Name,
 		Type:       req.Type,
 		ScopeRefID: req.ScopeRefID,
-		Value:      models.NewMoneyFromDecimal(decimal.NewFromFloat(req.Value)),
-		MinAmount:  models.NewMoneyFromDecimal(decimal.NewFromFloat(req.MinAmount)),
+		Value:      money.FromDecimal(decimal.NewFromFloat(req.Value)),
+		MinAmount:  money.FromDecimal(decimal.NewFromFloat(req.MinAmount)),
 		StartsAt:   startsAt,
 		EndsAt:     endsAt,
 		IsActive:   req.IsActive,

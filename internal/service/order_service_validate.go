@@ -15,6 +15,7 @@ import (
 	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -117,7 +118,7 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 		var promotion *models.Promotion
 		promoUnitPriceAmount := basePrice
 		if promotionService != nil {
-			var promoUnitPrice models.Money
+			var promoUnitPrice money.Amount
 			promotion, promoUnitPrice, err = promotionService.ApplyPromotion(&priceCarrier, item.Quantity)
 			if err != nil {
 				return nil, err
@@ -237,16 +238,16 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 				"image":       firstProductImage(product.Images),
 			},
 			Tags:                         product.Tags,
-			OriginalUnitPrice:            models.NewMoneyFromDecimal(basePrice),
-			UnitPrice:                    models.NewMoneyFromDecimal(unitPriceAmount),
+			OriginalUnitPrice:            money.FromDecimal(basePrice),
+			UnitPrice:                    money.FromDecimal(unitPriceAmount),
 			CostPrice:                    sku.CostPriceAmount, // 成本价快照
 			Quantity:                     item.Quantity,
-			OriginalTotalPrice:           models.NewMoneyFromDecimal(baseTotal),
-			TotalPrice:                   models.NewMoneyFromDecimal(total),
-			MemberDiscount:               models.NewMoneyFromDecimal(itemMemberDiscount),
-			CouponDiscount:               models.NewMoneyFromDecimal(decimal.Zero),
-			PromotionDiscount:            models.NewMoneyFromDecimal(promotionDiscount),
-			WholesaleDiscount:            models.NewMoneyFromDecimal(wholesaleDiscount),
+			OriginalTotalPrice:           money.FromDecimal(baseTotal),
+			TotalPrice:                   money.FromDecimal(total),
+			MemberDiscount:               money.FromDecimal(itemMemberDiscount),
+			CouponDiscount:               money.FromDecimal(decimal.Zero),
+			PromotionDiscount:            money.FromDecimal(promotionDiscount),
+			WholesaleDiscount:            money.FromDecimal(wholesaleDiscount),
 			PromotionID:                  promotionID,
 			FulfillmentType:              fulfillmentType,
 			ManualFormSchemaSnapshotJSON: manualSchemaSnapshot,
@@ -282,7 +283,7 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 	if !resellerOrder && couponCode != "" {
 		couponService := couponmodule.NewService(s.couponRepo, s.couponUsageRepo)
 		discount, coupon, err := couponService.ApplyCoupon(
-			models.NewMoneyFromDecimal(originalAmount),
+			money.FromDecimal(originalAmount),
 			couponCode,
 			input.UserID,
 			orderItems,
@@ -309,11 +310,11 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 	totalAmount := decimal.Zero
 	for i := range plans {
 		plan := &plans[i]
-		plan.Item.MemberDiscount = models.NewMoneyFromDecimal(plan.MemberDiscount)
-		plan.Item.CouponDiscount = models.NewMoneyFromDecimal(plan.CouponDiscount)
-		plan.Item.PromotionDiscount = models.NewMoneyFromDecimal(plan.PromotionDiscount)
-		plan.Item.WholesaleDiscount = models.NewMoneyFromDecimal(plan.WholesaleDiscount)
-		plan.Item.TotalPrice = models.NewMoneyFromDecimal(plan.TotalAmount)
+		plan.Item.MemberDiscount = money.FromDecimal(plan.MemberDiscount)
+		plan.Item.CouponDiscount = money.FromDecimal(plan.CouponDiscount)
+		plan.Item.PromotionDiscount = money.FromDecimal(plan.PromotionDiscount)
+		plan.Item.WholesaleDiscount = money.FromDecimal(plan.WholesaleDiscount)
+		plan.Item.TotalPrice = money.FromDecimal(plan.TotalAmount)
 		planTotal := plan.TotalAmount.Sub(plan.CouponDiscount).Round(2)
 		if planTotal.LessThan(decimal.Zero) {
 			planTotal = decimal.Zero

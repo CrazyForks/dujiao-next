@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -63,9 +64,9 @@ func createDashboardProfitOrderWithItem(
 		UserID:         1,
 		Status:         status,
 		Currency:       "CNY",
-		OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
-		DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
+		OriginalAmount: money.FromDecimal(decimal.NewFromInt(amount)),
+		DiscountAmount: money.FromDecimal(decimal.Zero),
+		TotalAmount:    money.FromDecimal(decimal.NewFromInt(amount)),
 		CreatedAt:      createdAt,
 		UpdatedAt:      createdAt,
 	}
@@ -76,11 +77,11 @@ func createDashboardProfitOrderWithItem(
 		OrderID:         order.ID,
 		ProductID:       product.ID,
 		TitleJSON:       jsonmap.JSON{"zh-CN": title},
-		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
-		CostPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(cost)),
+		UnitPrice:       money.FromDecimal(decimal.NewFromInt(amount)),
+		CostPrice:       money.FromDecimal(decimal.NewFromInt(cost)),
 		Quantity:        1,
-		TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(amount)),
-		CouponDiscount:  models.NewMoneyFromDecimal(decimal.Zero),
+		TotalPrice:      money.FromDecimal(decimal.NewFromInt(amount)),
+		CouponDiscount:  money.FromDecimal(decimal.Zero),
 		FulfillmentType: constants.FulfillmentTypeManual,
 		CreatedAt:       createdAt,
 		UpdatedAt:       createdAt,

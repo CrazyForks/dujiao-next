@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
@@ -35,9 +36,9 @@ func RefreshBalanceAccount(store BalanceAccountStore, resellerID uint, currency 
 	} else if account.Status == models.ResellerBalanceStatusNegativeBalance {
 		account.Status = models.ResellerBalanceStatusNormal
 	}
-	account.AvailableAmountCache = models.NewMoneyFromDecimal(net)
-	account.LockedAmountCache = models.NewMoneyFromDecimal(locked.Round(2))
-	account.NegativeAmountCache = models.NewMoneyFromDecimal(negative)
+	account.AvailableAmountCache = money.FromDecimal(net)
+	account.LockedAmountCache = money.FromDecimal(locked.Round(2))
+	account.NegativeAmountCache = money.FromDecimal(negative)
 	account.UpdatedAt = now
 	return store.UpdateBalanceAccount(account)
 }

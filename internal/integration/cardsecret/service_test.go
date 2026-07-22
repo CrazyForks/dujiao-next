@@ -14,6 +14,7 @@ import (
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -103,7 +104,7 @@ func TestCreateCardSecretBatchAutoMultiSKURequiresExplicitSKU(t *testing.T) {
 		CategoryID:      1,
 		Slug:            "card-secret-product-default",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(20)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -115,7 +116,7 @@ func TestCreateCardSecretBatchAutoMultiSKURequiresExplicitSKU(t *testing.T) {
 	defaultSKU := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(20)),
 		IsActive:    true,
 	}
 	if err := db.Create(defaultSKU).Error; err != nil {
@@ -124,7 +125,7 @@ func TestCreateCardSecretBatchAutoMultiSKURequiresExplicitSKU(t *testing.T) {
 	otherSKU := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     "PRO",
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(30)),
 		IsActive:    true,
 	}
 	if err := db.Create(otherSKU).Error; err != nil {
@@ -159,7 +160,7 @@ func TestCreateCardSecretBatchAutoSingleActiveFallsBackToOnlyActiveSKU(t *testin
 		CategoryID:      1,
 		Slug:            "card-secret-product-single-active",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(20)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -171,7 +172,7 @@ func TestCreateCardSecretBatchAutoSingleActiveFallsBackToOnlyActiveSKU(t *testin
 	defaultSKU := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(20)),
 		IsActive:    false,
 	}
 	if err := db.Create(defaultSKU).Error; err != nil {
@@ -183,7 +184,7 @@ func TestCreateCardSecretBatchAutoSingleActiveFallsBackToOnlyActiveSKU(t *testin
 	onlyActiveSKU := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     "PRO",
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(30)),
 		IsActive:    true,
 	}
 	if err := db.Create(onlyActiveSKU).Error; err != nil {
@@ -221,7 +222,7 @@ func TestCreateCardSecretBatchDeduplicateOption(t *testing.T) {
 		CategoryID:      1,
 		Slug:            "card-secret-deduplicate-option",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密去重商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(20)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -233,7 +234,7 @@ func TestCreateCardSecretBatchDeduplicateOption(t *testing.T) {
 	defaultSKU := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(20)),
 		IsActive:    true,
 	}
 	if err := db.Create(defaultSKU).Error; err != nil {
@@ -305,7 +306,7 @@ func TestImportCardSecretCSVKeepsDuplicatesWhenDeduplicateDisabled(t *testing.T)
 		CategoryID:      1,
 		Slug:            "card-secret-csv-deduplicate-option",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "CSV 卡密去重商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(20)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -317,7 +318,7 @@ func TestImportCardSecretCSVKeepsDuplicatesWhenDeduplicateDisabled(t *testing.T)
 	defaultSKU := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(20)),
 		IsActive:    true,
 	}
 	if err := db.Create(defaultSKU).Error; err != nil {
@@ -375,7 +376,7 @@ func TestCardSecretServiceSupportsBatchTargetOperations(t *testing.T) {
 		CategoryID:      1,
 		Slug:            "card-secret-batch-ops",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密批次商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(50)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -387,7 +388,7 @@ func TestCardSecretServiceSupportsBatchTargetOperations(t *testing.T) {
 	defaultSKU := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(50)),
 		IsActive:    true,
 	}
 	if err := db.Create(defaultSKU).Error; err != nil {
@@ -517,7 +518,7 @@ func TestExportCardSecretsWithEmptyFilterExportsCurrentResults(t *testing.T) {
 		CategoryID:      1,
 		Slug:            "card-secret-export-empty-filter",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密导出商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(20)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -528,7 +529,7 @@ func TestExportCardSecretsWithEmptyFilterExportsCurrentResults(t *testing.T) {
 	defaultSKU := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(20)),
 		IsActive:    true,
 	}
 	if err := db.Create(defaultSKU).Error; err != nil {
@@ -570,7 +571,7 @@ func TestCardSecretServiceSupportsKeywordAndBatchNoFilters(t *testing.T) {
 		CategoryID:      1,
 		Slug:            "card-secret-search",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密搜索商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(30)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -582,7 +583,7 @@ func TestCardSecretServiceSupportsKeywordAndBatchNoFilters(t *testing.T) {
 	defaultSKU := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(30)),
 		IsActive:    true,
 	}
 	if err := db.Create(defaultSKU).Error; err != nil {
@@ -647,7 +648,7 @@ func TestCardSecretServiceListBatchesReturnsRealtimeCounts(t *testing.T) {
 		CategoryID:      1,
 		Slug:            "card-secret-batch-summary",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "卡密批次统计商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(88)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -659,7 +660,7 @@ func TestCardSecretServiceListBatchesReturnsRealtimeCounts(t *testing.T) {
 	defaultSKU := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(88)),
 		IsActive:    true,
 	}
 	if err := db.Create(defaultSKU).Error; err != nil {
@@ -739,7 +740,7 @@ func TestExportAvailableCardSecretsMarksUsed(t *testing.T) {
 		CategoryID:      1,
 		Slug:            "export-available-used",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "出库导出商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(88)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -750,7 +751,7 @@ func TestExportAvailableCardSecretsMarksUsed(t *testing.T) {
 	sku := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(88)),
 		IsActive:    true,
 	}
 	if err := db.Create(sku).Error; err != nil {
@@ -814,7 +815,7 @@ func TestExportAvailableCardSecretsDeletesAfterExport(t *testing.T) {
 		CategoryID:      1,
 		Slug:            "export-available-delete",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "导出删除商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(88)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -825,7 +826,7 @@ func TestExportAvailableCardSecretsDeletesAfterExport(t *testing.T) {
 	sku := &models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(88)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(88)),
 		IsActive:    true,
 	}
 	if err := db.Create(sku).Error; err != nil {

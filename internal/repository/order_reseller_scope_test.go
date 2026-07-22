@@ -6,6 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
@@ -20,9 +21,9 @@ func seedScopedOrder(t *testing.T, db *gorm.DB, orderNo string, userID uint, gue
 		GuestPassword:    guestPassword,
 		Status:           status,
 		Currency:         "USD",
-		OriginalAmount:   models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-		TotalAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-		OnlinePaidAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		OriginalAmount:   money.FromDecimal(decimal.NewFromInt(10)),
+		TotalAmount:      money.FromDecimal(decimal.NewFromInt(10)),
+		OnlinePaidAmount: money.FromDecimal(decimal.NewFromInt(10)),
 		ResellerID:       resellerID,
 		CreatedAt:        time.Now(),
 		UpdatedAt:        time.Now(),

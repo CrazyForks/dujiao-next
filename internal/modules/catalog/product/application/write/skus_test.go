@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -17,7 +18,7 @@ func TestSyncSingleProductSKUMultipleRowsKeepsSingleActive(t *testing.T) {
 	inactiveDefault := models.ProductSKU{
 		ProductID:        productID,
 		SKUCode:          models.DefaultSKUCode,
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(10)),
 		ManualStockTotal: 9,
 		IsActive:         false,
 		SortOrder:        0,
@@ -25,7 +26,7 @@ func TestSyncSingleProductSKUMultipleRowsKeepsSingleActive(t *testing.T) {
 	firstActive := models.ProductSKU{
 		ProductID:        productID,
 		SKUCode:          "A",
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(20)),
 		ManualStockTotal: 2,
 		IsActive:         true,
 		SortOrder:        2,
@@ -33,7 +34,7 @@ func TestSyncSingleProductSKUMultipleRowsKeepsSingleActive(t *testing.T) {
 	secondActive := models.ProductSKU{
 		ProductID:        productID,
 		SKUCode:          "B",
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(30)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(30)),
 		ManualStockTotal: 4,
 		IsActive:         true,
 		SortOrder:        1,
@@ -87,7 +88,7 @@ func TestSyncSingleProductSKUNoActivePrefersDefaultCode(t *testing.T) {
 	inactiveA := models.ProductSKU{
 		ProductID:        productID,
 		SKUCode:          "A",
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(10)),
 		ManualStockTotal: 3,
 		IsActive:         false,
 		SortOrder:        1,
@@ -95,7 +96,7 @@ func TestSyncSingleProductSKUNoActivePrefersDefaultCode(t *testing.T) {
 	inactiveDefault := models.ProductSKU{
 		ProductID:        productID,
 		SKUCode:          models.DefaultSKUCode,
-		PriceAmount:      models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		PriceAmount:      money.FromDecimal(decimal.NewFromInt(20)),
 		ManualStockTotal: 8,
 		IsActive:         false,
 		SortOrder:        0,

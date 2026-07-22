@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // GiftCardRedeemResp 礼品卡兑换结果响应
@@ -11,7 +12,7 @@ type GiftCardRedeemResp struct {
 	GiftCard    GiftCardResp          `json:"gift_card"`
 	Wallet      WalletAccountResp     `json:"wallet"`
 	Transaction WalletTransactionResp `json:"transaction"`
-	WalletDelta models.Money          `json:"wallet_delta"`
+	WalletDelta money.Amount          `json:"wallet_delta"`
 }
 
 // GiftCardResp 礼品卡响应（兑换后）
@@ -19,7 +20,7 @@ type GiftCardResp struct {
 	ID         uint         `json:"id"`
 	Name       string       `json:"name"`
 	Code       string       `json:"code"`
-	Amount     models.Money `json:"amount"`
+	Amount     money.Amount `json:"amount"`
 	Currency   string       `json:"currency"`
 	Status     string       `json:"status"`
 	RedeemedAt *time.Time   `json:"redeemed_at"`

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -45,7 +46,7 @@ func NormalizeWholesalePrices(inputs []WholesalePriceInput) (models.WholesalePri
 			SKUID:       input.SKUID,
 			SKUCode:     skuCode,
 			MinQuantity: minQuantity,
-			UnitPrice:   models.NewMoneyFromDecimal(unitPrice),
+			UnitPrice:   money.FromDecimal(unitPrice),
 		})
 	}
 

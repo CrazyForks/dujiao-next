@@ -11,6 +11,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -39,7 +40,7 @@ func TestValidateChannelWechatOfficial(t *testing.T) {
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeWechat,
 		InteractionMode: constants.PaymentInteractionRedirect,
-		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
+		FeeRate:         money.FromDecimal(decimal.Zero),
 		ConfigJSON: jsonmap.JSON{
 			"appid":                "wx1234567890",
 			"mchid":                "1900000109",
@@ -61,7 +62,7 @@ func TestValidateChannelWechatInvalidInteractionMode(t *testing.T) {
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeWechat,
 		InteractionMode: constants.PaymentInteractionWAP,
-		FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
+		FeeRate:         money.FromDecimal(decimal.Zero),
 		ConfigJSON: jsonmap.JSON{
 			"appid":                "wx1234567890",
 			"mchid":                "1900000109",

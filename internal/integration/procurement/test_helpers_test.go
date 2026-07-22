@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -60,8 +61,8 @@ func createProcTestOrder(t *testing.T, db *gorm.DB, orderNo, status, fulfillment
 		UserID:         1,
 		Status:         status,
 		Currency:       "CNY",
-		OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		OriginalAmount: money.FromDecimal(decimal.NewFromInt(100)),
+		TotalAmount:    money.FromDecimal(decimal.NewFromInt(100)),
 	}
 	if err := db.Create(order).Error; err != nil {
 		t.Fatalf("create order failed: %v", err)
@@ -73,8 +74,8 @@ func createProcTestOrder(t *testing.T, db *gorm.DB, orderNo, status, fulfillment
 		Quantity:        1,
 		FulfillmentType: fulfillmentType,
 		TitleJSON:       jsonmap.JSON{"zh-CN": "Test Product"},
-		UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		UnitPrice:       money.FromDecimal(decimal.NewFromInt(100)),
+		TotalPrice:      money.FromDecimal(decimal.NewFromInt(100)),
 	}
 	if err := db.Create(item).Error; err != nil {
 		t.Fatalf("create order item failed: %v", err)
@@ -93,7 +94,7 @@ func createTestProcurementOrder(t *testing.T, db *gorm.DB, connID, localOrderID 
 		LocalOrderID:    localOrderID,
 		LocalOrderNo:    localOrderNo,
 		Status:          status,
-		LocalSellAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		LocalSellAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		Currency:        "CNY",
 		TraceID:         "test-trace-id",
 	}

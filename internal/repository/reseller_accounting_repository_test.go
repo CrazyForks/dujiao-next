@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -77,7 +78,7 @@ func seedResellerAccountingOrder(t *testing.T, db *gorm.DB, orderNo string) mode
 	order := models.Order{
 		OrderNo:     orderNo,
 		Status:      constants.OrderStatusPaid,
-		TotalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		TotalAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		Currency:    "USD",
 	}
 	if err := db.Create(&order).Error; err != nil {
@@ -95,7 +96,7 @@ func TestResellerAccountingRepositoryLedgerIdempotency(t *testing.T) {
 		ResellerID:     profile.ID,
 		OrderID:        &orderID,
 		Type:           models.ResellerLedgerTypeOrderProfit,
-		Amount:         models.NewMoneyFromDecimal(decimal.RequireFromString("12.34")),
+		Amount:         money.FromDecimal(decimal.RequireFromString("12.34")),
 		Currency:       "USD",
 		IdempotencyKey: "order_profit:100",
 		Status:         models.ResellerLedgerStatusPendingConfirm,
@@ -131,8 +132,8 @@ func TestResellerAccountingRepositoryMarkDueLedgersAvailable(t *testing.T) {
 	past := now.Add(-time.Minute)
 	future := now.Add(time.Minute)
 	rows := []models.ResellerLedgerEntry{
-		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:1", Status: models.ResellerLedgerStatusPendingConfirm, AvailableAt: &past},
-		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(20)), Currency: "USD", IdempotencyKey: "order_profit:2", Status: models.ResellerLedgerStatusPendingConfirm, AvailableAt: &future},
+		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:1", Status: models.ResellerLedgerStatusPendingConfirm, AvailableAt: &past},
+		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(20)), Currency: "USD", IdempotencyKey: "order_profit:2", Status: models.ResellerLedgerStatusPendingConfirm, AvailableAt: &future},
 	}
 	if err := db.Create(&rows).Error; err != nil {
 		t.Fatalf("seed ledger rows failed: %v", err)
@@ -159,8 +160,8 @@ func TestResellerAccountingRepositoryWithdrawLocksSameCurrencyOnly(t *testing.T)
 	repo := NewResellerRepository(db)
 	now := time.Now()
 	rows := []models.ResellerLedgerEntry{
-		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:usd1", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
-		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: models.NewMoneyFromDecimal(decimal.NewFromInt(20)), Currency: "CNY", IdempotencyKey: "order_profit:cny1", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
+		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:usd1", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
+		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(20)), Currency: "CNY", IdempotencyKey: "order_profit:cny1", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
 	}
 	if err := db.Create(&rows).Error; err != nil {
 		t.Fatalf("seed ledger rows failed: %v", err)
@@ -186,7 +187,7 @@ func TestResellerAccountingRepositoryListAdminLedgerEntriesFiltersByKeywordAndOr
 		ResellerID:     profile.ID,
 		OrderID:        &order.ID,
 		Type:           models.ResellerLedgerTypeOrderProfit,
-		Amount:         models.NewMoneyFromDecimal(decimal.NewFromInt(12)),
+		Amount:         money.FromDecimal(decimal.NewFromInt(12)),
 		Currency:       "USD",
 		IdempotencyKey: "admin-ledger-filter-1",
 		Status:         models.ResellerLedgerStatusAvailable,
@@ -195,7 +196,7 @@ func TestResellerAccountingRepositoryListAdminLedgerEntriesFiltersByKeywordAndOr
 	otherEntry := models.ResellerLedgerEntry{
 		ResellerID:     other.ID,
 		Type:           models.ResellerLedgerTypeOrderProfit,
-		Amount:         models.NewMoneyFromDecimal(decimal.NewFromInt(8)),
+		Amount:         money.FromDecimal(decimal.NewFromInt(8)),
 		Currency:       "USD",
 		IdempotencyKey: "admin-ledger-filter-2",
 		Status:         models.ResellerLedgerStatusAvailable,
@@ -240,16 +241,16 @@ func TestResellerAccountingRepositoryListAdminBalanceAccountsFiltersAndPreloadsP
 			ResellerID:           profile.ID,
 			Currency:             "USD",
 			Status:               models.ResellerBalanceStatusNormal,
-			AvailableAmountCache: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-			LockedAmountCache:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-			NegativeAmountCache:  models.NewMoneyFromDecimal(decimal.Zero),
+			AvailableAmountCache: money.FromDecimal(decimal.NewFromInt(100)),
+			LockedAmountCache:    money.FromDecimal(decimal.NewFromInt(10)),
+			NegativeAmountCache:  money.FromDecimal(decimal.Zero),
 			LastLedgerEntryID:    99,
 		},
 		{
 			ResellerID:           other.ID,
 			Currency:             "CNY",
 			Status:               models.ResellerBalanceStatusNormal,
-			AvailableAmountCache: models.NewMoneyFromDecimal(decimal.NewFromInt(200)),
+			AvailableAmountCache: money.FromDecimal(decimal.NewFromInt(200)),
 		},
 	}
 	if err := db.Create(&rows).Error; err != nil {
@@ -285,22 +286,22 @@ func TestResellerAccountingRepositoryListBalanceAccountsScopesByReseller(t *test
 			ResellerID:           profile.ID,
 			Currency:             "USD",
 			Status:               models.ResellerBalanceStatusNormal,
-			AvailableAmountCache: models.NewMoneyFromDecimal(decimal.RequireFromString("12.30")),
-			LockedAmountCache:    models.NewMoneyFromDecimal(decimal.RequireFromString("1.00")),
-			NegativeAmountCache:  models.NewMoneyFromDecimal(decimal.Zero),
+			AvailableAmountCache: money.FromDecimal(decimal.RequireFromString("12.30")),
+			LockedAmountCache:    money.FromDecimal(decimal.RequireFromString("1.00")),
+			NegativeAmountCache:  money.FromDecimal(decimal.Zero),
 			LastLedgerEntryID:    11,
 		},
 		{
 			ResellerID:           other.ID,
 			Currency:             "USD",
 			Status:               models.ResellerBalanceStatusNormal,
-			AvailableAmountCache: models.NewMoneyFromDecimal(decimal.RequireFromString("99.00")),
+			AvailableAmountCache: money.FromDecimal(decimal.RequireFromString("99.00")),
 		},
 		{
 			ResellerID:           profile.ID,
 			Currency:             "EUR",
 			Status:               models.ResellerBalanceStatusDisabled,
-			AvailableAmountCache: models.NewMoneyFromDecimal(decimal.RequireFromString("8.00")),
+			AvailableAmountCache: money.FromDecimal(decimal.RequireFromString("8.00")),
 		},
 	}
 	if err := db.Create(&rows).Error; err != nil {
@@ -336,7 +337,7 @@ func TestResellerAccountingRepositoryListAdminWithdrawRequestsFiltersAndPreloads
 	now := time.Now()
 	req := models.ResellerWithdrawRequest{
 		ResellerID:  profile.ID,
-		Amount:      models.NewMoneyFromDecimal(decimal.NewFromInt(50)),
+		Amount:      money.FromDecimal(decimal.NewFromInt(50)),
 		Currency:    "USD",
 		Channel:     "USDT",
 		Account:     "TwithdrawAdmin",

@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/shopspring/decimal"
@@ -123,7 +124,7 @@ func (s *Service) SyncProduct(mappingID uint) error {
 		upPrice, _ := decimal.NewFromString(upSKU.PriceAmount)
 
 		// 更新 SKU 映射记录
-		skuMappings[i].UpstreamPrice = models.NewMoneyFromDecimal(upPrice.Round(2))
+		skuMappings[i].UpstreamPrice = money.FromDecimal(upPrice.Round(2))
 		skuMappings[i].UpstreamIsActive = upSKU.IsActive
 		skuMappings[i].StockSyncedAt = &now
 		skuMappings[i].UpstreamStock = upSKU.StockQuantity
@@ -137,8 +138,8 @@ func (s *Service) SyncProduct(mappingID uint) error {
 			// 如果启用了自动同步价格，按加价比例更新本地售价和成本价
 			if conn.AutoSyncPrice {
 				newLocalPrice := CalculateLocalPrice(upPrice, conn.ExchangeRate, conn.PriceMarkupPercent, conn.PriceRoundingMode)
-				localSKU.PriceAmount = models.NewMoneyFromDecimal(newLocalPrice.Round(2))
-				localSKU.CostPriceAmount = models.NewMoneyFromDecimal(convertCurrency(upPrice, conn.ExchangeRate).Round(2))
+				localSKU.PriceAmount = money.FromDecimal(newLocalPrice.Round(2))
+				localSKU.CostPriceAmount = money.FromDecimal(convertCurrency(upPrice, conn.ExchangeRate).Round(2))
 			}
 			_ = s.skus.Update(localSKU)
 		}
@@ -156,8 +157,8 @@ func (s *Service) SyncProduct(mappingID uint) error {
 			ProductID:       mapping.LocalProductID,
 			SKUCode:         upSKU.SKUCode,
 			SpecValuesJSON:  upSKU.SpecValues,
-			PriceAmount:     models.NewMoneyFromDecimal(localPrice.Round(2)),
-			CostPriceAmount: models.NewMoneyFromDecimal(convertCurrency(skuPrice, conn.ExchangeRate).Round(2)), // 成本价 = 上游价格 × 汇率（本地币种）
+			PriceAmount:     money.FromDecimal(localPrice.Round(2)),
+			CostPriceAmount: money.FromDecimal(convertCurrency(skuPrice, conn.ExchangeRate).Round(2)), // 成本价 = 上游价格 × 汇率（本地币种）
 			IsActive:        upSKU.IsActive,
 			SortOrder:       0,
 		}
@@ -169,7 +170,7 @@ func (s *Service) SyncProduct(mappingID uint) error {
 			ProductMappingID: mappingID,
 			LocalSKUID:       newLocalSKU.ID,
 			UpstreamSKUID:    upSKU.ID,
-			UpstreamPrice:    models.NewMoneyFromDecimal(skuPrice.Round(2)),
+			UpstreamPrice:    money.FromDecimal(skuPrice.Round(2)),
 			UpstreamIsActive: upSKU.IsActive,
 			UpstreamStock:    upSKU.StockQuantity,
 			StockSyncedAt:    &now,
@@ -670,7 +671,7 @@ func (s *Service) syncProductFromData(mapping *models.ProductMapping, conn *mode
 			_ = s.skuMappings.Update(&skuMappings[i])
 			continue
 		}
-		skuMappings[i].UpstreamPrice = models.NewMoneyFromDecimal(upPrice.Round(2))
+		skuMappings[i].UpstreamPrice = money.FromDecimal(upPrice.Round(2))
 		skuMappings[i].UpstreamIsActive = upSKU.IsActive
 		skuMappings[i].StockSyncedAt = now
 		skuMappings[i].UpstreamStock = upSKU.StockQuantity
@@ -682,8 +683,8 @@ func (s *Service) syncProductFromData(mapping *models.ProductMapping, conn *mode
 			localSKU.IsActive = upSKU.IsActive
 			if conn.AutoSyncPrice {
 				newLocalPrice := CalculateLocalPrice(upPrice, conn.ExchangeRate, conn.PriceMarkupPercent, conn.PriceRoundingMode)
-				localSKU.PriceAmount = models.NewMoneyFromDecimal(newLocalPrice.Round(2))
-				localSKU.CostPriceAmount = models.NewMoneyFromDecimal(convertCurrency(upPrice, conn.ExchangeRate).Round(2))
+				localSKU.PriceAmount = money.FromDecimal(newLocalPrice.Round(2))
+				localSKU.CostPriceAmount = money.FromDecimal(convertCurrency(upPrice, conn.ExchangeRate).Round(2))
 			}
 			_ = s.skus.Update(localSKU)
 		}
@@ -708,8 +709,8 @@ func (s *Service) syncProductFromData(mapping *models.ProductMapping, conn *mode
 			ProductID:       mapping.LocalProductID,
 			SKUCode:         upSKU.SKUCode,
 			SpecValuesJSON:  upSKU.SpecValues,
-			PriceAmount:     models.NewMoneyFromDecimal(localPrice.Round(2)),
-			CostPriceAmount: models.NewMoneyFromDecimal(convertCurrency(skuPrice, conn.ExchangeRate).Round(2)),
+			PriceAmount:     money.FromDecimal(localPrice.Round(2)),
+			CostPriceAmount: money.FromDecimal(convertCurrency(skuPrice, conn.ExchangeRate).Round(2)),
 			IsActive:        upSKU.IsActive,
 			SortOrder:       0,
 		}
@@ -720,7 +721,7 @@ func (s *Service) syncProductFromData(mapping *models.ProductMapping, conn *mode
 			ProductMappingID: mapping.ID,
 			LocalSKUID:       newLocalSKU.ID,
 			UpstreamSKUID:    upSKU.ID,
-			UpstreamPrice:    models.NewMoneyFromDecimal(skuPrice.Round(2)),
+			UpstreamPrice:    money.FromDecimal(skuPrice.Round(2)),
 			UpstreamIsActive: upSKU.IsActive,
 			UpstreamStock:    upSKU.StockQuantity,
 			StockSyncedAt:    now,

@@ -12,6 +12,7 @@ import (
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/money"
 	adminusertransport "github.com/dujiao-next/internal/transport/http/adminuser"
 )
 
@@ -65,7 +66,7 @@ type adminUserWalletAdapter struct {
 	wallets *service.WalletService
 }
 
-func (a adminUserWalletAdapter) GetBalancesByUserIDs(userIDs []uint) (map[uint]models.Money, error) {
+func (a adminUserWalletAdapter) GetBalancesByUserIDs(userIDs []uint) (map[uint]money.Amount, error) {
 	return a.wallets.GetBalancesByUserIDs(userIDs)
 }
 

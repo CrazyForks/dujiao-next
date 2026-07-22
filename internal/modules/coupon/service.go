@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -18,7 +19,7 @@ type Service struct {
 }
 
 type couponEligibility struct {
-	subtotal models.Money
+	subtotal money.Amount
 	quantity int
 }
 
@@ -31,71 +32,71 @@ func NewService(couponRepo Repository, usageRepo UsageRepository) *Service {
 }
 
 // ApplyCoupon 计算优惠券折扣金额
-func (s *Service) ApplyCoupon(subtotal models.Money, code string, userID uint, items []models.OrderItem, isGuest bool, memberLevelID uint) (models.Money, *models.Coupon, error) {
+func (s *Service) ApplyCoupon(subtotal money.Amount, code string, userID uint, items []models.OrderItem, isGuest bool, memberLevelID uint) (money.Amount, *models.Coupon, error) {
 	trimmed := strings.TrimSpace(code)
 	if trimmed == "" {
-		return models.Money{}, nil, ErrInvalid
+		return money.Amount{}, nil, ErrInvalid
 	}
 
 	coupon, err := s.couponRepo.GetByCode(trimmed)
 	if err != nil {
-		return models.Money{}, nil, err
+		return money.Amount{}, nil, err
 	}
 	if coupon == nil {
-		return models.Money{}, nil, ErrNotFound
+		return money.Amount{}, nil, ErrNotFound
 	}
 	if !coupon.IsActive {
-		return models.Money{}, coupon, ErrInactive
+		return money.Amount{}, coupon, ErrInactive
 	}
 
 	now := time.Now()
 	if coupon.StartsAt != nil && now.Before(*coupon.StartsAt) {
-		return models.Money{}, coupon, ErrNotStarted
+		return money.Amount{}, coupon, ErrNotStarted
 	}
 	if coupon.EndsAt != nil && now.After(*coupon.EndsAt) {
-		return models.Money{}, coupon, ErrExpired
+		return money.Amount{}, coupon, ErrExpired
 	}
 
 	if coupon.UsageLimit > 0 && coupon.UsedCount >= coupon.UsageLimit {
-		return models.Money{}, coupon, ErrUsageLimit
+		return money.Amount{}, coupon, ErrUsageLimit
 	}
 	if roleErr := resolveCouponPaymentRoleError(coupon, isGuest); roleErr != nil {
-		return models.Money{}, coupon, roleErr
+		return money.Amount{}, coupon, roleErr
 	}
 	if !matchesCouponMemberLevel(coupon, memberLevelID) {
-		return models.Money{}, coupon, ErrMemberLevelNotAllowed
+		return money.Amount{}, coupon, ErrMemberLevelNotAllowed
 	}
 
 	if coupon.PerUserLimit > 0 && userID != 0 {
 		count, err := s.usageRepo.CountByUser(coupon.ID, userID)
 		if err != nil {
-			return models.Money{}, coupon, err
+			return money.Amount{}, coupon, err
 		}
 		if int(count) >= coupon.PerUserLimit {
-			return models.Money{}, coupon, ErrPerUserLimit
+			return money.Amount{}, coupon, ErrPerUserLimit
 		}
 	}
 
 	eligibility, err := s.resolveCouponEligibility(coupon, items)
 	if err != nil {
-		return models.Money{}, coupon, err
+		return money.Amount{}, coupon, err
 	}
 
 	if eligibility.subtotal.Decimal.Cmp(coupon.MinAmount.Decimal) < 0 {
-		return models.Money{}, coupon, ErrMinAmount
+		return money.Amount{}, coupon, ErrMinAmount
 	}
 
 	discount, err := s.calculateDiscount(coupon, eligibility)
 	if err != nil {
-		return models.Money{}, coupon, err
+		return money.Amount{}, coupon, err
 	}
 
 	if coupon.MaxDiscount.Decimal.GreaterThan(decimal.Zero) && discount.Decimal.GreaterThan(coupon.MaxDiscount.Decimal) {
-		discount = models.NewMoneyFromDecimal(coupon.MaxDiscount.Decimal)
+		discount = money.FromDecimal(coupon.MaxDiscount.Decimal)
 	}
 
 	if discount.Decimal.GreaterThan(eligibility.subtotal.Decimal) {
-		discount = models.NewMoneyFromDecimal(eligibility.subtotal.Decimal)
+		discount = money.FromDecimal(eligibility.subtotal.Decimal)
 	}
 
 	return discount, coupon, nil
@@ -203,34 +204,34 @@ func (s *Service) resolveCouponEligibility(coupon *models.Coupon, items []models
 		return couponEligibility{}, ErrScopeInvalid
 	}
 	return couponEligibility{
-		subtotal: models.NewMoneyFromDecimal(eligible),
+		subtotal: money.FromDecimal(eligible),
 		quantity: eligibleQuantity,
 	}, nil
 }
 
-func (s *Service) calculateDiscount(coupon *models.Coupon, eligibility couponEligibility) (models.Money, error) {
+func (s *Service) calculateDiscount(coupon *models.Coupon, eligibility couponEligibility) (money.Amount, error) {
 	switch strings.ToLower(strings.TrimSpace(coupon.Type)) {
 	case constants.CouponTypeFixed:
 		if coupon.Value.Decimal.LessThanOrEqual(decimal.Zero) {
-			return models.Money{}, ErrInvalid
+			return money.Amount{}, ErrInvalid
 		}
 		if coupon.PerItemDiscount {
 			if eligibility.quantity <= 0 {
-				return models.Money{}, ErrScopeInvalid
+				return money.Amount{}, ErrScopeInvalid
 			}
 			discount := coupon.Value.Decimal.Mul(decimal.NewFromInt(int64(eligibility.quantity)))
-			return models.NewMoneyFromDecimal(discount), nil
+			return money.FromDecimal(discount), nil
 		}
-		return models.NewMoneyFromDecimal(coupon.Value.Decimal), nil
+		return money.FromDecimal(coupon.Value.Decimal), nil
 	case constants.CouponTypePercent:
 		if coupon.Value.Decimal.LessThanOrEqual(decimal.Zero) {
-			return models.Money{}, ErrInvalid
+			return money.Amount{}, ErrInvalid
 		}
 		percent := coupon.Value.Decimal.Div(decimal.NewFromInt(100))
 		discount := eligibility.subtotal.Decimal.Mul(percent)
-		return models.NewMoneyFromDecimal(discount), nil
+		return money.FromDecimal(discount), nil
 	default:
-		return models.Money{}, ErrInvalid
+		return money.Amount{}, ErrInvalid
 	}
 }
 

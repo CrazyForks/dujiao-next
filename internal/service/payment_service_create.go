@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -31,8 +32,8 @@ type CreatePaymentResult struct {
 	Payment          *models.Payment
 	Channel          *models.PaymentChannel
 	OrderPaid        bool
-	WalletPaidAmount models.Money
-	OnlinePayAmount  models.Money
+	WalletPaidAmount money.Amount
+	OnlinePayAmount  money.Amount
 }
 
 func hasProviderResult(payment *models.Payment) bool {
@@ -155,10 +156,10 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 				ProviderType:    constants.PaymentProviderWallet,
 				ChannelType:     constants.PaymentChannelTypeBalance,
 				InteractionMode: constants.PaymentInteractionBalance,
-				Amount:          models.NewMoneyFromDecimal(walletPaidAmount),
-				FeeRate:         models.NewMoneyFromDecimal(decimal.Zero),
-				FixedFee:        models.NewMoneyFromDecimal(decimal.Zero),
-				FeeAmount:       models.NewMoneyFromDecimal(decimal.Zero),
+				Amount:          money.FromDecimal(walletPaidAmount),
+				FeeRate:         money.FromDecimal(decimal.Zero),
+				FixedFee:        money.FromDecimal(decimal.Zero),
+				FeeAmount:       money.FromDecimal(decimal.Zero),
 				Currency:        lockedOrder.Currency,
 				Status:          constants.PaymentStatusSuccess,
 				CreatedAt:       paidAt,
@@ -204,10 +205,10 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 			ProviderType:    channel.ProviderType,
 			ChannelType:     channel.ChannelType,
 			InteractionMode: channel.InteractionMode,
-			Amount:          models.NewMoneyFromDecimal(payableAmount),
-			FeeRate:         models.NewMoneyFromDecimal(feeRate),
-			FixedFee:        models.NewMoneyFromDecimal(fixedFee),
-			FeeAmount:       models.NewMoneyFromDecimal(feeAmount),
+			Amount:          money.FromDecimal(payableAmount),
+			FeeRate:         money.FromDecimal(feeRate),
+			FixedFee:        money.FromDecimal(fixedFee),
+			FeeAmount:       money.FromDecimal(feeAmount),
 			Currency:        lockedOrder.Currency,
 			Status:          constants.PaymentStatusInitiated,
 			CreatedAt:       now,
@@ -221,12 +222,12 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 			return ErrPaymentCreateFailed
 		}
 		if err := s.orderRepo.WithTx(tx).UpdateFields(lockedOrder.ID, map[string]interface{}{
-			"online_paid_amount": models.NewMoneyFromDecimal(onlineAmount),
+			"online_paid_amount": money.FromDecimal(onlineAmount),
 			"updated_at":         time.Now(),
 		}); err != nil {
 			return ErrOrderUpdateFailed
 		}
-		lockedOrder.OnlinePaidAmount = models.NewMoneyFromDecimal(onlineAmount)
+		lockedOrder.OnlinePaidAmount = money.FromDecimal(onlineAmount)
 		lockedOrder.UpdatedAt = time.Now()
 		order = &lockedOrder
 		return nil
@@ -270,7 +271,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 			Channel:          nil,
 			OrderPaid:        true,
 			WalletPaidAmount: order.WalletPaidAmount,
-			OnlinePayAmount:  models.NewMoneyFromDecimal(decimal.Zero),
+			OnlinePayAmount:  money.FromDecimal(decimal.Zero),
 		}, nil
 	}
 

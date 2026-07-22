@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -78,7 +79,7 @@ func TestResellerRepositoryPostgresWithdrawLocksSameRows(t *testing.T) {
 	entry := models.ResellerLedgerEntry{
 		ResellerID:     profile.ID,
 		Type:           models.ResellerLedgerTypeOrderProfit,
-		Amount:         models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		Amount:         money.FromDecimal(decimal.NewFromInt(100)),
 		Currency:       "USD",
 		IdempotencyKey: "pg-order-profit-" + suffix,
 		Status:         models.ResellerLedgerStatusAvailable,

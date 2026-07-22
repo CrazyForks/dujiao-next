@@ -6,6 +6,7 @@ import (
 	"time"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -18,7 +19,7 @@ import (
 // AdminManualRefundInput 管理员手动退款输入（不处理钱包/支付渠道）
 type AdminManualRefundInput struct {
 	OrderID uint
-	Amount  models.Money
+	Amount  money.Amount
 	Remark  string
 }
 
@@ -59,7 +60,7 @@ type OrderRefundService struct {
 
 // OrderStatusEmailRefundDetails 订单状态邮件中的退款信息
 type OrderStatusEmailRefundDetails struct {
-	Amount models.Money
+	Amount money.Amount
 	Reason string
 }
 
@@ -109,16 +110,16 @@ func (s *OrderRefundService) SetResellerAccountingService(svc *ResellerAccountin
 }
 
 // ParseRefundAmount 解析并校验退款金额。
-func (s *OrderRefundService) ParseRefundAmount(raw string) (models.Money, error) {
+func (s *OrderRefundService) ParseRefundAmount(raw string) (money.Amount, error) {
 	parsed, err := decimal.NewFromString(strings.TrimSpace(raw))
 	if err != nil {
-		return models.Money{}, ErrWalletInvalidAmount
+		return money.Amount{}, ErrWalletInvalidAmount
 	}
 	amount := parsed.Round(2)
 	if amount.LessThanOrEqual(decimal.Zero) {
-		return models.Money{}, ErrWalletInvalidAmount
+		return money.Amount{}, ErrWalletInvalidAmount
 	}
-	return models.NewMoneyFromDecimal(amount), nil
+	return money.FromDecimal(amount), nil
 }
 
 // ParseAdminRefundListFilter 解析管理端退款记录列表筛选条件。
@@ -266,7 +267,7 @@ func (s *OrderRefundService) AdminManualRefund(input AdminManualRefundInput) (*m
 		newRefunded := refundedBefore.Add(amount).Round(2)
 		now := time.Now()
 		updates := map[string]interface{}{
-			"refunded_amount": models.NewMoneyFromDecimal(newRefunded),
+			"refunded_amount": money.FromDecimal(newRefunded),
 			"updated_at":      now,
 		}
 		markRefunded := newRefunded.GreaterThanOrEqual(order.TotalAmount.Decimal.Round(2))
@@ -418,7 +419,7 @@ func (s *OrderRefundService) createRefundRecordTx(
 		GuestEmail: order.GuestEmail,
 		OrderID:    order.ID,
 		Type:       strings.TrimSpace(refundType),
-		Amount:     models.NewMoneyFromDecimal(amount.Round(2)),
+		Amount:     money.FromDecimal(amount.Round(2)),
 		Currency:   normalizeWalletCurrency(order.Currency),
 		Remark:     remark,
 		CreatedAt:  now,

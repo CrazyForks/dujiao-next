@@ -14,6 +14,7 @@ import (
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -56,7 +57,7 @@ func assertBuildOrderResultRejectsPurchaseQuantity(t *testing.T, fixture orderPu
 		CategoryID:          category.ID,
 		Slug:                fixture.productSlug,
 		TitleJSON:           jsonmap.JSON{"zh-CN": "测试商品"},
-		PriceAmount:         models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:         money.FromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:        constants.ProductPurchaseMember,
 		FulfillmentType:     constants.FulfillmentTypeManual,
 		MinPurchaseQuantity: fixture.minQuantity,
@@ -72,7 +73,7 @@ func assertBuildOrderResultRejectsPurchaseQuantity(t *testing.T, fixture orderPu
 	sku := models.ProductSKU{
 		ProductID:         product.ID,
 		SKUCode:           models.DefaultSKUCode,
-		PriceAmount:       models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:       money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:          true,
 		ManualStockTotal:  constants.ManualStockUnlimited,
 		ManualStockLocked: 0,
@@ -131,7 +132,7 @@ func TestBuildOrderResultRejectsZeroPromotionPrice(t *testing.T) {
 		CategoryID:      category.ID,
 		Slug:            "test-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -145,7 +146,7 @@ func TestBuildOrderResultRejectsZeroPromotionPrice(t *testing.T) {
 	sku := models.ProductSKU{
 		ProductID:         product.ID,
 		SKUCode:           models.DefaultSKUCode,
-		PriceAmount:       models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:       money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:          true,
 		ManualStockTotal:  constants.ManualStockUnlimited,
 		ManualStockLocked: 0,
@@ -162,8 +163,8 @@ func TestBuildOrderResultRejectsZeroPromotionPrice(t *testing.T) {
 		ScopeType:  constants.ScopeTypeProduct,
 		ScopeRefID: product.ID,
 		Type:       constants.PromotionTypePercent,
-		Value:      models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		MinAmount:  models.NewMoneyFromDecimal(decimal.Zero),
+		Value:      money.FromDecimal(decimal.NewFromInt(100)),
+		MinAmount:  money.FromDecimal(decimal.Zero),
 		IsActive:   true,
 		CreatedAt:  now,
 		UpdatedAt:  now,
@@ -225,7 +226,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 	level := models.MemberLevel{
 		NameJSON:     jsonmap.JSON{"zh-CN": "金牌会员"},
 		Slug:         "gold",
-		DiscountRate: models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
+		DiscountRate: money.FromDecimal(decimal.NewFromInt(80)),
 		IsActive:     true,
 		CreatedAt:    now,
 		UpdatedAt:    now,
@@ -249,7 +250,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 		CategoryID:      category.ID,
 		Slug:            "manual-member-preview-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "人工发货商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		ManualFormSchemaJSON: jsonmap.JSON{
@@ -273,7 +274,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 	sku := models.ProductSKU{
 		ProductID:         product.ID,
 		SKUCode:           models.DefaultSKUCode,
-		PriceAmount:       models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:       money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:          true,
 		ManualStockTotal:  constants.ManualStockUnlimited,
 		ManualStockLocked: 0,
@@ -356,7 +357,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 	level := models.MemberLevel{
 		NameJSON:     jsonmap.JSON{"zh-CN": "金牌会员"},
 		Slug:         "stack-gold",
-		DiscountRate: models.NewMoneyFromDecimal(decimal.NewFromInt(80)),
+		DiscountRate: money.FromDecimal(decimal.NewFromInt(80)),
 		IsActive:     true,
 		CreatedAt:    now,
 		UpdatedAt:    now,
@@ -380,7 +381,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 		CategoryID:      category.ID,
 		Slug:            "stack-promo-member-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "叠加优惠商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
 		IsActive:        true,
@@ -393,7 +394,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 	sku := models.ProductSKU{
 		ProductID:   product.ID,
 		SKUCode:     models.DefaultSKUCode,
-		PriceAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount: money.FromDecimal(decimal.NewFromInt(100)),
 		IsActive:    true,
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -406,8 +407,8 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 		ScopeType:  constants.ScopeTypeProduct,
 		ScopeRefID: product.ID,
 		Type:       constants.PromotionTypePercent,
-		Value:      models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-		MinAmount:  models.NewMoneyFromDecimal(decimal.Zero),
+		Value:      money.FromDecimal(decimal.NewFromInt(10)),
+		MinAmount:  money.FromDecimal(decimal.Zero),
 		IsActive:   true,
 		CreatedAt:  now,
 		UpdatedAt:  now,
@@ -523,7 +524,7 @@ func TestBuildOrderResultOriginalAmountBeforePromotion(t *testing.T) {
 		CategoryID:      category.ID,
 		Slug:            "test-product-original",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.RequireFromString("59.90")),
+		PriceAmount:     money.FromDecimal(decimal.RequireFromString("59.90")),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -537,7 +538,7 @@ func TestBuildOrderResultOriginalAmountBeforePromotion(t *testing.T) {
 	sku := models.ProductSKU{
 		ProductID:         product.ID,
 		SKUCode:           models.DefaultSKUCode,
-		PriceAmount:       models.NewMoneyFromDecimal(decimal.RequireFromString("59.90")),
+		PriceAmount:       money.FromDecimal(decimal.RequireFromString("59.90")),
 		IsActive:          true,
 		ManualStockTotal:  constants.ManualStockUnlimited,
 		ManualStockLocked: 0,
@@ -554,8 +555,8 @@ func TestBuildOrderResultOriginalAmountBeforePromotion(t *testing.T) {
 		ScopeType:  constants.ScopeTypeProduct,
 		ScopeRefID: product.ID,
 		Type:       constants.PromotionTypePercent,
-		Value:      models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
-		MinAmount:  models.NewMoneyFromDecimal(decimal.Zero),
+		Value:      money.FromDecimal(decimal.NewFromInt(20)),
+		MinAmount:  money.FromDecimal(decimal.Zero),
 		IsActive:   true,
 		CreatedAt:  now,
 		UpdatedAt:  now,
@@ -628,7 +629,7 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 		CategoryID:      category.ID,
 		Slug:            "test-product-coupon",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -642,7 +643,7 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 	sku := models.ProductSKU{
 		ProductID:         product.ID,
 		SKUCode:           models.DefaultSKUCode,
-		PriceAmount:       models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
+		PriceAmount:       money.FromDecimal(decimal.NewFromInt(10)),
 		IsActive:          true,
 		ManualStockTotal:  constants.ManualStockUnlimited,
 		ManualStockLocked: 0,
@@ -657,9 +658,9 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 	coupon := models.Coupon{
 		Code:        "FREE10",
 		Type:        constants.CouponTypeFixed,
-		Value:       models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-		MinAmount:   models.NewMoneyFromDecimal(decimal.Zero),
-		MaxDiscount: models.NewMoneyFromDecimal(decimal.Zero),
+		Value:       money.FromDecimal(decimal.NewFromInt(10)),
+		MinAmount:   money.FromDecimal(decimal.Zero),
+		MaxDiscount: money.FromDecimal(decimal.Zero),
 		ScopeType:   constants.ScopeTypeProduct,
 		ScopeRefIDs: fmt.Sprintf("[%d]", product.ID),
 		IsActive:    true,

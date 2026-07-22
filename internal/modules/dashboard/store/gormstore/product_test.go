@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
@@ -22,7 +23,7 @@ func TestGetTopProductsIncludesChildOrderItems(t *testing.T) {
 		CategoryID:      category.ID,
 		Slug:            "test-dashboard-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "测试商品"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -36,9 +37,9 @@ func TestGetTopProductsIncludesChildOrderItems(t *testing.T) {
 		UserID:         1,
 		Status:         constants.OrderStatusPaid,
 		Currency:       "CNY",
-		OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		OriginalAmount: money.FromDecimal(decimal.NewFromInt(100)),
+		DiscountAmount: money.FromDecimal(decimal.Zero),
+		TotalAmount:    money.FromDecimal(decimal.NewFromInt(100)),
 		CreatedAt:      now,
 	}
 	if err := db.Create(parentOrder).Error; err != nil {
@@ -51,9 +52,9 @@ func TestGetTopProductsIncludesChildOrderItems(t *testing.T) {
 		UserID:         1,
 		Status:         constants.OrderStatusPaid,
 		Currency:       "CNY",
-		OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
-		DiscountAmount: models.NewMoneyFromDecimal(decimal.Zero),
-		TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		OriginalAmount: money.FromDecimal(decimal.NewFromInt(100)),
+		DiscountAmount: money.FromDecimal(decimal.Zero),
+		TotalAmount:    money.FromDecimal(decimal.NewFromInt(100)),
 		CreatedAt:      now,
 	}
 	if err := db.Create(childOrder).Error; err != nil {
@@ -64,11 +65,11 @@ func TestGetTopProductsIncludesChildOrderItems(t *testing.T) {
 		OrderID:           childOrder.ID,
 		ProductID:         product.ID,
 		TitleJSON:         jsonmap.JSON{"zh-CN": "测试商品"},
-		UnitPrice:         models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		UnitPrice:         money.FromDecimal(decimal.NewFromInt(100)),
 		Quantity:          2,
-		TotalPrice:        models.NewMoneyFromDecimal(decimal.NewFromInt(200)),
-		CouponDiscount:    models.NewMoneyFromDecimal(decimal.NewFromInt(10)),
-		PromotionDiscount: models.NewMoneyFromDecimal(decimal.NewFromInt(20)),
+		TotalPrice:        money.FromDecimal(decimal.NewFromInt(200)),
+		CouponDiscount:    money.FromDecimal(decimal.NewFromInt(10)),
+		PromotionDiscount: money.FromDecimal(decimal.NewFromInt(20)),
 		FulfillmentType:   constants.FulfillmentTypeManual,
 		CreatedAt:         now,
 		UpdatedAt:         now,
@@ -107,7 +108,7 @@ func TestGetTopProductsGroupsBySKU(t *testing.T) {
 		CategoryID:      category.ID,
 		Slug:            "sku-product",
 		TitleJSON:       jsonmap.JSON{"zh-CN": "订阅"},
-		PriceAmount:     models.NewMoneyFromDecimal(decimal.NewFromInt(100)),
+		PriceAmount:     money.FromDecimal(decimal.NewFromInt(100)),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeManual,
 		IsActive:        true,
@@ -139,8 +140,8 @@ func TestGetTopProductsGroupsBySKU(t *testing.T) {
 			UserID:         1,
 			Status:         constants.OrderStatusPaid,
 			Currency:       "CNY",
-			OriginalAmount: models.NewMoneyFromDecimal(decimal.NewFromInt(combo.total)),
-			TotalAmount:    models.NewMoneyFromDecimal(decimal.NewFromInt(combo.total)),
+			OriginalAmount: money.FromDecimal(decimal.NewFromInt(combo.total)),
+			TotalAmount:    money.FromDecimal(decimal.NewFromInt(combo.total)),
 			CreatedAt:      now,
 		}
 		if err := db.Create(order).Error; err != nil {
@@ -152,9 +153,9 @@ func TestGetTopProductsGroupsBySKU(t *testing.T) {
 			SKUID:           combo.sku.ID,
 			TitleJSON:       product.TitleJSON,
 			SKUSnapshotJSON: jsonmap.JSON{"sku_id": combo.sku.ID, "sku_code": combo.sku.SKUCode, "spec_values": combo.sku.SpecValuesJSON},
-			UnitPrice:       models.NewMoneyFromDecimal(decimal.NewFromInt(combo.total / int64(combo.qty))),
+			UnitPrice:       money.FromDecimal(decimal.NewFromInt(combo.total / int64(combo.qty))),
 			Quantity:        combo.qty,
-			TotalPrice:      models.NewMoneyFromDecimal(decimal.NewFromInt(combo.total)),
+			TotalPrice:      money.FromDecimal(decimal.NewFromInt(combo.total)),
 			FulfillmentType: constants.FulfillmentTypeManual,
 			CreatedAt:       now,
 			UpdatedAt:       now,
