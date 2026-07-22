@@ -8,7 +8,7 @@ import (
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/models"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
-	uploadmodule "github.com/dujiao-next/internal/modules/upload"
+	uploadcontract "github.com/dujiao-next/internal/modules/upload/contract"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -27,7 +27,7 @@ type SiteConfigService interface {
 }
 
 type UploadService interface {
-	SaveFileWithMeta(file *multipart.FileHeader, category string) (*uploadmodule.Result, error)
+	SaveFileWithMeta(file *multipart.FileHeader, category string) (*uploadcontract.Result, error)
 }
 
 type UserHandler struct {

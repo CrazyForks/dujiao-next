@@ -1,4 +1,4 @@
-package upload
+package application
 
 import (
 	"encoding/binary"
@@ -7,12 +7,11 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/config"
+	"github.com/dujiao-next/internal/modules/upload/contract"
 
 	_ "image/gif"
 	_ "image/jpeg"
@@ -34,62 +33,44 @@ var allowedUploadScenes = map[string]struct{}{
 
 // Service 文件上传服务。
 type Service struct {
-	cfg *config.Config
+	policy Policy
+	store  contract.Store
 }
 
-// UploadValidationError 表示上传内容不符合业务校验规则，可直接展示给管理员。
-type UploadValidationError struct {
-	Message string
+// Policy 定义文件上传校验策略。
+type Policy struct {
+	MaxSize           int64
+	AllowedTypes      []string
+	AllowedExtensions []string
+	MaxWidth          int
+	MaxHeight         int
 }
-
-func (e *UploadValidationError) Error() string {
-	return e.Message
-}
-
-// UploadValidationError 标记该方法，供 transport 层在不依赖 service 包工具函数时识别校验错误。
-func (e *UploadValidationError) UploadValidationError() {}
 
 func newUploadValidationError(format string, args ...interface{}) error {
-	return &UploadValidationError{Message: fmt.Sprintf(format, args...)}
+	return &contract.ValidationError{Message: fmt.Sprintf(format, args...)}
 }
 
 // NewService 创建文件上传服务实例。
-func NewService(cfg *config.Config) *Service {
-	return &Service{cfg: cfg}
-}
-
-// Result 上传结果（包含完整元数据）。
-type Result struct {
-	URL      string // 相对路径
-	Filename string // 原始文件名
-	MimeType string
-	Size     int64
-	Width    int
-	Height   int
-}
-
-// SaveFile 保存上传的文件（保留原签名兼容性）
-func (s *Service) SaveFile(file *multipart.FileHeader, scene string) (string, error) {
-	result, err := s.SaveFileWithMeta(file, scene)
-	if err != nil {
-		return "", err
+func NewService(policy Policy, store contract.Store) *Service {
+	if store == nil {
+		panic("upload service: store is nil")
 	}
-	return result.URL, nil
+	return &Service{policy: policy, store: store}
 }
 
 // SaveFileWithMeta 保存上传的文件并返回完整元数据
-func (s *Service) SaveFileWithMeta(file *multipart.FileHeader, scene string) (*Result, error) {
+func (s *Service) SaveFileWithMeta(file *multipart.FileHeader, scene string) (*contract.Result, error) {
 	normalizedScene := normalizeUploadScene(scene)
 
 	// 验证文件大小
-	if file.Size > s.cfg.Upload.MaxSize {
-		return nil, newUploadValidationError("文件大小超过限制（最大 %d MB）", s.cfg.Upload.MaxSize/1024/1024)
+	if file.Size > s.policy.MaxSize {
+		return nil, newUploadValidationError("文件大小超过限制（最大 %d MB）", s.policy.MaxSize/1024/1024)
 	}
 
 	// 获取文件扩展名
 	ext := strings.ToLower(filepath.Ext(file.Filename))
-	if normalizedScene != "telegram" && len(s.cfg.Upload.AllowedExtensions) > 0 {
-		if ext == "" || !isAllowedExtension(ext, s.cfg.Upload.AllowedExtensions) {
+	if normalizedScene != "telegram" && len(s.policy.AllowedExtensions) > 0 {
+		if ext == "" || !isAllowedExtension(ext, s.policy.AllowedExtensions) {
 			return nil, newUploadValidationError("文件扩展名不被允许: %s", ext)
 		}
 	}
@@ -116,9 +97,9 @@ func (s *Service) SaveFileWithMeta(file *multipart.FileHeader, scene string) (*R
 	if ext == ".svg" && isSVGContent(buffer) {
 		contentType = "image/svg+xml"
 	}
-	if normalizedScene != "telegram" && len(s.cfg.Upload.AllowedTypes) > 0 {
+	if normalizedScene != "telegram" && len(s.policy.AllowedTypes) > 0 {
 		allowed := false
-		for _, t := range s.cfg.Upload.AllowedTypes {
+		for _, t := range s.policy.AllowedTypes {
 			if strings.EqualFold(contentType, t) {
 				allowed = true
 				break
@@ -140,11 +121,11 @@ func (s *Service) SaveFileWithMeta(file *multipart.FileHeader, scene string) (*R
 		}
 		imgWidth = width
 		imgHeight = height
-		if s.cfg.Upload.MaxWidth > 0 && width > s.cfg.Upload.MaxWidth {
-			return nil, newUploadValidationError("图片宽度超过限制（最大 %d）", s.cfg.Upload.MaxWidth)
+		if s.policy.MaxWidth > 0 && width > s.policy.MaxWidth {
+			return nil, newUploadValidationError("图片宽度超过限制（最大 %d）", s.policy.MaxWidth)
 		}
-		if s.cfg.Upload.MaxHeight > 0 && height > s.cfg.Upload.MaxHeight {
-			return nil, newUploadValidationError("图片高度超过限制（最大 %d）", s.cfg.Upload.MaxHeight)
+		if s.policy.MaxHeight > 0 && height > s.policy.MaxHeight {
+			return nil, newUploadValidationError("图片高度超过限制（最大 %d）", s.policy.MaxHeight)
 		}
 	}
 
@@ -173,27 +154,19 @@ func (s *Service) SaveFileWithMeta(file *multipart.FileHeader, scene string) (*R
 	now := time.Now()
 	year := now.Format("2006")
 	month := now.Format("01")
-	savePath := filepath.Join("uploads", normalizedScene, year, month, filename)
-
-	// 确保上传目录存在
-	if err := os.MkdirAll(filepath.Dir(savePath), 0755); err != nil {
-		return nil, err
-	}
-
-	// 保存文件
-	dst, err := os.Create(savePath)
-	if err != nil {
-		return nil, err
-	}
-	defer dst.Close()
-
-	_, err = io.Copy(dst, src)
+	storedURL, err := s.store.Save(contract.StoreInput{
+		Source:   src,
+		Scene:    normalizedScene,
+		Year:     year,
+		Month:    month,
+		Filename: filename,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	return &Result{
-		URL:      fmt.Sprintf("/uploads/%s/%s/%s/%s", normalizedScene, year, month, filename),
+	return &contract.Result{
+		URL:      storedURL,
 		Filename: file.Filename,
 		MimeType: contentType,
 		Size:     file.Size,

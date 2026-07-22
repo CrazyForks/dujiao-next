@@ -13,7 +13,7 @@ import (
 
 	contentapp "github.com/dujiao-next/internal/modules/content/application"
 	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
-	uploadmodule "github.com/dujiao-next/internal/modules/upload"
+	uploadcontract "github.com/dujiao-next/internal/modules/upload/contract"
 	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
@@ -44,13 +44,13 @@ func (e *fakeValidationError) Error() string          { return e.msg }
 func (e *fakeValidationError) UploadValidationError() {}
 
 type fakeUploader struct {
-	result *uploadmodule.Result
+	result *uploadcontract.Result
 	err    error
 	file   *multipart.FileHeader
 	scene  string
 }
 
-func (u *fakeUploader) SaveFileWithMeta(file *multipart.FileHeader, scene string) (*uploadmodule.Result, error) {
+func (u *fakeUploader) SaveFileWithMeta(file *multipart.FileHeader, scene string) (*uploadcontract.Result, error) {
 	u.file = file
 	u.scene = scene
 	return u.result, u.err
@@ -120,7 +120,7 @@ func TestUploadFileUsesInjectedMediaRecorderAndRequestContext(t *testing.T) {
 	media := &contentdomain.Media{}
 	media.ID = 91
 	recorder := &recordingMediaRecorder{media: media}
-	uploader := &fakeUploader{result: &uploadmodule.Result{
+	uploader := &fakeUploader{result: &uploadcontract.Result{
 		URL:      "/uploads/common/asset.txt",
 		Filename: "asset.txt",
 		MimeType: "text/plain",
@@ -174,7 +174,7 @@ func TestUploadFileKeepsUploadSuccessWhenMediaRecordingFails(t *testing.T) {
 	}
 
 	recorder := &recordingMediaRecorder{err: context.Canceled}
-	handler := NewAdminHandler(&fakeUploader{result: &uploadmodule.Result{
+	handler := NewAdminHandler(&fakeUploader{result: &uploadcontract.Result{
 		URL:      "/uploads/common/asset.txt",
 		Filename: "asset.txt",
 		Size:     13,

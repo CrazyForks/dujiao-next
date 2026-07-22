@@ -12,7 +12,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
-	uploadmodule "github.com/dujiao-next/internal/modules/upload"
+	uploadcontract "github.com/dujiao-next/internal/modules/upload/contract"
 	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
@@ -66,8 +66,8 @@ func (s siteConfigStub) UpdateUserSiteConfig(ctx context.Context, userID uint, i
 
 type uploadStub struct{}
 
-func (uploadStub) SaveFileWithMeta(file *multipart.FileHeader, category string) (*uploadmodule.Result, error) {
-	return &uploadmodule.Result{URL: "/uploads/reseller/x.png", Filename: "x.png", Size: 3}, nil
+func (uploadStub) SaveFileWithMeta(file *multipart.FileHeader, category string) (*uploadcontract.Result, error) {
+	return &uploadcontract.Result{URL: "/uploads/reseller/x.png", Filename: "x.png", Size: 3}, nil
 }
 
 func newUserHandlerTestContext(method, path string, body []byte, userID uint) (*gin.Context, *httptest.ResponseRecorder) {

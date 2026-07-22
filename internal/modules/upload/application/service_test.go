@@ -1,34 +1,37 @@
-package upload
+package application
 
 import (
 	"bytes"
+	"io"
 	"mime/multipart"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/config"
+	"github.com/dujiao-next/internal/modules/upload/contract"
 )
 
-func TestUploadServiceSaveFileAllowsArchiveForTelegramScene(t *testing.T) {
-	originalWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd failed: %v", err)
-	}
-	tempDir := t.TempDir()
-	if err := os.Chdir(tempDir); err != nil {
-		t.Fatalf("chdir temp dir failed: %v", err)
-	}
-	defer func() {
-		_ = os.Chdir(originalWD)
-	}()
+type memoryStore struct {
+	data []byte
+}
 
-	cfg := &config.Config{}
-	cfg.Upload.MaxSize = 10 * 1024 * 1024
-	cfg.Upload.AllowedTypes = []string{"image/jpeg", "image/png"}
-	cfg.Upload.AllowedExtensions = []string{".jpg", ".png"}
-	service := NewService(cfg)
+func (s *memoryStore) Save(input contract.StoreInput) (string, error) {
+	data, err := io.ReadAll(input.Source)
+	if err != nil {
+		return "", err
+	}
+	s.data = data
+	return "/uploads/" + input.Scene + "/" + input.Year + "/" + input.Month + "/" + input.Filename, nil
+}
+
+func TestUploadServiceSaveFileAllowsArchiveForTelegramScene(t *testing.T) {
+	policy := Policy{
+		MaxSize:           10 * 1024 * 1024,
+		AllowedTypes:      []string{"image/jpeg", "image/png"},
+		AllowedExtensions: []string{".jpg", ".png"},
+	}
+	store := &memoryStore{}
+	service := NewService(policy, store)
 
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
@@ -53,57 +56,49 @@ func TestUploadServiceSaveFileAllowsArchiveForTelegramScene(t *testing.T) {
 		t.Fatalf("expected one file, got %d", len(files))
 	}
 
-	savedPath, err := service.SaveFile(files[0], "telegram")
+	result, err := service.SaveFileWithMeta(files[0], "telegram")
 	if err != nil {
 		t.Fatalf("save file failed: %v", err)
 	}
+	savedPath := result.URL
 	if filepath.Ext(savedPath) != ".zip" {
 		t.Fatalf("expected .zip saved path, got %s", savedPath)
 	}
-	if _, err := os.Stat(filepath.Join(tempDir, strings.TrimPrefix(savedPath, "/"))); err != nil {
-		t.Fatalf("saved file not found: %v", err)
+	if string(store.data) != "fake zip content" {
+		t.Fatalf("stored content got %q", store.data)
 	}
 }
 
 func TestUploadServiceSaveFileSVG(t *testing.T) {
-	originalWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("getwd failed: %v", err)
+	policy := Policy{
+		MaxSize:           10 * 1024 * 1024,
+		AllowedTypes:      []string{"image/jpeg", "image/png", "image/svg+xml"},
+		AllowedExtensions: []string{".jpg", ".png", ".svg"},
 	}
-	tempDir := t.TempDir()
-	if err := os.Chdir(tempDir); err != nil {
-		t.Fatalf("chdir temp dir failed: %v", err)
-	}
-	defer func() {
-		_ = os.Chdir(originalWD)
-	}()
-
-	cfg := &config.Config{}
-	cfg.Upload.MaxSize = 10 * 1024 * 1024
-	cfg.Upload.AllowedTypes = []string{"image/jpeg", "image/png", "image/svg+xml"}
-	cfg.Upload.AllowedExtensions = []string{".jpg", ".png", ".svg"}
-	svc := NewService(cfg)
+	store := &memoryStore{}
+	svc := NewService(policy, store)
 
 	safeSVG := `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="red"/></svg>`
 
 	t.Run("safe SVG upload succeeds", func(t *testing.T) {
 		fh := createMultipartFile(t, "icon.svg", []byte(safeSVG))
-		path, err := svc.SaveFile(fh, "common")
+		result, err := svc.SaveFileWithMeta(fh, "common")
 		if err != nil {
 			t.Fatalf("expected success, got error: %v", err)
 		}
+		path := result.URL
 		if filepath.Ext(path) != ".svg" {
 			t.Fatalf("expected .svg extension, got %s", path)
 		}
-		if _, err := os.Stat(filepath.Join(tempDir, strings.TrimPrefix(path, "/"))); err != nil {
-			t.Fatalf("saved file not found: %v", err)
+		if string(store.data) != safeSVG {
+			t.Fatalf("stored SVG mismatch: %q", store.data)
 		}
 	})
 
 	t.Run("SVG with script tag is rejected", func(t *testing.T) {
 		malicious := `<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>`
 		fh := createMultipartFile(t, "bad.svg", []byte(malicious))
-		_, err := svc.SaveFile(fh, "common")
+		_, err := svc.SaveFileWithMeta(fh, "common")
 		if err == nil {
 			t.Fatal("expected error for SVG with script tag")
 		}
@@ -115,7 +110,7 @@ func TestUploadServiceSaveFileSVG(t *testing.T) {
 	t.Run("SVG with event handler is rejected", func(t *testing.T) {
 		malicious := `<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><circle cx="50" cy="50" r="40"/></svg>`
 		fh := createMultipartFile(t, "bad2.svg", []byte(malicious))
-		_, err := svc.SaveFile(fh, "common")
+		_, err := svc.SaveFileWithMeta(fh, "common")
 		if err == nil {
 			t.Fatal("expected error for SVG with event handler")
 		}
@@ -127,7 +122,7 @@ func TestUploadServiceSaveFileSVG(t *testing.T) {
 	t.Run("SVG with javascript protocol is rejected", func(t *testing.T) {
 		malicious := `<svg xmlns="http://www.w3.org/2000/svg"><a href="javascript:alert(1)"><circle cx="50" cy="50" r="40"/></a></svg>`
 		fh := createMultipartFile(t, "bad3.svg", []byte(malicious))
-		_, err := svc.SaveFile(fh, "common")
+		_, err := svc.SaveFileWithMeta(fh, "common")
 		if err == nil {
 			t.Fatal("expected error for SVG with javascript protocol")
 		}
@@ -136,7 +131,7 @@ func TestUploadServiceSaveFileSVG(t *testing.T) {
 	t.Run("SVG with foreignObject is rejected", func(t *testing.T) {
 		malicious := `<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><body xmlns="http://www.w3.org/1999/xhtml"><div>hello</div></body></foreignObject></svg>`
 		fh := createMultipartFile(t, "bad4.svg", []byte(malicious))
-		_, err := svc.SaveFile(fh, "common")
+		_, err := svc.SaveFileWithMeta(fh, "common")
 		if err == nil {
 			t.Fatal("expected error for SVG with foreignObject")
 		}
@@ -145,10 +140,11 @@ func TestUploadServiceSaveFileSVG(t *testing.T) {
 	t.Run("SVG with XML declaration", func(t *testing.T) {
 		xmlSVG := `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="blue"/></svg>`
 		fh := createMultipartFile(t, "xml.svg", []byte(xmlSVG))
-		path, err := svc.SaveFile(fh, "common")
+		result, err := svc.SaveFileWithMeta(fh, "common")
 		if err != nil {
 			t.Fatalf("expected success, got error: %v", err)
 		}
+		path := result.URL
 		if filepath.Ext(path) != ".svg" {
 			t.Fatalf("expected .svg extension, got %s", path)
 		}

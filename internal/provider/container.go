@@ -61,7 +61,7 @@ import (
 	sitemapapp "github.com/dujiao-next/internal/modules/sitemap/application"
 	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
 	broadcastcontract "github.com/dujiao-next/internal/modules/telegram/broadcast/contract"
-	"github.com/dujiao-next/internal/modules/upload"
+	uploadapp "github.com/dujiao-next/internal/modules/upload/application"
 	paymentprovider "github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
@@ -127,7 +127,7 @@ type Container struct {
 	TelegramAuthService           *telegramauthapp.Service
 	EmailService                  *service.EmailService
 	CaptchaService                *captcha.Service
-	UploadService                 *upload.Service
+	UploadService                 *uploadapp.Service
 	ProductReadService            *productapplication.Service
 	ProductAdminService           *productadmin.AdminService
 	ProductWriteService           *productwrite.WriteService

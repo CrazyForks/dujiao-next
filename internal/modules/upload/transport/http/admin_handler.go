@@ -8,7 +8,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	contentapp "github.com/dujiao-next/internal/modules/content/application"
 	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
-	uploadmodule "github.com/dujiao-next/internal/modules/upload"
+	uploadcontract "github.com/dujiao-next/internal/modules/upload/contract"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -17,7 +17,7 @@ import (
 
 // FileUploader 是文件落盘端口。
 type FileUploader interface {
-	SaveFileWithMeta(file *multipart.FileHeader, scene string) (*uploadmodule.Result, error)
+	SaveFileWithMeta(file *multipart.FileHeader, scene string) (*uploadcontract.Result, error)
 }
 
 // MediaRecorder 是上传 HTTP 消费方所需的最小 Content 写入接口。

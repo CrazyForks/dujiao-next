@@ -23,6 +23,7 @@ import (
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	siteconnectiontransport "github.com/dujiao-next/internal/modules/siteconnection/transport/http"
 	broadcasthttp "github.com/dujiao-next/internal/modules/telegram/broadcast/transport/http"
+	uploadtransport "github.com/dujiao-next/internal/modules/upload/transport/http"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/provider"
 	adminauthtransport "github.com/dujiao-next/internal/transport/http/adminauth"
@@ -36,9 +37,7 @@ import (
 	reconciliationtransport "github.com/dujiao-next/internal/transport/http/reconciliation"
 	resellertransport "github.com/dujiao-next/internal/transport/http/reseller"
 	systemtransport "github.com/dujiao-next/internal/transport/http/system"
-	uploadtransport "github.com/dujiao-next/internal/transport/http/upload"
 	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
-	uploadwiring "github.com/dujiao-next/internal/wiring/upload"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -146,7 +145,7 @@ func registerAdminRoutes(
 	})
 
 	// 文件上传
-	uploadtransport.RegisterAdminRoutes(authorized, uploadwiring.NewAdminHandler(c))
+	uploadtransport.RegisterAdminRoutes(authorized, uploadtransport.NewAdminHandler(c.UploadService, c.ContentMediaService))
 
 	// 订单管理
 	ordertransport.RegisterAdminRoutes(authorized, adminOrderHandler)

@@ -20,7 +20,8 @@ import (
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
-	"github.com/dujiao-next/internal/modules/upload"
+	uploadapp "github.com/dujiao-next/internal/modules/upload/application"
+	uploadlocal "github.com/dujiao-next/internal/modules/upload/infrastructure/localstore"
 	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
 	"github.com/dujiao-next/internal/service"
 )
@@ -88,7 +89,13 @@ func (c *Container) initIdentityAndCatalogServices() {
 	c.UserTOTPService = usertotpapp.NewService(c.Config, c.UserStore, cache.Client())
 	c.TelegramAuthService = telegramauthapp.NewService(c.Config.TelegramAuth, telegramauthcache.Options()...)
 	c.UserAuthService = userauthapp.NewService(c.Config, c.UserStore, c.ExternalIdentityStore, c.EmailVerificationStore, c.SettingService, c.EmailService, c.TelegramAuthService)
-	c.UploadService = upload.NewService(c.Config)
+	c.UploadService = uploadapp.NewService(uploadapp.Policy{
+		MaxSize:           c.Config.Upload.MaxSize,
+		AllowedTypes:      c.Config.Upload.AllowedTypes,
+		AllowedExtensions: c.Config.Upload.AllowedExtensions,
+		MaxWidth:          c.Config.Upload.MaxWidth,
+		MaxHeight:         c.Config.Upload.MaxHeight,
+	}, uploadlocal.New("uploads"))
 	c.AffiliateService = affiliateapp.NewService(c.AffiliateRepo, c.UserStore, c.OrderRepo, c.ProductRepo, c.SettingService)
 	c.AffiliateRefundHandler = affiliategormstore.NewRefundHandler(c.AffiliateService)
 	productServices := catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
