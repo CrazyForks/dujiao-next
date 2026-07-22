@@ -102,6 +102,26 @@ func TestUserAccountPersistenceLivesInIdentityModule(t *testing.T) {
 	assertDirectoryGoFileBudget(t, filepath.Join(moduleRoot, "infrastructure", "gormstore"), 2)
 }
 
+func TestSharedTOTPApplicationLivesInIdentityModule(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "identity", "totp")
+	applicationRoot := filepath.Join(moduleRoot, "application")
+
+	production, total := countDirectGoFiles(t, moduleRoot)
+	if production != 0 || total != 0 {
+		t.Fatalf("TOTP module root must remain structural only, got production=%d total=%d", production, total)
+	}
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "enable.go"), []string{
+		"EnableInput", "EnableResult", "EnableSubject", "EnableStore",
+	})
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "enable.go"), []string{"Enable", "PrepareEnable"})
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "recovery_codes.go"), []string{"RecoveryCode"})
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "recovery_codes.go"), []string{
+		"GenerateRecoveryCodes", "DecodeRecoveryCodes", "MatchAndConsumeRecoveryCode",
+	})
+	assertDirectoryGoFileBudget(t, applicationRoot, 3)
+}
+
 func TestUserProfileHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "userauth")

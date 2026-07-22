@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	totpapplication "github.com/dujiao-next/internal/modules/identity/totp/application"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/models"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
@@ -82,8 +84,8 @@ func TestEnableRejectsBadCode(t *testing.T) {
 		t.Fatalf("setup: %v", err)
 	}
 	_, err := svc.Enable(admin.ID, "000000")
-	if err != ErrTOTPCodeInvalid {
-		t.Fatalf("expected ErrTOTPCodeInvalid, got %v", err)
+	if err != totpapplication.ErrCodeInvalid {
+		t.Fatalf("expected totpapplication.ErrCodeInvalid, got %v", err)
 	}
 }
 
@@ -98,7 +100,7 @@ func TestEnableExpiredPending(t *testing.T) {
 		t.Fatalf("force expire: %v", err)
 	}
 	_, err := svc.Enable(admin.ID, "123456")
-	if err != ErrTOTPPendingExpired {
+	if err != totpapplication.ErrPendingExpired {
 		t.Fatalf("expected pending expired, got %v", err)
 	}
 }
@@ -119,7 +121,7 @@ func TestVerifyChallengeCode(t *testing.T) {
 	if err := svc.VerifyChallengeCode(admin.ID, good); err != nil {
 		t.Fatalf("verify good: %v", err)
 	}
-	if err := svc.VerifyChallengeCode(admin.ID, "000000"); err != ErrTOTPCodeInvalid {
+	if err := svc.VerifyChallengeCode(admin.ID, "000000"); err != totpapplication.ErrCodeInvalid {
 		t.Fatalf("expected invalid for 000000, got %v", err)
 	}
 }
@@ -138,8 +140,8 @@ func TestRecoveryCodeConsume(t *testing.T) {
 	if err := svc.VerifyChallengeRecoveryCode(admin.ID, first); err != nil {
 		t.Fatalf("first use: %v", err)
 	}
-	if err := svc.VerifyChallengeRecoveryCode(admin.ID, first); err != ErrTOTPRecoveryInvalid {
-		t.Fatalf("expected ErrTOTPRecoveryInvalid on reuse, got %v", err)
+	if err := svc.VerifyChallengeRecoveryCode(admin.ID, first); err != totpapplication.ErrRecoveryCodeInvalid {
+		t.Fatalf("expected totpapplication.ErrRecoveryCodeInvalid on reuse, got %v", err)
 	}
 	st, _ := svc.GetStatus(admin.ID)
 	if st.RecoveryCodesRemaining != totpRecoveryCodeCount-1 {
@@ -165,7 +167,7 @@ func TestRegenerateRecoveryCodes(t *testing.T) {
 		t.Fatalf("expected %d, got %d", totpRecoveryCodeCount, len(regen))
 	}
 	for _, oldCode := range first.RecoveryCodes {
-		if err := svc.VerifyChallengeRecoveryCode(admin.ID, oldCode); err != ErrTOTPRecoveryInvalid {
+		if err := svc.VerifyChallengeRecoveryCode(admin.ID, oldCode); err != totpapplication.ErrRecoveryCodeInvalid {
 			t.Fatalf("expected old code invalid, got %v", err)
 		}
 	}

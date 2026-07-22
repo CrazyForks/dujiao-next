@@ -99,6 +99,9 @@ var completedMigrationPaths = []string{
 	"internal/models/user.go",
 	"internal/repository/user_repository.go",
 	"internal/repository/user_repository_test.go",
+	"internal/service/totp_enable.go",
+	"internal/service/totp_enable_test.go",
+	"internal/service/recovery_codes.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

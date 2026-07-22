@@ -1,4 +1,4 @@
-package service
+package totpapplication
 
 import (
 	"testing"
@@ -16,36 +16,36 @@ func TestPrepareTOTPEnableRejectsExpiredPendingBeforeSideEffects(t *testing.T) {
 	bumpFailureCalled := false
 	verifyCodeCalled := false
 
-	result, err := prepareTOTPEnable(totpEnableInput{
-		accountID:         42,
-		encKey:            key,
-		pendingSecret:     "not-yet-decrypted",
-		pendingExpiresAt:  &expiredAt,
-		code:              "123456",
-		recoveryCodeCount: 2,
-		now: func() time.Time {
+	result, err := PrepareEnable(EnableInput{
+		AccountID:         42,
+		EncryptionKey:     key,
+		PendingSecret:     "not-yet-decrypted",
+		PendingExpiresAt:  &expiredAt,
+		Code:              "123456",
+		RecoveryCodeCount: 2,
+		Now: func() time.Time {
 			return base
 		},
-		checkFailures: func(accountID uint) error {
+		CheckFailures: func(accountID uint) error {
 			if accountID != 42 {
 				t.Fatalf("expected account ID 42, got %d", accountID)
 			}
 			checkFailuresCalled = true
 			return nil
 		},
-		verifyCode: func(secret, code string) bool {
+		VerifyCode: func(secret, code string) bool {
 			verifyCodeCalled = true
 			return true
 		},
-		bumpFailure: func(accountID uint) {
+		BumpFailure: func(accountID uint) {
 			if accountID != 42 {
 				t.Fatalf("expected account ID 42, got %d", accountID)
 			}
 			bumpFailureCalled = true
 		},
 	})
-	if err != ErrTOTPPendingExpired {
-		t.Fatalf("expected ErrTOTPPendingExpired, got %v", err)
+	if err != ErrPendingExpired {
+		t.Fatalf("expected ErrPendingExpired, got %v", err)
 	}
 	if result != nil {
 		t.Fatalf("expected nil result for expired pending secret")
@@ -70,37 +70,37 @@ func TestPrepareTOTPEnableBumpsFailureWhenCodeInvalid(t *testing.T) {
 	verifySecret := ""
 	verifyCode := ""
 
-	result, err := prepareTOTPEnable(totpEnableInput{
-		accountID:         43,
-		encKey:            key,
-		pendingSecret:     encryptedSecret,
-		pendingExpiresAt:  &expiresAt,
-		code:              "000000",
-		recoveryCodeCount: 2,
-		now: func() time.Time {
+	result, err := PrepareEnable(EnableInput{
+		AccountID:         43,
+		EncryptionKey:     key,
+		PendingSecret:     encryptedSecret,
+		PendingExpiresAt:  &expiresAt,
+		Code:              "000000",
+		RecoveryCodeCount: 2,
+		Now: func() time.Time {
 			return base
 		},
-		checkFailures: func(accountID uint) error {
+		CheckFailures: func(accountID uint) error {
 			if accountID != 43 {
 				t.Fatalf("expected account ID 43, got %d", accountID)
 			}
 			checkFailuresCalls++
 			return nil
 		},
-		verifyCode: func(secret, code string) bool {
+		VerifyCode: func(secret, code string) bool {
 			verifySecret = secret
 			verifyCode = code
 			return false
 		},
-		bumpFailure: func(accountID uint) {
+		BumpFailure: func(accountID uint) {
 			if accountID != 43 {
 				t.Fatalf("expected account ID 43, got %d", accountID)
 			}
 			bumpFailureCalls++
 		},
 	})
-	if err != ErrTOTPCodeInvalid {
-		t.Fatalf("expected ErrTOTPCodeInvalid, got %v", err)
+	if err != ErrCodeInvalid {
+		t.Fatalf("expected ErrCodeInvalid, got %v", err)
 	}
 	if result != nil {
 		t.Fatalf("expected nil result for invalid code")
@@ -130,31 +130,31 @@ func TestPrepareTOTPEnableReturnsEncryptedSecretRecoveryCodesAndEnabledAt(t *tes
 	checkFailuresCalls := 0
 	bumpFailureCalls := 0
 
-	result, err := prepareTOTPEnable(totpEnableInput{
-		accountID:         44,
-		encKey:            key,
-		pendingSecret:     encryptedSecret,
-		pendingExpiresAt:  &expiresAt,
-		code:              "123456",
-		recoveryCodeCount: 3,
-		now: func() time.Time {
+	result, err := PrepareEnable(EnableInput{
+		AccountID:         44,
+		EncryptionKey:     key,
+		PendingSecret:     encryptedSecret,
+		PendingExpiresAt:  &expiresAt,
+		Code:              "123456",
+		RecoveryCodeCount: 3,
+		Now: func() time.Time {
 			nowCalls++
 			if nowCalls == 1 {
 				return base
 			}
 			return enabledAt
 		},
-		checkFailures: func(accountID uint) error {
+		CheckFailures: func(accountID uint) error {
 			if accountID != 44 {
 				t.Fatalf("expected account ID 44, got %d", accountID)
 			}
 			checkFailuresCalls++
 			return nil
 		},
-		verifyCode: func(secret, code string) bool {
+		VerifyCode: func(secret, code string) bool {
 			return secret == "shared-secret" && code == "123456"
 		},
-		bumpFailure: func(accountID uint) {
+		BumpFailure: func(accountID uint) {
 			if accountID != 44 {
 				t.Fatalf("expected account ID 44, got %d", accountID)
 			}
@@ -173,20 +173,20 @@ func TestPrepareTOTPEnableReturnsEncryptedSecretRecoveryCodesAndEnabledAt(t *tes
 	if bumpFailureCalls != 0 {
 		t.Fatalf("expected no failure bump, got %d", bumpFailureCalls)
 	}
-	if result.enabledAt != enabledAt {
-		t.Fatalf("expected enabledAt %v, got %v", enabledAt, result.enabledAt)
+	if result.EnabledAt != enabledAt {
+		t.Fatalf("expected enabledAt %v, got %v", enabledAt, result.EnabledAt)
 	}
-	decryptedSecret, err := crypto.Decrypt(key, result.encryptedSecret)
+	decryptedSecret, err := crypto.Decrypt(key, result.EncryptedSecret)
 	if err != nil {
 		t.Fatalf("decrypt enabled secret: %v", err)
 	}
 	if decryptedSecret != "shared-secret" {
 		t.Fatalf("expected re-encrypted shared secret, got %q", decryptedSecret)
 	}
-	if len(result.recoveryCodes) != 3 {
-		t.Fatalf("expected 3 plaintext recovery codes, got %d", len(result.recoveryCodes))
+	if len(result.RecoveryCodes) != 3 {
+		t.Fatalf("expected 3 plaintext recovery codes, got %d", len(result.RecoveryCodes))
 	}
-	entries, err := decodeRecoveryCodesJSON(result.recoveryCodesJSON)
+	entries, err := DecodeRecoveryCodes(result.RecoveryCodesJSON)
 	if err != nil {
 		t.Fatalf("decode recovery codes: %v", err)
 	}

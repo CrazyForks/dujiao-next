@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	totpapplication "github.com/dujiao-next/internal/modules/identity/totp/application"
+
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
@@ -105,8 +107,8 @@ func TestUserTOTPEnableRejectsBadCode(t *testing.T) {
 	if _, err := svc.Setup(user.ID); err != nil {
 		t.Fatalf("setup: %v", err)
 	}
-	if _, err := svc.Enable(user.ID, "000000"); err != ErrTOTPCodeInvalid {
-		t.Fatalf("expected ErrTOTPCodeInvalid, got %v", err)
+	if _, err := svc.Enable(user.ID, "000000"); err != totpapplication.ErrCodeInvalid {
+		t.Fatalf("expected totpapplication.ErrCodeInvalid, got %v", err)
 	}
 }
 
@@ -120,7 +122,7 @@ func TestUserTOTPEnableExpiredPending(t *testing.T) {
 	if err := db.Model(&userdomain.User{}).Where("id = ?", user.ID).Update("totp_pending_expires_at", past).Error; err != nil {
 		t.Fatalf("force expire: %v", err)
 	}
-	if _, err := svc.Enable(user.ID, "123456"); err != ErrTOTPPendingExpired {
+	if _, err := svc.Enable(user.ID, "123456"); err != totpapplication.ErrPendingExpired {
 		t.Fatalf("expected pending expired, got %v", err)
 	}
 }
@@ -133,11 +135,11 @@ func TestUserTOTPEnableRejectedWhenAlreadyEnabled(t *testing.T) {
 	if _, err := svc.Enable(user.ID, code); err != nil {
 		t.Fatalf("first enable: %v", err)
 	}
-	if _, err := svc.Enable(user.ID, code); err != ErrTOTPAlreadyEnabled {
+	if _, err := svc.Enable(user.ID, code); err != totpapplication.ErrAlreadyEnabled {
 		t.Fatalf("expected already enabled, got %v", err)
 	}
 	// Setup 也应被拒
-	if _, err := svc.Setup(user.ID); err != ErrTOTPAlreadyEnabled {
+	if _, err := svc.Setup(user.ID); err != totpapplication.ErrAlreadyEnabled {
 		t.Fatalf("expected setup blocked when enabled, got %v", err)
 	}
 }
@@ -154,7 +156,7 @@ func TestUserTOTPVerifyChallengeCode(t *testing.T) {
 	if err := svc.VerifyChallengeCode(user.ID, good); err != nil {
 		t.Fatalf("verify good: %v", err)
 	}
-	if err := svc.VerifyChallengeCode(user.ID, "000000"); err != ErrTOTPCodeInvalid {
+	if err := svc.VerifyChallengeCode(user.ID, "000000"); err != totpapplication.ErrCodeInvalid {
 		t.Fatalf("expected invalid for 000000, got %v", err)
 	}
 }
@@ -162,10 +164,10 @@ func TestUserTOTPVerifyChallengeCode(t *testing.T) {
 func TestUserTOTPVerifyChallengeRejectsWhenNotEnabled(t *testing.T) {
 	svc, repo, _ := newUserTOTPTestService(t)
 	user := createUserTOTPTestUser(t, repo, "noenable@example.com")
-	if err := svc.VerifyChallengeCode(user.ID, "123456"); err != ErrTOTPNotEnabled {
+	if err := svc.VerifyChallengeCode(user.ID, "123456"); err != totpapplication.ErrNotEnabled {
 		t.Fatalf("expected not enabled, got %v", err)
 	}
-	if err := svc.VerifyChallengeRecoveryCode(user.ID, "abcd-efgh"); err != ErrTOTPNotEnabled {
+	if err := svc.VerifyChallengeRecoveryCode(user.ID, "abcd-efgh"); err != totpapplication.ErrNotEnabled {
 		t.Fatalf("expected not enabled for recovery, got %v", err)
 	}
 }
@@ -184,8 +186,8 @@ func TestUserTOTPRecoveryCodeOneShot(t *testing.T) {
 	if err := svc.VerifyChallengeRecoveryCode(user.ID, first); err != nil {
 		t.Fatalf("first use: %v", err)
 	}
-	if err := svc.VerifyChallengeRecoveryCode(user.ID, first); err != ErrTOTPRecoveryInvalid {
-		t.Fatalf("expected ErrTOTPRecoveryInvalid on reuse, got %v", err)
+	if err := svc.VerifyChallengeRecoveryCode(user.ID, first); err != totpapplication.ErrRecoveryCodeInvalid {
+		t.Fatalf("expected totpapplication.ErrRecoveryCodeInvalid on reuse, got %v", err)
 	}
 	st, _ := svc.GetStatus(user.ID)
 	if st.RecoveryCodesRemaining != userTotpRecoveryCodeCount-1 {
@@ -204,10 +206,10 @@ func TestUserTOTPRecoveryCodeRejectsBogus(t *testing.T) {
 	if _, err := svc.Enable(user.ID, code); err != nil {
 		t.Fatalf("enable: %v", err)
 	}
-	if err := svc.VerifyChallengeRecoveryCode(user.ID, "0000-0000"); err != ErrTOTPRecoveryInvalid {
+	if err := svc.VerifyChallengeRecoveryCode(user.ID, "0000-0000"); err != totpapplication.ErrRecoveryCodeInvalid {
 		t.Fatalf("expected invalid, got %v", err)
 	}
-	if err := svc.VerifyChallengeRecoveryCode(user.ID, ""); err != ErrTOTPRecoveryInvalid {
+	if err := svc.VerifyChallengeRecoveryCode(user.ID, ""); err != totpapplication.ErrRecoveryCodeInvalid {
 		t.Fatalf("expected invalid for empty, got %v", err)
 	}
 }
@@ -234,7 +236,7 @@ func TestUserTOTPRegenerateRecoveryCodes(t *testing.T) {
 		t.Fatalf("expected %d, got %d", userTotpRecoveryCodeCount, len(regen))
 	}
 	for _, oldCode := range first.RecoveryCodes {
-		if err := svc.VerifyChallengeRecoveryCode(user.ID, oldCode); err != ErrTOTPRecoveryInvalid {
+		if err := svc.VerifyChallengeRecoveryCode(user.ID, oldCode); err != totpapplication.ErrRecoveryCodeInvalid {
 			t.Fatalf("expected old code invalid, got %v", err)
 		}
 	}
@@ -287,7 +289,7 @@ func TestUserTOTPDisableWithRecoveryCode(t *testing.T) {
 func TestUserTOTPDisableRejectsWhenNotEnabled(t *testing.T) {
 	svc, repo, _ := newUserTOTPTestService(t)
 	user := createUserTOTPTestUser(t, repo, "iris@example.com")
-	if err := svc.Disable(user.ID, "123456", false); err != ErrTOTPNotEnabled {
+	if err := svc.Disable(user.ID, "123456", false); err != totpapplication.ErrNotEnabled {
 		t.Fatalf("expected not enabled, got %v", err)
 	}
 }
@@ -342,8 +344,8 @@ func TestUserTOTPAdminResetClearsAndBumpsTokenVersion(t *testing.T) {
 func TestUserTOTPAdminResetRejectsWhenNotEnabled(t *testing.T) {
 	svc, repo, _ := newUserTOTPTestService(t)
 	user := createUserTOTPTestUser(t, repo, "noreset@example.com")
-	if _, err := svc.AdminResetUser2FA(1, user.ID); err != ErrTOTPNotEnabled {
-		t.Fatalf("expected ErrTOTPNotEnabled, got %v", err)
+	if _, err := svc.AdminResetUser2FA(1, user.ID); err != totpapplication.ErrNotEnabled {
+		t.Fatalf("expected totpapplication.ErrNotEnabled, got %v", err)
 	}
 }
 

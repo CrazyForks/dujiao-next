@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	totpapplication "github.com/dujiao-next/internal/modules/identity/totp/application"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/cache"
@@ -242,14 +244,15 @@ func mapAdminAuthTransportError(err error) error {
 		target error
 	}{
 		{service.ErrNotFound, adminauthtransport.ErrNotFound},
+		{totpapplication.ErrSubjectNotFound, adminauthtransport.ErrNotFound},
 		{service.ErrInvalidCredentials, adminauthtransport.ErrInvalidCredentials},
 		{service.ErrInvalidPassword, adminauthtransport.ErrInvalidPassword},
-		{service.ErrTOTPAlreadyEnabled, adminauthtransport.ErrTOTPAlreadyEnabled},
-		{service.ErrTOTPNotEnabled, adminauthtransport.ErrTOTPNotEnabled},
-		{service.ErrTOTPPendingExpired, adminauthtransport.ErrTOTPPendingExpired},
-		{service.ErrTOTPCodeInvalid, adminauthtransport.ErrTOTPCodeInvalid},
-		{service.ErrTOTPRecoveryInvalid, adminauthtransport.ErrTOTPRecoveryInvalid},
-		{service.ErrTOTPTooManyAttempts, adminauthtransport.ErrTOTPTooManyAttempts},
+		{totpapplication.ErrAlreadyEnabled, adminauthtransport.ErrTOTPAlreadyEnabled},
+		{totpapplication.ErrNotEnabled, adminauthtransport.ErrTOTPNotEnabled},
+		{totpapplication.ErrPendingExpired, adminauthtransport.ErrTOTPPendingExpired},
+		{totpapplication.ErrCodeInvalid, adminauthtransport.ErrTOTPCodeInvalid},
+		{totpapplication.ErrRecoveryCodeInvalid, adminauthtransport.ErrTOTPRecoveryInvalid},
+		{totpapplication.ErrTooManyAttempts, adminauthtransport.ErrTOTPTooManyAttempts},
 		{service.ErrTOTPCannotResetSelf, adminauthtransport.ErrTOTPCannotResetSelf},
 	} {
 		if errors.Is(err, mapping.source) {

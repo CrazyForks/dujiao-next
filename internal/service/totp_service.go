@@ -12,21 +12,14 @@ import (
 	"github.com/dujiao-next/internal/crypto"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
+	totpapplication "github.com/dujiao-next/internal/modules/identity/totp/application"
 
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 )
 
-// TOTP 相关错误
-var (
-	ErrTOTPAlreadyEnabled  = errors.New("totp already enabled")
-	ErrTOTPNotEnabled      = errors.New("totp not enabled")
-	ErrTOTPPendingExpired  = errors.New("totp pending secret expired")
-	ErrTOTPCodeInvalid     = errors.New("totp code invalid")
-	ErrTOTPRecoveryInvalid = errors.New("recovery code invalid or used")
-	ErrTOTPTooManyAttempts = errors.New("too many failed attempts")
-	ErrTOTPCannotResetSelf = errors.New("cannot reset self via super admin endpoint")
-)
+// ErrTOTPCannotResetSelf is specific to administrator self-reset protection.
+var ErrTOTPCannotResetSelf = errors.New("cannot reset self via super admin endpoint")
 
 const (
 	totpIssuerDefault     = "Dujiao-Next"
@@ -79,7 +72,7 @@ func (s *TOTPService) GetStatus(adminID uint) (*Status, error) {
 	}
 	st := &Status{Enabled: admin.TOTPEnabledAt != nil, EnabledAt: admin.TOTPEnabledAt}
 	if admin.RecoveryCodes != "" {
-		entries, err := decodeRecoveryCodesJSON(admin.RecoveryCodes)
+		entries, err := totpapplication.DecodeRecoveryCodes(admin.RecoveryCodes)
 		if err == nil {
 			st.RecoveryCodesTotal = len(entries)
 			for _, e := range entries {
@@ -109,7 +102,7 @@ func (s *TOTPService) Setup(adminID uint) (*SetupResult, error) {
 		return nil, ErrNotFound
 	}
 	if admin.TOTPEnabledAt != nil {
-		return nil, ErrTOTPAlreadyEnabled
+		return nil, totpapplication.ErrAlreadyEnabled
 	}
 	issuer := totpIssuerDefault
 	if s.cfg != nil && strings.TrimSpace(s.cfg.App.TOTPIssuer) != "" {
@@ -150,17 +143,17 @@ type EnableResult struct {
 
 // Enable 校验首次 code，启用 2FA，生成恢复码
 func (s *TOTPService) Enable(adminID uint, code string) (*EnableResult, error) {
-	prepared, err := enableTOTPFor(s, totpEnableInput{
-		accountID:         adminID,
-		encKey:            s.encKey,
-		code:              code,
-		recoveryCodeCount: totpRecoveryCodeCount,
-		now:               s.now,
+	prepared, err := totpapplication.Enable(s, totpapplication.EnableInput{
+		AccountID:         adminID,
+		EncryptionKey:     s.encKey,
+		Code:              code,
+		RecoveryCodeCount: totpRecoveryCodeCount,
+		Now:               s.now,
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &EnableResult{EnabledAt: prepared.enabledAt, RecoveryCodes: prepared.recoveryCodes}, nil
+	return &EnableResult{EnabledAt: prepared.EnabledAt, RecoveryCodes: prepared.RecoveryCodes}, nil
 }
 
 // Disable 关闭 2FA：使用 TOTP code 或恢复码二次确认
@@ -173,7 +166,7 @@ func (s *TOTPService) Disable(adminID uint, code string, isRecoveryCode bool) er
 		return ErrNotFound
 	}
 	if admin.TOTPEnabledAt == nil {
-		return ErrTOTPNotEnabled
+		return totpapplication.ErrNotEnabled
 	}
 	if isRecoveryCode {
 		if err := s.consumeRecoveryCode(admin, code); err != nil {
@@ -185,7 +178,7 @@ func (s *TOTPService) Disable(adminID uint, code string, isRecoveryCode bool) er
 			return fmt.Errorf("decrypt secret: %w", err)
 		}
 		if !s.verifyCode(secret, code) {
-			return ErrTOTPCodeInvalid
+			return totpapplication.ErrCodeInvalid
 		}
 	}
 	if err := s.adminRepo.ClearTOTP(adminID); err != nil {
@@ -206,16 +199,16 @@ func (s *TOTPService) RegenerateRecoveryCodes(adminID uint, code string) ([]stri
 		return nil, ErrNotFound
 	}
 	if admin.TOTPEnabledAt == nil {
-		return nil, ErrTOTPNotEnabled
+		return nil, totpapplication.ErrNotEnabled
 	}
 	secret, err := crypto.Decrypt(s.encKey, admin.TOTPSecret)
 	if err != nil {
 		return nil, fmt.Errorf("decrypt secret: %w", err)
 	}
 	if !s.verifyCode(secret, code) {
-		return nil, ErrTOTPCodeInvalid
+		return nil, totpapplication.ErrCodeInvalid
 	}
-	plaintext, codesJSON, err := s.generateRecoveryCodes(totpRecoveryCodeCount)
+	plaintext, codesJSON, err := totpapplication.GenerateRecoveryCodes(totpRecoveryCodeCount)
 	if err != nil {
 		return nil, err
 	}
@@ -235,14 +228,14 @@ func (s *TOTPService) VerifyChallengeCode(adminID uint, code string) error {
 		return ErrNotFound
 	}
 	if admin.TOTPEnabledAt == nil {
-		return ErrTOTPNotEnabled
+		return totpapplication.ErrNotEnabled
 	}
 	secret, err := crypto.Decrypt(s.encKey, admin.TOTPSecret)
 	if err != nil {
 		return fmt.Errorf("decrypt secret: %w", err)
 	}
 	if !s.verifyCode(secret, code) {
-		return ErrTOTPCodeInvalid
+		return totpapplication.ErrCodeInvalid
 	}
 	return nil
 }
@@ -257,7 +250,7 @@ func (s *TOTPService) VerifyChallengeRecoveryCode(adminID uint, code string) err
 		return ErrNotFound
 	}
 	if admin.TOTPEnabledAt == nil {
-		return ErrTOTPNotEnabled
+		return totpapplication.ErrNotEnabled
 	}
 	return s.consumeRecoveryCode(admin, code)
 }
@@ -298,36 +291,32 @@ func (s *TOTPService) verifyCode(secret, code string) bool {
 	return valid
 }
 
-func (s *TOTPService) generateRecoveryCodes(n int) (plaintext []string, codesJSON string, err error) {
-	return generateRecoveryCodesPair(n)
-}
-
 func (s *TOTPService) consumeRecoveryCode(admin *admindomain.Admin, code string) error {
-	js, err := matchAndConsumeRecoveryCode(admin.RecoveryCodes, code, s.now())
+	js, err := totpapplication.MatchAndConsumeRecoveryCode(admin.RecoveryCodes, code, s.now())
 	if err != nil {
 		return err
 	}
 	return s.adminRepo.UpdateRecoveryCodes(admin.ID, js)
 }
 
-func (s *TOTPService) loadTOTPEnableSubject(adminID uint) (totpEnableSubject, error) {
+func (s *TOTPService) LoadEnableSubject(adminID uint) (totpapplication.EnableSubject, error) {
 	admin, err := s.adminRepo.GetByID(adminID)
 	if err != nil || admin == nil {
-		return totpEnableSubject{}, err
+		return totpapplication.EnableSubject{}, err
 	}
-	return totpEnableSubject{
-		exists:           true,
-		enabledAt:        admin.TOTPEnabledAt,
-		pendingSecret:    admin.TOTPPendingSecret,
-		pendingExpiresAt: admin.TOTPPendingExpiresAt,
+	return totpapplication.EnableSubject{
+		Exists:           true,
+		EnabledAt:        admin.TOTPEnabledAt,
+		PendingSecret:    admin.TOTPPendingSecret,
+		PendingExpiresAt: admin.TOTPPendingExpiresAt,
 	}, nil
 }
 
-func (s *TOTPService) updateTOTPEnabledFromPrepared(adminID uint, result *totpEnableResult) error {
-	return s.adminRepo.UpdateTOTPEnabled(adminID, result.encryptedSecret, result.enabledAt, result.recoveryCodesJSON)
+func (s *TOTPService) SaveEnabled(adminID uint, result *totpapplication.EnableResult) error {
+	return s.adminRepo.UpdateTOTPEnabled(adminID, result.EncryptedSecret, result.EnabledAt, result.RecoveryCodesJSON)
 }
 
-func (s *TOTPService) clearTOTPEnableFailures(adminID uint) {
+func (s *TOTPService) ClearEnableFailures(adminID uint) {
 	if s.redis != nil {
 		_ = s.redis.Del(context.Background(), enableFailKey(adminID)).Err()
 	}
@@ -337,7 +326,7 @@ func enableFailKey(adminID uint) string {
 	return fmt.Sprintf("2fa:enable:%d:fails", adminID)
 }
 
-func (s *TOTPService) checkEnableFailures(adminID uint) error {
+func (s *TOTPService) CheckEnableFailures(adminID uint) error {
 	if s.redis == nil {
 		return nil
 	}
@@ -348,12 +337,12 @@ func (s *TOTPService) checkEnableFailures(adminID uint) error {
 	if v >= totpEnableMaxFailures {
 		_ = s.adminRepo.UpdateTOTPPending(adminID, "", time.Time{})
 		_ = s.redis.Del(context.Background(), enableFailKey(adminID)).Err()
-		return ErrTOTPTooManyAttempts
+		return totpapplication.ErrTooManyAttempts
 	}
 	return nil
 }
 
-func (s *TOTPService) bumpEnableFailures(adminID uint) {
+func (s *TOTPService) BumpEnableFailure(adminID uint) {
 	if s.redis == nil {
 		return
 	}
@@ -362,6 +351,10 @@ func (s *TOTPService) bumpEnableFailures(adminID uint) {
 	if err == nil && cnt == 1 {
 		_ = s.redis.Expire(ctx, enableFailKey(adminID), totpPendingTTL).Err()
 	}
+}
+
+func (s *TOTPService) VerifyEnableCode(secret, code string) bool {
+	return s.verifyCode(secret, code)
 }
 
 // 辅助：在 ChallengeToken jti 维度记录失败 / 检查 / revoke

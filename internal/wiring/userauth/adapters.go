@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	totpapplication "github.com/dujiao-next/internal/modules/identity/totp/application"
+
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -465,6 +467,7 @@ func mapUserAuthTransportError(err error) error {
 	}{
 		{service.ErrProfileEmpty, userauthtransport.ErrProfileEmpty},
 		{service.ErrNotFound, userauthtransport.ErrUserNotFound},
+		{totpapplication.ErrSubjectNotFound, userauthtransport.ErrUserNotFound},
 		{service.ErrInvalidEmail, userauthtransport.ErrInvalidEmail},
 		{service.ErrEmailChangeInvalid, userauthtransport.ErrEmailChangeInvalid},
 		{service.ErrEmailChangeExists, userauthtransport.ErrEmailChangeExists},
@@ -497,12 +500,12 @@ func mapUserAuthTransportError(err error) error {
 		{service.ErrAgreementRequired, userauthtransport.ErrAgreementRequired},
 		{service.ErrInvalidCredentials, userauthtransport.ErrInvalidCredentials},
 		{service.ErrEmailNotVerified, userauthtransport.ErrEmailNotVerified},
-		{service.ErrTOTPAlreadyEnabled, userauthtransport.ErrTOTPAlreadyEnabled},
-		{service.ErrTOTPNotEnabled, userauthtransport.ErrTOTPNotEnabled},
-		{service.ErrTOTPPendingExpired, userauthtransport.ErrTOTPPendingExpired},
-		{service.ErrTOTPCodeInvalid, userauthtransport.ErrTOTPCodeInvalid},
-		{service.ErrTOTPRecoveryInvalid, userauthtransport.ErrTOTPRecoveryInvalid},
-		{service.ErrTOTPTooManyAttempts, userauthtransport.ErrTOTPTooManyAttempts},
+		{totpapplication.ErrAlreadyEnabled, userauthtransport.ErrTOTPAlreadyEnabled},
+		{totpapplication.ErrNotEnabled, userauthtransport.ErrTOTPNotEnabled},
+		{totpapplication.ErrPendingExpired, userauthtransport.ErrTOTPPendingExpired},
+		{totpapplication.ErrCodeInvalid, userauthtransport.ErrTOTPCodeInvalid},
+		{totpapplication.ErrRecoveryCodeInvalid, userauthtransport.ErrTOTPRecoveryInvalid},
+		{totpapplication.ErrTooManyAttempts, userauthtransport.ErrTOTPTooManyAttempts},
 	} {
 		if errors.Is(err, mapping.source) {
 			return fmt.Errorf("%w: %v", mapping.target, err)
