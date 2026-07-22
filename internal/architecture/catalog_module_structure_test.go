@@ -272,42 +272,53 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 func TestCatalogMappingImplementationLivesInBoundedContext(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	mappingRoot := filepath.Join(repositoryRoot, "internal", "modules", "catalog", "mapping")
+	domainRoot := filepath.Join(mappingRoot, "domain")
+	contractRoot := filepath.Join(mappingRoot, "contract")
+	applicationRoot := filepath.Join(mappingRoot, "application")
+	storeRoot := filepath.Join(mappingRoot, "infrastructure", "gormstore")
 	transportRoot := filepath.Join(mappingRoot, "transport", "http")
 	integrationRoot := filepath.Join(mappingRoot, "integrationtest")
 
-	assertFileDeclaresTypes(t, filepath.Join(mappingRoot, "service.go"), []string{
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "mapping.go"), []string{"Mapping", "SKUMapping"})
+	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "repository.go"), []string{
 		"ListFilter", "MappingRepository", "SKUMappingRepository", "ProductRepository", "SKURepository",
-		"CategoryRepository", "ConnectionProvider", "MediaRecorder", "CategoryCreator", "SettingsProvider",
+		"CategoryRepository",
 		"ImportTxProductRepository", "ImportTxSKURepository", "ImportTxMappingRepository", "ImportTxSKUMappingRepository",
-		"ImportRepositories", "UnitOfWork", "ErrorSet", "Options", "Service",
+		"ImportRepositories", "UnitOfWork",
 	})
-	assertFileDeclaresFunctions(t, filepath.Join(mappingRoot, "service.go"), []string{
+	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "ports.go"), []string{
+		"ConnectionProvider", "MediaRecorder", "CategoryCreator", "SettingsProvider",
+	})
+	if _, err := os.Stat(filepath.Join(contractRoot, "errors.go")); err != nil {
+		t.Fatalf("catalog mapping contract errors.go must exist: %v", err)
+	}
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "service.go"), []string{"Options", "Service"})
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "service.go"), []string{
 		"NewService", "SetCategoryCreator", "SetSettings",
 		"GetByID", "List", "SetActive", "Delete", "GetSKUMappings", "GetMappedUpstreamIDs",
 	})
-	assertFileDeclaresFunctions(t, filepath.Join(mappingRoot, "import.go"), []string{
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "import.go"), []string{
 		"ImportUpstreamProduct", "ImportUpstreamProductWithAutoCategory", "importUpstreamProduct",
 		"createSKUMappings", "ListUpstreamProducts", "ListUpstreamCategories",
 	})
-	assertFileDeclaresTypes(t, filepath.Join(mappingRoot, "batch_import.go"), []string{
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "batch_import.go"), []string{
 		"BatchUpstreamProductImportOutcome", "BatchImportByCategoryResult",
 	})
-	assertFileDeclaresFunctions(t, filepath.Join(mappingRoot, "batch_import.go"), []string{
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "batch_import.go"), []string{
 		"BatchImportUpstreamProducts", "BatchImportByCategory",
 		"findOrCreateCategoryFromUpstream", "findOrCreateLocalCategory",
 	})
-	assertFileDeclaresFunctions(t, filepath.Join(mappingRoot, "sync.go"), []string{
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "sync.go"), []string{
 		"SyncProduct", "SyncAllStock", "SyncConnectionStock", "EnsureUpstreamStockForOrder",
 		"markUpstreamUnavailable", "computeFullSyncInterval",
 	})
-	assertFileDeclaresFunctions(t, filepath.Join(mappingRoot, "markup.go"), []string{
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "markup.go"), []string{
 		"ReapplyMarkup", "recalcProductPrice",
 	})
-	assertFileDeclaresFunctions(t, filepath.Join(mappingRoot, "pricing.go"), []string{
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "pricing.go"), []string{
 		"CalculateLocalPrice", "CalculateMarkedUpPrice", "convertCurrency",
 	})
 
-	storeRoot := filepath.Join(mappingRoot, "store", "gormstore")
 	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "mapping_store.go"), []string{"MappingStore"})
 	assertFileDeclaresFunctions(t, filepath.Join(storeRoot, "mapping_store.go"), []string{"NewMappingStore"})
 	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "sku_mapping_store.go"), []string{"SKUMappingStore"})
@@ -316,7 +327,10 @@ func TestCatalogMappingImplementationLivesInBoundedContext(t *testing.T) {
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "admin_handler.go"), []string{"NewAdminHandler"})
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{"RegisterAdminRoutes"})
 
-	assertDirectoryGoFileBudget(t, mappingRoot, 12)
+	assertDirectoryGoFileBudget(t, mappingRoot, 0)
+	assertDirectoryGoFileBudget(t, domainRoot, 1)
+	assertDirectoryGoFileBudget(t, contractRoot, 3)
+	assertDirectoryGoFileBudget(t, applicationRoot, 11)
 	assertDirectoryGoFileBudget(t, storeRoot, 4)
 	assertDirectoryGoFileBudget(t, transportRoot, 2)
 	assertDirectoryGoFileBudget(t, integrationRoot, 1)

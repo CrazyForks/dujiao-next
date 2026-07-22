@@ -1,4 +1,4 @@
-package mapping
+package application
 
 import (
 	"context"
@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
 
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -18,7 +20,7 @@ import (
 // BatchUpstreamProductImportOutcome 单个商品批量导入结果（供 handler 组装响应）
 type BatchUpstreamProductImportOutcome struct {
 	UpstreamProductID uint
-	Mapping           *models.ProductMapping
+	Mapping           *mappingdomain.Mapping
 	Err               error
 }
 
@@ -42,7 +44,7 @@ func (s *Service) BatchImportUpstreamProducts(
 			return nil, err
 		}
 		if conn == nil {
-			return nil, s.errors.ConnectionNotFound
+			return nil, siteconnectioncontract.ErrNotFound
 		}
 		adapter, err := s.connections.GetAdapter(conn)
 		if err != nil {
@@ -93,7 +95,7 @@ func (s *Service) BatchImportByCategory(
 		return nil, err
 	}
 	if conn == nil {
-		return nil, s.errors.ConnectionNotFound
+		return nil, siteconnectioncontract.ErrNotFound
 	}
 
 	adapter, err := s.connections.GetAdapter(conn)
@@ -167,7 +169,7 @@ func (s *Service) BatchImportByCategory(
 	for _, p := range targetProducts {
 		_, importErr := s.ImportUpstreamProduct(connectionID, p.ID, categoryID, "")
 		if importErr != nil {
-			if errors.Is(importErr, ErrMappingAlreadyExists) {
+			if errors.Is(importErr, mappingcontract.ErrMappingAlreadyExists) {
 				result.SuccessCount++ // 已映射的算成功
 				continue
 			}

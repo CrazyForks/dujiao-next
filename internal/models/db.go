@@ -10,6 +10,7 @@ import (
 
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
@@ -182,8 +183,8 @@ func AutoMigrate() error {
 		&settingsstore.SettingRecord{},
 		&ApiCredential{},
 		&siteconnectiondomain.Connection{},
-		&ProductMapping{},
-		&SKUMapping{},
+		&mappingdomain.Mapping{},
+		&mappingdomain.SKUMapping{},
 		&ProcurementOrder{},
 		&DownstreamOrderRef{},
 		&ReconciliationJob{},

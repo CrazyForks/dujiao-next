@@ -10,19 +10,20 @@ import (
 	"testing"
 	"time"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
-	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
-	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
+	mappingapp "github.com/dujiao-next/internal/modules/catalog/mapping/application"
+	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
+	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	mappinghttp "github.com/dujiao-next/internal/modules/catalog/mapping/transport/http"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -60,12 +61,12 @@ type mappingImportUoW struct {
 	skuMappings *mappinggormstore.SKUMappingStore
 }
 
-func (unit *mappingImportUoW) WithinTransaction(fn func(catalogmapping.ImportRepositories) error) error {
+func (unit *mappingImportUoW) WithinTransaction(fn func(mappingcontract.ImportRepositories) error) error {
 	if fn == nil {
 		return nil
 	}
 	return unit.products.Transaction(func(tx *gorm.DB) error {
-		return fn(catalogmapping.ImportRepositories{
+		return fn(mappingcontract.ImportRepositories{
 			Products:    unit.products.BindTx(tx),
 			SKUs:        unit.skus.BindTx(tx),
 			Mappings:    unit.mappings.WithTx(tx),
@@ -88,8 +89,8 @@ func setupAdminHandlerTest(t *testing.T, upstreamHandler http.HandlerFunc) (*map
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
 		&siteconnectiondomain.Connection{},
-		&models.ProductMapping{},
-		&models.SKUMapping{},
+		&mappingdomain.Mapping{},
+		&mappingdomain.SKUMapping{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -120,7 +121,7 @@ func setupAdminHandlerTest(t *testing.T, upstreamHandler http.HandlerFunc) (*map
 	mappingStore := mappinggormstore.NewMappingStore(db)
 	skuMappingStore := mappinggormstore.NewSKUMappingStore(db)
 
-	mappingService, err := catalogmapping.NewService(catalogmapping.Options{
+	mappingService, err := mappingapp.NewService(mappingapp.Options{
 		Mappings:    mappingStore,
 		SKUMappings: skuMappingStore,
 		Products:    productStore,
@@ -133,10 +134,6 @@ func setupAdminHandlerTest(t *testing.T, upstreamHandler http.HandlerFunc) (*map
 			skus:        skuStore,
 			mappings:    mappingStore,
 			skuMappings: skuMappingStore,
-		},
-		Errors: catalogmapping.ErrorSet{
-			ConnectionNotFound:     catalogmapping.ErrConnectionNotFound,
-			ProductCategoryInvalid: productcontract.ErrProductCategoryInvalid,
 		},
 	})
 	if err != nil {

@@ -1,9 +1,11 @@
-package mapping
+package application
 
 import (
 	"context"
 	"errors"
 	"testing"
+
+	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
 )
 
 type recordingMediaRecorder struct {
@@ -19,8 +21,8 @@ func (r *recordingMediaRecorder) RecordLocalFile(ctx context.Context, localPath,
 }
 
 func TestNewServiceRejectsNilMediaRecorder(t *testing.T) {
-	if _, err := NewService(Options{}); !errors.Is(err, ErrMediaRecorderRequired) {
-		t.Fatalf("error = %v, want ErrMediaRecorderRequired", err)
+	if _, err := NewService(Options{}); !errors.Is(err, mappingcontract.ErrMediaRecorderRequired) {
+		t.Fatalf("error = %v, want mappingcontract.ErrMediaRecorderRequired", err)
 	}
 }
 

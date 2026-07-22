@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -156,11 +158,11 @@ type ProductRepository interface {
 }
 
 type ProductMappingRepository interface {
-	ListByLocalProductIDs(productIDs []uint) ([]models.ProductMapping, error)
+	ListByLocalProductIDs(productIDs []uint) ([]mappingdomain.Mapping, error)
 }
 
 type SKUMappingRepository interface {
-	ListByProductMappingIDs(mappingIDs []uint) ([]models.SKUMapping, error)
+	ListByProductMappingIDs(mappingIDs []uint) ([]mappingdomain.SKUMapping, error)
 }
 
 type IdentityService interface {

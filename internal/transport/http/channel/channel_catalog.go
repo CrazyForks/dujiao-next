@@ -5,11 +5,12 @@ import (
 	"math"
 	"strings"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -518,7 +519,7 @@ func (h *Handler) applyUpstreamMappings(products []productdomain.Product) map[ui
 		return ftMap
 	}
 
-	mappingByProduct := make(map[uint]*models.ProductMapping, len(mappings))
+	mappingByProduct := make(map[uint]*mappingdomain.Mapping, len(mappings))
 	mappingIDs := make([]uint, 0, len(mappings))
 	for i := range mappings {
 		m := &mappings[i]
@@ -546,7 +547,7 @@ func (h *Handler) applyUpstreamMappings(products []productdomain.Product) map[ui
 	}
 
 	// 按 productMappingID 分桶
-	skusByMapping := make(map[uint][]*models.SKUMapping, len(mappingIDs))
+	skusByMapping := make(map[uint][]*mappingdomain.SKUMapping, len(mappingIDs))
 	for i := range skuMappings {
 		sm := &skuMappings[i]
 		skusByMapping[sm.ProductMappingID] = append(skusByMapping[sm.ProductMappingID], sm)
@@ -566,7 +567,7 @@ func (h *Handler) applyUpstreamMappings(products []productdomain.Product) map[ui
 			continue
 		}
 
-		smByLocal := make(map[uint]*models.SKUMapping)
+		smByLocal := make(map[uint]*mappingdomain.SKUMapping)
 		for _, sm := range skusByMapping[mapping.ID] {
 			smByLocal[sm.LocalSKUID] = sm
 		}

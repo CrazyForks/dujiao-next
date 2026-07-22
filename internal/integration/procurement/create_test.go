@@ -3,6 +3,8 @@ package procurement_test
 import (
 	"testing"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 )
@@ -33,7 +35,7 @@ func TestCreateForOrder_IdempotentSkipsDuplicate(t *testing.T) {
 	db := setupProcurementTestDB(t)
 
 	order := createProcTestOrder(t, db, "PROC-DUP-001", constants.OrderStatusPaid, constants.FulfillmentTypeUpstream)
-	pm := &models.ProductMapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
+	pm := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
 	db.Create(pm)
 
 	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())

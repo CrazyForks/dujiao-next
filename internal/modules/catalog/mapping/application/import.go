@@ -1,4 +1,4 @@
-package mapping
+package application
 
 import (
 	"context"
@@ -8,9 +8,13 @@ import (
 	"strings"
 	"time"
 
+	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
@@ -21,25 +25,25 @@ import (
 )
 
 // ImportUpstreamProduct 从上游导入商品（克隆为本地商品 + 建立映射）
-func (s *Service) ImportUpstreamProduct(connectionID uint, upstreamProductID uint, categoryID uint, slug string) (*models.ProductMapping, error) {
+func (s *Service) ImportUpstreamProduct(connectionID uint, upstreamProductID uint, categoryID uint, slug string) (*mappingdomain.Mapping, error) {
 	return s.importUpstreamProduct(connectionID, upstreamProductID, categoryID, slug, false, nil)
 }
 
 // ImportUpstreamProductWithAutoCategory 从上游导入商品，并按上游分类自动创建/匹配本地分类。
-func (s *Service) ImportUpstreamProductWithAutoCategory(connectionID uint, upstreamProductID uint, categoryID uint, slug string, autoCreateCategory bool) (*models.ProductMapping, error) {
+func (s *Service) ImportUpstreamProductWithAutoCategory(connectionID uint, upstreamProductID uint, categoryID uint, slug string, autoCreateCategory bool) (*mappingdomain.Mapping, error) {
 	return s.importUpstreamProduct(connectionID, upstreamProductID, categoryID, slug, autoCreateCategory, nil)
 }
 
 // importUpstreamProduct 内部导入实现。catMap 可由批量入口预先注入以避免 N+1 的上游 ListCategories 调用；
 // 为 nil 时在需要时单次拉取。
-func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uint, categoryID uint, slug string, autoCreateCategory bool, catMap map[uint]upstream.UpstreamCategory) (*models.ProductMapping, error) {
+func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uint, categoryID uint, slug string, autoCreateCategory bool, catMap map[uint]upstream.UpstreamCategory) (*mappingdomain.Mapping, error) {
 	// 检查是否已存在映射
 	existing, err := s.mappings.GetByConnectionAndUpstreamID(connectionID, upstreamProductID)
 	if err != nil {
 		return nil, err
 	}
 	if existing != nil {
-		return nil, ErrMappingAlreadyExists
+		return nil, mappingcontract.ErrMappingAlreadyExists
 	}
 
 	// 获取连接
@@ -48,7 +52,7 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 		return nil, err
 	}
 	if conn == nil {
-		return nil, s.errors.ConnectionNotFound
+		return nil, siteconnectioncontract.ErrNotFound
 	}
 
 	// 获取适配器
@@ -65,16 +69,16 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 	if err != nil {
 		// 上游已删除或已下架（旧上游兜底）→ 不允许导入
 		if errors.Is(err, upstream.ErrUpstreamProductDeleted) || errors.Is(err, upstream.ErrUpstreamProductUnavailable) {
-			return nil, ErrUpstreamProductNotFound
+			return nil, mappingcontract.ErrUpstreamProductNotFound
 		}
 		return nil, fmt.Errorf("fetch upstream product: %w", err)
 	}
 	if upProduct == nil {
-		return nil, ErrUpstreamProductNotFound
+		return nil, mappingcontract.ErrUpstreamProductNotFound
 	}
 	// 新版上游对下架商品返回 200 + is_active=false → 同样禁止导入
 	if !upProduct.IsActive {
-		return nil, ErrUpstreamProductNotFound
+		return nil, mappingcontract.ErrUpstreamProductNotFound
 	}
 
 	if autoCreateCategory && categoryID == 0 && upProduct.CategoryID > 0 {
@@ -91,7 +95,7 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 		}
 		categoryID = category.ID
 	}
-	if err := productdomain.ValidateCategoryAssignment(s.categories, categoryID, 0, s.errors.ProductCategoryInvalid); err != nil {
+	if err := productdomain.ValidateCategoryAssignment(s.categories, categoryID, 0, productcontract.ErrProductCategoryInvalid); err != nil {
 		return nil, err
 	}
 
@@ -159,10 +163,10 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 		SortOrder:            0,
 	}
 
-	var mapping *models.ProductMapping
+	var mapping *mappingdomain.Mapping
 
 	// 使用事务一次性创建本地商品、SKU、映射与 SKU 映射，避免留下半成功数据。
-	if err := s.transactions.WithinTransaction(func(repos ImportRepositories) error {
+	if err := s.transactions.WithinTransaction(func(repos mappingcontract.ImportRepositories) error {
 		if err := repos.Products.Create(&product); err != nil {
 			return fmt.Errorf("create local product: %w", err)
 		}
@@ -235,7 +239,7 @@ func (s *Service) importUpstreamProduct(connectionID uint, upstreamProductID uin
 		}
 
 		now := time.Now()
-		mapping = &models.ProductMapping{
+		mapping = &mappingdomain.Mapping{
 			ConnectionID:            connectionID,
 			LocalProductID:          product.ID,
 			UpstreamProductID:       upstreamProductID,
@@ -271,7 +275,7 @@ func (s *Service) fetchUpstreamCategoryMap(ctx context.Context, adapter upstream
 }
 
 func createSKUMappings(
-	skuMappings ImportTxSKUMappingRepository,
+	skuMappings mappingcontract.ImportTxSKUMappingRepository,
 	mappingID uint,
 	localSKUs []productdomain.ProductSKU,
 	upstreamSKUs []upstream.UpstreamSKU,
@@ -303,7 +307,7 @@ func createSKUMappings(
 
 		upPrice, _ := decimal.NewFromString(upSKU.PriceAmount)
 		now := time.Now()
-		skuMapping := &models.SKUMapping{
+		skuMapping := &mappingdomain.SKUMapping{
 			ProductMappingID: mappingID,
 			LocalSKUID:       localSKU.ID,
 			UpstreamSKUID:    upSKU.ID,
@@ -330,7 +334,7 @@ type upstreamWholesaleSKUIndex struct {
 	byCode       map[string]upstreamWholesaleSKURef
 }
 
-func buildUpstreamWholesaleSKUIndex(localSKUs []productdomain.ProductSKU, upstreamSKUs []upstream.UpstreamSKU, skuMappings []models.SKUMapping) upstreamWholesaleSKUIndex {
+func buildUpstreamWholesaleSKUIndex(localSKUs []productdomain.ProductSKU, upstreamSKUs []upstream.UpstreamSKU, skuMappings []mappingdomain.SKUMapping) upstreamWholesaleSKUIndex {
 	index := upstreamWholesaleSKUIndex{
 		byUpstreamID: map[uint]upstreamWholesaleSKURef{},
 		byCode:       map[string]upstreamWholesaleSKURef{},
@@ -563,7 +567,7 @@ func (s *Service) ListUpstreamProducts(connectionID uint, page, pageSize int) (*
 		return nil, err
 	}
 	if conn == nil {
-		return nil, s.errors.ConnectionNotFound
+		return nil, siteconnectioncontract.ErrNotFound
 	}
 
 	adapter, err := s.connections.GetAdapter(conn)
@@ -588,7 +592,7 @@ func (s *Service) ListUpstreamCategories(connectionID uint) ([]upstream.Upstream
 		return nil, false, err
 	}
 	if conn == nil {
-		return nil, false, s.errors.ConnectionNotFound
+		return nil, false, siteconnectioncontract.ErrNotFound
 	}
 
 	adapter, err := s.connections.GetAdapter(conn)

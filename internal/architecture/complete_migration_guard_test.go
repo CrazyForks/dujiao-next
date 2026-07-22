@@ -194,6 +194,19 @@ var completedMigrationPaths = []string{
 	"internal/transport/http/siteconnection",
 	"internal/integration/siteconnection",
 	"internal/wiring/siteconnection",
+	"internal/models/product_mapping.go",
+	"internal/modules/catalog/mapping/batch_import.go",
+	"internal/modules/catalog/mapping/batch_import_test.go",
+	"internal/modules/catalog/mapping/import.go",
+	"internal/modules/catalog/mapping/import_test.go",
+	"internal/modules/catalog/mapping/markup.go",
+	"internal/modules/catalog/mapping/pricing.go",
+	"internal/modules/catalog/mapping/pricing_test.go",
+	"internal/modules/catalog/mapping/service.go",
+	"internal/modules/catalog/mapping/service_test.go",
+	"internal/modules/catalog/mapping/sync.go",
+	"internal/modules/catalog/mapping/sync_test.go",
+	"internal/modules/catalog/mapping/store",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

@@ -1,7 +1,9 @@
-package mapping
+package application
 
 import (
 	"strconv"
+
+	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
@@ -15,7 +17,7 @@ func (s *Service) ReapplyMarkup(connectionID uint) (int, error) {
 		return 0, err
 	}
 	if conn == nil {
-		return 0, s.errors.ConnectionNotFound
+		return 0, siteconnectioncontract.ErrNotFound
 	}
 
 	mappings, err := s.mappings.ListActiveByConnection(connectionID)

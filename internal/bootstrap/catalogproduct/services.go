@@ -7,7 +7,7 @@ import (
 
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 
-	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
+	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
@@ -35,8 +35,8 @@ type SKUStore interface {
 
 // MappingStore 是商品级联删除所需的映射持久化与事务能力。
 type MappingStore interface {
-	catalogmapping.MappingRepository
-	BindTx(tx *gorm.DB) catalogmapping.MappingRepository
+	mappingcontract.MappingRepository
+	BindTx(tx *gorm.DB) mappingcontract.MappingRepository
 }
 
 // Dependencies 是 Product 三组应用用例的装配依赖。

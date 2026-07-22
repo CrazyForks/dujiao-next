@@ -3,10 +3,11 @@ package mappinghttp
 import (
 	"errors"
 
+	mappingapp "github.com/dujiao-next/internal/modules/catalog/mapping/application"
+	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-
-	"github.com/dujiao-next/internal/models"
-	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
+	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/upstream"
@@ -16,18 +17,18 @@ import (
 
 // ProductMappingService 是后台商品映射端点所需的最小用例接口。
 type ProductMappingService interface {
-	List(filter catalogmapping.ListFilter) ([]models.ProductMapping, int64, error)
-	GetByID(id uint) (*models.ProductMapping, error)
-	GetSKUMappings(mappingID uint) ([]models.SKUMapping, error)
-	ImportUpstreamProductWithAutoCategory(connectionID, upstreamProductID, categoryID uint, slug string, autoCreateCategory bool) (*models.ProductMapping, error)
-	BatchImportUpstreamProducts(connectionID uint, upstreamProductIDs []uint, categoryID uint, autoCreateCategory bool) ([]catalogmapping.BatchUpstreamProductImportOutcome, error)
+	List(filter mappingcontract.ListFilter) ([]mappingdomain.Mapping, int64, error)
+	GetByID(id uint) (*mappingdomain.Mapping, error)
+	GetSKUMappings(mappingID uint) ([]mappingdomain.SKUMapping, error)
+	ImportUpstreamProductWithAutoCategory(connectionID, upstreamProductID, categoryID uint, slug string, autoCreateCategory bool) (*mappingdomain.Mapping, error)
+	BatchImportUpstreamProducts(connectionID uint, upstreamProductIDs []uint, categoryID uint, autoCreateCategory bool) ([]mappingapp.BatchUpstreamProductImportOutcome, error)
 	SyncProduct(mappingID uint) error
 	SetActive(id uint, active bool) error
 	Delete(id uint) error
 	ListUpstreamProducts(connectionID uint, page, pageSize int) (*upstream.ProductListResult, error)
 	GetMappedUpstreamIDs(connectionID uint) ([]uint, error)
 	ListUpstreamCategories(connectionID uint) ([]upstream.UpstreamCategory, bool, error)
-	BatchImportByCategory(connectionID, upstreamCategoryID uint, autoCreateCategory bool, localCategoryID uint) (*catalogmapping.BatchImportByCategoryResult, error)
+	BatchImportByCategory(connectionID, upstreamCategoryID uint, autoCreateCategory bool, localCategoryID uint) (*mappingapp.BatchImportByCategoryResult, error)
 }
 
 // AdminHandler 处理后台商品映射管理请求。
@@ -51,9 +52,9 @@ func (h *AdminHandler) GetProductMappings(c *gin.Context) {
 	upstreamStatus := c.Query("upstream_status")
 	if upstreamStatus != "" {
 		validStatuses := map[string]bool{
-			models.UpstreamStatusActive:   true,
-			models.UpstreamStatusInactive: true,
-			models.UpstreamStatusDeleted:  true,
+			mappingdomain.UpstreamStatusActive:   true,
+			mappingdomain.UpstreamStatusInactive: true,
+			mappingdomain.UpstreamStatusDeleted:  true,
 		}
 		if !validStatuses[upstreamStatus] {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.invalid_upstream_status", nil)
@@ -67,7 +68,7 @@ func (h *AdminHandler) GetProductMappings(c *gin.Context) {
 	}
 	search := c.Query("search")
 
-	mappings, total, err := h.service.List(catalogmapping.ListFilter{
+	mappings, total, err := h.service.List(mappingcontract.ListFilter{
 		ConnectionID:   connectionID,
 		UpstreamStatus: upstreamStatus,
 		ProductStatus:  productStatus,
@@ -140,15 +141,15 @@ func (h *AdminHandler) ImportUpstreamProduct(c *gin.Context) {
 		req.AutoCreateCategory,
 	)
 	if err != nil {
-		if errors.Is(err, catalogmapping.ErrMappingAlreadyExists) {
+		if errors.Is(err, mappingcontract.ErrMappingAlreadyExists) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.mapping_already_exists", nil)
 			return
 		}
-		if errors.Is(err, catalogmapping.ErrConnectionNotFound) {
+		if errors.Is(err, siteconnectioncontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
-		if errors.Is(err, catalogmapping.ErrUpstreamProductNotFound) {
+		if errors.Is(err, mappingcontract.ErrUpstreamProductNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.upstream_product_not_found", nil)
 			return
 		}
@@ -197,7 +198,7 @@ func (h *AdminHandler) BatchImportUpstreamProducts(c *gin.Context) {
 		req.AutoCreateCategory,
 	)
 	if err != nil {
-		if errors.Is(err, catalogmapping.ErrConnectionNotFound) {
+		if errors.Is(err, siteconnectioncontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
@@ -299,7 +300,7 @@ func (h *AdminHandler) SyncProductMapping(c *gin.Context) {
 	}
 
 	if err := h.service.SyncProduct(id); err != nil {
-		if errors.Is(err, catalogmapping.ErrMappingNotFound) {
+		if errors.Is(err, mappingcontract.ErrMappingNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.mapping_not_found", nil)
 			return
 		}
@@ -330,7 +331,7 @@ func (h *AdminHandler) UpdateProductMappingStatus(c *gin.Context) {
 	}
 
 	if err := h.service.SetActive(id, req.IsActive); err != nil {
-		if errors.Is(err, catalogmapping.ErrMappingNotFound) {
+		if errors.Is(err, mappingcontract.ErrMappingNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.mapping_not_found", nil)
 			return
 		}
@@ -350,7 +351,7 @@ func (h *AdminHandler) DeleteProductMapping(c *gin.Context) {
 	}
 
 	if err := h.service.Delete(id); err != nil {
-		if errors.Is(err, catalogmapping.ErrMappingNotFound) {
+		if errors.Is(err, mappingcontract.ErrMappingNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.mapping_not_found", nil)
 			return
 		}
@@ -373,7 +374,7 @@ func (h *AdminHandler) ListUpstreamProducts(c *gin.Context) {
 
 	result, err := h.service.ListUpstreamProducts(connectionID, page, pageSize)
 	if err != nil {
-		if errors.Is(err, catalogmapping.ErrConnectionNotFound) {
+		if errors.Is(err, siteconnectioncontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
@@ -404,7 +405,7 @@ func (h *AdminHandler) ListUpstreamCategories(c *gin.Context) {
 
 	categories, supported, err := h.service.ListUpstreamCategories(connectionID)
 	if err != nil {
-		if errors.Is(err, catalogmapping.ErrConnectionNotFound) {
+		if errors.Is(err, siteconnectioncontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
@@ -441,7 +442,7 @@ func (h *AdminHandler) BatchImportByCategory(c *gin.Context) {
 		req.LocalCategoryID,
 	)
 	if err != nil {
-		if errors.Is(err, catalogmapping.ErrConnectionNotFound) {
+		if errors.Is(err, siteconnectioncontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}

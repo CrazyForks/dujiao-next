@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
@@ -18,14 +20,14 @@ func TestSubmitToUpstream_Success(t *testing.T) {
 
 	order := createProcTestOrder(t, db, "PROC-SUBMIT-001", constants.OrderStatusPaid, constants.FulfillmentTypeUpstream)
 	// 创建 product mapping 和 sku mapping
-	pm := &models.ProductMapping{
+	pm := &mappingdomain.Mapping{
 		ConnectionID:      1,
 		LocalProductID:    1,
 		UpstreamProductID: 101,
 		IsActive:          true,
 	}
 	db.Create(pm)
-	sm := &models.SKUMapping{
+	sm := &mappingdomain.SKUMapping{
 		ProductMappingID: pm.ID,
 		LocalSKUID:       1,
 		UpstreamSKUID:    201,
@@ -89,9 +91,9 @@ func TestSubmitToUpstream_NonRetryableError_Rejects(t *testing.T) {
 	db := setupProcurementTestDB(t)
 
 	order := createProcTestOrder(t, db, "PROC-NONRETRY-001", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
-	pm := &models.ProductMapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
+	pm := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
 	db.Create(pm)
-	sm := &models.SKUMapping{ProductMappingID: pm.ID, LocalSKUID: 1, UpstreamSKUID: 201, UpstreamIsActive: true}
+	sm := &mappingdomain.SKUMapping{ProductMappingID: pm.ID, LocalSKUID: 1, UpstreamSKUID: 201, UpstreamIsActive: true}
 	db.Create(sm)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -135,9 +137,9 @@ func TestSubmitToUpstream_RetryableError_Retries(t *testing.T) {
 	db := setupProcurementTestDB(t)
 
 	order := createProcTestOrder(t, db, "PROC-RETRY-001", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
-	pm := &models.ProductMapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
+	pm := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
 	db.Create(pm)
-	sm := &models.SKUMapping{ProductMappingID: pm.ID, LocalSKUID: 1, UpstreamSKUID: 201, UpstreamIsActive: true}
+	sm := &mappingdomain.SKUMapping{ProductMappingID: pm.ID, LocalSKUID: 1, UpstreamSKUID: 201, UpstreamIsActive: true}
 	db.Create(sm)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -180,9 +182,9 @@ func TestHandleSubmitFailure_MaxRetriesExhausted(t *testing.T) {
 	db := setupProcurementTestDB(t)
 
 	order := createProcTestOrder(t, db, "PROC-MAXRETRY-001", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
-	productMapping := &models.ProductMapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
+	productMapping := &mappingdomain.Mapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
 	db.Create(productMapping)
-	db.Create(&models.SKUMapping{
+	db.Create(&mappingdomain.SKUMapping{
 		ProductMappingID: productMapping.ID,
 		LocalSKUID:       1,
 		UpstreamSKUID:    201,

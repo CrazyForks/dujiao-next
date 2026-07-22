@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -16,7 +18,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
-	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
+	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -113,7 +115,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	}
 
 	// 创建商品映射
-	pm := models.ProductMapping{
+	pm := mappingdomain.Mapping{
 		ConnectionID:      1,
 		LocalProductID:    product.ID,
 		UpstreamProductID: 100,
@@ -123,7 +125,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	}
 
 	// 创建 SKU 映射
-	sm := models.SKUMapping{
+	sm := mappingdomain.SKUMapping{
 		ProductMappingID: pm.ID,
 		LocalSKUID:       sku.ID,
 		UpstreamSKUID:    200,
@@ -157,13 +159,13 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	}
 
 	var pmCount int64
-	db.Model(&models.ProductMapping{}).Where("local_product_id = ?", product.ID).Count(&pmCount)
+	db.Model(&mappingdomain.Mapping{}).Where("local_product_id = ? AND deleted_at IS NULL", product.ID).Count(&pmCount)
 	if pmCount != 0 {
 		t.Errorf("expected 0 product mappings after delete, got %d", pmCount)
 	}
 
 	var smCount int64
-	db.Model(&models.SKUMapping{}).Where("product_mapping_id = ?", pm.ID).Count(&smCount)
+	db.Model(&mappingdomain.SKUMapping{}).Where("product_mapping_id = ? AND deleted_at IS NULL", pm.ID).Count(&smCount)
 	if smCount != 0 {
 		t.Errorf("expected 0 SKU mappings after delete, got %d", smCount)
 	}
@@ -233,7 +235,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 	if err := db.Create(&cart).Error; err != nil {
 		t.Fatalf("create cart item failed: %v", err)
 	}
-	mapping := models.ProductMapping{
+	mapping := mappingdomain.Mapping{
 		ConnectionID:      1,
 		LocalProductID:    product.ID,
 		UpstreamProductID: 99,
@@ -250,7 +252,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 	assertProductRelationCount(t, db, &productdomain.Product{}, "id = ?", product.ID, 1)
 	assertProductRelationCount(t, db, &productdomain.ProductSKU{}, "product_id = ?", product.ID, 1)
 	assertProductRelationCount(t, db, &models.CartItem{}, "product_id = ?", product.ID, 1)
-	assertProductRelationCount(t, db, &models.ProductMapping{}, "local_product_id = ?", product.ID, 1)
+	assertProductRelationCount(t, db, &mappingdomain.Mapping{}, "local_product_id = ?", product.ID, 1)
 }
 
 type failingProductDeleteRepository struct {

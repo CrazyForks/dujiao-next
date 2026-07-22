@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -86,11 +88,11 @@ type SKURepository interface {
 }
 
 type ProductMappingRepository interface {
-	ListByLocalProductIDs(productIDs []uint) ([]models.ProductMapping, error)
+	ListByLocalProductIDs(productIDs []uint) ([]mappingdomain.Mapping, error)
 }
 
 type SKUMappingRepository interface {
-	GetByLocalSKUID(skuID uint) (*models.SKUMapping, error)
+	GetByLocalSKUID(skuID uint) (*mappingdomain.SKUMapping, error)
 }
 
 type MemberLevelService interface {

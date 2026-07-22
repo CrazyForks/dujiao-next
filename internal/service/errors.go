@@ -7,7 +7,6 @@ import (
 
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/cardsecret"
-	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	"github.com/dujiao-next/internal/modules/giftcard"
@@ -40,7 +39,6 @@ var (
 	ErrWholesalePriceInvalid               = productdomain.ErrWholesalePriceInvalid
 	ErrManualStockInvalid                  = productcontract.ErrManualStockInvalid
 	ErrManualStockInsufficient             = errors.New("manual stock insufficient")
-	ErrUpstreamStockInsufficient           = catalogmapping.ErrUpstreamStockInsufficient
 	ErrManualFormSchemaInvalid             = manualform.ErrSchemaInvalid
 	ErrManualFormRequiredMissing           = manualform.ErrRequiredMissing
 	ErrManualFormFieldInvalid              = manualform.ErrFieldInvalid

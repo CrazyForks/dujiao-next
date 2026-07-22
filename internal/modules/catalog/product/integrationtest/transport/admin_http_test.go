@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
@@ -18,7 +20,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/store/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
-	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
+	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
@@ -131,8 +133,8 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 		&models.CardSecretBatch{},
 		&models.MemberLevelPrice{},
 		&models.CartItem{},
-		&models.ProductMapping{},
-		&models.SKUMapping{},
+		&mappingdomain.Mapping{},
+		&mappingdomain.SKUMapping{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.PaymentChannel{},

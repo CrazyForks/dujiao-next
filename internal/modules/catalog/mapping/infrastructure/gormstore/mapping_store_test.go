@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -12,8 +14,7 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
+	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -34,8 +35,8 @@ func setupMappingStoreTest(t *testing.T) (*MappingStore, *SKUMappingStore, *gorm
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
 		&siteconnectiondomain.Connection{},
-		&models.ProductMapping{},
-		&models.SKUMapping{},
+		&mappingdomain.Mapping{},
+		&mappingdomain.SKUMapping{},
 	); err != nil {
 		t.Fatalf("migrate mapping models failed: %v", err)
 	}
@@ -69,9 +70,9 @@ func createMappedProduct(t *testing.T, db *gorm.DB, slug, title string) *product
 	return product
 }
 
-func createMapping(t *testing.T, store *MappingStore, connectionID, localProductID, upstreamProductID uint, upstreamStatus string, isActive bool) *models.ProductMapping {
+func createMapping(t *testing.T, store *MappingStore, connectionID, localProductID, upstreamProductID uint, upstreamStatus string, isActive bool) *mappingdomain.Mapping {
 	t.Helper()
-	mapping := &models.ProductMapping{
+	mapping := &mappingdomain.Mapping{
 		ConnectionID:      connectionID,
 		LocalProductID:    localProductID,
 		UpstreamProductID: upstreamProductID,
@@ -98,36 +99,36 @@ func TestMappingStoreListFiltersAndPaginates(t *testing.T) {
 	plainProduct := createMappedProduct(t, db, "plain-product", "普通商品")
 	otherSite := createMappedProduct(t, db, "other-site", "另一站点商品")
 
-	createMapping(t, store, 1, rechargeCard.ID, 1001, models.UpstreamStatusActive, true)
-	inactive := createMapping(t, store, 1, plainProduct.ID, 1002, models.UpstreamStatusInactive, false)
-	createMapping(t, store, 2, otherSite.ID, 2001, models.UpstreamStatusActive, true)
+	createMapping(t, store, 1, rechargeCard.ID, 1001, mappingdomain.UpstreamStatusActive, true)
+	inactive := createMapping(t, store, 1, plainProduct.ID, 1002, mappingdomain.UpstreamStatusInactive, false)
+	createMapping(t, store, 2, otherSite.ID, 2001, mappingdomain.UpstreamStatusActive, true)
 
-	if _, total, err := store.List(catalogmapping.ListFilter{}); err != nil || total != 3 {
+	if _, total, err := store.List(mappingcontract.ListFilter{}); err != nil || total != 3 {
 		t.Fatalf("list all: total=%d err=%v, want 3", total, err)
 	}
-	if _, total, err := store.List(catalogmapping.ListFilter{ConnectionID: 1}); err != nil || total != 2 {
+	if _, total, err := store.List(mappingcontract.ListFilter{ConnectionID: 1}); err != nil || total != 2 {
 		t.Fatalf("list by connection: total=%d err=%v, want 2", total, err)
 	}
-	rows, total, err := store.List(catalogmapping.ListFilter{UpstreamStatus: models.UpstreamStatusInactive})
+	rows, total, err := store.List(mappingcontract.ListFilter{UpstreamStatus: mappingdomain.UpstreamStatusInactive})
 	if err != nil || total != 1 || len(rows) != 1 || rows[0].ID != inactive.ID {
 		t.Fatalf("list by upstream status: rows=%d total=%d err=%v, want the inactive mapping", len(rows), total, err)
 	}
-	if _, total, err := store.List(catalogmapping.ListFilter{ProductStatus: "active"}); err != nil || total != 2 {
+	if _, total, err := store.List(mappingcontract.ListFilter{ProductStatus: "active"}); err != nil || total != 2 {
 		t.Fatalf("list by product status active: total=%d err=%v, want 2", total, err)
 	}
-	if _, total, err := store.List(catalogmapping.ListFilter{ProductStatus: "inactive"}); err != nil || total != 1 {
+	if _, total, err := store.List(mappingcontract.ListFilter{ProductStatus: "inactive"}); err != nil || total != 1 {
 		t.Fatalf("list by product status inactive: total=%d err=%v, want 1", total, err)
 	}
-	rows, total, err = store.List(catalogmapping.ListFilter{Search: "充值"})
+	rows, total, err = store.List(mappingcontract.ListFilter{Search: "充值"})
 	if err != nil || total != 1 || len(rows) != 1 || rows[0].LocalProductID != rechargeCard.ID {
 		t.Fatalf("list by search: rows=%d total=%d err=%v, want the recharge card mapping", len(rows), total, err)
 	}
 
-	rows, total, err = store.List(catalogmapping.ListFilter{Page: 1, PageSize: 2})
+	rows, total, err = store.List(mappingcontract.ListFilter{Page: 1, PageSize: 2})
 	if err != nil || total != 3 || len(rows) != 2 {
 		t.Fatalf("list page 1: rows=%d total=%d err=%v, want 2 rows of 3", len(rows), total, err)
 	}
-	rows, total, err = store.List(catalogmapping.ListFilter{Page: 2, PageSize: 2})
+	rows, total, err = store.List(mappingcontract.ListFilter{Page: 2, PageSize: 2})
 	if err != nil || total != 3 || len(rows) != 1 {
 		t.Fatalf("list page 2: rows=%d total=%d err=%v, want 1 row of 3", len(rows), total, err)
 	}
@@ -138,11 +139,11 @@ func TestMappingStoreDeleteByLocalProductRemovesSKUMappings(t *testing.T) {
 
 	removed := createMappedProduct(t, db, "removed-product", "待删除商品")
 	kept := createMappedProduct(t, db, "kept-product", "保留商品")
-	removedMapping := createMapping(t, store, 1, removed.ID, 1001, models.UpstreamStatusActive, true)
-	keptMapping := createMapping(t, store, 1, kept.ID, 1002, models.UpstreamStatusActive, true)
+	removedMapping := createMapping(t, store, 1, removed.ID, 1001, mappingdomain.UpstreamStatusActive, true)
+	keptMapping := createMapping(t, store, 1, kept.ID, 1002, mappingdomain.UpstreamStatusActive, true)
 
 	for i, mappingID := range []uint{removedMapping.ID, removedMapping.ID, keptMapping.ID} {
-		if err := skuStore.Create(&models.SKUMapping{
+		if err := skuStore.Create(&mappingdomain.SKUMapping{
 			ProductMappingID: mappingID,
 			LocalSKUID:       uint(100 + i),
 			UpstreamSKUID:    uint(200 + i),
@@ -161,10 +162,49 @@ func TestMappingStoreDeleteByLocalProductRemovesSKUMappings(t *testing.T) {
 	if rows, err := skuStore.ListByProductMapping(removedMapping.ID); err != nil || len(rows) != 0 {
 		t.Fatalf("removed sku mappings should be gone: rows=%d err=%v", len(rows), err)
 	}
+	var deletedMapping mappingdomain.Mapping
+	if err := db.Where("id = ? AND deleted_at IS NOT NULL", removedMapping.ID).First(&deletedMapping).Error; err != nil {
+		t.Fatalf("mapping must remain persisted with deleted_at: %v", err)
+	}
+	var deletedSKUCount int64
+	if err := db.Model(&mappingdomain.SKUMapping{}).
+		Where("product_mapping_id = ? AND deleted_at IS NOT NULL", removedMapping.ID).
+		Count(&deletedSKUCount).Error; err != nil {
+		t.Fatalf("count soft-deleted sku mappings: %v", err)
+	}
+	if deletedSKUCount != 2 {
+		t.Fatalf("soft-deleted sku mappings = %d, want 2", deletedSKUCount)
+	}
 	if mapping, err := store.GetByLocalProductID(kept.ID); err != nil || mapping == nil {
 		t.Fatalf("kept mapping should survive: mapping=%v err=%v", mapping, err)
 	}
 	if rows, err := skuStore.ListByProductMapping(keptMapping.ID); err != nil || len(rows) != 1 {
 		t.Fatalf("kept sku mapping should survive: rows=%d err=%v", len(rows), err)
+	}
+}
+
+func TestMappingStoreDeleteHidesMappingFromEveryReadPath(t *testing.T) {
+	store, _, db := setupMappingStoreTest(t)
+	product := createMappedProduct(t, db, "single-delete", "单条删除")
+	mapping := createMapping(t, store, 9, product.ID, 9001, mappingdomain.UpstreamStatusActive, true)
+
+	if err := store.Delete(mapping.ID); err != nil {
+		t.Fatalf("delete mapping: %v", err)
+	}
+
+	if got, err := store.GetByID(mapping.ID); err != nil || got != nil {
+		t.Fatalf("GetByID after delete = %#v, %v; want nil, nil", got, err)
+	}
+	if got, err := store.GetByConnectionAndUpstreamID(mapping.ConnectionID, mapping.UpstreamProductID); err != nil || got != nil {
+		t.Fatalf("GetByConnectionAndUpstreamID after delete = %#v, %v; want nil, nil", got, err)
+	}
+	if rows, total, err := store.List(mappingcontract.ListFilter{}); err != nil || total != 0 || len(rows) != 0 {
+		t.Fatalf("List after delete = rows %d total %d err %v; want empty", len(rows), total, err)
+	}
+	if rows, err := store.ListActiveByConnection(mapping.ConnectionID); err != nil || len(rows) != 0 {
+		t.Fatalf("ListActiveByConnection after delete = rows %d err %v; want empty", len(rows), err)
+	}
+	if ids, err := store.ListUpstreamIDsByConnection(mapping.ConnectionID); err != nil || len(ids) != 0 {
+		t.Fatalf("ListUpstreamIDsByConnection after delete = ids %v err %v; want empty", ids, err)
 	}
 }

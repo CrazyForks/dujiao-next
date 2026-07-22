@@ -5,11 +5,13 @@ import (
 	"testing"
 	"time"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/models"
-	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
+	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/procurement"
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/store/gormstore"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
@@ -50,8 +52,8 @@ func setupProcurementTestDB(t *testing.T) *gorm.DB {
 		&models.Fulfillment{},
 		&models.ProcurementOrder{},
 		&siteconnectiondomain.Connection{},
-		&models.ProductMapping{},
-		&models.SKUMapping{},
+		&mappingdomain.Mapping{},
+		&mappingdomain.SKUMapping{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}

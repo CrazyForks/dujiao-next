@@ -6,7 +6,7 @@ import (
 	apicredentialgormstore "github.com/dujiao-next/internal/modules/apicredential/store/gormstore"
 	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/store/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
-	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
+	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	channelclientstore "github.com/dujiao-next/internal/modules/channelclient/infrastructure/gormstore"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"

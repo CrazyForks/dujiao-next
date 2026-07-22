@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	productpresenter "github.com/dujiao-next/internal/modules/catalog/product/transport/presenter"
@@ -48,7 +50,7 @@ type MemberLevelPricing interface {
 
 // LocalProductMappingReader 按本地商品 ID 读取上游映射。
 type LocalProductMappingReader interface {
-	GetByLocalProductID(productID uint) (*models.ProductMapping, error)
+	GetByLocalProductID(productID uint) (*mappingdomain.Mapping, error)
 }
 
 // RelatedPostReader 是商品详情消费方所需的最小 Content 读取接口。

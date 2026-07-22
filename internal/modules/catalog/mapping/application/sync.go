@@ -1,4 +1,4 @@
-package mapping
+package application
 
 import (
 	"context"
@@ -8,6 +8,10 @@ import (
 	"sync"
 	"time"
 
+	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
+
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -15,7 +19,6 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/dujiao-next/internal/upstream"
@@ -30,7 +33,7 @@ func (s *Service) SyncProduct(mappingID uint) error {
 		return err
 	}
 	if mapping == nil {
-		return ErrMappingNotFound
+		return mappingcontract.ErrMappingNotFound
 	}
 
 	conn, err := s.connections.GetByID(mapping.ConnectionID)
@@ -38,7 +41,7 @@ func (s *Service) SyncProduct(mappingID uint) error {
 		return err
 	}
 	if conn == nil {
-		return s.errors.ConnectionNotFound
+		return siteconnectioncontract.ErrNotFound
 	}
 
 	adapter, err := s.connections.GetAdapter(conn)
@@ -54,12 +57,12 @@ func (s *Service) SyncProduct(mappingID uint) error {
 		// 上游软删除 → 标记本地为 deleted，自动停用映射
 		if errors.Is(err, upstream.ErrUpstreamProductDeleted) {
 			now := time.Now()
-			return s.markUpstreamUnavailable(mapping, models.UpstreamStatusDeleted, now)
+			return s.markUpstreamUnavailable(mapping, mappingdomain.UpstreamStatusDeleted, now)
 		}
 		// 旧版上游下架兜底（新版上游下架返回 200 + is_active=false，走下方分支）
 		if errors.Is(err, upstream.ErrUpstreamProductUnavailable) {
 			now := time.Now()
-			return s.markUpstreamUnavailable(mapping, models.UpstreamStatusInactive, now)
+			return s.markUpstreamUnavailable(mapping, mappingdomain.UpstreamStatusInactive, now)
 		}
 		return fmt.Errorf("fetch upstream product: %w", err)
 	}
@@ -68,7 +71,7 @@ func (s *Service) SyncProduct(mappingID uint) error {
 
 	// 上游 200 但 is_active=false → 视为下架
 	if !upProduct.IsActive {
-		return s.markUpstreamUnavailable(mapping, models.UpstreamStatusInactive, now)
+		return s.markUpstreamUnavailable(mapping, mappingdomain.UpstreamStatusInactive, now)
 	}
 
 	// ── 1. 同步本地商品字段（表单配置、上下架状态） ──
@@ -101,7 +104,7 @@ func (s *Service) SyncProduct(mappingID uint) error {
 	}
 
 	// 构建已有映射查找表（按上游 SKU ID）
-	existingByUpstreamID := make(map[uint]*models.SKUMapping, len(skuMappings))
+	existingByUpstreamID := make(map[uint]*mappingdomain.SKUMapping, len(skuMappings))
 	for i := range skuMappings {
 		existingByUpstreamID[skuMappings[i].UpstreamSKUID] = &skuMappings[i]
 	}
@@ -170,7 +173,7 @@ func (s *Service) SyncProduct(mappingID uint) error {
 			continue
 		}
 
-		newMapping := &models.SKUMapping{
+		newMapping := &mappingdomain.SKUMapping{
 			ProductMappingID: mappingID,
 			LocalSKUID:       newLocalSKU.ID,
 			UpstreamSKUID:    upSKU.ID,
@@ -206,12 +209,12 @@ func (s *Service) SyncProduct(mappingID uint) error {
 		upFulfillment = constants.FulfillmentTypeManual
 	}
 	mapping.UpstreamFulfillmentType = upFulfillment
-	mapping.UpstreamStatus = models.UpstreamStatusActive
+	mapping.UpstreamStatus = mappingdomain.UpstreamStatusActive
 	mapping.LastSyncedAt = &now
 	return s.mappings.Update(mapping)
 }
 
-func (s *Service) syncUpstreamWholesalePrices(mapping *models.ProductMapping, localProductID uint, conn *siteconnectiondomain.Connection, upProduct *upstream.UpstreamProduct) error {
+func (s *Service) syncUpstreamWholesalePrices(mapping *mappingdomain.Mapping, localProductID uint, conn *siteconnectiondomain.Connection, upProduct *upstream.UpstreamProduct) error {
 	if s == nil || mapping == nil || conn == nil || upProduct == nil || localProductID == 0 || len(upProduct.WholesalePrices) == 0 {
 		return nil
 	}
@@ -247,13 +250,13 @@ func (s *Service) syncUpstreamWholesalePrices(mapping *models.ProductMapping, lo
 }
 
 // markUpstreamUnavailable 上游下架/删除时的统一处理
-// status: models.UpstreamStatusInactive(下架) / models.UpstreamStatusDeleted(已删除)
+// status: mappingdomain.UpstreamStatusInactive(下架) / mappingdomain.UpstreamStatusDeleted(已删除)
 //   - 本地 Product 下架（IsActive=false），不删除
 //   - 所有 SKUMapping 标记为 UpstreamIsActive=false, UpstreamStock=0
 //   - 所有本地 SKU 下架
 //   - mapping.UpstreamStatus 写入对应状态
 //   - status==deleted 时同时停用映射（IsActive=false），避免后续白白调上游
-func (s *Service) markUpstreamUnavailable(mapping *models.ProductMapping, status string, now time.Time) error {
+func (s *Service) markUpstreamUnavailable(mapping *mappingdomain.Mapping, status string, now time.Time) error {
 	// 本地商品下架
 	localProduct, err := s.products.GetByID(strconv.FormatUint(uint64(mapping.LocalProductID), 10))
 	if err == nil && localProduct != nil && localProduct.IsActive {
@@ -278,7 +281,7 @@ func (s *Service) markUpstreamUnavailable(mapping *models.ProductMapping, status
 
 	mapping.UpstreamStatus = status
 	mapping.LastSyncedAt = &now
-	if status == models.UpstreamStatusDeleted {
+	if status == mappingdomain.UpstreamStatusDeleted {
 		mapping.IsActive = false
 	}
 	if err := s.mappings.Update(mapping); err != nil {
@@ -320,7 +323,7 @@ func (s *Service) SyncAllStock(cfg settingsintegration.UpstreamSyncConfig) error
 	}
 
 	// ── 按连接分组 ──
-	byConn := make(map[uint][]models.ProductMapping)
+	byConn := make(map[uint][]mappingdomain.Mapping)
 	for _, m := range mappings {
 		byConn[m.ConnectionID] = append(byConn[m.ConnectionID], m)
 	}
@@ -335,7 +338,7 @@ func (s *Service) SyncAllStock(cfg settingsintegration.UpstreamSyncConfig) error
 	for connID, connMappings := range byConn {
 		wg.Add(1)
 		sem <- struct{}{}
-		go func(connID uint, connMappings []models.ProductMapping) {
+		go func(connID uint, connMappings []mappingdomain.Mapping) {
 			defer wg.Done()
 			defer func() { <-sem }()
 			if err := s.SyncConnectionStock(connID, connMappings, cfg.SyncPageSize, cfg.SyncMaxPages); err != nil {
@@ -358,7 +361,7 @@ func (s *Service) SyncAllStock(cfg settingsintegration.UpstreamSyncConfig) error
 //   - 本地缓存 upstream_stock >= requiredQty → 缓存充足，返回 nil
 //   - 否则触发实时同步上游单品，再读缓存：
 //     · 同步失败 → 返回 nil（容忍上游抖动，让缓存继续兜底）
-//     · 同步后仍 < requiredQty → 返回 ErrUpstreamStockInsufficient
+//     · 同步后仍 < requiredQty → 返回 mappingcontract.ErrUpstreamStockInsufficient
 //
 // 后台 "pre_order_stock_check_enabled" 关闭时整个方法直接返回 nil。
 func (s *Service) EnsureUpstreamStockForOrder(localSKUID uint, requiredQty int) error {
@@ -414,7 +417,7 @@ func (s *Service) EnsureUpstreamStockForOrder(localSKUID uint, requiredQty int) 
 	if refreshed.UpstreamStock < 0 || refreshed.UpstreamStock >= requiredQty {
 		return nil
 	}
-	return ErrUpstreamStockInsufficient
+	return mappingcontract.ErrUpstreamStockInsufficient
 }
 
 // fullSyncIntervalFloor 强制全量同步的下限：任何情况下两次全量间隔至少 24h，
@@ -444,7 +447,7 @@ func (s *Service) computeFullSyncInterval() time.Duration {
 }
 
 // SyncConnectionStock 按连接批量同步：一次 ListProducts 拉取所有商品，内存匹配映射
-func (s *Service) SyncConnectionStock(connectionID uint, connMappings []models.ProductMapping, pageSize int, maxPages int) error {
+func (s *Service) SyncConnectionStock(connectionID uint, connMappings []mappingdomain.Mapping, pageSize int, maxPages int) error {
 	conn, err := s.connections.GetByID(connectionID)
 	if err != nil || conn == nil {
 		return fmt.Errorf("get connection %d: %w", connectionID, err)
@@ -576,7 +579,7 @@ func (s *Service) SyncConnectionStock(connectionID uint, connMappings []models.P
 			// 全量模式 + 上游真实支持 include_inactive + 本次拉取完整：
 			// 下架商品也应在列表中，仍然 missing 即说明上游已软删除。
 			if includesInactive && fetchComplete {
-				_ = s.markUpstreamUnavailable(mapping, models.UpstreamStatusDeleted, now)
+				_ = s.markUpstreamUnavailable(mapping, mappingdomain.UpstreamStatusDeleted, now)
 				continue
 			}
 			// 拉取不完整（分页异常 / 翻页超限）或旧上游不支持 include_inactive：
@@ -592,7 +595,7 @@ func (s *Service) SyncConnectionStock(connectionID uint, connMappings []models.P
 		}
 		// 上游 is_active=false → 标记为 inactive
 		if !upProduct.IsActive {
-			_ = s.markUpstreamUnavailable(mapping, models.UpstreamStatusInactive, now)
+			_ = s.markUpstreamUnavailable(mapping, mappingdomain.UpstreamStatusInactive, now)
 			continue
 		}
 		s.syncProductFromData(mapping, conn, &upProduct, &now)
@@ -617,7 +620,7 @@ func (s *Service) SyncConnectionStock(connectionID uint, connMappings []models.P
 
 // syncProductFromData 使用已拉取的上游数据同步单个映射（不再发 HTTP 请求）
 // 调用方应保证 upProduct.IsActive == true（下架/删除分支由 caller 处理）
-func (s *Service) syncProductFromData(mapping *models.ProductMapping, conn *siteconnectiondomain.Connection, upProduct *upstream.UpstreamProduct, now *time.Time) {
+func (s *Service) syncProductFromData(mapping *mappingdomain.Mapping, conn *siteconnectiondomain.Connection, upProduct *upstream.UpstreamProduct, now *time.Time) {
 	// ── 1. 同步本地商品字段 ──
 	localProduct, err := s.products.GetByID(strconv.FormatUint(uint64(mapping.LocalProductID), 10))
 	if err != nil || localProduct == nil {
@@ -640,7 +643,7 @@ func (s *Service) syncProductFromData(mapping *models.ProductMapping, conn *site
 		upstreamSKUMap[us.ID] = us
 	}
 
-	existingByUpstreamID := make(map[uint]*models.SKUMapping, len(skuMappings))
+	existingByUpstreamID := make(map[uint]*mappingdomain.SKUMapping, len(skuMappings))
 	for i := range skuMappings {
 		existingByUpstreamID[skuMappings[i].UpstreamSKUID] = &skuMappings[i]
 	}
@@ -721,7 +724,7 @@ func (s *Service) syncProductFromData(mapping *models.ProductMapping, conn *site
 		if err := s.skus.Create(&newLocalSKU); err != nil {
 			continue
 		}
-		newSKUMapping := &models.SKUMapping{
+		newSKUMapping := &mappingdomain.SKUMapping{
 			ProductMappingID: mapping.ID,
 			LocalSKUID:       newLocalSKU.ID,
 			UpstreamSKUID:    upSKU.ID,
@@ -756,7 +759,7 @@ func (s *Service) syncProductFromData(mapping *models.ProductMapping, conn *site
 		upFulfillment = constants.FulfillmentTypeManual
 	}
 	mapping.UpstreamFulfillmentType = upFulfillment
-	mapping.UpstreamStatus = models.UpstreamStatusActive
+	mapping.UpstreamStatus = mappingdomain.UpstreamStatusActive
 	mapping.LastSyncedAt = now
 	_ = s.mappings.Update(mapping)
 }

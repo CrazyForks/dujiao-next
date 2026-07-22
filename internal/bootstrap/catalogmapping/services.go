@@ -7,9 +7,9 @@ import (
 
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 
-	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
+	mappingapp "github.com/dujiao-next/internal/modules/catalog/mapping/application"
+	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
-	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
 
 	"gorm.io/gorm"
 )
@@ -29,14 +29,14 @@ type SKUStore interface {
 
 // MappingStore 是映射持久化与事务绑定能力。
 type MappingStore interface {
-	catalogmapping.MappingRepository
-	BindTx(tx *gorm.DB) catalogmapping.MappingRepository
+	mappingcontract.MappingRepository
+	BindTx(tx *gorm.DB) mappingcontract.MappingRepository
 }
 
 // SKUMappingStore 是 SKU 映射持久化与事务绑定能力。
 type SKUMappingStore interface {
-	catalogmapping.SKUMappingRepository
-	BindTx(tx *gorm.DB) catalogmapping.SKUMappingRepository
+	mappingcontract.SKUMappingRepository
+	BindTx(tx *gorm.DB) mappingcontract.SKUMappingRepository
 }
 
 // Dependencies 集中声明 Catalog Mapping 模块的启动装配依赖。
@@ -47,12 +47,12 @@ type Dependencies struct {
 	SKUs        SKUStore
 	Categories  categorycontract.Repository
 	Connections *siteconnectionapp.Service
-	Media       catalogmapping.MediaRecorder
+	Media       mappingcontract.MediaRecorder
 }
 
 // New 创建可直接注入调用方的 Catalog Mapping 应用服务。
-func New(dependencies Dependencies) (*catalogmapping.Service, error) {
-	core, err := catalogmapping.NewService(catalogmapping.Options{
+func New(dependencies Dependencies) (*mappingapp.Service, error) {
+	core, err := mappingapp.NewService(mappingapp.Options{
 		Mappings:     dependencies.Mappings,
 		SKUMappings:  dependencies.SKUMappings,
 		Products:     dependencies.Products,
@@ -61,10 +61,6 @@ func New(dependencies Dependencies) (*catalogmapping.Service, error) {
 		Connections:  dependencies.Connections,
 		Media:        dependencies.Media,
 		Transactions: newUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.Mappings, dependencies.SKUMappings),
-		Errors: catalogmapping.ErrorSet{
-			ConnectionNotFound:     siteconnectioncontract.ErrNotFound,
-			ProductCategoryInvalid: productcontract.ErrProductCategoryInvalid,
-		},
 	})
 	if err != nil {
 		return nil, err
@@ -85,7 +81,7 @@ func newUnitOfWork(
 	skus SKUStore,
 	mappings MappingStore,
 	skuMappings SKUMappingStore,
-) catalogmapping.UnitOfWork {
+) mappingcontract.UnitOfWork {
 	return &unitOfWork{
 		products:    products,
 		skus:        skus,
@@ -94,7 +90,7 @@ func newUnitOfWork(
 	}
 }
 
-func (unit *unitOfWork) WithinTransaction(fn func(catalogmapping.ImportRepositories) error) error {
+func (unit *unitOfWork) WithinTransaction(fn func(mappingcontract.ImportRepositories) error) error {
 	if fn == nil {
 		return nil
 	}
@@ -102,19 +98,19 @@ func (unit *unitOfWork) WithinTransaction(fn func(catalogmapping.ImportRepositor
 		return errors.New("product transaction repository is nil")
 	}
 	return unit.products.Transaction(func(tx *gorm.DB) error {
-		var skus catalogmapping.ImportTxSKURepository
+		var skus mappingcontract.ImportTxSKURepository
 		if unit.skus != nil {
 			skus = unit.skus.BindTx(tx)
 		}
-		var mappings catalogmapping.ImportTxMappingRepository
+		var mappings mappingcontract.ImportTxMappingRepository
 		if unit.mappings != nil {
 			mappings = unit.mappings.BindTx(tx)
 		}
-		var skuMappings catalogmapping.ImportTxSKUMappingRepository
+		var skuMappings mappingcontract.ImportTxSKUMappingRepository
 		if unit.skuMappings != nil {
 			skuMappings = unit.skuMappings.BindTx(tx)
 		}
-		return fn(catalogmapping.ImportRepositories{
+		return fn(mappingcontract.ImportRepositories{
 			Products:    unit.products.BindTx(tx),
 			SKUs:        skus,
 			Mappings:    mappings,

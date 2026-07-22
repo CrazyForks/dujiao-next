@@ -3,10 +3,11 @@ package producthttp
 import (
 	"strings"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
 )
 
@@ -129,7 +130,7 @@ func (h *PublicHandler) decorateUpstreamStock(product *productdomain.Product, it
 	}
 
 	// 按本地 SKU ID 索引映射
-	skuMappingByLocal := make(map[uint]*models.SKUMapping, len(skuMappings))
+	skuMappingByLocal := make(map[uint]*mappingdomain.SKUMapping, len(skuMappings))
 	for i := range skuMappings {
 		skuMappingByLocal[skuMappings[i].LocalSKUID] = &skuMappings[i]
 	}

@@ -5,11 +5,12 @@ import (
 	"strconv"
 	"strings"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/models"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
@@ -47,12 +48,12 @@ type LowStockThresholdProvider interface {
 
 // ProductMappingLookup 用于把 upstream 商品展示为真实交付类型与库存。
 type ProductMappingLookup interface {
-	ListByLocalProductIDs(productIDs []uint) ([]models.ProductMapping, error)
+	ListByLocalProductIDs(productIDs []uint) ([]mappingdomain.Mapping, error)
 }
 
 // SKUMappingLookup 读取上游 SKU 库存映射。
 type SKUMappingLookup interface {
-	ListByProductMapping(productMappingID uint) ([]models.SKUMapping, error)
+	ListByProductMapping(productMappingID uint) ([]mappingdomain.SKUMapping, error)
 }
 
 // AdminProductHandler 处理后台商品管理请求。
@@ -577,7 +578,7 @@ func (h *AdminProductHandler) applyUpstreamDisplayTypes(products []productdomain
 			continue
 		}
 
-		skuMappingByLocal := make(map[uint]*models.SKUMapping, len(skuMappings))
+		skuMappingByLocal := make(map[uint]*mappingdomain.SKUMapping, len(skuMappings))
 		for i := range skuMappings {
 			skuMappingByLocal[skuMappings[i].LocalSKUID] = &skuMappings[i]
 		}

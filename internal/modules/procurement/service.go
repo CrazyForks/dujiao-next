@@ -4,6 +4,8 @@ import (
 	"errors"
 	"time"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	"github.com/dujiao-next/internal/models"
@@ -54,11 +56,11 @@ type OrderRepository interface {
 }
 
 type ProductMappingRepository interface {
-	GetByLocalProductID(productID uint) (*models.ProductMapping, error)
+	GetByLocalProductID(productID uint) (*mappingdomain.Mapping, error)
 }
 
 type SKUMappingRepository interface {
-	GetByLocalSKUID(skuID uint) (*models.SKUMapping, error)
+	GetByLocalSKUID(skuID uint) (*mappingdomain.SKUMapping, error)
 }
 
 // ConnectionProvider 隔离站点连接的读取与上游协议适配器构造。

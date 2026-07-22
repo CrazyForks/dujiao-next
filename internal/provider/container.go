@@ -14,8 +14,8 @@ import (
 	"github.com/dujiao-next/internal/modules/cart"
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
-	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
-	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
+	mappingapp "github.com/dujiao-next/internal/modules/catalog/mapping/application"
+	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
@@ -159,7 +159,7 @@ type Container struct {
 	ResellerOperationsService     *reseller.OperationsService
 	ApiCredentialService          *apicredential.Service
 	SiteConnectionService         *siteconnectionapp.Service
-	ProductMappingService         *catalogmapping.Service
+	ProductMappingService         *mappingapp.Service
 	ProcurementOrderService       *procurement.Service
 	DownstreamCallbackService     *downstreamcallback.Service
 	ReconciliationService         *reconciliation.Service

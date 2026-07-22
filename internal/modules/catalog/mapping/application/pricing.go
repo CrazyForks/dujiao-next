@@ -1,4 +1,4 @@
-package mapping
+package application
 
 import "github.com/shopspring/decimal"
 

@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -18,10 +20,10 @@ import (
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
-	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
-	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
+	mappingapp "github.com/dujiao-next/internal/modules/catalog/mapping/application"
+	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
+	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -43,8 +45,8 @@ func newTestMappingService(
 	productSKURepo SKUStore,
 	categoryRepo categorycontract.Repository,
 	connService *siteconnectionapp.Service,
-	mediaRecorder catalogmapping.MediaRecorder,
-) (*catalogmapping.Service, error) {
+	mediaRecorder mappingcontract.MediaRecorder,
+) (*mappingapp.Service, error) {
 	return New(Dependencies{
 		Mappings:    mappingRepo,
 		SKUMappings: skuMappingRepo,
@@ -57,7 +59,7 @@ func newTestMappingService(
 }
 
 func TestNewRejectsNilMediaRecorder(t *testing.T) {
-	if _, err := newTestMappingService(nil, nil, nil, nil, nil, nil, nil); !errors.Is(err, catalogmapping.ErrMediaRecorderRequired) {
+	if _, err := newTestMappingService(nil, nil, nil, nil, nil, nil, nil); !errors.Is(err, mappingcontract.ErrMediaRecorderRequired) {
 		t.Fatalf("error = %v, want ErrMediaRecorderRequired", err)
 	}
 }
@@ -66,27 +68,27 @@ type failingSKUMappingRepo struct {
 	err error
 }
 
-func (r *failingSKUMappingRepo) GetByLocalSKUID(skuID uint) (*models.SKUMapping, error) {
+func (r *failingSKUMappingRepo) GetByLocalSKUID(skuID uint) (*mappingdomain.SKUMapping, error) {
 	return nil, nil
 }
 
-func (r *failingSKUMappingRepo) ListByProductMapping(productMappingID uint) ([]models.SKUMapping, error) {
+func (r *failingSKUMappingRepo) ListByProductMapping(productMappingID uint) ([]mappingdomain.SKUMapping, error) {
 	return nil, nil
 }
 
-func (r *failingSKUMappingRepo) ListByProductMappingIDs(productMappingIDs []uint) ([]models.SKUMapping, error) {
+func (r *failingSKUMappingRepo) ListByProductMappingIDs(productMappingIDs []uint) ([]mappingdomain.SKUMapping, error) {
 	return nil, nil
 }
 
-func (r *failingSKUMappingRepo) BindTx(tx *gorm.DB) catalogmapping.SKUMappingRepository {
+func (r *failingSKUMappingRepo) BindTx(tx *gorm.DB) mappingcontract.SKUMappingRepository {
 	return r
 }
 
-func (r *failingSKUMappingRepo) Create(mapping *models.SKUMapping) error {
+func (r *failingSKUMappingRepo) Create(mapping *mappingdomain.SKUMapping) error {
 	return r.err
 }
 
-func (r *failingSKUMappingRepo) Update(mapping *models.SKUMapping) error {
+func (r *failingSKUMappingRepo) Update(mapping *mappingdomain.SKUMapping) error {
 	return nil
 }
 
@@ -105,7 +107,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
 		&siteconnectiondomain.Connection{},
-		&models.ProductMapping{},
+		&mappingdomain.Mapping{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -198,7 +200,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 	}
 
 	var mappingCount int64
-	if err := db.Model(&models.ProductMapping{}).Count(&mappingCount).Error; err != nil {
+	if err := db.Model(&mappingdomain.Mapping{}).Count(&mappingCount).Error; err != nil {
 		t.Fatalf("count product mappings failed: %v", err)
 	}
 	if mappingCount != 0 {
@@ -207,7 +209,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 }
 
 // setupMappingWithUpstreamHandler 准备一份本地映射 + 启动可定制响应的上游 httptest server
-func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.HandlerFunc) (*catalogmapping.Service, *gorm.DB, *models.ProductMapping, func()) {
+func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.HandlerFunc) (*mappingapp.Service, *gorm.DB, *mappingdomain.Mapping, func()) {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -218,8 +220,8 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
 		&siteconnectiondomain.Connection{},
-		&models.ProductMapping{},
-		&models.SKUMapping{},
+		&mappingdomain.Mapping{},
+		&mappingdomain.SKUMapping{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -264,17 +266,17 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 
 	mappingRepo := mappinggormstore.NewMappingStore(db)
 	skuMappingRepo := mappinggormstore.NewSKUMappingStore(db)
-	mapping := &models.ProductMapping{
+	mapping := &mappingdomain.Mapping{
 		ConnectionID:      conn.ID,
 		LocalProductID:    product.ID,
 		UpstreamProductID: 101,
 		IsActive:          true,
-		UpstreamStatus:    models.UpstreamStatusActive,
+		UpstreamStatus:    mappingdomain.UpstreamStatusActive,
 	}
 	if err := mappingRepo.Create(mapping); err != nil {
 		t.Fatalf("create mapping failed: %v", err)
 	}
-	if err := skuMappingRepo.Create(&models.SKUMapping{
+	if err := skuMappingRepo.Create(&mappingdomain.SKUMapping{
 		ProductMappingID: mapping.ID,
 		LocalSKUID:       sku.ID,
 		UpstreamSKUID:    201,
@@ -310,11 +312,11 @@ func TestSyncProductMarksDeletedWhenUpstreamSoftDeleted(t *testing.T) {
 		t.Fatalf("SyncProduct returned error: %v", err)
 	}
 
-	var got models.ProductMapping
+	var got mappingdomain.Mapping
 	if err := db.First(&got, mapping.ID).Error; err != nil {
 		t.Fatalf("reload mapping failed: %v", err)
 	}
-	if got.UpstreamStatus != models.UpstreamStatusDeleted {
+	if got.UpstreamStatus != mappingdomain.UpstreamStatusDeleted {
 		t.Fatalf("expected upstream_status=deleted, got %q", got.UpstreamStatus)
 	}
 	if got.IsActive {
@@ -329,7 +331,7 @@ func TestSyncProductMarksDeletedWhenUpstreamSoftDeleted(t *testing.T) {
 		t.Fatalf("expected local product to be deactivated")
 	}
 
-	var skuMapping models.SKUMapping
+	var skuMapping mappingdomain.SKUMapping
 	if err := db.Where("product_mapping_id = ?", mapping.ID).First(&skuMapping).Error; err != nil {
 		t.Fatalf("reload sku mapping failed: %v", err)
 	}
@@ -361,11 +363,11 @@ func TestSyncProductMarksInactiveWhenUpstreamReturnsInactive(t *testing.T) {
 		t.Fatalf("SyncProduct returned error: %v", err)
 	}
 
-	var got models.ProductMapping
+	var got mappingdomain.Mapping
 	if err := db.First(&got, mapping.ID).Error; err != nil {
 		t.Fatalf("reload mapping failed: %v", err)
 	}
-	if got.UpstreamStatus != models.UpstreamStatusInactive {
+	if got.UpstreamStatus != mappingdomain.UpstreamStatusInactive {
 		t.Fatalf("expected upstream_status=inactive, got %q", got.UpstreamStatus)
 	}
 	if !got.IsActive {
@@ -503,15 +505,15 @@ func TestSyncConnectionStockMarksDeletedWhenFullSyncMissing(t *testing.T) {
 	)
 	defer cleanup()
 
-	if err := svc.SyncConnectionStock(mapping.ConnectionID, []models.ProductMapping{*mapping}, 50, 200); err != nil {
+	if err := svc.SyncConnectionStock(mapping.ConnectionID, []mappingdomain.Mapping{*mapping}, 50, 200); err != nil {
 		t.Fatalf("syncConnectionStock returned error: %v", err)
 	}
 
-	var got models.ProductMapping
+	var got mappingdomain.Mapping
 	if err := db.First(&got, mapping.ID).Error; err != nil {
 		t.Fatalf("reload mapping failed: %v", err)
 	}
-	if got.UpstreamStatus != models.UpstreamStatusDeleted {
+	if got.UpstreamStatus != mappingdomain.UpstreamStatusDeleted {
 		t.Fatalf("expected upstream_status=deleted, got %q", got.UpstreamStatus)
 	}
 	if got.IsActive {
@@ -536,15 +538,15 @@ func TestSyncConnectionStockKeepsLegacyUpstreamMissing(t *testing.T) {
 	)
 	defer cleanup()
 
-	if err := svc.SyncConnectionStock(mapping.ConnectionID, []models.ProductMapping{*mapping}, 50, 200); err != nil {
+	if err := svc.SyncConnectionStock(mapping.ConnectionID, []mappingdomain.Mapping{*mapping}, 50, 200); err != nil {
 		t.Fatalf("syncConnectionStock returned error: %v", err)
 	}
 
-	var got models.ProductMapping
+	var got mappingdomain.Mapping
 	if err := db.First(&got, mapping.ID).Error; err != nil {
 		t.Fatalf("reload mapping failed: %v", err)
 	}
-	if got.UpstreamStatus != models.UpstreamStatusActive {
+	if got.UpstreamStatus != mappingdomain.UpstreamStatusActive {
 		t.Fatalf("legacy upstream missing must not change status, got %q", got.UpstreamStatus)
 	}
 	if !got.IsActive {
@@ -598,15 +600,15 @@ func TestSyncConnectionStockKeepsMappingWhenFullSyncIncomplete(t *testing.T) {
 	)
 	defer cleanup()
 
-	if err := svc.SyncConnectionStock(mapping.ConnectionID, []models.ProductMapping{*mapping}, 50, 200); err != nil {
+	if err := svc.SyncConnectionStock(mapping.ConnectionID, []mappingdomain.Mapping{*mapping}, 50, 200); err != nil {
 		t.Fatalf("syncConnectionStock returned error: %v", err)
 	}
 
-	var got models.ProductMapping
+	var got mappingdomain.Mapping
 	if err := db.First(&got, mapping.ID).Error; err != nil {
 		t.Fatalf("reload mapping failed: %v", err)
 	}
-	if got.UpstreamStatus != models.UpstreamStatusActive {
+	if got.UpstreamStatus != mappingdomain.UpstreamStatusActive {
 		t.Fatalf("incomplete full sync must not mark missing mapping as deleted, got %q", got.UpstreamStatus)
 	}
 	if !got.IsActive {
@@ -685,7 +687,7 @@ func TestEnsureUpstreamStockRejectsWhenUpstreamReportsZero(t *testing.T) {
 	defer cleanup()
 
 	// 强制把缓存 stock 降到不足
-	if err := db.Model(&models.SKUMapping{}).Where("upstream_sku_id = ?", 201).
+	if err := db.Model(&mappingdomain.SKUMapping{}).Where("upstream_sku_id = ?", 201).
 		Update("upstream_stock", 0).Error; err != nil {
 		t.Fatalf("reset stock failed: %v", err)
 	}
@@ -696,7 +698,7 @@ func TestEnsureUpstreamStockRejectsWhenUpstreamReportsZero(t *testing.T) {
 	}
 
 	err := svc.EnsureUpstreamStockForOrder(sku.ID, 1)
-	if !errors.Is(err, catalogmapping.ErrUpstreamStockInsufficient) {
+	if !errors.Is(err, mappingcontract.ErrUpstreamStockInsufficient) {
 		t.Fatalf("expected ErrUpstreamStockInsufficient, got %v", err)
 	}
 }
@@ -712,7 +714,7 @@ func TestEnsureUpstreamStockFailsOpenWhenUpstreamDown(t *testing.T) {
 	)
 	defer cleanup()
 
-	if err := db.Model(&models.SKUMapping{}).Where("upstream_sku_id = ?", 201).
+	if err := db.Model(&mappingdomain.SKUMapping{}).Where("upstream_sku_id = ?", 201).
 		Update("upstream_stock", 0).Error; err != nil {
 		t.Fatalf("reset stock failed: %v", err)
 	}
@@ -752,8 +754,8 @@ func TestSyncProductRestoresStatusWhenUpstreamRecovers(t *testing.T) {
 	defer cleanup()
 
 	// 先把 mapping 状态改为 inactive 模拟"之前已下架"
-	if err := db.Model(&models.ProductMapping{}).Where("id = ?", mapping.ID).
-		Update("upstream_status", models.UpstreamStatusInactive).Error; err != nil {
+	if err := db.Model(&mappingdomain.Mapping{}).Where("id = ?", mapping.ID).
+		Update("upstream_status", mappingdomain.UpstreamStatusInactive).Error; err != nil {
 		t.Fatalf("preset inactive failed: %v", err)
 	}
 
@@ -761,11 +763,11 @@ func TestSyncProductRestoresStatusWhenUpstreamRecovers(t *testing.T) {
 		t.Fatalf("SyncProduct returned error: %v", err)
 	}
 
-	var got models.ProductMapping
+	var got mappingdomain.Mapping
 	if err := db.First(&got, mapping.ID).Error; err != nil {
 		t.Fatalf("reload mapping failed: %v", err)
 	}
-	if got.UpstreamStatus != models.UpstreamStatusActive {
+	if got.UpstreamStatus != mappingdomain.UpstreamStatusActive {
 		t.Fatalf("expected upstream_status to recover to active, got %q", got.UpstreamStatus)
 	}
 }
@@ -782,8 +784,8 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
 		&siteconnectiondomain.Connection{},
-		&models.ProductMapping{},
-		&models.SKUMapping{},
+		&mappingdomain.Mapping{},
+		&mappingdomain.SKUMapping{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -830,7 +832,7 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 	}
 
 	_, importErr := svc.ImportUpstreamProduct(conn.ID, 202, 1, "")
-	if !errors.Is(importErr, catalogmapping.ErrUpstreamProductNotFound) {
+	if !errors.Is(importErr, mappingcontract.ErrUpstreamProductNotFound) {
 		t.Fatalf("expected ErrUpstreamProductNotFound for inactive upstream product, got %v", importErr)
 	}
 

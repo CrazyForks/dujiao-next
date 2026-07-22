@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
+
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
@@ -36,8 +38,8 @@ func setupProductStoreTest(t *testing.T) (*ProductStore, *gorm.DB) {
 		&productdomain.ProductSKU{},
 		&models.CardSecret{},
 		&siteconnectiondomain.Connection{},
-		&models.ProductMapping{},
-		&models.SKUMapping{},
+		&mappingdomain.Mapping{},
+		&mappingdomain.SKUMapping{},
 	); err != nil {
 		t.Fatalf("migrate product/sku/card_secret/mappings failed: %v", err)
 	}
