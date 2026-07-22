@@ -16,7 +16,7 @@ import (
 	"github.com/dujiao-next/internal/modules/notification"
 	"github.com/dujiao-next/internal/modules/procurement"
 	"github.com/dujiao-next/internal/modules/reconciliation"
-	"github.com/dujiao-next/internal/modules/siteconnection"
+	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 	telegrammodule "github.com/dujiao-next/internal/modules/telegram"
 	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
 	"github.com/dujiao-next/internal/service"
@@ -37,7 +37,7 @@ func (c *Container) initIntegrationServices() {
 		telegrammodule.NewNotifyService(c.SettingService, c.Config.TelegramAuth),
 	)
 	c.ApiCredentialService = apicredential.NewService(c.ApiCredentialRepo)
-	c.SiteConnectionService = siteconnection.NewService(c.SiteConnectionRepo, c.Config.App.SecretKey, "uploads")
+	c.SiteConnectionService = siteconnectionapp.NewService(c.SiteConnectionRepo, c.Config.App.SecretKey, "uploads")
 	mediaCore := content.NewMediaService(
 		contentgormstore.NewMediaStore(models.DB),
 		localfilestore.New(),

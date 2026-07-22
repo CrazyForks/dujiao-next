@@ -1,14 +1,13 @@
-package models
+package domain
 
 import (
 	"time"
 
 	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
 )
 
-// SiteConnection 对接连接表
-type SiteConnection struct {
+// Connection 表示一个上游站点连接。
+type Connection struct {
 	ID                 uint            `gorm:"primarykey" json:"id"`
 	Name               string          `gorm:"type:varchar(100);not null" json:"name"`
 	BaseURL            string          `gorm:"type:varchar(500);not null" json:"base_url"`
@@ -27,10 +26,10 @@ type SiteConnection struct {
 	AutoSyncPrice      bool            `gorm:"not null;default:false" json:"auto_sync_price"`                       // 同步时自动更新本地价格
 	CreatedAt          time.Time       `gorm:"index" json:"created_at"`
 	UpdatedAt          time.Time       `gorm:"index" json:"updated_at"`
-	DeletedAt          gorm.DeletedAt  `gorm:"index" json:"-"`
+	DeletedAt          *time.Time      `gorm:"index" json:"-"`
 }
 
 // TableName 指定表名
-func (SiteConnection) TableName() string {
+func (Connection) TableName() string {
 	return "site_connections"
 }

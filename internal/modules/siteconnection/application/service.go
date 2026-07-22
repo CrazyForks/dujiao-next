@@ -1,4 +1,4 @@
-package siteconnection
+package application
 
 import (
 	"context"
@@ -8,7 +8,8 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/crypto"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
+	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/shopspring/decimal"
@@ -20,25 +21,16 @@ type MarkupReapplier interface {
 	ReapplyMarkup(connectionID uint) (int, error)
 }
 
-// Repository 是连接服务所需的最小持久化端口。
-type Repository interface {
-	GetByID(id uint) (*models.SiteConnection, error)
-	Create(conn *models.SiteConnection) error
-	Update(conn *models.SiteConnection) error
-	Delete(id uint) error
-	List(filter ListFilter) ([]models.SiteConnection, int64, error)
-}
-
 // Service 对接连接服务。
 type Service struct {
-	connRepo        Repository
+	connRepo        siteconnectioncontract.Repository
 	encryptKey      []byte
 	uploadsDir      string
 	markupReapplier MarkupReapplier
 }
 
 // NewService 创建连接服务。
-func NewService(connRepo Repository, appSecretKey, uploadsDir string) *Service {
+func NewService(connRepo siteconnectioncontract.Repository, appSecretKey, uploadsDir string) *Service {
 	return &Service{
 		connRepo:   connRepo,
 		encryptKey: crypto.DeriveKey(appSecretKey),
@@ -52,12 +44,12 @@ func (s *Service) SetMarkupReapplier(r MarkupReapplier) {
 }
 
 // Create 创建连接
-func (s *Service) Create(input CreateInput) (*models.SiteConnection, error) {
+func (s *Service) Create(input CreateInput) (*siteconnectiondomain.Connection, error) {
 	if strings.TrimSpace(input.Name) == "" || strings.TrimSpace(input.BaseURL) == "" {
-		return nil, ErrInvalid
+		return nil, siteconnectioncontract.ErrInvalid
 	}
 	if strings.TrimSpace(input.ApiKey) == "" || strings.TrimSpace(input.ApiSecret) == "" {
-		return nil, ErrInvalid
+		return nil, siteconnectioncontract.ErrInvalid
 	}
 
 	protocol := strings.TrimSpace(input.Protocol)
@@ -84,7 +76,7 @@ func (s *Service) Create(input CreateInput) (*models.SiteConnection, error) {
 		roundingMode = "none"
 	}
 
-	conn := &models.SiteConnection{
+	conn := &siteconnectiondomain.Connection{
 		Name:               strings.TrimSpace(input.Name),
 		BaseURL:            strings.TrimRight(strings.TrimSpace(input.BaseURL), "/"),
 		ApiKey:             strings.TrimSpace(input.ApiKey),
@@ -107,13 +99,13 @@ func (s *Service) Create(input CreateInput) (*models.SiteConnection, error) {
 }
 
 // Update 更新连接
-func (s *Service) Update(id uint, input UpdateInput) (*models.SiteConnection, error) {
+func (s *Service) Update(id uint, input UpdateInput) (*siteconnectiondomain.Connection, error) {
 	conn, err := s.connRepo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	if conn == nil {
-		return nil, ErrNotFound
+		return nil, siteconnectioncontract.ErrNotFound
 	}
 
 	// 记录定价配置旧值，用于判断本次保存是否需要重算已映射商品的本地售价。
@@ -193,18 +185,18 @@ func (s *Service) Delete(id uint) error {
 		return err
 	}
 	if conn == nil {
-		return ErrNotFound
+		return siteconnectioncontract.ErrNotFound
 	}
 	return s.connRepo.Delete(id)
 }
 
 // GetByID 获取连接
-func (s *Service) GetByID(id uint) (*models.SiteConnection, error) {
+func (s *Service) GetByID(id uint) (*siteconnectiondomain.Connection, error) {
 	return s.connRepo.GetByID(id)
 }
 
 // List 列表查询
-func (s *Service) List(filter ListFilter) ([]models.SiteConnection, int64, error) {
+func (s *Service) List(filter siteconnectioncontract.ListFilter) ([]siteconnectiondomain.Connection, int64, error) {
 	return s.connRepo.List(filter)
 }
 
@@ -215,7 +207,7 @@ func (s *Service) SetStatus(id uint, status string) error {
 		return err
 	}
 	if conn == nil {
-		return ErrNotFound
+		return siteconnectioncontract.ErrNotFound
 	}
 	conn.Status = status
 	return s.connRepo.Update(conn)
@@ -228,7 +220,7 @@ func (s *Service) Ping(id uint) (*PingResult, error) {
 		return nil, err
 	}
 	if conn == nil {
-		return nil, ErrNotFound
+		return nil, siteconnectioncontract.ErrNotFound
 	}
 
 	// 解密 secret
@@ -237,7 +229,7 @@ func (s *Service) Ping(id uint) (*PingResult, error) {
 		return nil, err
 	}
 
-	adapter, err := upstream.NewAdapter(&models.SiteConnection{
+	adapter, err := upstream.NewAdapter(&siteconnectiondomain.Connection{
 		BaseURL:   conn.BaseURL,
 		ApiKey:    conn.ApiKey,
 		ApiSecret: decrypted,
@@ -279,13 +271,13 @@ func (s *Service) Ping(id uint) (*PingResult, error) {
 }
 
 // GetAdapter 获取连接的适配器（解密 secret 后构建）
-func (s *Service) GetAdapter(conn *models.SiteConnection) (upstream.Adapter, error) {
+func (s *Service) GetAdapter(conn *siteconnectiondomain.Connection) (upstream.Adapter, error) {
 	decrypted, err := s.decryptSecret(conn)
 	if err != nil {
 		return nil, err
 	}
 
-	return upstream.NewAdapter(&models.SiteConnection{
+	return upstream.NewAdapter(&siteconnectiondomain.Connection{
 		BaseURL:   conn.BaseURL,
 		ApiKey:    conn.ApiKey,
 		ApiSecret: decrypted,
@@ -293,7 +285,7 @@ func (s *Service) GetAdapter(conn *models.SiteConnection) (upstream.Adapter, err
 	}, s.uploadsDir)
 }
 
-func (s *Service) decryptSecret(conn *models.SiteConnection) (string, error) {
+func (s *Service) decryptSecret(conn *siteconnectiondomain.Connection) (string, error) {
 	return crypto.Decrypt(s.encryptKey, conn.ApiSecret)
 }
 

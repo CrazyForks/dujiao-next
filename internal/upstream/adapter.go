@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -173,7 +174,7 @@ type Adapter interface {
 }
 
 // NewAdapter 根据协议类型创建适配器
-func NewAdapter(conn *models.SiteConnection, uploadsDir string) (Adapter, error) {
+func NewAdapter(conn *siteconnectiondomain.Connection, uploadsDir string) (Adapter, error) {
 	switch conn.Protocol {
 	case constants.ConnectionProtocolDujiaoNext:
 		return NewDujiaoNextAdapter(conn, uploadsDir), nil

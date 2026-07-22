@@ -13,8 +13,9 @@ import (
 	"strings"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 
 	"github.com/google/uuid"
 )
@@ -53,7 +54,7 @@ type DujiaoNextAdapter struct {
 }
 
 // NewDujiaoNextAdapter 创建 Dujiao-Next 适配器
-func NewDujiaoNextAdapter(conn *models.SiteConnection, uploadsDir string) *DujiaoNextAdapter {
+func NewDujiaoNextAdapter(conn *siteconnectiondomain.Connection, uploadsDir string) *DujiaoNextAdapter {
 	return &DujiaoNextAdapter{
 		baseURL:    strings.TrimRight(conn.BaseURL, "/"),
 		apiKey:     conn.ApiKey,

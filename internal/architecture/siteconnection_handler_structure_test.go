@@ -1,38 +1,40 @@
 package architecture
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 )
 
-func TestSiteConnectionHTTPLivesInTransport(t *testing.T) {
+func TestSiteConnectionOwnsCompleteVerticalSlice(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "siteconnection")
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "siteconnection")
+	domainRoot := filepath.Join(moduleRoot, "domain")
+	contractRoot := filepath.Join(moduleRoot, "contract")
+	applicationRoot := filepath.Join(moduleRoot, "application")
+	storeRoot := filepath.Join(moduleRoot, "infrastructure", "gormstore")
+	transportRoot := filepath.Join(moduleRoot, "transport", "http")
 
-	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "types.go"), []string{
-		"CreateInput", "UpdateInput", "ListFilter", "PingResult",
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "connection.go"), []string{"Connection"})
+	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "repository.go"), []string{"ListFilter", "Repository"})
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "types.go"), []string{
+		"CreateInput", "UpdateInput", "PingResult",
 	})
-	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "service.go"), []string{"Service", "Repository"})
-	assertFileDeclaresFunctions(t, filepath.Join(moduleRoot, "service.go"), []string{"NewService"})
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "service.go"), []string{"Service"})
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "service.go"), []string{"NewService"})
+	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "store.go"), []string{"Store"})
+	assertFileDeclaresFunctions(t, filepath.Join(storeRoot, "store.go"), []string{"New"})
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{"RegisterAdminRoutes"})
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "admin_handler.go"), []string{
 		"AdminHandler", "AdminService", "MarkupReapplier",
 	})
-	assertDirectoryGoFileBudget(t, moduleRoot, 3)
-	assertDirectoryGoFileBudget(t, transportRoot, 3)
 
-	legacy := filepath.Join(repositoryRoot, "internal", "http", "handlers", "admin", "admin_site_connection.go")
-	if _, err := os.Stat(legacy); err == nil {
-		t.Fatalf("legacy site connection handler must stay removed: %s", legacy)
-	} else if !os.IsNotExist(err) {
-		t.Fatalf("stat legacy site connection handler: %v", err)
+	production, total := countDirectGoFiles(t, moduleRoot)
+	if production != 0 || total != 0 {
+		t.Fatalf("siteconnection module root must remain structural only, got production=%d total=%d", production, total)
 	}
-	legacyService := filepath.Join(repositoryRoot, "internal", "service", "site_connection_service.go")
-	if _, err := os.Stat(legacyService); err == nil {
-		t.Fatalf("legacy site connection service must stay removed: %s", legacyService)
-	} else if !os.IsNotExist(err) {
-		t.Fatalf("stat legacy site connection service: %v", err)
-	}
+	assertDirectoryGoFileBudget(t, domainRoot, 1)
+	assertDirectoryGoFileBudget(t, contractRoot, 2)
+	assertDirectoryGoFileBudget(t, applicationRoot, 2)
+	assertDirectoryGoFileBudget(t, storeRoot, 2)
+	assertDirectoryGoFileBudget(t, transportRoot, 3)
 }

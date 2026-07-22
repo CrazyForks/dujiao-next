@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
@@ -97,8 +99,8 @@ type CategoryRepository interface {
 
 // ConnectionProvider 隔离站点连接的读取与上游协议适配器构造。
 type ConnectionProvider interface {
-	GetByID(id uint) (*models.SiteConnection, error)
-	GetAdapter(conn *models.SiteConnection) (upstream.Adapter, error)
+	GetByID(id uint) (*siteconnectiondomain.Connection, error)
+	GetAdapter(conn *siteconnectiondomain.Connection) (upstream.Adapter, error)
 }
 
 // MediaRecorder 是下载上游图片后所需的最小 Content 写入端口。

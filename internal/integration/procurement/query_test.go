@@ -9,7 +9,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
+	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -50,7 +50,7 @@ func TestProcurement_GetByID_DoesNotIncludeLocalRefundRecords(t *testing.T) {
 		t.Fatalf("create parent refund record: %v", err)
 	}
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
 	svc := newTestProcurementService(db, connSvc)
 
 	got, err := svc.GetByID(proc.ID)
@@ -81,7 +81,7 @@ func TestProcurement_FillParentOrderNo_BackfillsLocalRefundedAmountFromParent(t 
 	}
 
 	proc := createTestProcurementOrder(t, db, 1, child.ID, child.OrderNo, constants.ProcurementStatusAccepted)
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
 	svc := newTestProcurementService(db, connSvc)
 
 	got, err := svc.GetByID(proc.ID)
@@ -118,7 +118,7 @@ func TestProcurement_List_BackfillsChildLocalRefundedAmountFromParent(t *testing
 	}
 
 	proc := createTestProcurementOrder(t, db, 1, child.ID, child.OrderNo, constants.ProcurementStatusAccepted)
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
 	svc := newTestProcurementService(db, connSvc)
 
 	orders, total, err := svc.List(ListFilter{
@@ -161,7 +161,7 @@ func TestProcurement_List_DoesNotIncludeLocalRefundRecords(t *testing.T) {
 		t.Fatalf("create refund record: %v", err)
 	}
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
 	svc := newTestProcurementService(db, connSvc)
 
 	orders, total, err := svc.List(ListFilter{
@@ -210,8 +210,8 @@ func TestProcurement_GetByID_SyncsUpstreamRefundStatusAndRecords(t *testing.T) {
 	}))
 	defer server.Close()
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
-	conn, err := connSvc.Create(CreateConnectionInput{
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
+	conn, err := connSvc.Create(siteconnectionapp.CreateInput{
 		Name:      "upstream-refund",
 		BaseURL:   server.URL,
 		ApiKey:    "key",
@@ -280,8 +280,8 @@ func TestProcurement_List_SyncsUpstreamRefundStatusAndRecords(t *testing.T) {
 	}))
 	defer server.Close()
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
-	conn, err := connSvc.Create(CreateConnectionInput{
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
+	conn, err := connSvc.Create(siteconnectionapp.CreateInput{
 		Name:      "upstream-refund-list",
 		BaseURL:   server.URL,
 		ApiKey:    "key",
@@ -344,8 +344,8 @@ func TestProcurement_GetByID_WithoutUpstreamRefundOmitsRefundFields(t *testing.T
 	}))
 	defer server.Close()
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
-	conn, err := connSvc.Create(CreateConnectionInput{
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
+	conn, err := connSvc.Create(siteconnectionapp.CreateInput{
 		Name:      "upstream-no-refund",
 		BaseURL:   server.URL,
 		ApiKey:    "key",

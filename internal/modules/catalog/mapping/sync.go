@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/cache"
@@ -209,7 +211,7 @@ func (s *Service) SyncProduct(mappingID uint) error {
 	return s.mappings.Update(mapping)
 }
 
-func (s *Service) syncUpstreamWholesalePrices(mapping *models.ProductMapping, localProductID uint, conn *models.SiteConnection, upProduct *upstream.UpstreamProduct) error {
+func (s *Service) syncUpstreamWholesalePrices(mapping *models.ProductMapping, localProductID uint, conn *siteconnectiondomain.Connection, upProduct *upstream.UpstreamProduct) error {
 	if s == nil || mapping == nil || conn == nil || upProduct == nil || localProductID == 0 || len(upProduct.WholesalePrices) == 0 {
 		return nil
 	}
@@ -615,7 +617,7 @@ func (s *Service) SyncConnectionStock(connectionID uint, connMappings []models.P
 
 // syncProductFromData 使用已拉取的上游数据同步单个映射（不再发 HTTP 请求）
 // 调用方应保证 upProduct.IsActive == true（下架/删除分支由 caller 处理）
-func (s *Service) syncProductFromData(mapping *models.ProductMapping, conn *models.SiteConnection, upProduct *upstream.UpstreamProduct, now *time.Time) {
+func (s *Service) syncProductFromData(mapping *models.ProductMapping, conn *siteconnectiondomain.Connection, upProduct *upstream.UpstreamProduct, now *time.Time) {
 	// ── 1. 同步本地商品字段 ──
 	localProduct, err := s.products.GetByID(strconv.FormatUint(uint64(mapping.LocalProductID), 10))
 	if err != nil || localProduct == nil {

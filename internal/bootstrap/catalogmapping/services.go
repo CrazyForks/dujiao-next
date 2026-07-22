@@ -8,7 +8,8 @@ import (
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
-	"github.com/dujiao-next/internal/modules/siteconnection"
+	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
+	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
 
 	"gorm.io/gorm"
 )
@@ -45,7 +46,7 @@ type Dependencies struct {
 	Products    ProductStore
 	SKUs        SKUStore
 	Categories  categorycontract.Repository
-	Connections *siteconnection.Service
+	Connections *siteconnectionapp.Service
 	Media       catalogmapping.MediaRecorder
 }
 
@@ -61,7 +62,7 @@ func New(dependencies Dependencies) (*catalogmapping.Service, error) {
 		Media:        dependencies.Media,
 		Transactions: newUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.Mappings, dependencies.SKUMappings),
 		Errors: catalogmapping.ErrorSet{
-			ConnectionNotFound:     siteconnection.ErrNotFound,
+			ConnectionNotFound:     siteconnectioncontract.ErrNotFound,
 			ProductCategoryInvalid: productcontract.ErrProductCategoryInvalid,
 		},
 	})

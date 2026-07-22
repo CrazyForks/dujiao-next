@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
@@ -39,15 +41,15 @@ type mappingConnectionProvider struct {
 	adapter upstream.Adapter
 }
 
-func (p *mappingConnectionProvider) GetByID(id uint) (*models.SiteConnection, error) {
-	var conn models.SiteConnection
+func (p *mappingConnectionProvider) GetByID(id uint) (*siteconnectiondomain.Connection, error) {
+	var conn siteconnectiondomain.Connection
 	if err := p.db.First(&conn, id).Error; err != nil {
 		return nil, err
 	}
 	return &conn, nil
 }
 
-func (p *mappingConnectionProvider) GetAdapter(conn *models.SiteConnection) (upstream.Adapter, error) {
+func (p *mappingConnectionProvider) GetAdapter(conn *siteconnectiondomain.Connection) (upstream.Adapter, error) {
 	return p.adapter, nil
 }
 
@@ -85,7 +87,7 @@ func setupAdminHandlerTest(t *testing.T, upstreamHandler http.HandlerFunc) (*map
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.SiteConnection{},
+		&siteconnectiondomain.Connection{},
 		&models.ProductMapping{},
 		&models.SKUMapping{},
 	); err != nil {
@@ -96,7 +98,7 @@ func setupAdminHandlerTest(t *testing.T, upstreamHandler http.HandlerFunc) (*map
 	categoryRepo := categorygormstore.NewCategoryStore(db)
 	categoryService := categoryapp.NewService(categoryRepo)
 
-	conn := models.SiteConnection{
+	conn := siteconnectiondomain.Connection{
 		Name:      "upstream",
 		BaseURL:   server.URL,
 		ApiKey:    "test-key",

@@ -5,8 +5,9 @@ import (
 
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/siteconnection"
+	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
+	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
@@ -14,12 +15,12 @@ import (
 
 // AdminService 是后台站点对接连接端口。
 type AdminService interface {
-	List(filter siteconnection.ListFilter) ([]models.SiteConnection, int64, error)
-	GetByID(id uint) (*models.SiteConnection, error)
-	Create(input siteconnection.CreateInput) (*models.SiteConnection, error)
-	Update(id uint, input siteconnection.UpdateInput) (*models.SiteConnection, error)
+	List(filter siteconnectioncontract.ListFilter) ([]siteconnectiondomain.Connection, int64, error)
+	GetByID(id uint) (*siteconnectiondomain.Connection, error)
+	Create(input siteconnectionapp.CreateInput) (*siteconnectiondomain.Connection, error)
+	Update(id uint, input siteconnectionapp.UpdateInput) (*siteconnectiondomain.Connection, error)
 	Delete(id uint) error
-	Ping(id uint) (*siteconnection.PingResult, error)
+	Ping(id uint) (*siteconnectionapp.PingResult, error)
 	SetStatus(id uint, status string) error
 }
 
@@ -52,7 +53,7 @@ func NewAdminHandler(connections AdminService, markup MarkupReapplier) *AdminHan
 func (h *AdminHandler) GetSiteConnections(c *gin.Context) {
 	page, pageSize := ginutil.ParsePagination(c)
 
-	conns, total, err := h.connections.List(siteconnection.ListFilter{
+	conns, total, err := h.connections.List(siteconnectioncontract.ListFilter{
 		Page:     page,
 		PageSize: pageSize,
 	})
@@ -88,7 +89,7 @@ func (h *AdminHandler) GetSiteConnection(c *gin.Context) {
 
 // CreateSiteConnection 创建对接连接
 func (h *AdminHandler) CreateSiteConnection(c *gin.Context) {
-	var input siteconnection.CreateInput
+	var input siteconnectionapp.CreateInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
@@ -96,7 +97,7 @@ func (h *AdminHandler) CreateSiteConnection(c *gin.Context) {
 
 	conn, err := h.connections.Create(input)
 	if err != nil {
-		if errors.Is(err, siteconnection.ErrInvalid) {
+		if errors.Is(err, siteconnectioncontract.ErrInvalid) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.connection_invalid", nil)
 			return
 		}
@@ -115,7 +116,7 @@ func (h *AdminHandler) UpdateSiteConnection(c *gin.Context) {
 		return
 	}
 
-	var input siteconnection.UpdateInput
+	var input siteconnectionapp.UpdateInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
@@ -123,7 +124,7 @@ func (h *AdminHandler) UpdateSiteConnection(c *gin.Context) {
 
 	conn, err := h.connections.Update(id, input)
 	if err != nil {
-		if errors.Is(err, siteconnection.ErrNotFound) {
+		if errors.Is(err, siteconnectioncontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
@@ -143,7 +144,7 @@ func (h *AdminHandler) DeleteSiteConnection(c *gin.Context) {
 	}
 
 	if err := h.connections.Delete(id); err != nil {
-		if errors.Is(err, siteconnection.ErrNotFound) {
+		if errors.Is(err, siteconnectioncontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
@@ -164,7 +165,7 @@ func (h *AdminHandler) PingSiteConnection(c *gin.Context) {
 
 	result, err := h.connections.Ping(id)
 	if err != nil {
-		if errors.Is(err, siteconnection.ErrNotFound) {
+		if errors.Is(err, siteconnectioncontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
@@ -185,7 +186,7 @@ func (h *AdminHandler) ReapplyConnectionMarkup(c *gin.Context) {
 
 	count, err := h.markup.ReapplyMarkup(id)
 	if err != nil {
-		if errors.Is(err, siteconnection.ErrNotFound) {
+		if errors.Is(err, siteconnectioncontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}
@@ -211,7 +212,7 @@ func (h *AdminHandler) UpdateSiteConnectionStatus(c *gin.Context) {
 	}
 
 	if err := h.connections.SetStatus(id, req.Status); err != nil {
-		if errors.Is(err, siteconnection.ErrNotFound) {
+		if errors.Is(err, siteconnectioncontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.connection_not_found", nil)
 			return
 		}

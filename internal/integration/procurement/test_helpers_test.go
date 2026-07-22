@@ -5,12 +5,15 @@ import (
 	"testing"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/models"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	"github.com/dujiao-next/internal/modules/procurement"
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/store/gormstore"
-	"github.com/dujiao-next/internal/modules/siteconnection"
+	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
+	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -21,14 +24,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type SiteConnectionService = siteconnection.Service
-type CreateConnectionInput = siteconnection.CreateInput
 type ListFilter = procurement.ListFilter
 
 var (
-	NewSiteConnectionService = siteconnection.NewService
-	ErrExists                = procurement.ErrExists
+	ErrExists = procurement.ErrExists
 )
+
+func newTestSiteConnectionService(db *gorm.DB, secretKey, uploadsDir string) *siteconnectionapp.Service {
+	return siteconnectionapp.NewService(siteconnectiongormstore.New(db), secretKey, uploadsDir)
+}
 
 func setupProcurementTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
@@ -45,7 +49,7 @@ func setupProcurementTestDB(t *testing.T) *gorm.DB {
 		&models.OrderRefundRecord{},
 		&models.Fulfillment{},
 		&models.ProcurementOrder{},
-		&models.SiteConnection{},
+		&siteconnectiondomain.Connection{},
 		&models.ProductMapping{},
 		&models.SKUMapping{},
 	); err != nil {
@@ -105,7 +109,7 @@ func createTestProcurementOrder(t *testing.T, db *gorm.DB, connID, localOrderID 
 	return order
 }
 
-func newTestProcurementService(db *gorm.DB, connections *SiteConnectionService) *procurement.Service {
+func newTestProcurementService(db *gorm.DB, connections *siteconnectionapp.Service) *procurement.Service {
 	orders := repository.NewOrderRepository(db)
 	fulfillments := repository.NewFulfillmentRepository(db)
 	return procurement.NewService(procurement.ServiceOptions{

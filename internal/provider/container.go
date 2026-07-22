@@ -50,7 +50,8 @@ import (
 	"github.com/dujiao-next/internal/modules/reseller"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingscontract "github.com/dujiao-next/internal/modules/settings/contract"
-	"github.com/dujiao-next/internal/modules/siteconnection"
+	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
+	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
 	"github.com/dujiao-next/internal/modules/sitemap"
 	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
 	broadcastcontract "github.com/dujiao-next/internal/modules/telegram/broadcast/contract"
@@ -98,7 +99,7 @@ type Container struct {
 	ResellerProductSettingRepo repository.ResellerProductSettingRepository
 	ResellerOperationsRepo     repository.ResellerOperationsRepository
 	ApiCredentialRepo          apicredential.Repository
-	SiteConnectionRepo         repository.SiteConnectionRepository
+	SiteConnectionRepo         siteconnectioncontract.Repository
 	ProductMappingRepo         *mappinggormstore.MappingStore
 	SKUMappingRepo             *mappinggormstore.SKUMappingStore
 	ProcurementOrderRepo       procurement.Repository
@@ -157,7 +158,7 @@ type Container struct {
 	ResellerOrderService          *reseller.OrderQueryService
 	ResellerOperationsService     *reseller.OperationsService
 	ApiCredentialService          *apicredential.Service
-	SiteConnectionService         *siteconnection.Service
+	SiteConnectionService         *siteconnectionapp.Service
 	ProductMappingService         *catalogmapping.Service
 	ProcurementOrderService       *procurement.Service
 	DownstreamCallbackService     *downstreamcallback.Service

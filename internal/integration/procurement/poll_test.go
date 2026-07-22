@@ -9,7 +9,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
+	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 )
 
 // ── PollUpstreamStatus test ──
@@ -38,8 +38,8 @@ func TestPollUpstreamStatus_Delivered(t *testing.T) {
 	}))
 	defer server.Close()
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
-	conn, _ := connSvc.Create(CreateConnectionInput{
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
+	conn, _ := connSvc.Create(siteconnectionapp.CreateInput{
 		Name: "poll-upstream", BaseURL: server.URL,
 		ApiKey: "key", ApiSecret: "secret", Protocol: constants.ConnectionProtocolDujiaoNext,
 	})
@@ -95,8 +95,8 @@ func TestPollUpstreamStatus_FulfilledMappedToDelivered(t *testing.T) {
 	}))
 	defer server.Close()
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
-	conn, _ := connSvc.Create(CreateConnectionInput{
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
+	conn, _ := connSvc.Create(siteconnectionapp.CreateInput{
 		Name: "poll-upstream-fulfilled", BaseURL: server.URL,
 		ApiKey: "key", ApiSecret: "secret", Protocol: constants.ConnectionProtocolDujiaoNext,
 	})

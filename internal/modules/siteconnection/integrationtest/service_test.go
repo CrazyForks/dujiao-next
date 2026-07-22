@@ -4,10 +4,12 @@ import (
 	"strings"
 	"testing"
 
+	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
+	siteconnectioncontract "github.com/dujiao-next/internal/modules/siteconnection/contract"
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/crypto"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/siteconnection"
 
 	"github.com/shopspring/decimal"
 )
@@ -19,7 +21,7 @@ func TestSiteConnectionServicePingReturnsAdapterCreationError(t *testing.T) {
 		t.Fatalf("encrypt secret failed: %v", err)
 	}
 	repo := &siteConnectionRepoStub{
-		conn: &models.SiteConnection{
+		conn: &siteconnectiondomain.Connection{
 			ID:        1,
 			Name:      "unsupported upstream",
 			BaseURL:   "https://upstream.example.com",
@@ -29,7 +31,7 @@ func TestSiteConnectionServicePingReturnsAdapterCreationError(t *testing.T) {
 			Status:    constants.ConnectionStatusPending,
 		},
 	}
-	svc := siteconnection.NewService(repo, appSecretKey, t.TempDir())
+	svc := siteconnectionapp.NewService(repo, appSecretKey, t.TempDir())
 
 	result, err := svc.Ping(1)
 
@@ -56,8 +58,8 @@ func (f *fakeMarkupReapplier) ReapplyMarkup(connectionID uint) (int, error) {
 	return 0, nil
 }
 
-func newReapplyTestConn() *models.SiteConnection {
-	return &models.SiteConnection{
+func newReapplyTestConn() *siteconnectiondomain.Connection {
+	return &siteconnectiondomain.Connection{
 		ID:                 7,
 		Name:               "conn",
 		BaseURL:            "https://up.example.com",
@@ -72,12 +74,12 @@ func newReapplyTestConn() *models.SiteConnection {
 
 func TestSiteConnectionServiceUpdateTriggersReapplyWhenExchangeRateChanges(t *testing.T) {
 	repo := &siteConnectionRepoStub{conn: newReapplyTestConn()}
-	svc := siteconnection.NewService(repo, "test-secret-key", t.TempDir())
+	svc := siteconnectionapp.NewService(repo, "test-secret-key", t.TempDir())
 	reapplier := &fakeMarkupReapplier{}
 	svc.SetMarkupReapplier(reapplier)
 
 	rate := 6.9
-	if _, err := svc.Update(7, siteconnection.UpdateInput{ExchangeRate: &rate}); err != nil {
+	if _, err := svc.Update(7, siteconnectionapp.UpdateInput{ExchangeRate: &rate}); err != nil {
 		t.Fatalf("update failed: %v", err)
 	}
 	if len(reapplier.calls) != 1 || reapplier.calls[0] != 7 {
@@ -87,14 +89,14 @@ func TestSiteConnectionServiceUpdateTriggersReapplyWhenExchangeRateChanges(t *te
 
 func TestSiteConnectionServiceUpdateSkipsReapplyWhenPriceConfigUnchanged(t *testing.T) {
 	repo := &siteConnectionRepoStub{conn: newReapplyTestConn()}
-	svc := siteconnection.NewService(repo, "test-secret-key", t.TempDir())
+	svc := siteconnectionapp.NewService(repo, "test-secret-key", t.TempDir())
 	reapplier := &fakeMarkupReapplier{}
 	svc.SetMarkupReapplier(reapplier)
 
 	// 只改名字，汇率传入与现值相同的 1 → 定价配置未变，不应触发重算。
 	name := "renamed"
 	rate := 1.0
-	if _, err := svc.Update(7, siteconnection.UpdateInput{Name: name, ExchangeRate: &rate}); err != nil {
+	if _, err := svc.Update(7, siteconnectionapp.UpdateInput{Name: name, ExchangeRate: &rate}); err != nil {
 		t.Fatalf("update failed: %v", err)
 	}
 	if len(reapplier.calls) != 0 {
@@ -103,11 +105,11 @@ func TestSiteConnectionServiceUpdateSkipsReapplyWhenPriceConfigUnchanged(t *test
 }
 
 type siteConnectionRepoStub struct {
-	conn    *models.SiteConnection
+	conn    *siteconnectiondomain.Connection
 	updated bool
 }
 
-func (r *siteConnectionRepoStub) GetByID(id uint) (*models.SiteConnection, error) {
+func (r *siteConnectionRepoStub) GetByID(id uint) (*siteconnectiondomain.Connection, error) {
 	if r.conn != nil && r.conn.ID == id {
 		copy := *r.conn
 		return &copy, nil
@@ -115,7 +117,7 @@ func (r *siteConnectionRepoStub) GetByID(id uint) (*models.SiteConnection, error
 	return nil, nil
 }
 
-func (r *siteConnectionRepoStub) GetByApiKey(apiKey string) (*models.SiteConnection, error) {
+func (r *siteConnectionRepoStub) GetByApiKey(apiKey string) (*siteconnectiondomain.Connection, error) {
 	if r.conn != nil && r.conn.ApiKey == apiKey {
 		copy := *r.conn
 		return &copy, nil
@@ -123,13 +125,13 @@ func (r *siteConnectionRepoStub) GetByApiKey(apiKey string) (*models.SiteConnect
 	return nil, nil
 }
 
-func (r *siteConnectionRepoStub) Create(conn *models.SiteConnection) error {
+func (r *siteConnectionRepoStub) Create(conn *siteconnectiondomain.Connection) error {
 	copy := *conn
 	r.conn = &copy
 	return nil
 }
 
-func (r *siteConnectionRepoStub) Update(conn *models.SiteConnection) error {
+func (r *siteConnectionRepoStub) Update(conn *siteconnectiondomain.Connection) error {
 	r.updated = true
 	copy := *conn
 	r.conn = &copy
@@ -143,9 +145,16 @@ func (r *siteConnectionRepoStub) Delete(id uint) error {
 	return nil
 }
 
-func (r *siteConnectionRepoStub) List(siteconnection.ListFilter) ([]models.SiteConnection, int64, error) {
+func (r *siteConnectionRepoStub) List(siteconnectioncontract.ListFilter) ([]siteconnectiondomain.Connection, int64, error) {
 	if r.conn == nil {
 		return nil, 0, nil
 	}
-	return []models.SiteConnection{*r.conn}, 1, nil
+	return []siteconnectiondomain.Connection{*r.conn}, 1, nil
+}
+
+func (r *siteConnectionRepoStub) ListActive() ([]siteconnectiondomain.Connection, error) {
+	if r.conn == nil || r.conn.Status != constants.ConnectionStatusActive {
+		return nil, nil
+	}
+	return []siteconnectiondomain.Connection{*r.conn}, nil
 }

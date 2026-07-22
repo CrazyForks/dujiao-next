@@ -1,4 +1,4 @@
-package siteconnection
+package application
 
 // CreateInput 创建对接连接输入。
 type CreateInput struct {
@@ -30,13 +30,6 @@ type UpdateInput struct {
 	PriceMarkupPercent *float64 `json:"price_markup_percent"` // 指针类型，区分 0 和未传
 	PriceRoundingMode  *string  `json:"price_rounding_mode"`
 	AutoSyncPrice      *bool    `json:"auto_sync_price"`
-}
-
-// ListFilter 对接连接列表筛选。
-type ListFilter struct {
-	Status   string
-	Page     int
-	PageSize int
 }
 
 // PingResult 连接测试结果。

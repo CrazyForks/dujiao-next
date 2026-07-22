@@ -4,6 +4,8 @@ import (
 	"errors"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/notification"
 	"github.com/dujiao-next/internal/queue"
@@ -61,8 +63,8 @@ type SKUMappingRepository interface {
 
 // ConnectionProvider 隔离站点连接的读取与上游协议适配器构造。
 type ConnectionProvider interface {
-	GetByID(id uint) (*models.SiteConnection, error)
-	GetAdapter(conn *models.SiteConnection) (upstream.Adapter, error)
+	GetByID(id uint) (*siteconnectiondomain.Connection, error)
+	GetAdapter(conn *siteconnectiondomain.Connection) (upstream.Adapter, error)
 }
 
 // Enqueuer 是采购模块真正使用到的队列能力。

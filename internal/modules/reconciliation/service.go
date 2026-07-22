@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
@@ -56,8 +58,8 @@ type ProcurementReader interface {
 }
 
 type ConnectionProvider interface {
-	GetByID(id uint) (*models.SiteConnection, error)
-	GetAdapter(connection *models.SiteConnection) (upstream.Adapter, error)
+	GetByID(id uint) (*siteconnectiondomain.Connection, error)
+	GetAdapter(connection *siteconnectiondomain.Connection) (upstream.Adapter, error)
 }
 
 type Enqueuer interface {

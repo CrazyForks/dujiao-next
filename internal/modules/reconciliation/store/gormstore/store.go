@@ -21,7 +21,7 @@ func (s *Store) Create(job *models.ReconciliationJob) error {
 
 func (s *Store) GetByID(id uint) (*models.ReconciliationJob, error) {
 	var job models.ReconciliationJob
-	if err := s.db.Preload("Connection").First(&job, id).Error; err != nil {
+	if err := s.db.Preload("Connection", "deleted_at IS NULL").First(&job, id).Error; err != nil {
 		return nil, err
 	}
 	return &job, nil
@@ -54,7 +54,7 @@ func (s *Store) List(filter reconciliation.JobListFilter) ([]models.Reconciliati
 	if pageSize < 1 {
 		pageSize = 20
 	}
-	if err := query.Preload("Connection").Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&jobs).Error; err != nil {
+	if err := query.Preload("Connection", "deleted_at IS NULL").Order("id DESC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&jobs).Error; err != nil {
 		return nil, 0, err
 	}
 	return jobs, total, nil

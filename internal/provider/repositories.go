@@ -22,6 +22,7 @@ import (
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
 	reconciliationgormstore "github.com/dujiao-next/internal/modules/reconciliation/store/gormstore"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"
 	broadcaststore "github.com/dujiao-next/internal/modules/telegram/broadcast/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 )
@@ -59,7 +60,7 @@ func (c *Container) initRepositories() {
 	c.ResellerProductSettingRepo = repository.NewResellerProductSettingRepository(db)
 	c.ResellerOperationsRepo = repository.NewResellerOperationsRepository(db)
 	c.ApiCredentialRepo = apicredentialgormstore.New(db)
-	c.SiteConnectionRepo = repository.NewSiteConnectionRepository(db)
+	c.SiteConnectionRepo = siteconnectiongormstore.New(db)
 	c.ProductMappingRepo = mappinggormstore.NewMappingStore(db)
 	c.SKUMappingRepo = mappinggormstore.NewSKUMappingStore(db)
 	c.ProcurementOrderRepo = procurementgormstore.New(db)

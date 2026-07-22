@@ -10,6 +10,7 @@ import (
 	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
 	channelclienthttp "github.com/dujiao-next/internal/modules/channelclient/transport/http"
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
+	siteconnectiontransport "github.com/dujiao-next/internal/modules/siteconnection/transport/http"
 	broadcasthttp "github.com/dujiao-next/internal/modules/telegram/broadcast/transport/http"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/provider"
@@ -34,13 +35,11 @@ import (
 	promotiontransport "github.com/dujiao-next/internal/transport/http/promotion"
 	reconciliationtransport "github.com/dujiao-next/internal/transport/http/reconciliation"
 	resellertransport "github.com/dujiao-next/internal/transport/http/reseller"
-	siteconnectiontransport "github.com/dujiao-next/internal/transport/http/siteconnection"
 	systemtransport "github.com/dujiao-next/internal/transport/http/system"
 	uploadtransport "github.com/dujiao-next/internal/transport/http/upload"
 	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
 	adproxywiring "github.com/dujiao-next/internal/wiring/adproxy"
 	compliancewiring "github.com/dujiao-next/internal/wiring/compliance"
-	siteconnectionwiring "github.com/dujiao-next/internal/wiring/siteconnection"
 	uploadwiring "github.com/dujiao-next/internal/wiring/upload"
 
 	"github.com/gin-gonic/gin"
@@ -179,7 +178,10 @@ func registerAdminRoutes(
 	apicredentialtransport.RegisterAdminRoutes(authorized, adminApiCredentialHandler)
 
 	// 站点对接连接管理
-	siteconnectiontransport.RegisterAdminRoutes(authorized, siteconnectionwiring.NewAdminHandler(c))
+	siteconnectiontransport.RegisterAdminRoutes(authorized, siteconnectiontransport.NewAdminHandler(
+		c.SiteConnectionService,
+		c.ProductMappingService,
+	))
 
 	// 商品映射管理
 	mappinghttp.RegisterAdminRoutes(authorized, adminCatalogProductMappingHandler)

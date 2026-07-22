@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
@@ -40,7 +42,7 @@ func setupWalletServiceTest(t *testing.T) (*WalletService, *gorm.DB) {
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
-		&models.SiteConnection{},
+		&siteconnectiondomain.Connection{},
 		&models.ProcurementOrder{},
 		&affiliatedomain.Profile{},
 		&affiliatedomain.Commission{},
@@ -101,9 +103,9 @@ func createTestOrder(t *testing.T, db *gorm.DB, userID uint, orderNo string, tot
 	return order
 }
 
-func createTestSiteConnection(t *testing.T, db *gorm.DB, id uint) *models.SiteConnection {
+func createTestSiteConnection(t *testing.T, db *gorm.DB, id uint) *siteconnectiondomain.Connection {
 	t.Helper()
-	conn := &models.SiteConnection{
+	conn := &siteconnectiondomain.Connection{
 		ID:        id,
 		Name:      fmt.Sprintf("conn-%d", id),
 		BaseURL:   "https://upstream.example.com",

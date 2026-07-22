@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
@@ -213,7 +215,7 @@ func (s *Service) notifyProcurementFailure(procOrder *models.ProcurementOrder, e
 }
 
 // handleSubmitFailure 处理提交失败
-func (s *Service) handleSubmitFailure(procOrder *models.ProcurementOrder, conn *models.SiteConnection, errMsg string, retryable bool) error {
+func (s *Service) handleSubmitFailure(procOrder *models.ProcurementOrder, conn *siteconnectiondomain.Connection, errMsg string, retryable bool) error {
 	now := time.Now()
 
 	if retryable && procOrder.RetryCount < conn.RetryMax {

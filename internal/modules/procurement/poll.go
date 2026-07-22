@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/queue"
@@ -78,7 +80,7 @@ func (s *Service) PollUpstreamStatus(procurementOrderID uint) error {
 }
 
 // requeuePoll 重新入队轮询任务
-func (s *Service) requeuePoll(procOrder *models.ProcurementOrder, _ *models.SiteConnection) error {
+func (s *Service) requeuePoll(procOrder *models.ProcurementOrder, _ *siteconnectiondomain.Connection) error {
 	if s.queue == nil {
 		return nil
 	}

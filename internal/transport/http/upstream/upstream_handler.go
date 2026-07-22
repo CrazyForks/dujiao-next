@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -127,7 +129,7 @@ type DownstreamOrderReferences interface {
 }
 
 type SiteConnections interface {
-	GetByApiKey(apiKey string) (*models.SiteConnection, error)
+	GetByApiKey(apiKey string) (*siteconnectiondomain.Connection, error)
 }
 
 type SecretDecrypter interface {

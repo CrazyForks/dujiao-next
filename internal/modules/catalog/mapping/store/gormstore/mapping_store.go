@@ -36,7 +36,7 @@ func (r *MappingStore) BindTx(tx *gorm.DB) catalogmapping.MappingRepository {
 
 func (r *MappingStore) GetByID(id uint) (*models.ProductMapping, error) {
 	var m models.ProductMapping
-	if err := r.db.Preload("Connection").Preload("Product", "deleted_at IS NULL").First(&m, id).Error; err != nil {
+	if err := r.db.Preload("Connection", "deleted_at IS NULL").Preload("Product", "deleted_at IS NULL").First(&m, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -120,7 +120,7 @@ func (r *MappingStore) List(filter catalogmapping.ListFilter) ([]models.ProductM
 	}
 
 	q = q.
-		Preload("Connection").
+		Preload("Connection", "deleted_at IS NULL").
 		Preload("Product", "deleted_at IS NULL").
 		Preload("Product.SKUs", "deleted_at IS NULL").
 		Order("created_at DESC")
@@ -145,7 +145,7 @@ func (r *MappingStore) ListActiveByConnection(connectionID uint) ([]models.Produ
 
 func (r *MappingStore) ListAllActive() ([]models.ProductMapping, error) {
 	var mappings []models.ProductMapping
-	if err := r.db.Where("is_active = ?", true).Preload("Connection").Find(&mappings).Error; err != nil {
+	if err := r.db.Where("is_active = ?", true).Preload("Connection", "deleted_at IS NULL").Find(&mappings).Error; err != nil {
 		return nil, err
 	}
 	return mappings, nil

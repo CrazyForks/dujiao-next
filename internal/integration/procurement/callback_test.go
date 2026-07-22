@@ -6,7 +6,6 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/upstream"
 )
 
@@ -26,7 +25,7 @@ func assertProcurementCallbackStatus(t *testing.T, fixture procurementCallbackSt
 	order := createProcTestOrder(t, db, fixture.orderNo, fixture.initialOrderStatus, constants.FulfillmentTypeUpstream)
 	proc := createTestProcurementOrder(t, db, 1, order.ID, order.OrderNo, fixture.initialProcurementStatus)
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
 	svc := newTestProcurementService(db, connSvc)
 
 	if err := svc.HandleUpstreamCallback(proc.ID, fixture.callbackStatus, nil); err != nil {
@@ -58,7 +57,7 @@ func TestRejectProcurement_RollsBackOrderStatus(t *testing.T) {
 	order := createProcTestOrder(t, db, "PROC-REJECT-001", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
 	proc := createTestProcurementOrder(t, db, 1, order.ID, order.OrderNo, "pending")
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
 	svc := newTestProcurementService(db, connSvc)
 
 	if err := svc.SubmitToUpstream(proc.ID); err != nil {
@@ -90,7 +89,7 @@ func TestHandleUpstreamCallback_Canceled_RollsBackOrder(t *testing.T) {
 	order := createProcTestOrder(t, db, "PROC-CANCEL-001", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
 	proc := createTestProcurementOrder(t, db, 1, order.ID, order.OrderNo, "accepted")
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
 	svc := newTestProcurementService(db, connSvc)
 
 	if err := svc.HandleUpstreamCallback(proc.ID, "canceled", nil); err != nil {
@@ -122,7 +121,7 @@ func TestHandleUpstreamCallback_Delivered_CreatesFulfillment(t *testing.T) {
 	order := createProcTestOrder(t, db, "PROC-DELIVER-001", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
 	proc := createTestProcurementOrder(t, db, 1, order.ID, order.OrderNo, "accepted")
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
 	svc := newTestProcurementService(db, connSvc)
 
 	now := time.Now()

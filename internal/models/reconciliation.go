@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 	"github.com/dujiao-next/internal/shared/money"
 )
 
@@ -23,7 +24,7 @@ type ReconciliationJob struct {
 	CreatedAt       time.Time  `gorm:"index" json:"created_at"`
 	UpdatedAt       time.Time  `gorm:"index" json:"updated_at"`
 
-	Connection *SiteConnection `gorm:"foreignKey:ConnectionID" json:"connection,omitempty"`
+	Connection *siteconnectiondomain.Connection `gorm:"foreignKey:ConnectionID" json:"connection,omitempty"`
 }
 
 // TableName 指定表名

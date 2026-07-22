@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"gorm.io/gorm"
@@ -32,9 +33,9 @@ type ProcurementOrder struct {
 	UpdatedAt                time.Time      `gorm:"index" json:"updated_at"`
 	DeletedAt                gorm.DeletedAt `gorm:"index" json:"-"`
 
-	Connection    *SiteConnection `gorm:"foreignKey:ConnectionID" json:"connection,omitempty"`
-	LocalOrder    *Order          `gorm:"foreignKey:LocalOrderID" json:"local_order,omitempty"`
-	ParentOrderNo string          `gorm:"-" json:"parent_order_no,omitempty"` // 父订单号（虚拟字段）
+	Connection    *siteconnectiondomain.Connection `gorm:"foreignKey:ConnectionID" json:"connection,omitempty"`
+	LocalOrder    *Order                           `gorm:"foreignKey:LocalOrderID" json:"local_order,omitempty"`
+	ParentOrderNo string                           `gorm:"-" json:"parent_order_no,omitempty"` // 父订单号（虚拟字段）
 	// UpstreamRefundRecords 仅用于接口返回，不写入数据库；值来自上游 /upstream/orders 的 refund_records
 	UpstreamRefundRecords []jsonmap.JSON `gorm:"-" json:"upstream_refund_records,omitempty"`
 	// UpstreamRefundedAmount 仅用于接口返回，不写入数据库；值来自上游 /upstream/orders 的 refunded_amount

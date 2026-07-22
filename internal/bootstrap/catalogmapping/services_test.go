@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
@@ -20,8 +22,8 @@ import (
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
-	"github.com/dujiao-next/internal/modules/siteconnection"
-	"github.com/dujiao-next/internal/repository"
+	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
+	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/dujiao-next/internal/upstream"
@@ -40,7 +42,7 @@ func newTestMappingService(
 	productRepo ProductStore,
 	productSKURepo SKUStore,
 	categoryRepo categorycontract.Repository,
-	connService *siteconnection.Service,
+	connService *siteconnectionapp.Service,
 	mediaRecorder catalogmapping.MediaRecorder,
 ) (*catalogmapping.Service, error) {
 	return New(Dependencies{
@@ -102,7 +104,7 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.SiteConnection{},
+		&siteconnectiondomain.Connection{},
 		&models.ProductMapping{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
@@ -150,8 +152,8 @@ func TestImportUpstreamProductRollbackWhenSKUMappingCreateFails(t *testing.T) {
 	}))
 	defer server.Close()
 
-	connService := siteconnection.NewService(repository.NewSiteConnectionRepository(db), "test-secret-key", t.TempDir())
-	conn, err := connService.Create(siteconnection.CreateInput{
+	connService := siteconnectionapp.NewService(siteconnectiongormstore.New(db), "test-secret-key", t.TempDir())
+	conn, err := connService.Create(siteconnectionapp.CreateInput{
 		Name:      "upstream-a",
 		BaseURL:   server.URL,
 		ApiKey:    "test-key",
@@ -215,7 +217,7 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.SiteConnection{},
+		&siteconnectiondomain.Connection{},
 		&models.ProductMapping{},
 		&models.SKUMapping{},
 	); err != nil {
@@ -248,8 +250,8 @@ func setupMappingWithUpstreamHandler(t *testing.T, dsn string, handler http.Hand
 		t.Fatalf("create sku failed: %v", err)
 	}
 
-	connService := siteconnection.NewService(repository.NewSiteConnectionRepository(db), "test-secret-key", t.TempDir())
-	conn, err := connService.Create(siteconnection.CreateInput{
+	connService := siteconnectionapp.NewService(siteconnectiongormstore.New(db), "test-secret-key", t.TempDir())
+	conn, err := connService.Create(siteconnectionapp.CreateInput{
 		Name:      "upstream",
 		BaseURL:   server.URL,
 		ApiKey:    "k",
@@ -779,7 +781,7 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.SiteConnection{},
+		&siteconnectiondomain.Connection{},
 		&models.ProductMapping{},
 		&models.SKUMapping{},
 	); err != nil {
@@ -805,8 +807,8 @@ func TestImportUpstreamProductRejectsInactive(t *testing.T) {
 	}))
 	defer server.Close()
 
-	connService := siteconnection.NewService(repository.NewSiteConnectionRepository(db), "test-secret-key", t.TempDir())
-	conn, err := connService.Create(siteconnection.CreateInput{
+	connService := siteconnectionapp.NewService(siteconnectiongormstore.New(db), "test-secret-key", t.TempDir())
+	conn, err := connService.Create(siteconnectionapp.CreateInput{
 		Name: "u", BaseURL: server.URL, ApiKey: "k", ApiSecret: "s",
 		Protocol: constants.ConnectionProtocolDujiaoNext,
 	})

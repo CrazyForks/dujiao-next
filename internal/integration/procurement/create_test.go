@@ -5,7 +5,6 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
 )
 
 // ── CreateForOrder tests ──
@@ -15,7 +14,7 @@ func TestCreateForOrder_SkipsNonUpstreamItems(t *testing.T) {
 
 	order := createProcTestOrder(t, db, "PROC-SKIP-001", constants.OrderStatusPaid, constants.FulfillmentTypeAuto)
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
 	svc := newTestProcurementService(db, connSvc)
 
 	if err := svc.CreateForOrder(order.ID); err != nil {
@@ -37,7 +36,7 @@ func TestCreateForOrder_IdempotentSkipsDuplicate(t *testing.T) {
 	pm := &models.ProductMapping{ConnectionID: 1, LocalProductID: 1, UpstreamProductID: 101, IsActive: true}
 	db.Create(pm)
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
 	svc := newTestProcurementService(db, connSvc)
 
 	// 第一次创建成功

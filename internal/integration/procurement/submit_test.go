@@ -8,7 +8,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
+	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 )
 
 // ── SubmitToUpstream tests ──
@@ -47,8 +47,8 @@ func TestSubmitToUpstream_Success(t *testing.T) {
 	}))
 	defer server.Close()
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
-	conn, err := connSvc.Create(CreateConnectionInput{
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
+	conn, err := connSvc.Create(siteconnectionapp.CreateInput{
 		Name:      "test-upstream",
 		BaseURL:   server.URL,
 		ApiKey:    "key",
@@ -104,8 +104,8 @@ func TestSubmitToUpstream_NonRetryableError_Rejects(t *testing.T) {
 	}))
 	defer server.Close()
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
-	conn, _ := connSvc.Create(CreateConnectionInput{
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
+	conn, _ := connSvc.Create(siteconnectionapp.CreateInput{
 		Name: "test-upstream", BaseURL: server.URL,
 		ApiKey: "key", ApiSecret: "secret", Protocol: constants.ConnectionProtocolDujiaoNext,
 	})
@@ -150,8 +150,8 @@ func TestSubmitToUpstream_RetryableError_Retries(t *testing.T) {
 	}))
 	defer server.Close()
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
-	conn, _ := connSvc.Create(CreateConnectionInput{
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
+	conn, _ := connSvc.Create(siteconnectionapp.CreateInput{
 		Name: "test-upstream", BaseURL: server.URL,
 		ApiKey: "key", ApiSecret: "secret", Protocol: constants.ConnectionProtocolDujiaoNext,
 		RetryMax: 3,
@@ -199,8 +199,8 @@ func TestHandleSubmitFailure_MaxRetriesExhausted(t *testing.T) {
 	}))
 	defer server.Close()
 
-	connSvc := NewSiteConnectionService(repository.NewSiteConnectionRepository(db), "test-key", t.TempDir())
-	conn, err := connSvc.Create(CreateConnectionInput{
+	connSvc := newTestSiteConnectionService(db, "test-key", t.TempDir())
+	conn, err := connSvc.Create(siteconnectionapp.CreateInput{
 		Name: "test-upstream", BaseURL: server.URL,
 		ApiKey: "key", ApiSecret: "secret", Protocol: constants.ConnectionProtocolDujiaoNext,
 		RetryMax: 2, RetryIntervals: "[30,60]",

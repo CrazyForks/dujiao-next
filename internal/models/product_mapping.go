@@ -4,6 +4,7 @@ import (
 	"time"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 	"github.com/dujiao-next/internal/shared/money"
 	"gorm.io/gorm"
 )
@@ -29,8 +30,8 @@ type ProductMapping struct {
 	UpdatedAt               time.Time      `gorm:"index" json:"updated_at"`
 	DeletedAt               gorm.DeletedAt `gorm:"index" json:"-"`
 
-	Connection *SiteConnection        `gorm:"foreignKey:ConnectionID" json:"connection,omitempty"`
-	Product    *productdomain.Product `gorm:"foreignKey:LocalProductID" json:"product,omitempty"`
+	Connection *siteconnectiondomain.Connection `gorm:"foreignKey:ConnectionID" json:"connection,omitempty"`
+	Product    *productdomain.Product           `gorm:"foreignKey:LocalProductID" json:"product,omitempty"`
 }
 
 // TableName 指定表名

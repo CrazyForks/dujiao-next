@@ -22,7 +22,7 @@ func New(db *gorm.DB) *Store {
 // GetByID 根据 ID 获取
 func (r *Store) GetByID(id uint) (*models.ProcurementOrder, error) {
 	var order models.ProcurementOrder
-	if err := r.db.Preload("Connection").Preload("LocalOrder").Preload("LocalOrder.Items").First(&order, id).Error; err != nil {
+	if err := r.db.Preload("Connection", "deleted_at IS NULL").Preload("LocalOrder").Preload("LocalOrder.Items").First(&order, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -98,7 +98,7 @@ func (r *Store) List(filter procurement.ListFilter) ([]models.ProcurementOrder, 
 		return nil, 0, err
 	}
 
-	q = q.Order("created_at DESC").Preload("Connection").Preload("LocalOrder").Preload("LocalOrder.Items")
+	q = q.Order("created_at DESC").Preload("Connection", "deleted_at IS NULL").Preload("LocalOrder").Preload("LocalOrder.Items")
 	if filter.Page > 0 && filter.PageSize > 0 {
 		q = q.Offset((filter.Page - 1) * filter.PageSize).Limit(filter.PageSize)
 	}

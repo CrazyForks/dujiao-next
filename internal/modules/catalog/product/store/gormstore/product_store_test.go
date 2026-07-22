@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
+
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
@@ -33,7 +35,7 @@ func setupProductStoreTest(t *testing.T) (*ProductStore, *gorm.DB) {
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
 		&models.CardSecret{},
-		&models.SiteConnection{},
+		&siteconnectiondomain.Connection{},
 		&models.ProductMapping{},
 		&models.SKUMapping{},
 	); err != nil {

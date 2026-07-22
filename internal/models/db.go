@@ -12,6 +12,7 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
@@ -180,7 +181,7 @@ func AutoMigrate() error {
 		&Banner{},
 		&settingsstore.SettingRecord{},
 		&ApiCredential{},
-		&SiteConnection{},
+		&siteconnectiondomain.Connection{},
 		&ProductMapping{},
 		&SKUMapping{},
 		&ProcurementOrder{},
