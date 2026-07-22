@@ -1,4 +1,4 @@
-package repository
+package gormstore
 
 import (
 	"errors"
@@ -6,76 +6,36 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-// AffiliateRepository 推广返利数据访问接口
-type AffiliateRepository interface {
-	Transaction(fn func(tx *gorm.DB) error) error
-	WithTx(tx *gorm.DB) AffiliateRepository
-
-	GetProfileByID(id uint) (*models.AffiliateProfile, error)
-	UpdateProfileStatus(id uint, status string, updatedAt time.Time) error
-	BatchUpdateProfileStatus(ids []uint, status string, updatedAt time.Time) (int64, error)
-	GetProfileByUserID(userID uint) (*models.AffiliateProfile, error)
-	GetProfileByCode(code string) (*models.AffiliateProfile, error)
-	CreateProfile(profile *models.AffiliateProfile) error
-	ListProfiles(filter AffiliateProfileListFilter) ([]models.AffiliateProfile, int64, error)
-
-	CreateClick(click *models.AffiliateClick) error
-	HasRecentClick(profileID uint, visitorKey, landingPath string, since time.Time) (bool, error)
-	GetLatestActiveProfileByVisitorKey(visitorKey string, since time.Time) (*models.AffiliateProfile, error)
-	CountClicksByProfile(profileID uint) (int64, error)
-
-	GetCommissionByOrderAndProfile(orderID, profileID uint, commissionType string) (*models.AffiliateCommission, error)
-	CreateCommission(commission *models.AffiliateCommission) error
-	UpdateCommission(commission *models.AffiliateCommission) error
-	ListCommissions(filter AffiliateCommissionListFilter) ([]models.AffiliateCommission, int64, error)
-	ListCommissionsByOrder(orderID uint, statuses []string) ([]models.AffiliateCommission, error)
-	ListCommissionsByOrderForUpdate(orderID uint, statuses []string) ([]models.AffiliateCommission, error)
-	ListCommissionsByWithdrawIDForUpdate(withdrawID uint) ([]models.AffiliateCommission, error)
-	MarkPendingCommissionsAvailable(before, now time.Time) (int64, error)
-	CountValidOrdersByProfile(profileID uint) (int64, error)
-	SumCommissionByProfile(profileID uint, statuses []string, unboundOnly bool) (decimal.Decimal, error)
-	ListAvailableCommissionsForUpdate(profileID uint) ([]models.AffiliateCommission, error)
-	BatchUpdateCommissions(ids []uint, updates map[string]interface{}) error
-
-	CreateWithdraw(req *models.AffiliateWithdrawRequest) error
-	UpdateWithdraw(req *models.AffiliateWithdrawRequest) error
-	GetWithdrawByID(id uint) (*models.AffiliateWithdrawRequest, error)
-	GetWithdrawByIDForUpdate(id uint) (*models.AffiliateWithdrawRequest, error)
-	ListWithdraws(filter AffiliateWithdrawListFilter) ([]models.AffiliateWithdrawRequest, int64, error)
-	GetProfileStatsBatch(profileIDs []uint) (map[uint]AffiliateProfileStatsAggregate, error)
+// Store GORM 推广返利仓储
+type Store struct {
+	db *gorm.DB
 }
 
-// GormAffiliateRepository GORM 推广返利仓储
-type GormAffiliateRepository struct {
-	BaseRepository
+// New 创建推广返利仓储
+func New(db *gorm.DB) *Store {
+	return &Store{db: db}
 }
 
-// NewAffiliateRepository 创建推广返利仓储
-func NewAffiliateRepository(db *gorm.DB) *GormAffiliateRepository {
-	return &GormAffiliateRepository{BaseRepository: BaseRepository{db: db}}
-}
-
-// WithTx 绑定事务
-func (r *GormAffiliateRepository) WithTx(tx *gorm.DB) AffiliateRepository {
-	if tx == nil {
-		return r
-	}
-	return &GormAffiliateRepository{BaseRepository: BaseRepository{db: tx}}
+func (r *Store) WithinTransaction(fn func(affiliatecontract.Store) error) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		return fn(New(tx))
+	})
 }
 
 // GetProfileByID 按ID获取推广档案
-func (r *GormAffiliateRepository) GetProfileByID(id uint) (*models.AffiliateProfile, error) {
+func (r *Store) GetProfileByID(id uint) (*affiliatedomain.Profile, error) {
 	if id == 0 {
 		return nil, nil
 	}
-	var profile models.AffiliateProfile
-	if err := r.db.Preload("User", "deleted_at IS NULL").First(&profile, id).Error; err != nil {
+	var profile affiliatedomain.Profile
+	if err := r.db.Where("affiliate_profiles.deleted_at IS NULL").Preload("User", "deleted_at IS NULL").First(&profile, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -85,12 +45,12 @@ func (r *GormAffiliateRepository) GetProfileByID(id uint) (*models.AffiliateProf
 }
 
 // UpdateProfileStatus 更新推广档案状态
-func (r *GormAffiliateRepository) UpdateProfileStatus(id uint, status string, updatedAt time.Time) error {
+func (r *Store) UpdateProfileStatus(id uint, status string, updatedAt time.Time) error {
 	if id == 0 {
 		return nil
 	}
-	return r.db.Model(&models.AffiliateProfile{}).
-		Where("id = ?", id).
+	return r.db.Model(&affiliatedomain.Profile{}).
+		Where("id = ? AND deleted_at IS NULL", id).
 		Updates(map[string]interface{}{
 			"status":     strings.TrimSpace(status),
 			"updated_at": updatedAt,
@@ -98,12 +58,12 @@ func (r *GormAffiliateRepository) UpdateProfileStatus(id uint, status string, up
 }
 
 // BatchUpdateProfileStatus 批量更新推广档案状态
-func (r *GormAffiliateRepository) BatchUpdateProfileStatus(ids []uint, status string, updatedAt time.Time) (int64, error) {
+func (r *Store) BatchUpdateProfileStatus(ids []uint, status string, updatedAt time.Time) (int64, error) {
 	if len(ids) == 0 {
 		return 0, nil
 	}
-	result := r.db.Model(&models.AffiliateProfile{}).
-		Where("id IN ?", ids).
+	result := r.db.Model(&affiliatedomain.Profile{}).
+		Where("id IN ? AND deleted_at IS NULL", ids).
 		Updates(map[string]interface{}{
 			"status":     strings.TrimSpace(status),
 			"updated_at": updatedAt,
@@ -115,12 +75,12 @@ func (r *GormAffiliateRepository) BatchUpdateProfileStatus(ids []uint, status st
 }
 
 // GetProfileByUserID 按用户ID获取推广档案
-func (r *GormAffiliateRepository) GetProfileByUserID(userID uint) (*models.AffiliateProfile, error) {
+func (r *Store) GetProfileByUserID(userID uint) (*affiliatedomain.Profile, error) {
 	if userID == 0 {
 		return nil, nil
 	}
-	var profile models.AffiliateProfile
-	if err := r.db.Preload("User", "deleted_at IS NULL").Where("user_id = ?", userID).First(&profile).Error; err != nil {
+	var profile affiliatedomain.Profile
+	if err := r.db.Preload("User", "deleted_at IS NULL").Where("user_id = ? AND affiliate_profiles.deleted_at IS NULL", userID).First(&profile).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -130,13 +90,13 @@ func (r *GormAffiliateRepository) GetProfileByUserID(userID uint) (*models.Affil
 }
 
 // GetProfileByCode 按联盟ID获取推广档案
-func (r *GormAffiliateRepository) GetProfileByCode(code string) (*models.AffiliateProfile, error) {
+func (r *Store) GetProfileByCode(code string) (*affiliatedomain.Profile, error) {
 	normalized := strings.ToUpper(strings.TrimSpace(code))
 	if normalized == "" {
 		return nil, nil
 	}
-	var profile models.AffiliateProfile
-	if err := r.db.Preload("User", "deleted_at IS NULL").Where("affiliate_code = ?", normalized).First(&profile).Error; err != nil {
+	var profile affiliatedomain.Profile
+	if err := r.db.Preload("User", "deleted_at IS NULL").Where("affiliate_code = ? AND affiliate_profiles.deleted_at IS NULL", normalized).First(&profile).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -146,13 +106,13 @@ func (r *GormAffiliateRepository) GetProfileByCode(code string) (*models.Affilia
 }
 
 // CreateProfile 创建推广档案
-func (r *GormAffiliateRepository) CreateProfile(profile *models.AffiliateProfile) error {
+func (r *Store) CreateProfile(profile *affiliatedomain.Profile) error {
 	return r.db.Create(profile).Error
 }
 
 // ListProfiles 查询推广档案列表
-func (r *GormAffiliateRepository) ListProfiles(filter AffiliateProfileListFilter) ([]models.AffiliateProfile, int64, error) {
-	query := r.db.Model(&models.AffiliateProfile{}).Preload("User", "deleted_at IS NULL")
+func (r *Store) ListProfiles(filter affiliatecontract.ProfileListFilter) ([]affiliatedomain.Profile, int64, error) {
+	query := r.db.Model(&affiliatedomain.Profile{}).Where("affiliate_profiles.deleted_at IS NULL").Preload("User", "deleted_at IS NULL")
 	if filter.UserID != 0 {
 		query = query.Where("affiliate_profiles.user_id = ?", filter.UserID)
 	}
@@ -175,7 +135,7 @@ func (r *GormAffiliateRepository) ListProfiles(filter AffiliateProfileListFilter
 	}
 	query = applyPagination(query, filter.Page, filter.PageSize)
 
-	var rows []models.AffiliateProfile
+	var rows []affiliatedomain.Profile
 	if err := query.Order("affiliate_profiles.id desc").Find(&rows).Error; err != nil {
 		return nil, 0, err
 	}
@@ -183,16 +143,16 @@ func (r *GormAffiliateRepository) ListProfiles(filter AffiliateProfileListFilter
 }
 
 // CreateClick 创建推广点击记录
-func (r *GormAffiliateRepository) CreateClick(click *models.AffiliateClick) error {
+func (r *Store) CreateClick(click *affiliatedomain.Click) error {
 	return r.db.Create(click).Error
 }
 
 // HasRecentClick 查询是否存在近期重复点击记录
-func (r *GormAffiliateRepository) HasRecentClick(profileID uint, visitorKey, landingPath string, since time.Time) (bool, error) {
+func (r *Store) HasRecentClick(profileID uint, visitorKey, landingPath string, since time.Time) (bool, error) {
 	if profileID == 0 || strings.TrimSpace(visitorKey) == "" {
 		return false, nil
 	}
-	query := r.db.Model(&models.AffiliateClick{}).
+	query := r.db.Model(&affiliatedomain.Click{}).
 		Where("affiliate_profile_id = ? AND visitor_key = ? AND created_at >= ?",
 			profileID,
 			strings.TrimSpace(visitorKey),
@@ -209,16 +169,16 @@ func (r *GormAffiliateRepository) HasRecentClick(profileID uint, visitorKey, lan
 }
 
 // GetLatestActiveProfileByVisitorKey 查询访客最近一次有效点击对应的推广用户
-func (r *GormAffiliateRepository) GetLatestActiveProfileByVisitorKey(visitorKey string, since time.Time) (*models.AffiliateProfile, error) {
+func (r *Store) GetLatestActiveProfileByVisitorKey(visitorKey string, since time.Time) (*affiliatedomain.Profile, error) {
 	key := strings.TrimSpace(visitorKey)
 	if key == "" {
 		return nil, nil
 	}
 
-	var profile models.AffiliateProfile
-	err := r.db.Model(&models.AffiliateProfile{}).
+	var profile affiliatedomain.Profile
+	err := r.db.Model(&affiliatedomain.Profile{}).
 		Joins("JOIN affiliate_clicks ac ON ac.affiliate_profile_id = affiliate_profiles.id").
-		Where("ac.visitor_key = ? AND ac.created_at >= ? AND affiliate_profiles.status = ?",
+		Where("ac.visitor_key = ? AND ac.created_at >= ? AND affiliate_profiles.status = ? AND affiliate_profiles.deleted_at IS NULL",
 			key,
 			since,
 			constants.AffiliateProfileStatusActive,
@@ -237,19 +197,19 @@ func (r *GormAffiliateRepository) GetLatestActiveProfileByVisitorKey(visitorKey 
 }
 
 // CountClicksByProfile 统计推广点击数
-func (r *GormAffiliateRepository) CountClicksByProfile(profileID uint) (int64, error) {
+func (r *Store) CountClicksByProfile(profileID uint) (int64, error) {
 	if profileID == 0 {
 		return 0, nil
 	}
 	var total int64
-	if err := r.db.Model(&models.AffiliateClick{}).Where("affiliate_profile_id = ?", profileID).Count(&total).Error; err != nil {
+	if err := r.db.Model(&affiliatedomain.Click{}).Where("affiliate_profile_id = ?", profileID).Count(&total).Error; err != nil {
 		return 0, err
 	}
 	return total, nil
 }
 
 // GetCommissionByOrderAndProfile 按订单和推广人查询佣金
-func (r *GormAffiliateRepository) GetCommissionByOrderAndProfile(orderID, profileID uint, commissionType string) (*models.AffiliateCommission, error) {
+func (r *Store) GetCommissionByOrderAndProfile(orderID, profileID uint, commissionType string) (*affiliatedomain.Commission, error) {
 	if orderID == 0 || profileID == 0 {
 		return nil, nil
 	}
@@ -257,8 +217,8 @@ func (r *GormAffiliateRepository) GetCommissionByOrderAndProfile(orderID, profil
 	if ctype == "" {
 		ctype = constants.AffiliateCommissionTypeOrder
 	}
-	var commission models.AffiliateCommission
-	if err := r.db.Where("order_id = ? AND affiliate_profile_id = ? AND commission_type = ?", orderID, profileID, ctype).
+	var commission affiliatedomain.Commission
+	if err := r.db.Where("order_id = ? AND affiliate_profile_id = ? AND commission_type = ? AND deleted_at IS NULL", orderID, profileID, ctype).
 		First(&commission).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -269,19 +229,26 @@ func (r *GormAffiliateRepository) GetCommissionByOrderAndProfile(orderID, profil
 }
 
 // CreateCommission 创建佣金记录
-func (r *GormAffiliateRepository) CreateCommission(commission *models.AffiliateCommission) error {
+func (r *Store) CreateCommission(commission *affiliatedomain.Commission) error {
 	return r.db.Create(commission).Error
 }
 
 // UpdateCommission 更新佣金记录
-func (r *GormAffiliateRepository) UpdateCommission(commission *models.AffiliateCommission) error {
-	return r.db.Save(commission).Error
+func (r *Store) UpdateCommission(commission *affiliatedomain.Commission) error {
+	if commission == nil || commission.ID == 0 {
+		return nil
+	}
+	return r.db.Model(&affiliatedomain.Commission{}).
+		Where("id = ? AND deleted_at IS NULL", commission.ID).
+		Select("*").
+		Updates(commission).Error
 }
 
 // ListCommissions 查询佣金记录
-func (r *GormAffiliateRepository) ListCommissions(filter AffiliateCommissionListFilter) ([]models.AffiliateCommission, int64, error) {
-	query := r.db.Model(&models.AffiliateCommission{}).
-		Preload("AffiliateProfile").
+func (r *Store) ListCommissions(filter affiliatecontract.CommissionListFilter) ([]affiliatedomain.Commission, int64, error) {
+	query := r.db.Model(&affiliatedomain.Commission{}).
+		Where("affiliate_commissions.deleted_at IS NULL").
+		Preload("AffiliateProfile", "deleted_at IS NULL").
 		Preload("AffiliateProfile.User", "deleted_at IS NULL").
 		Preload("Order")
 	if filter.AffiliateProfileID != 0 {
@@ -317,7 +284,7 @@ func (r *GormAffiliateRepository) ListCommissions(filter AffiliateCommissionList
 	}
 	query = applyPagination(query, filter.Page, filter.PageSize)
 
-	var rows []models.AffiliateCommission
+	var rows []affiliatedomain.Commission
 	if err := query.Order("affiliate_commissions.id desc").Find(&rows).Error; err != nil {
 		return nil, 0, err
 	}
@@ -325,15 +292,15 @@ func (r *GormAffiliateRepository) ListCommissions(filter AffiliateCommissionList
 }
 
 // ListCommissionsByOrder 按订单查询佣金记录
-func (r *GormAffiliateRepository) ListCommissionsByOrder(orderID uint, statuses []string) ([]models.AffiliateCommission, error) {
+func (r *Store) ListCommissionsByOrder(orderID uint, statuses []string) ([]affiliatedomain.Commission, error) {
 	if orderID == 0 {
-		return []models.AffiliateCommission{}, nil
+		return []affiliatedomain.Commission{}, nil
 	}
-	query := r.db.Model(&models.AffiliateCommission{}).Where("order_id = ?", orderID)
+	query := r.db.Model(&affiliatedomain.Commission{}).Where("order_id = ? AND deleted_at IS NULL", orderID)
 	if len(statuses) > 0 {
 		query = query.Where("status IN ?", statuses)
 	}
-	var rows []models.AffiliateCommission
+	var rows []affiliatedomain.Commission
 	if err := query.Find(&rows).Error; err != nil {
 		return nil, err
 	}
@@ -341,17 +308,17 @@ func (r *GormAffiliateRepository) ListCommissionsByOrder(orderID uint, statuses 
 }
 
 // ListCommissionsByOrderForUpdate 按订单查询佣金并加锁
-func (r *GormAffiliateRepository) ListCommissionsByOrderForUpdate(orderID uint, statuses []string) ([]models.AffiliateCommission, error) {
+func (r *Store) ListCommissionsByOrderForUpdate(orderID uint, statuses []string) ([]affiliatedomain.Commission, error) {
 	if orderID == 0 {
-		return []models.AffiliateCommission{}, nil
+		return []affiliatedomain.Commission{}, nil
 	}
-	query := r.db.Model(&models.AffiliateCommission{}).
+	query := r.db.Model(&affiliatedomain.Commission{}).
 		Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("order_id = ?", orderID)
+		Where("order_id = ? AND deleted_at IS NULL", orderID)
 	if len(statuses) > 0 {
 		query = query.Where("status IN ?", statuses)
 	}
-	var rows []models.AffiliateCommission
+	var rows []affiliatedomain.Commission
 	if err := query.Order("id asc").Find(&rows).Error; err != nil {
 		return nil, err
 	}
@@ -359,13 +326,13 @@ func (r *GormAffiliateRepository) ListCommissionsByOrderForUpdate(orderID uint, 
 }
 
 // ListCommissionsByWithdrawIDForUpdate 按提现单查询并锁定佣金记录
-func (r *GormAffiliateRepository) ListCommissionsByWithdrawIDForUpdate(withdrawID uint) ([]models.AffiliateCommission, error) {
+func (r *Store) ListCommissionsByWithdrawIDForUpdate(withdrawID uint) ([]affiliatedomain.Commission, error) {
 	if withdrawID == 0 {
-		return []models.AffiliateCommission{}, nil
+		return []affiliatedomain.Commission{}, nil
 	}
-	var rows []models.AffiliateCommission
-	if err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("withdraw_request_id = ?", withdrawID).
+	var rows []affiliatedomain.Commission
+	if err := r.db.Model(&affiliatedomain.Commission{}).Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("withdraw_request_id = ? AND deleted_at IS NULL", withdrawID).
 		Order("id asc").
 		Find(&rows).Error; err != nil {
 		return nil, err
@@ -374,9 +341,9 @@ func (r *GormAffiliateRepository) ListCommissionsByWithdrawIDForUpdate(withdrawI
 }
 
 // MarkPendingCommissionsAvailable 批量将待确认佣金转可提现
-func (r *GormAffiliateRepository) MarkPendingCommissionsAvailable(before, now time.Time) (int64, error) {
-	result := r.db.Model(&models.AffiliateCommission{}).
-		Where("status = ? AND confirm_at IS NOT NULL AND confirm_at <= ? AND withdraw_request_id IS NULL",
+func (r *Store) MarkPendingCommissionsAvailable(before, now time.Time) (int64, error) {
+	result := r.db.Model(&affiliatedomain.Commission{}).
+		Where("status = ? AND confirm_at IS NOT NULL AND confirm_at <= ? AND withdraw_request_id IS NULL AND deleted_at IS NULL",
 			constants.AffiliateCommissionStatusPendingConfirm, before).
 		Updates(map[string]interface{}{
 			"status":       constants.AffiliateCommissionStatusAvailable,
@@ -390,13 +357,13 @@ func (r *GormAffiliateRepository) MarkPendingCommissionsAvailable(before, now ti
 }
 
 // CountValidOrdersByProfile 统计有效订单数
-func (r *GormAffiliateRepository) CountValidOrdersByProfile(profileID uint) (int64, error) {
+func (r *Store) CountValidOrdersByProfile(profileID uint) (int64, error) {
 	if profileID == 0 {
 		return 0, nil
 	}
 	var total int64
-	if err := r.db.Model(&models.AffiliateCommission{}).
-		Where("affiliate_profile_id = ? AND status <> ?", profileID, constants.AffiliateCommissionStatusRejected).
+	if err := r.db.Model(&affiliatedomain.Commission{}).
+		Where("affiliate_profile_id = ? AND status <> ? AND deleted_at IS NULL", profileID, constants.AffiliateCommissionStatusRejected).
 		Distinct("order_id").
 		Count(&total).Error; err != nil {
 		return 0, err
@@ -405,12 +372,12 @@ func (r *GormAffiliateRepository) CountValidOrdersByProfile(profileID uint) (int
 }
 
 // SumCommissionByProfile 汇总指定状态佣金金额
-func (r *GormAffiliateRepository) SumCommissionByProfile(profileID uint, statuses []string, unboundOnly bool) (decimal.Decimal, error) {
+func (r *Store) SumCommissionByProfile(profileID uint, statuses []string, unboundOnly bool) (decimal.Decimal, error) {
 	if profileID == 0 || len(statuses) == 0 {
 		return decimal.Zero, nil
 	}
-	query := r.db.Model(&models.AffiliateCommission{}).
-		Where("affiliate_profile_id = ? AND status IN ?", profileID, statuses)
+	query := r.db.Model(&affiliatedomain.Commission{}).
+		Where("affiliate_profile_id = ? AND status IN ? AND deleted_at IS NULL", profileID, statuses)
 	if unboundOnly {
 		query = query.Where("withdraw_request_id IS NULL")
 	}
@@ -425,13 +392,13 @@ func (r *GormAffiliateRepository) SumCommissionByProfile(profileID uint, statuse
 }
 
 // ListAvailableCommissionsForUpdate 查询并锁定可提现佣金
-func (r *GormAffiliateRepository) ListAvailableCommissionsForUpdate(profileID uint) ([]models.AffiliateCommission, error) {
+func (r *Store) ListAvailableCommissionsForUpdate(profileID uint) ([]affiliatedomain.Commission, error) {
 	if profileID == 0 {
-		return []models.AffiliateCommission{}, nil
+		return []affiliatedomain.Commission{}, nil
 	}
-	var rows []models.AffiliateCommission
-	if err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("affiliate_profile_id = ? AND status = ? AND withdraw_request_id IS NULL",
+	var rows []affiliatedomain.Commission
+	if err := r.db.Model(&affiliatedomain.Commission{}).Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("affiliate_profile_id = ? AND status = ? AND withdraw_request_id IS NULL AND deleted_at IS NULL",
 			profileID, constants.AffiliateCommissionStatusAvailable).
 		Order("id asc").
 		Find(&rows).Error; err != nil {
@@ -441,30 +408,36 @@ func (r *GormAffiliateRepository) ListAvailableCommissionsForUpdate(profileID ui
 }
 
 // BatchUpdateCommissions 批量更新佣金记录
-func (r *GormAffiliateRepository) BatchUpdateCommissions(ids []uint, updates map[string]interface{}) error {
+func (r *Store) BatchUpdateCommissions(ids []uint, updates map[string]interface{}) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	return r.db.Model(&models.AffiliateCommission{}).Where("id IN ?", ids).Updates(updates).Error
+	return r.db.Model(&affiliatedomain.Commission{}).Where("id IN ? AND deleted_at IS NULL", ids).Updates(updates).Error
 }
 
 // CreateWithdraw 创建提现申请
-func (r *GormAffiliateRepository) CreateWithdraw(req *models.AffiliateWithdrawRequest) error {
+func (r *Store) CreateWithdraw(req *affiliatedomain.WithdrawRequest) error {
 	return r.db.Create(req).Error
 }
 
 // UpdateWithdraw 更新提现申请
-func (r *GormAffiliateRepository) UpdateWithdraw(req *models.AffiliateWithdrawRequest) error {
-	return r.db.Save(req).Error
+func (r *Store) UpdateWithdraw(req *affiliatedomain.WithdrawRequest) error {
+	if req == nil || req.ID == 0 {
+		return nil
+	}
+	return r.db.Model(&affiliatedomain.WithdrawRequest{}).
+		Where("id = ? AND deleted_at IS NULL", req.ID).
+		Select("*").
+		Updates(req).Error
 }
 
 // GetWithdrawByID 按ID查询提现申请
-func (r *GormAffiliateRepository) GetWithdrawByID(id uint) (*models.AffiliateWithdrawRequest, error) {
+func (r *Store) GetWithdrawByID(id uint) (*affiliatedomain.WithdrawRequest, error) {
 	if id == 0 {
 		return nil, nil
 	}
-	var row models.AffiliateWithdrawRequest
-	if err := r.db.Preload("AffiliateProfile").Preload("AffiliateProfile.User", "deleted_at IS NULL").Preload("Processor", "deleted_at IS NULL").First(&row, id).Error; err != nil {
+	var row affiliatedomain.WithdrawRequest
+	if err := r.db.Where("affiliate_withdraw_requests.deleted_at IS NULL").Preload("AffiliateProfile", "deleted_at IS NULL").Preload("AffiliateProfile.User", "deleted_at IS NULL").Preload("Processor", "deleted_at IS NULL").First(&row, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -474,12 +447,12 @@ func (r *GormAffiliateRepository) GetWithdrawByID(id uint) (*models.AffiliateWit
 }
 
 // GetWithdrawByIDForUpdate 按ID锁定查询提现申请
-func (r *GormAffiliateRepository) GetWithdrawByIDForUpdate(id uint) (*models.AffiliateWithdrawRequest, error) {
+func (r *Store) GetWithdrawByIDForUpdate(id uint) (*affiliatedomain.WithdrawRequest, error) {
 	if id == 0 {
 		return nil, nil
 	}
-	var row models.AffiliateWithdrawRequest
-	if err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).First(&row, id).Error; err != nil {
+	var row affiliatedomain.WithdrawRequest
+	if err := r.db.Where("affiliate_withdraw_requests.deleted_at IS NULL").Clauses(clause.Locking{Strength: "UPDATE"}).First(&row, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -489,9 +462,10 @@ func (r *GormAffiliateRepository) GetWithdrawByIDForUpdate(id uint) (*models.Aff
 }
 
 // ListWithdraws 查询提现申请列表
-func (r *GormAffiliateRepository) ListWithdraws(filter AffiliateWithdrawListFilter) ([]models.AffiliateWithdrawRequest, int64, error) {
-	query := r.db.Model(&models.AffiliateWithdrawRequest{}).
-		Preload("AffiliateProfile").
+func (r *Store) ListWithdraws(filter affiliatecontract.WithdrawListFilter) ([]affiliatedomain.WithdrawRequest, int64, error) {
+	query := r.db.Model(&affiliatedomain.WithdrawRequest{}).
+		Where("affiliate_withdraw_requests.deleted_at IS NULL").
+		Preload("AffiliateProfile", "deleted_at IS NULL").
 		Preload("AffiliateProfile.User", "deleted_at IS NULL").
 		Preload("Processor", "deleted_at IS NULL")
 
@@ -522,7 +496,7 @@ func (r *GormAffiliateRepository) ListWithdraws(filter AffiliateWithdrawListFilt
 	}
 	query = applyPagination(query, filter.Page, filter.PageSize)
 
-	var rows []models.AffiliateWithdrawRequest
+	var rows []affiliatedomain.WithdrawRequest
 	if err := query.Order("affiliate_withdraw_requests.id desc").Find(&rows).Error; err != nil {
 		return nil, 0, err
 	}
@@ -530,8 +504,8 @@ func (r *GormAffiliateRepository) ListWithdraws(filter AffiliateWithdrawListFilt
 }
 
 // GetProfileStatsBatch 批量汇总推广用户统计信息
-func (r *GormAffiliateRepository) GetProfileStatsBatch(profileIDs []uint) (map[uint]AffiliateProfileStatsAggregate, error) {
-	result := make(map[uint]AffiliateProfileStatsAggregate, len(profileIDs))
+func (r *Store) GetProfileStatsBatch(profileIDs []uint) (map[uint]affiliatecontract.ProfileStatsAggregate, error) {
+	result := make(map[uint]affiliatecontract.ProfileStatsAggregate, len(profileIDs))
 	if len(profileIDs) == 0 {
 		return result, nil
 	}
@@ -540,7 +514,7 @@ func (r *GormAffiliateRepository) GetProfileStatsBatch(profileIDs []uint) (map[u
 		if id == 0 {
 			continue
 		}
-		result[id] = AffiliateProfileStatsAggregate{
+		result[id] = affiliatecontract.ProfileStatsAggregate{
 			PendingCommission:   decimal.Zero,
 			AvailableCommission: decimal.Zero,
 			WithdrawnCommission: decimal.Zero,
@@ -551,7 +525,7 @@ func (r *GormAffiliateRepository) GetProfileStatsBatch(profileIDs []uint) (map[u
 		AffiliateProfileID uint  `gorm:"column:affiliate_profile_id"`
 		Total              int64 `gorm:"column:total"`
 	}
-	if err := r.db.Model(&models.AffiliateClick{}).
+	if err := r.db.Model(&affiliatedomain.Click{}).
 		Select("affiliate_profile_id, COUNT(*) AS total").
 		Where("affiliate_profile_id IN ?", profileIDs).
 		Group("affiliate_profile_id").
@@ -568,9 +542,9 @@ func (r *GormAffiliateRepository) GetProfileStatsBatch(profileIDs []uint) (map[u
 		AffiliateProfileID uint  `gorm:"column:affiliate_profile_id"`
 		Total              int64 `gorm:"column:total"`
 	}
-	if err := r.db.Model(&models.AffiliateCommission{}).
+	if err := r.db.Model(&affiliatedomain.Commission{}).
 		Select("affiliate_profile_id, COUNT(DISTINCT order_id) AS total").
-		Where("affiliate_profile_id IN ? AND status <> ?", profileIDs, constants.AffiliateCommissionStatusRejected).
+		Where("affiliate_profile_id IN ? AND status <> ? AND deleted_at IS NULL", profileIDs, constants.AffiliateCommissionStatusRejected).
 		Group("affiliate_profile_id").
 		Scan(&validRows).Error; err != nil {
 		return nil, err
@@ -585,9 +559,9 @@ func (r *GormAffiliateRepository) GetProfileStatsBatch(profileIDs []uint) (map[u
 		AffiliateProfileID uint            `gorm:"column:affiliate_profile_id"`
 		Total              decimal.Decimal `gorm:"column:total"`
 	}
-	if err := r.db.Model(&models.AffiliateCommission{}).
+	if err := r.db.Model(&affiliatedomain.Commission{}).
 		Select("affiliate_profile_id, COALESCE(SUM(commission_amount), 0) AS total").
-		Where("affiliate_profile_id IN ? AND status = ?", profileIDs, constants.AffiliateCommissionStatusPendingConfirm).
+		Where("affiliate_profile_id IN ? AND status = ? AND deleted_at IS NULL", profileIDs, constants.AffiliateCommissionStatusPendingConfirm).
 		Group("affiliate_profile_id").
 		Scan(&pendingRows).Error; err != nil {
 		return nil, err
@@ -602,9 +576,9 @@ func (r *GormAffiliateRepository) GetProfileStatsBatch(profileIDs []uint) (map[u
 		AffiliateProfileID uint            `gorm:"column:affiliate_profile_id"`
 		Total              decimal.Decimal `gorm:"column:total"`
 	}
-	if err := r.db.Model(&models.AffiliateCommission{}).
+	if err := r.db.Model(&affiliatedomain.Commission{}).
 		Select("affiliate_profile_id, COALESCE(SUM(commission_amount), 0) AS total").
-		Where("affiliate_profile_id IN ? AND status = ? AND withdraw_request_id IS NULL",
+		Where("affiliate_profile_id IN ? AND status = ? AND withdraw_request_id IS NULL AND deleted_at IS NULL",
 			profileIDs,
 			constants.AffiliateCommissionStatusAvailable,
 		).
@@ -622,9 +596,9 @@ func (r *GormAffiliateRepository) GetProfileStatsBatch(profileIDs []uint) (map[u
 		AffiliateProfileID uint            `gorm:"column:affiliate_profile_id"`
 		Total              decimal.Decimal `gorm:"column:total"`
 	}
-	if err := r.db.Model(&models.AffiliateCommission{}).
+	if err := r.db.Model(&affiliatedomain.Commission{}).
 		Select("affiliate_profile_id, COALESCE(SUM(commission_amount), 0) AS total").
-		Where("affiliate_profile_id IN ? AND status = ?", profileIDs, constants.AffiliateCommissionStatusWithdrawn).
+		Where("affiliate_profile_id IN ? AND status = ? AND deleted_at IS NULL", profileIDs, constants.AffiliateCommissionStatusWithdrawn).
 		Group("affiliate_profile_id").
 		Scan(&withdrawnRows).Error; err != nil {
 		return nil, err
@@ -637,3 +611,15 @@ func (r *GormAffiliateRepository) GetProfileStatsBatch(profileIDs []uint) (map[u
 
 	return result, nil
 }
+
+func applyPagination(query *gorm.DB, page, pageSize int) *gorm.DB {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	return query.Offset((page - 1) * pageSize).Limit(pageSize)
+}
+
+var _ affiliatecontract.Store = (*Store)(nil)

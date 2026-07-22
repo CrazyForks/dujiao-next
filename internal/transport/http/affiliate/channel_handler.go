@@ -6,8 +6,9 @@ import (
 	"strings"
 	"time"
 
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
@@ -377,7 +378,7 @@ func buildChannelIdentity(req channelIdentityRequest) ChannelIdentity {
 	}
 }
 
-func buildChannelAffiliateProfileResponse(profile *models.AffiliateProfile) gin.H {
+func buildChannelAffiliateProfileResponse(profile *affiliatedomain.Profile) gin.H {
 	if profile == nil {
 		return gin.H{}
 	}

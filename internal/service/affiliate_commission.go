@@ -5,8 +5,11 @@ import (
 	"strings"
 	"time"
 
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -84,7 +87,7 @@ func (s *AffiliateService) HandleOrderPaid(orderID uint) error {
 		confirmAt = &t
 	}
 
-	commission := &models.AffiliateCommission{
+	commission := &affiliatedomain.Commission{
 		AffiliateProfileID: profile.ID,
 		OrderID:            order.ID,
 		CommissionType:     commissionType,
@@ -178,7 +181,7 @@ func (s *AffiliateService) HandleOrderRefundedTx(
 		delta = remaining
 	}
 
-	repoTx := s.repo.WithTx(tx)
+	repoTx := affiliategormstore.New(tx)
 	rows, err := repoTx.ListCommissionsByOrderForUpdate(order.ID, []string{
 		constants.AffiliateCommissionStatusPendingConfirm,
 		constants.AffiliateCommissionStatusAvailable,
@@ -247,7 +250,7 @@ func (s *AffiliateService) HandleOrderRefundedTx(
 	return nil
 }
 
-func (s *AffiliateService) resolveAffiliateProfileForOrder(order *models.Order) (*models.AffiliateProfile, error) {
+func (s *AffiliateService) resolveAffiliateProfileForOrder(order *models.Order) (*affiliatedomain.Profile, error) {
 	if order == nil || s.repo == nil {
 		return nil, nil
 	}

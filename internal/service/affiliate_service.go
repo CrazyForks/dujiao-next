@@ -3,6 +3,8 @@ package service
 import (
 	"time"
 
+	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
+
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
@@ -20,7 +22,7 @@ const (
 
 // AffiliateService 推广返利业务服务
 type AffiliateService struct {
-	repo           repository.AffiliateRepository
+	repo           affiliatecontract.Store
 	userRepo       usercontract.Store
 	orderRepo      repository.OrderRepository
 	productRepo    catalogproduct.Repository
@@ -29,7 +31,7 @@ type AffiliateService struct {
 
 // NewAffiliateService 创建推广返利服务
 func NewAffiliateService(
-	repo repository.AffiliateRepository,
+	repo affiliatecontract.Store,
 	userRepo usercontract.Store,
 	orderRepo repository.OrderRepository,
 	productRepo catalogproduct.Repository,

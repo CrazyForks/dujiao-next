@@ -1,8 +1,8 @@
 package affiliatewiring
 
 import (
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	"github.com/dujiao-next/internal/service"
 )
 
@@ -15,7 +15,7 @@ func (a affiliateStorefrontAdapter) TrackClick(input affiliate.TrackClickInput) 
 	return a.svc.TrackClick(input)
 }
 
-func (a affiliateStorefrontAdapter) OpenAffiliate(userID uint) (*models.AffiliateProfile, error) {
+func (a affiliateStorefrontAdapter) OpenAffiliate(userID uint) (*affiliatedomain.Profile, error) {
 	return a.svc.OpenAffiliate(userID)
 }
 
@@ -23,14 +23,14 @@ func (a affiliateStorefrontAdapter) GetUserDashboard(userID uint) (affiliate.Das
 	return a.svc.GetUserDashboard(userID)
 }
 
-func (a affiliateStorefrontAdapter) ListUserCommissions(userID uint, page, pageSize int, status string) ([]models.AffiliateCommission, int64, error) {
+func (a affiliateStorefrontAdapter) ListUserCommissions(userID uint, page, pageSize int, status string) ([]affiliatedomain.Commission, int64, error) {
 	return a.svc.ListUserCommissions(userID, page, pageSize, status)
 }
 
-func (a affiliateStorefrontAdapter) ListUserWithdraws(userID uint, page, pageSize int, status string) ([]models.AffiliateWithdrawRequest, int64, error) {
+func (a affiliateStorefrontAdapter) ListUserWithdraws(userID uint, page, pageSize int, status string) ([]affiliatedomain.WithdrawRequest, int64, error) {
 	return a.svc.ListUserWithdraws(userID, page, pageSize, status)
 }
 
-func (a affiliateStorefrontAdapter) ApplyWithdraw(userID uint, input affiliate.WithdrawApplyInput) (*models.AffiliateWithdrawRequest, error) {
+func (a affiliateStorefrontAdapter) ApplyWithdraw(userID uint, input affiliate.WithdrawApplyInput) (*affiliatedomain.WithdrawRequest, error) {
 	return a.svc.ApplyWithdraw(userID, input)
 }

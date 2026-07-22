@@ -1,9 +1,9 @@
-package models
+package domain
 
 import "time"
 
-// AffiliateClick 推广返利点击记录
-type AffiliateClick struct {
+// Click 推广返利点击记录
+type Click struct {
 	ID                 uint      `gorm:"primarykey" json:"id"`                                       // 主键
 	AffiliateProfileID uint      `gorm:"not null;index" json:"affiliate_profile_id"`                 // 推广用户ID
 	VisitorKey         string    `gorm:"type:varchar(128);index" json:"visitor_key"`                 // 访客标识
@@ -13,10 +13,10 @@ type AffiliateClick struct {
 	UserAgent          string    `gorm:"type:varchar(1024)" json:"user_agent"`                       // 客户端UA
 	CreatedAt          time.Time `gorm:"index;not null;default:CURRENT_TIMESTAMP" json:"created_at"` // 创建时间
 
-	AffiliateProfile AffiliateProfile `gorm:"foreignKey:AffiliateProfileID" json:"affiliate_profile,omitempty"` // 推广用户
+	AffiliateProfile Profile `gorm:"foreignKey:AffiliateProfileID" json:"affiliate_profile,omitempty"` // 推广用户
 }
 
 // TableName 指定表名
-func (AffiliateClick) TableName() string {
+func (Click) TableName() string {
 	return "affiliate_clicks"
 }

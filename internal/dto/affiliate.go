@@ -3,7 +3,8 @@ package dto
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+
 	"github.com/dujiao-next/internal/shared/money"
 )
 
@@ -15,8 +16,8 @@ type AffiliateProfileResp struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
-// NewAffiliateProfileResp 从 models.AffiliateProfile 构造响应
-func NewAffiliateProfileResp(p *models.AffiliateProfile) AffiliateProfileResp {
+// NewAffiliateProfileResp 从 affiliatedomain.Profile 构造响应
+func NewAffiliateProfileResp(p *affiliatedomain.Profile) AffiliateProfileResp {
 	return AffiliateProfileResp{
 		ID:            p.ID,
 		AffiliateCode: p.AffiliateCode,
@@ -37,8 +38,8 @@ type AffiliateCommissionResp struct {
 	CreatedAt        time.Time    `json:"created_at"`
 }
 
-// NewAffiliateCommissionResp 从 models.AffiliateCommission 构造响应
-func NewAffiliateCommissionResp(c *models.AffiliateCommission) AffiliateCommissionResp {
+// NewAffiliateCommissionResp 从 affiliatedomain.Commission 构造响应
+func NewAffiliateCommissionResp(c *affiliatedomain.Commission) AffiliateCommissionResp {
 	return AffiliateCommissionResp{
 		ID:               c.ID,
 		CommissionType:   c.CommissionType,
@@ -53,7 +54,7 @@ func NewAffiliateCommissionResp(c *models.AffiliateCommission) AffiliateCommissi
 }
 
 // NewAffiliateCommissionRespList 批量转换佣金列表
-func NewAffiliateCommissionRespList(commissions []models.AffiliateCommission) []AffiliateCommissionResp {
+func NewAffiliateCommissionRespList(commissions []affiliatedomain.Commission) []AffiliateCommissionResp {
 	result := make([]AffiliateCommissionResp, 0, len(commissions))
 	for i := range commissions {
 		result = append(result, NewAffiliateCommissionResp(&commissions[i]))
@@ -72,8 +73,8 @@ type AffiliateWithdrawResp struct {
 	CreatedAt    time.Time    `json:"created_at"`
 }
 
-// NewAffiliateWithdrawResp 从 models.AffiliateWithdrawRequest 构造响应
-func NewAffiliateWithdrawResp(w *models.AffiliateWithdrawRequest) AffiliateWithdrawResp {
+// NewAffiliateWithdrawResp 从 affiliatedomain.WithdrawRequest 构造响应
+func NewAffiliateWithdrawResp(w *affiliatedomain.WithdrawRequest) AffiliateWithdrawResp {
 	return AffiliateWithdrawResp{
 		ID:           w.ID,
 		Amount:       w.Amount,
@@ -87,7 +88,7 @@ func NewAffiliateWithdrawResp(w *models.AffiliateWithdrawRequest) AffiliateWithd
 }
 
 // NewAffiliateWithdrawRespList 批量转换提现列表
-func NewAffiliateWithdrawRespList(withdraws []models.AffiliateWithdrawRequest) []AffiliateWithdrawResp {
+func NewAffiliateWithdrawRespList(withdraws []affiliatedomain.WithdrawRequest) []AffiliateWithdrawResp {
 	result := make([]AffiliateWithdrawResp, 0, len(withdraws))
 	for i := range withdraws {
 		result = append(result, NewAffiliateWithdrawResp(&withdraws[i]))

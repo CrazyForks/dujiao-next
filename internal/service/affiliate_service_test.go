@@ -5,6 +5,9 @@ import (
 	"testing"
 	"time"
 
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
+
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -15,8 +18,6 @@ import (
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -140,7 +141,7 @@ func setupAffiliateServiceTest(t *testing.T) (*AffiliateService, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&userdomain.User{}, &models.AffiliateProfile{}, &models.AffiliateClick{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &affiliatedomain.Profile{}, &affiliatedomain.Click{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -153,7 +154,7 @@ func setupAffiliateServiceTest(t *testing.T) (*AffiliateService, *gorm.DB) {
 		t.Fatalf("init affiliate setting failed: %v", err)
 	}
 
-	affiliateRepo := repository.NewAffiliateRepository(db)
+	affiliateRepo := affiliategormstore.New(db)
 	return NewAffiliateService(affiliateRepo, userstore.New(db), nil, nil, settingSvc), db
 }
 
@@ -174,10 +175,10 @@ func createAffiliateTestUser(t *testing.T, db *gorm.DB, email string) userdomain
 	return row
 }
 
-func createAffiliateTestProfile(t *testing.T, db *gorm.DB, userID uint, code, status string) models.AffiliateProfile {
+func createAffiliateTestProfile(t *testing.T, db *gorm.DB, userID uint, code, status string) affiliatedomain.Profile {
 	t.Helper()
 
-	row := models.AffiliateProfile{
+	row := affiliatedomain.Profile{
 		UserID:        userID,
 		AffiliateCode: code,
 		Status:        status,
@@ -193,7 +194,7 @@ func createAffiliateTestProfile(t *testing.T, db *gorm.DB, userID uint, code, st
 func createAffiliateTestClick(t *testing.T, db *gorm.DB, profileID uint, visitorKey string, createdAt time.Time) {
 	t.Helper()
 
-	row := models.AffiliateClick{
+	row := affiliatedomain.Click{
 		AffiliateProfileID: profileID,
 		VisitorKey:         visitorKey,
 		LandingPath:        "/",

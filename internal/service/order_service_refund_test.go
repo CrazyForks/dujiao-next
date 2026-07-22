@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
+
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -38,9 +41,9 @@ func setupOrderRefundServiceTest(t *testing.T) (*OrderRefundService, *gorm.DB) {
 		&models.Fulfillment{},
 		&models.SiteConnection{},
 		&models.ProcurementOrder{},
-		&models.AffiliateProfile{},
-		&models.AffiliateCommission{},
-		&models.AffiliateWithdrawRequest{},
+		&affiliatedomain.Profile{},
+		&affiliatedomain.Commission{},
+		&affiliatedomain.WithdrawRequest{},
 		&models.WalletAccount{},
 		&models.WalletTransaction{},
 		&models.OrderRefundRecord{},
@@ -52,7 +55,7 @@ func setupOrderRefundServiceTest(t *testing.T) (*OrderRefundService, *gorm.DB) {
 
 	orderRepo := repository.NewOrderRepository(db)
 	orderRefundRecordRepo := repository.NewOrderRefundRecordRepository(db)
-	affiliateSvc := NewAffiliateService(repository.NewAffiliateRepository(db), nil, nil, nil, nil)
+	affiliateSvc := NewAffiliateService(affiliategormstore.New(db), nil, nil, nil, nil)
 	userRepo := userstore.New(db)
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
 	return NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateSvc, settingSvc), db

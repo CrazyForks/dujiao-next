@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
+
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -52,7 +55,7 @@ func (a channelAffiliateServiceAdapter) TrackClick(input affiliate.TrackClickInp
 	return a.svc.TrackClick(input)
 }
 
-func (a channelAffiliateServiceAdapter) OpenAffiliate(userID uint) (*models.AffiliateProfile, error) {
+func (a channelAffiliateServiceAdapter) OpenAffiliate(userID uint) (*affiliatedomain.Profile, error) {
 	return a.svc.OpenAffiliate(userID)
 }
 
@@ -60,15 +63,15 @@ func (a channelAffiliateServiceAdapter) GetUserDashboard(userID uint) (affiliate
 	return a.svc.GetUserDashboard(userID)
 }
 
-func (a channelAffiliateServiceAdapter) ListUserCommissions(userID uint, page, pageSize int, status string) ([]models.AffiliateCommission, int64, error) {
+func (a channelAffiliateServiceAdapter) ListUserCommissions(userID uint, page, pageSize int, status string) ([]affiliatedomain.Commission, int64, error) {
 	return a.svc.ListUserCommissions(userID, page, pageSize, status)
 }
 
-func (a channelAffiliateServiceAdapter) ListUserWithdraws(userID uint, page, pageSize int, status string) ([]models.AffiliateWithdrawRequest, int64, error) {
+func (a channelAffiliateServiceAdapter) ListUserWithdraws(userID uint, page, pageSize int, status string) ([]affiliatedomain.WithdrawRequest, int64, error) {
 	return a.svc.ListUserWithdraws(userID, page, pageSize, status)
 }
 
-func (a channelAffiliateServiceAdapter) ApplyWithdraw(userID uint, input affiliate.WithdrawApplyInput) (*models.AffiliateWithdrawRequest, error) {
+func (a channelAffiliateServiceAdapter) ApplyWithdraw(userID uint, input affiliate.WithdrawApplyInput) (*affiliatedomain.WithdrawRequest, error) {
 	return a.svc.ApplyWithdraw(userID, input)
 }
 
@@ -109,10 +112,10 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
-		&models.AffiliateProfile{},
-		&models.AffiliateClick{},
-		&models.AffiliateCommission{},
-		&models.AffiliateWithdrawRequest{},
+		&affiliatedomain.Profile{},
+		&affiliatedomain.Click{},
+		&affiliatedomain.Commission{},
+		&affiliatedomain.WithdrawRequest{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -123,7 +126,7 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 	emailVerifyRepo := emailverificationstore.New(db)
 	settingRepo := settingsstore.New(db)
 	orderRepo := repository.NewOrderRepository(db)
-	affiliateRepo := repository.NewAffiliateRepository(db)
+	affiliateRepo := affiliategormstore.New(db)
 
 	settingSvc := settingsapp.NewService(settingRepo)
 	if _, err := settingSvc.UpdateAffiliateSetting(settingsintegration.AffiliateSetting{
@@ -246,7 +249,7 @@ func TestChannelAffiliateListsCommissionAndWithdrawRecords(t *testing.T) {
 	if err := db.Create(&identity).Error; err != nil {
 		t.Fatalf("create identity failed: %v", err)
 	}
-	profile := models.AffiliateProfile{
+	profile := affiliatedomain.Profile{
 		UserID:        user.ID,
 		AffiliateCode: "AFFTEST01",
 		Status:        constants.AffiliateProfileStatusActive,
@@ -269,7 +272,7 @@ func TestChannelAffiliateListsCommissionAndWithdrawRecords(t *testing.T) {
 	if err := db.Create(&order).Error; err != nil {
 		t.Fatalf("create order failed: %v", err)
 	}
-	commission := models.AffiliateCommission{
+	commission := affiliatedomain.Commission{
 		AffiliateProfileID: profile.ID,
 		OrderID:            order.ID,
 		CommissionType:     constants.AffiliateCommissionTypeOrder,
@@ -283,7 +286,7 @@ func TestChannelAffiliateListsCommissionAndWithdrawRecords(t *testing.T) {
 	if err := db.Create(&commission).Error; err != nil {
 		t.Fatalf("create commission failed: %v", err)
 	}
-	withdraw := models.AffiliateWithdrawRequest{
+	withdraw := affiliatedomain.WithdrawRequest{
 		AffiliateProfileID: profile.ID,
 		Amount:             money.FromDecimal(decimal.RequireFromString("10.00")),
 		Channel:            "alipay",
@@ -383,7 +386,7 @@ func TestChannelAffiliateTrackClick(t *testing.T) {
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create unrelated user failed: %v", err)
 	}
-	profile := models.AffiliateProfile{
+	profile := affiliatedomain.Profile{
 		UserID:        user.ID,
 		AffiliateCode: "AFFCLICK1",
 		Status:        constants.AffiliateProfileStatusActive,
@@ -414,7 +417,7 @@ func TestChannelAffiliateTrackClick(t *testing.T) {
 	}
 
 	var clickCount int64
-	if err := db.Model(&models.AffiliateClick{}).Where("visitor_key = ?", "445566").Count(&clickCount).Error; err != nil {
+	if err := db.Model(&affiliatedomain.Click{}).Where("visitor_key = ?", "445566").Count(&clickCount).Error; err != nil {
 		t.Fatalf("count affiliate clicks failed: %v", err)
 	}
 	if clickCount != 1 {
@@ -444,7 +447,7 @@ func TestChannelAffiliateApplyWithdraw(t *testing.T) {
 	if err := db.Create(&identity).Error; err != nil {
 		t.Fatalf("create identity failed: %v", err)
 	}
-	profile := models.AffiliateProfile{
+	profile := affiliatedomain.Profile{
 		UserID:        user.ID,
 		AffiliateCode: "AFFWD001",
 		Status:        constants.AffiliateProfileStatusActive,
@@ -467,7 +470,7 @@ func TestChannelAffiliateApplyWithdraw(t *testing.T) {
 	if err := db.Create(&order).Error; err != nil {
 		t.Fatalf("create order failed: %v", err)
 	}
-	commission := models.AffiliateCommission{
+	commission := affiliatedomain.Commission{
 		AffiliateProfileID: profile.ID,
 		OrderID:            order.ID,
 		CommissionType:     constants.AffiliateCommissionTypeOrder,
@@ -513,7 +516,7 @@ func TestChannelAffiliateApplyWithdraw(t *testing.T) {
 	}
 
 	var withdrawCount int64
-	if err := db.Model(&models.AffiliateWithdrawRequest{}).Where("affiliate_profile_id = ?", profile.ID).Count(&withdrawCount).Error; err != nil {
+	if err := db.Model(&affiliatedomain.WithdrawRequest{}).Where("affiliate_profile_id = ?", profile.ID).Count(&withdrawCount).Error; err != nil {
 		t.Fatalf("count withdraw requests failed: %v", err)
 	}
 	if withdrawCount != 1 {

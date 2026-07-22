@@ -124,6 +124,11 @@ var completedMigrationPaths = []string{
 	"internal/service/auth_service_test.go",
 	"internal/service/totp_service.go",
 	"internal/service/totp_service_test.go",
+	"internal/models/affiliate_profile.go",
+	"internal/models/affiliate_click.go",
+	"internal/models/affiliate_commission.go",
+	"internal/models/affiliate_withdraw_request.go",
+	"internal/repository/affiliate_repository.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {
@@ -163,6 +168,20 @@ func TestSharedPasswordPolicyOwnsStrengthValidation(t *testing.T) {
 	assertFileDeclaresTypes(t, filepath.Join(policyRoot, "policy.go"), []string{"Policy"})
 	assertFileDeclaresFunctions(t, filepath.Join(policyRoot, "policy.go"), []string{"Validate"})
 	assertDirectoryGoFileBudget(t, policyRoot, 2)
+}
+
+func TestAffiliateModuleOwnsDomainAndPersistence(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	domainRoot := filepath.Join(repositoryRoot, "internal", "modules", "affiliate", "domain")
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "profile.go"), []string{"Profile"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "click.go"), []string{"Click"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "commission.go"), []string{"Commission"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "withdraw_request.go"), []string{"WithdrawRequest"})
+	assertDirectoryGoFileBudget(t, domainRoot, 5)
+
+	storeRoot := filepath.Join(repositoryRoot, "internal", "modules", "affiliate", "infrastructure", "gormstore")
+	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "store.go"), []string{"Store"})
+	assertDirectoryGoFileBudget(t, storeRoot, 2)
 }
 
 func TestLegacyHorizontalRootsCanOnlyShrink(t *testing.T) {

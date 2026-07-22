@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
+
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -38,9 +41,9 @@ func setupWalletServiceTest(t *testing.T) (*WalletService, *gorm.DB) {
 		&models.Fulfillment{},
 		&models.SiteConnection{},
 		&models.ProcurementOrder{},
-		&models.AffiliateProfile{},
-		&models.AffiliateCommission{},
-		&models.AffiliateWithdrawRequest{},
+		&affiliatedomain.Profile{},
+		&affiliatedomain.Commission{},
+		&affiliatedomain.WithdrawRequest{},
 		&models.WalletAccount{},
 		&models.WalletTransaction{},
 		&models.OrderRefundRecord{},
@@ -53,7 +56,7 @@ func setupWalletServiceTest(t *testing.T) (*WalletService, *gorm.DB) {
 	orderRepo := repository.NewOrderRepository(db)
 	refundRecordRepo := repository.NewOrderRefundRecordRepository(db)
 	userRepo := userstore.New(db)
-	affiliateSvc := NewAffiliateService(repository.NewAffiliateRepository(db), nil, nil, nil, nil)
+	affiliateSvc := NewAffiliateService(affiliategormstore.New(db), nil, nil, nil, nil)
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
 	return NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, affiliateSvc, settingSvc), db
 }
@@ -353,7 +356,7 @@ func TestWalletServiceAdminRefundToWallet(t *testing.T) {
 	}).Error; err != nil {
 		t.Fatalf("update order status failed: %v", err)
 	}
-	profile := models.AffiliateProfile{
+	profile := affiliatedomain.Profile{
 		UserID:        204,
 		AffiliateCode: "AFFT104A",
 		Status:        constants.AffiliateProfileStatusActive,
@@ -363,7 +366,7 @@ func TestWalletServiceAdminRefundToWallet(t *testing.T) {
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create affiliate profile failed: %v", err)
 	}
-	commission := models.AffiliateCommission{
+	commission := affiliatedomain.Commission{
 		AffiliateProfileID: profile.ID,
 		OrderID:            order.ID,
 		CommissionType:     constants.AffiliateCommissionTypeOrder,
@@ -407,7 +410,7 @@ func TestWalletServiceAdminRefundToWallet(t *testing.T) {
 	if !refundRecord.Amount.Decimal.Equal(decimal.NewFromInt(15)) {
 		t.Fatalf("unexpected refund record amount: %s", refundRecord.Amount.String())
 	}
-	var refreshedCommission models.AffiliateCommission
+	var refreshedCommission affiliatedomain.Commission
 	if err := db.First(&refreshedCommission, commission.ID).Error; err != nil {
 		t.Fatalf("reload affiliate commission failed: %v", err)
 	}

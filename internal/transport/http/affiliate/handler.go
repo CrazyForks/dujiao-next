@@ -4,10 +4,11 @@ import (
 	"errors"
 	"strings"
 
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -19,11 +20,11 @@ import (
 // Service 是前台推广返利端口。
 type Service interface {
 	TrackClick(input affiliate.TrackClickInput) error
-	OpenAffiliate(userID uint) (*models.AffiliateProfile, error)
+	OpenAffiliate(userID uint) (*affiliatedomain.Profile, error)
 	GetUserDashboard(userID uint) (affiliate.Dashboard, error)
-	ListUserCommissions(userID uint, page, pageSize int, status string) ([]models.AffiliateCommission, int64, error)
-	ListUserWithdraws(userID uint, page, pageSize int, status string) ([]models.AffiliateWithdrawRequest, int64, error)
-	ApplyWithdraw(userID uint, input affiliate.WithdrawApplyInput) (*models.AffiliateWithdrawRequest, error)
+	ListUserCommissions(userID uint, page, pageSize int, status string) ([]affiliatedomain.Commission, int64, error)
+	ListUserWithdraws(userID uint, page, pageSize int, status string) ([]affiliatedomain.WithdrawRequest, int64, error)
+	ApplyWithdraw(userID uint, input affiliate.WithdrawApplyInput) (*affiliatedomain.WithdrawRequest, error)
 }
 
 type trackClickRequest struct {

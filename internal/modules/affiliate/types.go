@@ -1,7 +1,7 @@
 package affiliate
 
 import (
-	"github.com/dujiao-next/internal/models"
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -49,7 +49,7 @@ type Stats struct {
 
 // AdminUserItem 后台推广用户列表项。
 type AdminUserItem struct {
-	Profile models.AffiliateProfile `json:"profile"`
+	Profile affiliatedomain.Profile `json:"profile"`
 	Stats   Stats                   `json:"stats"`
 }
 

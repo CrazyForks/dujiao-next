@@ -2,6 +2,7 @@ package provider
 
 import (
 	"github.com/dujiao-next/internal/models"
+	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	apicredentialgormstore "github.com/dujiao-next/internal/modules/apicredential/store/gormstore"
 	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/store/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
@@ -53,7 +54,7 @@ func (c *Container) initRepositories() {
 	c.NotificationLogRepo = notificationgormstore.NewLogStore(db)
 	c.AdminLoginLogRepo = auditloggormstore.NewAdminLoginStore(db)
 	c.DashboardRepo = dashboardgormstore.New(db)
-	c.AffiliateRepo = repository.NewAffiliateRepository(db)
+	c.AffiliateRepo = affiliategormstore.New(db)
 	c.ResellerRepo = repository.NewResellerRepository(db)
 	c.ResellerProductSettingRepo = repository.NewResellerProductSettingRepository(db)
 	c.ResellerOperationsRepo = repository.NewResellerOperationsRepository(db)

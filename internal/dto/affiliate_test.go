@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 )
 
 func TestAffiliateProfileRespOmitsSensitiveFields(t *testing.T) {
-	profile := &models.AffiliateProfile{
+	profile := &affiliatedomain.Profile{
 		ID:            1,
 		UserID:        99,
 		AffiliateCode: "AFF-001",
@@ -35,7 +35,7 @@ func TestAffiliateProfileRespOmitsSensitiveFields(t *testing.T) {
 }
 
 func TestAffiliateCommissionRespOmitsSensitiveFields(t *testing.T) {
-	commission := &models.AffiliateCommission{
+	commission := &affiliatedomain.Commission{
 		ID:                 1,
 		AffiliateProfileID: 5,
 		OrderID:            10,
@@ -64,7 +64,7 @@ func TestAffiliateCommissionRespOmitsSensitiveFields(t *testing.T) {
 }
 
 func TestAffiliateWithdrawRespOmitsSensitiveFields(t *testing.T) {
-	withdraw := &models.AffiliateWithdrawRequest{
+	withdraw := &affiliatedomain.WithdrawRequest{
 		ID:                 1,
 		AffiliateProfileID: 5,
 		Amount:             newMoney("50.00"),

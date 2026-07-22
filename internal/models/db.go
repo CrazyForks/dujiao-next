@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
@@ -133,10 +134,10 @@ func AutoMigrate() error {
 		&admindomain.Admin{},
 		&userdomain.User{},
 		&externalidentitydomain.Identity{},
-		&AffiliateProfile{},
-		&AffiliateClick{},
-		&AffiliateCommission{},
-		&AffiliateWithdrawRequest{},
+		&affiliatedomain.Profile{},
+		&affiliatedomain.Click{},
+		&affiliatedomain.Commission{},
+		&affiliatedomain.WithdrawRequest{},
 		&ResellerProfile{},
 		&ResellerDomain{},
 		&ResellerSiteConfig{},

@@ -4,8 +4,9 @@ import (
 	"errors"
 	"strings"
 
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
@@ -17,11 +18,11 @@ import (
 // AdminService 是后台推广返利管理端口。
 type AdminService interface {
 	ListAdminUsers(filter affiliate.AdminProfileListFilter) ([]affiliate.AdminUserItem, int64, error)
-	ListAdminCommissions(filter affiliate.AdminCommissionListFilter) ([]models.AffiliateCommission, int64, error)
-	ListAdminWithdraws(filter affiliate.AdminWithdrawListFilter) ([]models.AffiliateWithdrawRequest, int64, error)
-	UpdateAffiliateProfileStatus(profileID uint, status string) (*models.AffiliateProfile, error)
+	ListAdminCommissions(filter affiliate.AdminCommissionListFilter) ([]affiliatedomain.Commission, int64, error)
+	ListAdminWithdraws(filter affiliate.AdminWithdrawListFilter) ([]affiliatedomain.WithdrawRequest, int64, error)
+	UpdateAffiliateProfileStatus(profileID uint, status string) (*affiliatedomain.Profile, error)
 	BatchUpdateAffiliateProfileStatus(profileIDs []uint, status string) (int64, error)
-	ReviewWithdraw(adminID, withdrawID uint, action, reason string) (*models.AffiliateWithdrawRequest, error)
+	ReviewWithdraw(adminID, withdrawID uint, action, reason string) (*affiliatedomain.WithdrawRequest, error)
 }
 
 type profileStatusRequest struct {

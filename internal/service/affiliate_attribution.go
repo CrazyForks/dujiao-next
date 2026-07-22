@@ -4,8 +4,9 @@ import (
 	"strings"
 	"time"
 
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
 )
 
@@ -96,7 +97,7 @@ func (s *AffiliateService) TrackClick(input AffiliateTrackClickInput) error {
 		}
 	}
 
-	click := &models.AffiliateClick{
+	click := &affiliatedomain.Click{
 		AffiliateProfileID: profile.ID,
 		VisitorKey:         visitorKey,
 		LandingPath:        landingPath,

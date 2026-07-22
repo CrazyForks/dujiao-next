@@ -4,20 +4,21 @@ import (
 	"strings"
 	"time"
 
+	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
 )
 
 // AffiliateWithdrawApplyInput 兼容门面别名。
 type AffiliateWithdrawApplyInput = affiliate.WithdrawApplyInput
 
 // ApplyWithdraw 用户提交提现申请
-func (s *AffiliateService) ApplyWithdraw(userID uint, input AffiliateWithdrawApplyInput) (*models.AffiliateWithdrawRequest, error) {
+func (s *AffiliateService) ApplyWithdraw(userID uint, input AffiliateWithdrawApplyInput) (*affiliatedomain.WithdrawRequest, error) {
 	if userID == 0 || s.repo == nil {
 		return nil, ErrAffiliateNotOpened
 	}
@@ -50,8 +51,7 @@ func (s *AffiliateService) ApplyWithdraw(userID uint, input AffiliateWithdrawApp
 	}
 
 	var createdID uint
-	err = s.repo.Transaction(func(tx *gorm.DB) error {
-		repoTx := s.repo.WithTx(tx)
+	err = s.repo.WithinTransaction(func(repoTx affiliatecontract.Store) error {
 		profile, err := repoTx.GetProfileByUserID(userID)
 		if err != nil {
 			return err
@@ -115,7 +115,7 @@ func (s *AffiliateService) ApplyWithdraw(userID uint, input AffiliateWithdrawApp
 			return ErrAffiliateWithdrawInsufficient
 		}
 
-		req := &models.AffiliateWithdrawRequest{
+		req := &affiliatedomain.WithdrawRequest{
 			AffiliateProfileID: profile.ID,
 			Amount:             money.FromDecimal(amount),
 			Channel:            channel,
@@ -143,7 +143,7 @@ func (s *AffiliateService) ApplyWithdraw(userID uint, input AffiliateWithdrawApp
 }
 
 // ReviewWithdraw 管理端审核提现申请
-func (s *AffiliateService) ReviewWithdraw(adminID, withdrawID uint, action, rejectReason string) (*models.AffiliateWithdrawRequest, error) {
+func (s *AffiliateService) ReviewWithdraw(adminID, withdrawID uint, action, rejectReason string) (*affiliatedomain.WithdrawRequest, error) {
 	if withdrawID == 0 || s.repo == nil {
 		return nil, ErrNotFound
 	}
@@ -153,8 +153,7 @@ func (s *AffiliateService) ReviewWithdraw(adminID, withdrawID uint, action, reje
 	}
 	rejectReason = strings.TrimSpace(rejectReason)
 
-	err := s.repo.Transaction(func(tx *gorm.DB) error {
-		repoTx := s.repo.WithTx(tx)
+	err := s.repo.WithinTransaction(func(repoTx affiliatecontract.Store) error {
 		req, err := repoTx.GetWithdrawByIDForUpdate(withdrawID)
 		if err != nil {
 			return err

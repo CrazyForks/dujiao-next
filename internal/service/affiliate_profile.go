@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 )
 
 // UpdateAffiliateProfileStatus 管理端更新返利用户状态
-func (s *AffiliateService) UpdateAffiliateProfileStatus(profileID uint, rawStatus string) (*models.AffiliateProfile, error) {
+func (s *AffiliateService) UpdateAffiliateProfileStatus(profileID uint, rawStatus string) (*affiliatedomain.Profile, error) {
 	if profileID == 0 || s.repo == nil {
 		return nil, ErrNotFound
 	}
@@ -53,7 +54,7 @@ func (s *AffiliateService) BatchUpdateAffiliateProfileStatus(profileIDs []uint, 
 }
 
 // OpenAffiliate 为用户开通推广返利
-func (s *AffiliateService) OpenAffiliate(userID uint) (*models.AffiliateProfile, error) {
+func (s *AffiliateService) OpenAffiliate(userID uint) (*affiliatedomain.Profile, error) {
 	if userID == 0 {
 		return nil, ErrUserDisabled
 	}
@@ -93,7 +94,7 @@ func (s *AffiliateService) OpenAffiliate(userID uint) (*models.AffiliateProfile,
 		if genErr != nil {
 			return nil, genErr
 		}
-		profile := &models.AffiliateProfile{
+		profile := &affiliatedomain.Profile{
 			UserID:        userID,
 			AffiliateCode: code,
 			Status:        constants.AffiliateProfileStatusActive,

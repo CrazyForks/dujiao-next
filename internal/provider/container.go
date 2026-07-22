@@ -4,6 +4,7 @@ import (
 	"github.com/dujiao-next/internal/authz"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/modules/adproxy"
+	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
 	"github.com/dujiao-next/internal/modules/apicredential"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	"github.com/dujiao-next/internal/modules/captcha"
@@ -84,7 +85,7 @@ type Container struct {
 	NotificationLogRepo        *notificationgormstore.LogStore
 	AdminLoginLogRepo          auditlog.AdminLoginRepository
 	DashboardRepo              dashboard.Repository
-	AffiliateRepo              repository.AffiliateRepository
+	AffiliateRepo              affiliatecontract.Store
 	ResellerRepo               repository.ResellerRepository
 	ResellerProductSettingRepo repository.ResellerProductSettingRepository
 	ResellerOperationsRepo     repository.ResellerOperationsRepository

@@ -4,10 +4,11 @@ import (
 	"math"
 	"strings"
 
+	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
+	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -58,18 +59,18 @@ func (s *AffiliateService) GetUserDashboard(userID uint) (AffiliateDashboard, er
 }
 
 // ListUserCommissions 查询用户佣金记录
-func (s *AffiliateService) ListUserCommissions(userID uint, page, pageSize int, status string) ([]models.AffiliateCommission, int64, error) {
+func (s *AffiliateService) ListUserCommissions(userID uint, page, pageSize int, status string) ([]affiliatedomain.Commission, int64, error) {
 	if userID == 0 || s.repo == nil {
-		return []models.AffiliateCommission{}, 0, nil
+		return []affiliatedomain.Commission{}, 0, nil
 	}
 	profile, err := s.repo.GetProfileByUserID(userID)
 	if err != nil {
 		return nil, 0, err
 	}
 	if profile == nil {
-		return []models.AffiliateCommission{}, 0, nil
+		return []affiliatedomain.Commission{}, 0, nil
 	}
-	return s.repo.ListCommissions(repository.AffiliateCommissionListFilter{
+	return s.repo.ListCommissions(affiliatecontract.CommissionListFilter{
 		Page:               page,
 		PageSize:           pageSize,
 		AffiliateProfileID: profile.ID,
@@ -78,18 +79,18 @@ func (s *AffiliateService) ListUserCommissions(userID uint, page, pageSize int, 
 }
 
 // ListUserWithdraws 查询用户提现记录
-func (s *AffiliateService) ListUserWithdraws(userID uint, page, pageSize int, status string) ([]models.AffiliateWithdrawRequest, int64, error) {
+func (s *AffiliateService) ListUserWithdraws(userID uint, page, pageSize int, status string) ([]affiliatedomain.WithdrawRequest, int64, error) {
 	if userID == 0 || s.repo == nil {
-		return []models.AffiliateWithdrawRequest{}, 0, nil
+		return []affiliatedomain.WithdrawRequest{}, 0, nil
 	}
 	profile, err := s.repo.GetProfileByUserID(userID)
 	if err != nil {
 		return nil, 0, err
 	}
 	if profile == nil {
-		return []models.AffiliateWithdrawRequest{}, 0, nil
+		return []affiliatedomain.WithdrawRequest{}, 0, nil
 	}
-	return s.repo.ListWithdraws(repository.AffiliateWithdrawListFilter{
+	return s.repo.ListWithdraws(affiliatecontract.WithdrawListFilter{
 		Page:               page,
 		PageSize:           pageSize,
 		AffiliateProfileID: profile.ID,
@@ -98,7 +99,7 @@ func (s *AffiliateService) ListUserWithdraws(userID uint, page, pageSize int, st
 }
 
 // ListAdminUsers 后台查询推广用户列表
-func (s *AffiliateService) ListAdminUsers(filter repository.AffiliateProfileListFilter) ([]AffiliateAdminUserItem, int64, error) {
+func (s *AffiliateService) ListAdminUsers(filter affiliatecontract.ProfileListFilter) ([]AffiliateAdminUserItem, int64, error) {
 	if s.repo == nil {
 		return []AffiliateAdminUserItem{}, 0, nil
 	}
@@ -137,11 +138,11 @@ func (s *AffiliateService) ListAdminUsers(filter repository.AffiliateProfileList
 }
 
 // ListAdminCommissions 后台查询佣金记录
-func (s *AffiliateService) ListAdminCommissions(filter AffiliateAdminCommissionListFilter) ([]models.AffiliateCommission, int64, error) {
+func (s *AffiliateService) ListAdminCommissions(filter AffiliateAdminCommissionListFilter) ([]affiliatedomain.Commission, int64, error) {
 	if s.repo == nil {
-		return []models.AffiliateCommission{}, 0, nil
+		return []affiliatedomain.Commission{}, 0, nil
 	}
-	return s.repo.ListCommissions(repository.AffiliateCommissionListFilter{
+	return s.repo.ListCommissions(affiliatecontract.CommissionListFilter{
 		Page:               filter.Page,
 		PageSize:           filter.PageSize,
 		AffiliateProfileID: filter.AffiliateProfileID,
@@ -152,11 +153,11 @@ func (s *AffiliateService) ListAdminCommissions(filter AffiliateAdminCommissionL
 }
 
 // ListAdminWithdraws 后台查询提现申请
-func (s *AffiliateService) ListAdminWithdraws(filter AffiliateAdminWithdrawListFilter) ([]models.AffiliateWithdrawRequest, int64, error) {
+func (s *AffiliateService) ListAdminWithdraws(filter AffiliateAdminWithdrawListFilter) ([]affiliatedomain.WithdrawRequest, int64, error) {
 	if s.repo == nil {
-		return []models.AffiliateWithdrawRequest{}, 0, nil
+		return []affiliatedomain.WithdrawRequest{}, 0, nil
 	}
-	return s.repo.ListWithdraws(repository.AffiliateWithdrawListFilter{
+	return s.repo.ListWithdraws(affiliatecontract.WithdrawListFilter{
 		Page:               filter.Page,
 		PageSize:           filter.PageSize,
 		AffiliateProfileID: filter.AffiliateProfileID,

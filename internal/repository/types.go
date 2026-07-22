@@ -5,7 +5,6 @@ import (
 
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	walletmodule "github.com/dujiao-next/internal/modules/wallet"
-	"github.com/shopspring/decimal"
 )
 
 // Pagination 通用分页参数
@@ -148,46 +147,3 @@ type WalletTransactionListFilter = walletmodule.TransactionListFilter
 
 // WalletRechargeListFilter is retained for legacy callers.
 type WalletRechargeListFilter = walletmodule.RechargeListFilter
-
-// AffiliateProfileListFilter 推广用户列表过滤条件
-type AffiliateProfileListFilter struct {
-	Page     int
-	PageSize int
-	UserID   uint
-	Status   string
-	Code     string
-	Keyword  string
-}
-
-// AffiliateCommissionListFilter 推广佣金列表过滤条件
-type AffiliateCommissionListFilter struct {
-	Page               int
-	PageSize           int
-	AffiliateProfileID uint
-	OrderID            uint
-	OrderNo            string
-	Status             string
-	Keyword            string
-	CreatedFrom        *time.Time
-	CreatedTo          *time.Time
-}
-
-// AffiliateWithdrawListFilter 推广提现列表过滤条件
-type AffiliateWithdrawListFilter struct {
-	Page               int
-	PageSize           int
-	AffiliateProfileID uint
-	Status             string
-	Keyword            string
-	CreatedFrom        *time.Time
-	CreatedTo          *time.Time
-}
-
-// AffiliateProfileStatsAggregate 推广用户统计聚合结果
-type AffiliateProfileStatsAggregate struct {
-	ClickCount          int64
-	ValidOrderCount     int64
-	PendingCommission   decimal.Decimal
-	AvailableCommission decimal.Decimal
-	WithdrawnCommission decimal.Decimal
-}
