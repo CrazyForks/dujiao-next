@@ -1,4 +1,4 @@
-package notification
+package format
 
 import (
 	"fmt"
@@ -9,12 +9,13 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/modules/dashboard"
+	"github.com/dujiao-next/internal/modules/notification/contract"
 	"github.com/dujiao-next/internal/queue"
 )
 
 func BuildInventoryAlertDispatchPayloads(
-	setting NotificationCenterSetting,
-	dashboardSetting DashboardSetting,
+	setting contract.NotificationCenterSetting,
+	dashboardSetting contract.DashboardSetting,
 	payload queue.NotificationDispatchPayload,
 	rows []dashboard.InventoryAlertRow,
 ) []queue.NotificationDispatchPayload {
@@ -23,7 +24,7 @@ func BuildInventoryAlertDispatchPayloads(
 		return nil
 	}
 
-	locale := resolveNotificationLocale(payload.Locale, setting.DefaultLocale)
+	locale := ResolveLocale(payload.Locale, setting.DefaultLocale)
 	groups := map[string][]dashboard.InventoryAlertRow{
 		constants.NotificationAlertTypeOutOfStockProducts: {},
 		constants.NotificationAlertTypeLowStockProducts:   {},
@@ -48,7 +49,7 @@ func BuildInventoryAlertDispatchPayloads(
 			continue
 		}
 
-		data := cloneNotificationVariables(payload.Data)
+		data := CloneVariables(payload.Data)
 		if data == nil {
 			data = map[string]interface{}{}
 		}

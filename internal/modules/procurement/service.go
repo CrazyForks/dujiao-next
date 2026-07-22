@@ -9,7 +9,7 @@ import (
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/notification"
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/upstream"
 
@@ -91,10 +91,6 @@ type BotFulfillmentNotifier interface {
 	NotifyBotOrderFulfilled(userID, orderID uint)
 }
 
-type NotificationEnqueuer interface {
-	Enqueue(input notification.EnqueueInput) error
-}
-
 // ServiceOptions 显式声明采购模块的依赖，避免继续扩张位置参数构造器。
 type ServiceOptions struct {
 	Repository         Repository
@@ -106,7 +102,7 @@ type ServiceOptions struct {
 	OrderLifecycle     OrderLifecycle
 	DownstreamCallback DownstreamCallbackEnqueuer
 	BotNotifier        BotFulfillmentNotifier
-	Notifications      NotificationEnqueuer
+	Notifications      notificationcontract.NotificationEnqueuer
 }
 
 // Service 负责采购单从创建、提交、轮询到交付/退款回调的完整生命周期。
@@ -120,7 +116,7 @@ type Service struct {
 	orderLifecycle     OrderLifecycle
 	downstreamCallback DownstreamCallbackEnqueuer
 	botNotifier        BotFulfillmentNotifier
-	notifications      NotificationEnqueuer
+	notifications      notificationcontract.NotificationEnqueuer
 }
 
 func NewService(options ServiceOptions) *Service {

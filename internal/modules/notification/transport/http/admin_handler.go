@@ -5,8 +5,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/notification"
+	"github.com/dujiao-next/internal/modules/notification/contract"
+	"github.com/dujiao-next/internal/modules/notification/domain"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -20,11 +20,11 @@ type SettingsService interface {
 }
 
 type LogService interface {
-	ListForAdmin(notification.LogListFilter) ([]models.NotificationLog, int64, error)
+	ListForAdmin(contract.LogListFilter) ([]domain.NotificationLog, int64, error)
 }
 
 type Sender interface {
-	SendTest(context.Context, notification.TestSendInput) error
+	SendTest(context.Context, contract.TestSendInput) error
 }
 
 type AdminHandler struct {
@@ -61,7 +61,7 @@ func (h *AdminHandler) UpdateNotificationCenterSettings(c *gin.Context) {
 	setting, err := h.settings.PatchNotificationCenterSetting(req)
 	if err != nil {
 		switch {
-		case errors.Is(err, notification.ErrConfigInvalid):
+		case errors.Is(err, contract.ErrConfigInvalid):
 			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.settings_save_failed", err)
@@ -100,7 +100,7 @@ func (h *AdminHandler) ListNotificationLogs(c *gin.Context) {
 		return
 	}
 
-	items, total, err := h.logs.ListForAdmin(notification.LogListFilter{
+	items, total, err := h.logs.ListForAdmin(contract.LogListFilter{
 		Page:        page,
 		PageSize:    pageSize,
 		Channel:     channel,
@@ -131,7 +131,7 @@ func (h *AdminHandler) TestNotificationCenterSettings(c *gin.Context) {
 		return
 	}
 
-	err := h.sender.SendTest(c.Request.Context(), notification.TestSendInput{
+	err := h.sender.SendTest(c.Request.Context(), contract.TestSendInput{
 		Channel:   channel,
 		Target:    strings.TrimSpace(req.Target),
 		Scene:     strings.TrimSpace(req.Scene),
@@ -140,7 +140,7 @@ func (h *AdminHandler) TestNotificationCenterSettings(c *gin.Context) {
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, notification.ErrConfigInvalid):
+		case errors.Is(err, contract.ErrConfigInvalid):
 			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.notification_send_failed", err)

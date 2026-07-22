@@ -18,6 +18,7 @@ import (
 	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+	notificationdomain "github.com/dujiao-next/internal/modules/notification/domain"
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
@@ -162,7 +163,7 @@ func AutoMigrate() error {
 		&WalletRechargeOrder{},
 		&auditlogdomain.UserLoginLog{},
 		&auditlogdomain.AuthzAuditLog{},
-		&NotificationLog{},
+		&notificationdomain.NotificationLog{},
 		&auditlogdomain.AdminLoginLog{},
 		&emailverificationdomain.Code{},
 		&Order{},

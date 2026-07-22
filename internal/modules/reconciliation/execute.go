@@ -9,7 +9,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/notification"
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/dujiao-next/internal/upstream"
 
@@ -132,7 +132,7 @@ func (s *Service) notifyMismatch(job *models.ReconciliationJob) {
 	if s.notifications == nil {
 		return
 	}
-	_ = s.notifications.Enqueue(notification.EnqueueInput{
+	_ = s.notifications.Enqueue(notificationcontract.EnqueueInput{
 		EventType: constants.NotificationEventExceptionAlert,
 		BizType:   constants.NotificationBizTypeReconciliation, BizID: job.ID,
 		Data: map[string]any{

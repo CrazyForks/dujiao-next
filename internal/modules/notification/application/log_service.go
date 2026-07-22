@@ -1,10 +1,11 @@
-package notification
+package application
 
 import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/notification/contract"
+	"github.com/dujiao-next/internal/modules/notification/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -31,11 +32,11 @@ type LogRecordInput struct {
 
 // LogService 通知日志服务。
 type LogService struct {
-	repo LogRepository
+	repo contract.LogRepository
 }
 
 // NewLogService 创建通知日志服务。
-func NewLogService(repo LogRepository) *LogService {
+func NewLogService(repo contract.LogRepository) *LogService {
 	return &LogService{repo: repo}
 }
 
@@ -56,7 +57,7 @@ func (s *LogService) Record(input LogRecordInput) error {
 		status = notificationLogStatusFailed
 	}
 
-	item := &models.NotificationLog{
+	item := &domain.NotificationLog{
 		EventType:     strings.ToLower(strings.TrimSpace(input.EventType)),
 		BizType:       strings.ToLower(strings.TrimSpace(input.BizType)),
 		BizID:         input.BizID,
@@ -75,9 +76,9 @@ func (s *LogService) Record(input LogRecordInput) error {
 }
 
 // ListForAdmin 管理端查询通知日志
-func (s *LogService) ListForAdmin(filter LogListFilter) ([]models.NotificationLog, int64, error) {
+func (s *LogService) ListForAdmin(filter contract.LogListFilter) ([]domain.NotificationLog, int64, error) {
 	if s == nil || s.repo == nil {
-		return []models.NotificationLog{}, 0, nil
+		return []domain.NotificationLog{}, 0, nil
 	}
 	return s.repo.ListAdmin(filter)
 }

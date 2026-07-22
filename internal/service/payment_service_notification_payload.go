@@ -6,7 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/notification"
+	notificationformat "github.com/dujiao-next/internal/modules/notification/application/format"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
@@ -18,7 +18,7 @@ func (s *PaymentService) buildOrderNotificationPayload(order *models.Order, paym
 	customerEmail, customerLabel, customerType := s.resolveNotificationCustomer(order)
 	// 父订单拆单时商品项可能只存在于子订单，通知变量需先补齐聚合商品明细。
 	fillOrderItemsFromChildren(order)
-	itemsSummary, fulfillmentItemsSummary, counts := notification.BuildOrderItemSummaries(order.Items, locale)
+	itemsSummary, fulfillmentItemsSummary, counts := notificationformat.BuildOrderItemSummaries(order.Items, locale)
 	providerType, channelType, paymentChannel := notificationPaymentChannel(order, payment)
 
 	payload := jsonmap.JSON{
@@ -34,7 +34,7 @@ func (s *PaymentService) buildOrderNotificationPayload(order *models.Order, paym
 		"customer_type":             customerType,
 		"items_summary":             itemsSummary,
 		"fulfillment_items_summary": fulfillmentItemsSummary,
-		"delivery_summary":          notification.BuildDeliverySummary(locale, counts),
+		"delivery_summary":          notificationformat.BuildDeliverySummary(locale, counts),
 		"item_count":                fmt.Sprintf("%d", counts.Total),
 		"auto_item_count":           fmt.Sprintf("%d", counts.Auto),
 		"manual_item_count":         fmt.Sprintf("%d", counts.Manual),

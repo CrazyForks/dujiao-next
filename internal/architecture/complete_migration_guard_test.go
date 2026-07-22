@@ -261,6 +261,22 @@ var completedMigrationPaths = []string{
 	"internal/modules/auditlog/user_login_service.go",
 	"internal/transport/http/auditlog",
 	"internal/dto/login_log.go",
+	"internal/models/notification_log.go",
+	"internal/modules/notification/alert.go",
+	"internal/modules/notification/dedupe.go",
+	"internal/modules/notification/errors.go",
+	"internal/modules/notification/inventory_alert.go",
+	"internal/modules/notification/log_service.go",
+	"internal/modules/notification/log_service_test.go",
+	"internal/modules/notification/order_format.go",
+	"internal/modules/notification/payment_order_alert.go",
+	"internal/modules/notification/ports.go",
+	"internal/modules/notification/send.go",
+	"internal/modules/notification/service.go",
+	"internal/modules/notification/store",
+	"internal/modules/notification/template.go",
+	"internal/modules/notification/test_variables.go",
+	"internal/transport/http/notification",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

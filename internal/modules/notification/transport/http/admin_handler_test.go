@@ -7,18 +7,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/notification"
+	"github.com/dujiao-next/internal/modules/notification/contract"
+	"github.com/dujiao-next/internal/modules/notification/domain"
 
 	"github.com/gin-gonic/gin"
 )
 
 type notificationLogServiceStub struct {
-	items []models.NotificationLog
+	items []domain.NotificationLog
 }
 
-func (s notificationLogServiceStub) ListForAdmin(filter notification.LogListFilter) ([]models.NotificationLog, int64, error) {
-	result := make([]models.NotificationLog, 0, len(s.items))
+func (s notificationLogServiceStub) ListForAdmin(filter contract.LogListFilter) ([]domain.NotificationLog, int64, error) {
+	result := make([]domain.NotificationLog, 0, len(s.items))
 	for _, item := range s.items {
 		if filter.Channel != "" && item.Channel != filter.Channel {
 			continue
@@ -38,7 +38,7 @@ func TestListNotificationLogsFiltersStatusAndChannel(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	now := time.Now().UTC().Truncate(time.Second)
 
-	items := []models.NotificationLog{
+	items := []domain.NotificationLog{
 		{
 			EventType:    "order_paid_success",
 			BizType:      "order",
@@ -80,7 +80,7 @@ func TestListNotificationLogsFiltersStatusAndChannel(t *testing.T) {
 	}
 
 	var resp struct {
-		Data       []models.NotificationLog `json:"data"`
+		Data       []domain.NotificationLog `json:"data"`
 		Pagination struct {
 			Total int `json:"total"`
 		} `json:"pagination"`

@@ -1,33 +1,20 @@
-package notification
+package contract
 
 import (
 	"context"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/dashboard"
+	"github.com/dujiao-next/internal/modules/notification/domain"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 	"github.com/dujiao-next/internal/queue"
-
-	"github.com/hibiken/asynq"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 type NotificationCenterSetting = settingsmessaging.NotificationCenterSetting
 type DashboardSetting = settingsstorefront.DashboardSetting
 type DashboardAlertSetting = settingsstorefront.DashboardAlertSetting
-
-func normalizeNotificationLocale(locale string) string {
-	return settingsmessaging.NormalizeNotificationLocale(locale)
-}
-
-func normalizeNotificationInventoryAlertInterval(seconds int) int {
-	return settingsmessaging.NormalizeNotificationInventoryAlertInterval(seconds)
-}
-
-func normalizeNotificationPaymentOrderAlertInterval(seconds int) int {
-	return settingsmessaging.NormalizeNotificationPaymentOrderAlertInterval(seconds)
-}
 
 type SettingsReader interface {
 	GetNotificationCenterSetting() (settingsmessaging.NotificationCenterSetting, error)
@@ -38,8 +25,8 @@ type EmailSender interface {
 	SendCustomEmail(toEmail, subject, body string) error
 }
 
-type Enqueuer interface {
-	EnqueueNotificationDispatch(payload queue.NotificationDispatchPayload, opts ...asynq.Option) error
+type DispatchQueue interface {
+	EnqueueNotificationDispatch(payload queue.NotificationDispatchPayload, maxRetry int) error
 }
 
 type DashboardAlertReader interface {
@@ -53,8 +40,8 @@ type TelegramSender interface {
 }
 
 type LogRepository interface {
-	Create(log *models.NotificationLog) error
-	ListAdmin(filter LogListFilter) ([]models.NotificationLog, int64, error)
+	Create(log *domain.NotificationLog) error
+	ListAdmin(filter LogListFilter) ([]domain.NotificationLog, int64, error)
 }
 
 type LogListFilter struct {
@@ -66,4 +53,31 @@ type LogListFilter struct {
 	IsTest      *bool
 	CreatedFrom *time.Time
 	CreatedTo   *time.Time
+}
+
+// EnqueueInput 描述一个待投递的业务通知事件。
+type EnqueueInput struct {
+	EventType string
+	BizType   string
+	BizID     uint
+	Locale    string
+	Force     bool
+	Data      jsonmap.JSON
+}
+
+type NotificationEnqueuer interface {
+	Enqueue(input EnqueueInput) error
+}
+
+// TestSendInput 描述后台通知中心的一次测试发送。
+type TestSendInput struct {
+	Channel   string
+	Target    string
+	Scene     string
+	Locale    string
+	Variables map[string]interface{}
+}
+
+type TestSender interface {
+	SendTest(context.Context, TestSendInput) error
 }

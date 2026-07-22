@@ -12,7 +12,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/notification"
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/upstream"
@@ -202,7 +202,7 @@ func (s *Service) notifyProcurementFailure(procOrder *models.ProcurementOrder, e
 	if s.notifications == nil {
 		return
 	}
-	_ = s.notifications.Enqueue(notification.EnqueueInput{
+	_ = s.notifications.Enqueue(notificationcontract.EnqueueInput{
 		EventType: constants.NotificationEventExceptionAlert,
 		BizType:   constants.NotificationBizTypeProcurement,
 		BizID:     procOrder.ID,

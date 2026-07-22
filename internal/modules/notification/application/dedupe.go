@@ -1,4 +1,4 @@
-package notification
+package application
 
 import (
 	"context"
@@ -11,6 +11,8 @@ import (
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/constants"
+	"github.com/dujiao-next/internal/modules/notification/application/format"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	"github.com/dujiao-next/internal/queue"
 )
 
@@ -72,11 +74,11 @@ func isInventoryAlertType(alertType string) bool {
 }
 
 func acquireInventoryAlertInterval(ctx context.Context, intervalSeconds int, payload queue.NotificationDispatchPayload) (bool, error) {
-	alertType := ResolveInventoryAlertTypeKey(payload.Data)
+	alertType := format.ResolveInventoryAlertTypeKey(payload.Data)
 	if !isInventoryAlertType(alertType) {
 		return true, nil
 	}
-	intervalSeconds = normalizeNotificationInventoryAlertInterval(intervalSeconds)
+	intervalSeconds = settingsmessaging.NormalizeNotificationInventoryAlertInterval(intervalSeconds)
 	key := "notification:inventory_interval:" + alertType
 	return cache.SetNX(ctx, key, "1", time.Duration(intervalSeconds)*time.Second)
 }
@@ -97,7 +99,7 @@ func acquirePaymentOrderAlertInterval(ctx context.Context, intervalSeconds int, 
 	if !isPaymentOrderAlertType(alertType) {
 		return true, nil
 	}
-	intervalSeconds = normalizeNotificationPaymentOrderAlertInterval(intervalSeconds)
+	intervalSeconds = settingsmessaging.NormalizeNotificationPaymentOrderAlertInterval(intervalSeconds)
 	key := "notification:payment_order_interval:" + alertType
 	return cache.SetNX(ctx, key, "1", time.Duration(intervalSeconds)*time.Second)
 }
@@ -114,42 +116,6 @@ func resolvePaymentOrderAlertTypeKey(data map[string]interface{}) string {
 	normalized = strings.ToLower(strings.TrimSpace(fmt.Sprintf("%v", data["alert_type"])))
 	if isPaymentOrderAlertType(normalized) {
 		return normalized
-	}
-	return ""
-}
-
-func ResolveInventoryAlertTypeKey(data map[string]interface{}) string {
-	if len(data) == 0 {
-		return ""
-	}
-	if key := normalizeInventoryAlertTypeKey(fmt.Sprintf("%v", data["alert_type_key"])); key != "" {
-		return key
-	}
-	return normalizeInventoryAlertTypeKey(fmt.Sprintf("%v", data["alert_type"]))
-}
-
-func normalizeInventoryAlertTypeKey(value string) string {
-	normalized := strings.ToLower(strings.TrimSpace(value))
-	inventoryAlertTypes := []string{
-		constants.NotificationAlertTypeOutOfStockProducts,
-		constants.NotificationAlertTypeLowStockProducts,
-	}
-	locales := []string{
-		constants.LocaleZhCN,
-		constants.LocaleZhTW,
-		constants.LocaleEnUS,
-	}
-
-	for _, alertType := range inventoryAlertTypes {
-		if normalized == strings.ToLower(strings.TrimSpace(alertType)) {
-			return alertType
-		}
-		for _, locale := range locales {
-			label := strings.ToLower(strings.TrimSpace(alertTypeLabelByType(locale, alertType)))
-			if normalized == label {
-				return alertType
-			}
-		}
 	}
 	return ""
 }

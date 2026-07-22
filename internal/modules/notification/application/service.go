@@ -1,44 +1,33 @@
-package notification
+package application
 
 import (
 	"context"
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
+	"github.com/dujiao-next/internal/modules/notification/application/format"
+	"github.com/dujiao-next/internal/modules/notification/contract"
 	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-
-	"github.com/hibiken/asynq"
 )
-
-// EnqueueInput 通知事件入队参数。
-type EnqueueInput struct {
-	EventType string
-	BizType   string
-	BizID     uint
-	Locale    string
-	Force     bool
-	Data      jsonmap.JSON
-}
 
 // Service 通知中心服务。
 type Service struct {
-	settingService SettingsReader
-	emailService   EmailSender
-	queueClient    Enqueuer
-	dashboardSvc   DashboardAlertReader
+	settingService contract.SettingsReader
+	emailService   contract.EmailSender
+	queueClient    contract.DispatchQueue
+	dashboardSvc   contract.DashboardAlertReader
 	logService     *LogService
-	telegramSender TelegramSender
+	telegramSender contract.TelegramSender
 }
 
 // NewService 创建通知中心服务。
 func NewService(
-	settingService SettingsReader,
-	emailService EmailSender,
-	queueClient Enqueuer,
-	dashboardSvc DashboardAlertReader,
+	settingService contract.SettingsReader,
+	emailService contract.EmailSender,
+	queueClient contract.DispatchQueue,
+	dashboardSvc contract.DashboardAlertReader,
 	logService *LogService,
-	telegramSender TelegramSender,
+	telegramSender contract.TelegramSender,
 ) *Service {
 	return &Service{
 		settingService: settingService,
@@ -51,10 +40,10 @@ func NewService(
 }
 
 // Enqueue 入队通知任务
-func (s *Service) Enqueue(input EnqueueInput) error {
+func (s *Service) Enqueue(input contract.EnqueueInput) error {
 	eventType := strings.ToLower(strings.TrimSpace(input.EventType))
 	if !isNotificationEventSupported(eventType) {
-		return ErrEventInvalid
+		return contract.ErrEventInvalid
 	}
 	if s == nil || s.queueClient == nil {
 		return nil
@@ -66,9 +55,9 @@ func (s *Service) Enqueue(input EnqueueInput) error {
 		BizID:     input.BizID,
 		Locale:    strings.TrimSpace(input.Locale),
 		Force:     input.Force,
-		Data:      notificationJSONToMap(input.Data),
+		Data:      format.JSONToMap(input.Data),
 	}
-	return s.queueClient.EnqueueNotificationDispatch(payload, asynq.MaxRetry(5))
+	return s.queueClient.EnqueueNotificationDispatch(payload, 5)
 }
 
 // Dispatch 处理通知分发任务
@@ -78,7 +67,7 @@ func (s *Service) Dispatch(ctx context.Context, payload queue.NotificationDispat
 	}
 	eventType := strings.ToLower(strings.TrimSpace(payload.EventType))
 	if !isNotificationEventSupported(eventType) {
-		return ErrEventInvalid
+		return contract.ErrEventInvalid
 	}
 
 	setting, err := s.settingService.GetNotificationCenterSetting()

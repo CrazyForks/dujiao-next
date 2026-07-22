@@ -1,4 +1,4 @@
-package notification
+package application
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
+	"github.com/dujiao-next/internal/modules/notification/application/format"
+	"github.com/dujiao-next/internal/modules/notification/contract"
 	paymentcommon "github.com/dujiao-next/internal/payment/common"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -19,24 +21,15 @@ func detachOutboundRequestContext(parent context.Context) (context.Context, cont
 	return paymentcommon.WithDefaultTimeout(context.WithoutCancel(parent))
 }
 
-// TestSendInput 通知测试发送参数
-type TestSendInput struct {
-	Channel   string
-	Target    string
-	Scene     string
-	Locale    string
-	Variables map[string]interface{}
-}
-
 // SendTest 测试发送通知
-func (s *Service) SendTest(ctx context.Context, input TestSendInput) error {
+func (s *Service) SendTest(ctx context.Context, input contract.TestSendInput) error {
 	if s == nil {
-		return ErrSendFailed
+		return contract.ErrSendFailed
 	}
 	channel := strings.ToLower(strings.TrimSpace(input.Channel))
 	target := strings.TrimSpace(input.Target)
 	if channel == "" || target == "" {
-		return ErrConfigInvalid
+		return contract.ErrConfigInvalid
 	}
 
 	setting, err := s.settingService.GetNotificationCenterSetting()
@@ -47,17 +40,17 @@ func (s *Service) SendTest(ctx context.Context, input TestSendInput) error {
 	if scene == "" {
 		scene = constants.NotificationEventExceptionAlert
 	}
-	template := setting.Templates.TemplateByEvent(scene).ResolveLocaleTemplate(resolveNotificationLocale(input.Locale, setting.DefaultLocale))
-	variables := cloneNotificationVariables(input.Variables)
+	template := setting.Templates.TemplateByEvent(scene).ResolveLocaleTemplate(format.ResolveLocale(input.Locale, setting.DefaultLocale))
+	variables := format.CloneVariables(input.Variables)
 	if variables == nil {
 		variables = map[string]interface{}{}
 	}
-	locale := resolveNotificationLocale(input.Locale, setting.DefaultLocale)
-	applyNotificationTestVariables(variables, BuildTestVariables(scene, locale))
+	locale := format.ResolveLocale(input.Locale, setting.DefaultLocale)
+	format.ApplyTestVariables(variables, format.BuildTestVariables(scene, locale))
 	variables["event_type"] = scene
-	variables["message"] = pickNotificationMessage(variables["message"], "test message")
-	title := renderNotificationTemplate(template.Title, variables)
-	body := renderNotificationTemplate(template.Body, variables)
+	variables["message"] = format.PickMessage(variables["message"], "test message")
+	title := format.RenderTemplate(template.Title, variables)
+	body := format.RenderTemplate(template.Body, variables)
 	if strings.TrimSpace(body) == "" {
 		body = title
 	}
@@ -67,7 +60,7 @@ func (s *Service) SendTest(ctx context.Context, input TestSendInput) error {
 
 	switch channel {
 	case "email":
-		sendErr := ErrSendFailed
+		sendErr := contract.ErrSendFailed
 		if s.emailService != nil {
 			sendErr = s.emailService.SendCustomEmail(target, title, body)
 		}
@@ -84,11 +77,11 @@ func (s *Service) SendTest(ctx context.Context, input TestSendInput) error {
 		})
 		return sendErr
 	case "telegram":
-		sendErr := ErrSendFailed
+		sendErr := contract.ErrSendFailed
 		gatewayCtx, cancel := detachOutboundRequestContext(ctx)
 		defer cancel()
 		if s.telegramSender != nil {
-			sendErr = s.telegramSender.SendMessage(gatewayCtx, target, composeTelegramMessage(title, body))
+			sendErr = s.telegramSender.SendMessage(gatewayCtx, target, format.ComposeTelegramMessage(title, body))
 		}
 		s.recordSendAttempt(notificationSendAttempt{
 			eventType: scene,
@@ -103,11 +96,11 @@ func (s *Service) SendTest(ctx context.Context, input TestSendInput) error {
 		})
 		return sendErr
 	default:
-		return ErrConfigInvalid
+		return contract.ErrConfigInvalid
 	}
 }
 
-func (s *Service) dispatchSingleEvent(ctx context.Context, setting NotificationCenterSetting, payload queue.NotificationDispatchPayload) error {
+func (s *Service) dispatchSingleEvent(ctx context.Context, setting contract.NotificationCenterSetting, payload queue.NotificationDispatchPayload) error {
 	if !payload.Force {
 		ok, err := acquireNotificationDedupe(ctx, setting.DedupeTTLSeconds, payload)
 		if err != nil {
@@ -118,11 +111,11 @@ func (s *Service) dispatchSingleEvent(ctx context.Context, setting NotificationC
 		}
 	}
 
-	locale := resolveNotificationLocale(payload.Locale, setting.DefaultLocale)
+	locale := format.ResolveLocale(payload.Locale, setting.DefaultLocale)
 	template := setting.Templates.TemplateByEvent(payload.EventType).ResolveLocaleTemplate(locale)
-	variables := buildNotificationTemplateVariables(payload)
-	title := renderNotificationTemplate(template.Title, variables)
-	body := renderNotificationTemplate(template.Body, variables)
+	variables := format.BuildTemplateVariables(payload)
+	title := format.RenderTemplate(template.Title, variables)
+	body := format.RenderTemplate(template.Body, variables)
 	if strings.TrimSpace(body) == "" {
 		body = title
 	}
@@ -135,7 +128,7 @@ func (s *Service) dispatchSingleEvent(ctx context.Context, setting NotificationC
 		for _, recipient := range setting.Channels.Email.Recipients {
 			var sendErr error
 			if s.emailService == nil {
-				sendErr = ErrSendFailed
+				sendErr = contract.ErrSendFailed
 			} else {
 				sendErr = s.emailService.SendCustomEmail(recipient, title, body)
 			}
@@ -166,11 +159,11 @@ func (s *Service) dispatchSingleEvent(ctx context.Context, setting NotificationC
 		}
 	}
 	if setting.Channels.Telegram.Enabled && len(setting.Channels.Telegram.Recipients) > 0 {
-		message := composeTelegramMessage(title, body)
+		message := format.ComposeTelegramMessage(title, body)
 		for _, recipient := range setting.Channels.Telegram.Recipients {
 			var sendErr error
 			if s.telegramSender == nil {
-				sendErr = ErrSendFailed
+				sendErr = contract.ErrSendFailed
 			} else {
 				sendErr = s.telegramSender.SendMessage(ctx, recipient, message)
 			}
@@ -201,7 +194,7 @@ func (s *Service) dispatchSingleEvent(ctx context.Context, setting NotificationC
 		}
 	}
 	if firstErr != nil {
-		return fmt.Errorf("%w: %v", ErrSendFailed, firstErr)
+		return fmt.Errorf("%w: %v", contract.ErrSendFailed, firstErr)
 	}
 	return nil
 }

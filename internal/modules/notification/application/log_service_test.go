@@ -1,4 +1,4 @@
-package notification
+package application
 
 import (
 	"context"
@@ -7,7 +7,8 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/notification/contract"
+	"github.com/dujiao-next/internal/modules/notification/domain"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 	"github.com/dujiao-next/internal/queue"
@@ -36,10 +37,10 @@ func (notificationEmailStub) SendCustomEmail(recipient, _, _ string) error {
 }
 
 type notificationLogRepositoryStub struct {
-	items []models.NotificationLog
+	items []domain.NotificationLog
 }
 
-func (r *notificationLogRepositoryStub) Create(item *models.NotificationLog) error {
+func (r *notificationLogRepositoryStub) Create(item *domain.NotificationLog) error {
 	if item != nil {
 		copy := *item
 		copy.ID = uint(len(r.items) + 1)
@@ -48,8 +49,8 @@ func (r *notificationLogRepositoryStub) Create(item *models.NotificationLog) err
 	return nil
 }
 
-func (r *notificationLogRepositoryStub) ListAdmin(filter LogListFilter) ([]models.NotificationLog, int64, error) {
-	result := make([]models.NotificationLog, 0, len(r.items))
+func (r *notificationLogRepositoryStub) ListAdmin(filter contract.LogListFilter) ([]domain.NotificationLog, int64, error) {
+	result := make([]domain.NotificationLog, 0, len(r.items))
 	for _, item := range r.items {
 		if filter.EventType != "" && item.EventType != filter.EventType {
 			continue
@@ -98,7 +99,7 @@ func setupLogService(t *testing.T) (*Service, *LogService) {
 
 func TestServiceSendTestRecordsSuccessLog(t *testing.T) {
 	service, logService := setupLogService(t)
-	if err := service.SendTest(context.Background(), TestSendInput{
+	if err := service.SendTest(context.Background(), contract.TestSendInput{
 		Channel: "email",
 		Target:  "success@example.com",
 		Scene:   constants.NotificationEventOrderPaidSuccess,
@@ -108,7 +109,7 @@ func TestServiceSendTestRecordsSuccessLog(t *testing.T) {
 	}
 
 	isTest := true
-	items, total, err := logService.ListForAdmin(LogListFilter{
+	items, total, err := logService.ListForAdmin(contract.LogListFilter{
 		Page: 1, PageSize: 10, EventType: constants.NotificationEventOrderPaidSuccess, IsTest: &isTest,
 	})
 	if err != nil {
@@ -142,11 +143,11 @@ func TestServiceDispatchSingleEventRecordsPerRecipientResult(t *testing.T) {
 			"customer_email": "member@example.com",
 		},
 	})
-	if !errors.Is(dispatchErr, ErrSendFailed) {
+	if !errors.Is(dispatchErr, contract.ErrSendFailed) {
 		t.Fatalf("expected send failure, got %v", dispatchErr)
 	}
 
-	items, total, err := logService.ListForAdmin(LogListFilter{Page: 1, PageSize: 10, EventType: constants.NotificationEventOrderPaidSuccess})
+	items, total, err := logService.ListForAdmin(contract.LogListFilter{Page: 1, PageSize: 10, EventType: constants.NotificationEventOrderPaidSuccess})
 	if err != nil {
 		t.Fatalf("list notification logs failed: %v", err)
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
-	"github.com/dujiao-next/internal/modules/notification"
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	"github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/queue"
@@ -34,7 +34,7 @@ type PaymentService struct {
 	defaultEmailConfig      config.EmailConfig
 	expireMinutes           int
 	affiliateSvc            AffiliatePaymentLifecycle
-	notificationSvc         *notification.Service
+	notificationSvc         notificationcontract.NotificationEnqueuer
 	procurementSvc          ProcurementCreator
 	downstreamCallbackSvc   *downstreamcallback.Service
 	memberLevelSvc          MemberLevelProgressor
@@ -97,7 +97,7 @@ type PaymentServiceOptions struct {
 	DefaultEmailConfig        config.EmailConfig
 	ExpireMinutes             int
 	AffiliateService          AffiliatePaymentLifecycle
-	NotificationService       *notification.Service
+	NotificationService       notificationcontract.NotificationEnqueuer
 	PaymentProviderRegistry   *provider.Registry
 	ResellerAccountingService *ResellerAccountingService
 }

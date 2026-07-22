@@ -1,8 +1,8 @@
 package gormstore
 
 import (
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/notification"
+	"github.com/dujiao-next/internal/modules/notification/contract"
+	"github.com/dujiao-next/internal/modules/notification/domain"
 
 	"gorm.io/gorm"
 )
@@ -17,7 +17,7 @@ func NewLogStore(db *gorm.DB) *LogStore {
 }
 
 // Create 创建通知日志
-func (r *LogStore) Create(log *models.NotificationLog) error {
+func (r *LogStore) Create(log *domain.NotificationLog) error {
 	if log == nil {
 		return nil
 	}
@@ -25,8 +25,8 @@ func (r *LogStore) Create(log *models.NotificationLog) error {
 }
 
 // ListAdmin 管理端查询通知日志
-func (r *LogStore) ListAdmin(filter notification.LogListFilter) ([]models.NotificationLog, int64, error) {
-	query := r.db.Model(&models.NotificationLog{})
+func (r *LogStore) ListAdmin(filter contract.LogListFilter) ([]domain.NotificationLog, int64, error) {
+	query := r.db.Model(&domain.NotificationLog{})
 	if filter.Channel != "" {
 		query = query.Where("channel = ?", filter.Channel)
 	}
@@ -52,11 +52,11 @@ func (r *LogStore) ListAdmin(filter notification.LogListFilter) ([]models.Notifi
 	}
 	query = applyPagination(query, filter.Page, filter.PageSize)
 
-	logs := make([]models.NotificationLog, 0)
+	logs := make([]domain.NotificationLog, 0)
 	if err := query.Order("id DESC").Find(&logs).Error; err != nil {
 		return nil, 0, err
 	}
 	return logs, total, nil
 }
 
-var _ notification.LogRepository = (*LogStore)(nil)
+var _ contract.LogRepository = (*LogStore)(nil)

@@ -17,7 +17,7 @@ import (
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
-	notificationgormstore "github.com/dujiao-next/internal/modules/notification/store/gormstore"
+	notificationgormstore "github.com/dujiao-next/internal/modules/notification/infrastructure/gormstore"
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/store/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	reconciliationgormstore "github.com/dujiao-next/internal/modules/reconciliation/store/gormstore"

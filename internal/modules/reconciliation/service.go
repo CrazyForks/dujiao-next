@@ -11,7 +11,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/notification"
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/upstream"
 
@@ -66,17 +66,13 @@ type Enqueuer interface {
 	EnqueueReconciliationRun(payload queue.ReconciliationRunPayload, opts ...asynq.Option) error
 }
 
-type NotificationEnqueuer interface {
-	Enqueue(input notification.EnqueueInput) error
-}
-
 type ServiceOptions struct {
 	Jobs          JobRepository
 	Items         ItemRepository
 	Procurements  ProcurementReader
 	Connections   ConnectionProvider
 	Queue         Enqueuer
-	Notifications NotificationEnqueuer
+	Notifications notificationcontract.NotificationEnqueuer
 }
 
 type Service struct {
@@ -85,7 +81,7 @@ type Service struct {
 	procurements  ProcurementReader
 	connections   ConnectionProvider
 	queue         Enqueuer
-	notifications NotificationEnqueuer
+	notifications notificationcontract.NotificationEnqueuer
 }
 
 func NewService(options ServiceOptions) *Service {

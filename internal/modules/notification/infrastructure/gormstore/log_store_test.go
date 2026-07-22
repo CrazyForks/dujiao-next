@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/notification"
-	"github.com/dujiao-next/internal/modules/notification/store/gormstore"
+	"github.com/dujiao-next/internal/modules/notification/contract"
+	"github.com/dujiao-next/internal/modules/notification/domain"
+	"github.com/dujiao-next/internal/modules/notification/infrastructure/gormstore"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -19,11 +19,11 @@ func TestLogStoreListAdminFiltersStatusChannelAndTestFlag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
-	if err := db.AutoMigrate(&models.NotificationLog{}); err != nil {
+	if err := db.AutoMigrate(&domain.NotificationLog{}); err != nil {
 		t.Fatalf("migrate notification log: %v", err)
 	}
 	now := time.Now().UTC().Truncate(time.Second)
-	items := []models.NotificationLog{
+	items := []domain.NotificationLog{
 		{EventType: "order_paid_success", Channel: "email", Recipient: "failed@example.com", Status: "failed", IsTest: false, CreatedAt: now},
 		{EventType: "order_paid_success", Channel: "telegram", Recipient: "-100100", Status: "success", IsTest: true, CreatedAt: now.Add(time.Second)},
 	}
@@ -32,7 +32,7 @@ func TestLogStoreListAdminFiltersStatusChannelAndTestFlag(t *testing.T) {
 	}
 
 	isTest := false
-	rows, total, err := gormstore.NewLogStore(db).ListAdmin(notification.LogListFilter{
+	rows, total, err := gormstore.NewLogStore(db).ListAdmin(contract.LogListFilter{
 		Page: 1, PageSize: 10, Channel: "email", Status: "failed", IsTest: &isTest,
 	})
 	if err != nil {

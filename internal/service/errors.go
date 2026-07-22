@@ -9,7 +9,7 @@ import (
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
-	"github.com/dujiao-next/internal/modules/notification"
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
@@ -126,9 +126,9 @@ var (
 	ErrResellerWithdrawCurrencyUnavailable = resellermodule.ErrWithdrawCurrencyUnavailable
 	ErrResellerWithdrawStatusInvalid       = resellermodule.ErrWithdrawStatusInvalid
 	ErrResellerBalanceAccountFrozen        = resellermodule.ErrBalanceAccountFrozen
-	ErrNotificationConfigInvalid           = notification.ErrConfigInvalid
-	ErrNotificationSendFailed              = notification.ErrSendFailed
-	ErrNotificationEventInvalid            = notification.ErrEventInvalid
+	ErrNotificationConfigInvalid           = notificationcontract.ErrConfigInvalid
+	ErrNotificationSendFailed              = notificationcontract.ErrSendFailed
+	ErrNotificationEventInvalid            = notificationcontract.ErrEventInvalid
 	ErrOrderEmailTemplateConfigInvalid     = settingsmessaging.ErrOrderEmailTemplateConfigInvalid
 	ErrPaymentChannelNotAllowedForProduct  = errors.New("payment channel not allowed for product")
 	ErrPaymentChannelNotAllowedForRecharge = errors.New("payment channel not allowed for wallet recharge")

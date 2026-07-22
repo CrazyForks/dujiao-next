@@ -44,8 +44,8 @@ import (
 	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
 	memberlevelcontract "github.com/dujiao-next/internal/modules/memberlevel/contract"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/modules/notification"
-	notificationgormstore "github.com/dujiao-next/internal/modules/notification/store/gormstore"
+	notificationapp "github.com/dujiao-next/internal/modules/notification/application"
+	notificationgormstore "github.com/dujiao-next/internal/modules/notification/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/orderrisk"
 	"github.com/dujiao-next/internal/modules/procurement"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
@@ -149,9 +149,9 @@ type Container struct {
 	UserLoginLogService           *auditlogapp.UserLoginService
 	AuthzAuditService             *auditlogapp.AuthzService
 	AdminLoginLogService          *auditlogapp.AdminLoginService
-	NotificationLogService        *notification.LogService
+	NotificationLogService        *notificationapp.LogService
 	DashboardService              *dashboard.Service
-	NotificationService           *notification.Service
+	NotificationService           *notificationapp.Service
 	AffiliateService              *affiliateapp.Service
 	AffiliateRefundHandler        *affiliategormstore.RefundHandler
 	ResellerDomainResolver        *reseller.DomainResolver

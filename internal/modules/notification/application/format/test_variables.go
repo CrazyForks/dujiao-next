@@ -1,4 +1,4 @@
-package notification
+package format
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 )
 
-func pickNotificationMessage(value interface{}, fallback string) string {
+func PickMessage(value interface{}, fallback string) string {
 	normalized := strings.TrimSpace(fmt.Sprintf("%v", value))
 	if normalized == "" || normalized == "<nil>" {
 		return fallback
@@ -15,7 +15,7 @@ func pickNotificationMessage(value interface{}, fallback string) string {
 	return normalized
 }
 
-func applyNotificationTestVariables(target map[string]interface{}, defaults map[string]interface{}) {
+func ApplyTestVariables(target map[string]interface{}, defaults map[string]interface{}) {
 	if target == nil || len(defaults) == 0 {
 		return
 	}
@@ -28,7 +28,7 @@ func applyNotificationTestVariables(target map[string]interface{}, defaults map[
 }
 
 func BuildTestVariables(scene, locale string) map[string]interface{} {
-	locale = resolveNotificationLocale(locale, constants.LocaleZhCN)
+	locale = ResolveLocale(locale, constants.LocaleZhCN)
 	switch strings.ToLower(strings.TrimSpace(scene)) {
 	case constants.NotificationEventWalletRechargeSuccess:
 		return map[string]interface{}{

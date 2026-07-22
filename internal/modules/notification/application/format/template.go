@@ -1,4 +1,4 @@
-package notification
+package format
 
 import (
 	"fmt"
@@ -6,14 +6,15 @@ import (
 	"strings"
 	"time"
 
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 var notificationTemplateVariablePattern = regexp.MustCompile(`\{\{\s*([a-zA-Z0-9_]+)\s*\}\}`)
 
-func buildNotificationTemplateVariables(payload queue.NotificationDispatchPayload) map[string]interface{} {
-	data := cloneNotificationVariables(payload.Data)
+func BuildTemplateVariables(payload queue.NotificationDispatchPayload) map[string]interface{} {
+	data := CloneVariables(payload.Data)
 	if data == nil {
 		data = map[string]interface{}{}
 	}
@@ -24,7 +25,7 @@ func buildNotificationTemplateVariables(payload queue.NotificationDispatchPayloa
 	return data
 }
 
-func renderNotificationTemplate(tmpl string, variables map[string]interface{}) string {
+func RenderTemplate(tmpl string, variables map[string]interface{}) string {
 	tmpl = strings.TrimSpace(tmpl)
 	if tmpl == "" {
 		return ""
@@ -42,7 +43,7 @@ func renderNotificationTemplate(tmpl string, variables map[string]interface{}) s
 	})
 }
 
-func resolveNotificationLocale(locale, fallback string) string {
+func ResolveLocale(locale, fallback string) string {
 	locale = strings.TrimSpace(locale)
 	if locale == "" {
 		locale = strings.TrimSpace(fallback)
@@ -50,7 +51,7 @@ func resolveNotificationLocale(locale, fallback string) string {
 	return normalizeNotificationLocale(locale)
 }
 
-func composeTelegramMessage(title, body string) string {
+func ComposeTelegramMessage(title, body string) string {
 	title = strings.TrimSpace(title)
 	body = strings.TrimSpace(body)
 	if title == "" {
@@ -62,7 +63,7 @@ func composeTelegramMessage(title, body string) string {
 	return title + "\n\n" + body
 }
 
-func notificationJSONToMap(data jsonmap.JSON) map[string]interface{} {
+func JSONToMap(data jsonmap.JSON) map[string]interface{} {
 	if data == nil {
 		return map[string]interface{}{}
 	}
@@ -73,7 +74,7 @@ func notificationJSONToMap(data jsonmap.JSON) map[string]interface{} {
 	return result
 }
 
-func cloneNotificationVariables(data map[string]interface{}) map[string]interface{} {
+func CloneVariables(data map[string]interface{}) map[string]interface{} {
 	if len(data) == 0 {
 		return map[string]interface{}{}
 	}
@@ -82,4 +83,16 @@ func cloneNotificationVariables(data map[string]interface{}) map[string]interfac
 		result[key] = value
 	}
 	return result
+}
+
+func normalizeNotificationLocale(locale string) string {
+	return settingsmessaging.NormalizeNotificationLocale(locale)
+}
+
+func normalizeNotificationInventoryAlertInterval(seconds int) int {
+	return settingsmessaging.NormalizeNotificationInventoryAlertInterval(seconds)
+}
+
+func normalizeNotificationPaymentOrderAlertInterval(seconds int) int {
+	return settingsmessaging.NormalizeNotificationPaymentOrderAlertInterval(seconds)
 }

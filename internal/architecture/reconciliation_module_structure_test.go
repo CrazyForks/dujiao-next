@@ -31,7 +31,7 @@ func TestReconciliationUsesBoundedContextLayout(t *testing.T) {
 
 	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "service.go"), []string{
 		"Service", "ServiceOptions", "RunInput", "JobListFilter", "JobRepository", "ItemRepository",
-		"ProcurementReader", "ConnectionProvider", "Enqueuer", "NotificationEnqueuer",
+		"ProcurementReader", "ConnectionProvider", "Enqueuer",
 	})
 	assertFileDeclaresFunctions(t, filepath.Join(moduleRoot, "service.go"), []string{"NewService", "CreateAndEnqueue", "Execute"})
 	assertFileDeclaresFunctions(t, filepath.Join(moduleRoot, "query.go"), []string{"GetJob", "ListJobs", "GetJobItems", "ResolveItem"})

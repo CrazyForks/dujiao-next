@@ -6,7 +6,8 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/notification"
+	notificationformat "github.com/dujiao-next/internal/modules/notification/application/format"
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	"github.com/dujiao-next/internal/modules/procurement"
 	"github.com/dujiao-next/internal/queue"
 
@@ -129,7 +130,7 @@ func (s *PaymentService) enqueueOrderPaidNotificationAsync(order *models.Order, 
 		return
 	}
 	payload := s.buildOrderNotificationPayload(order, payment)
-	if err := s.notificationSvc.Enqueue(notification.EnqueueInput{
+	if err := s.notificationSvc.Enqueue(notificationcontract.EnqueueInput{
 		EventType: constants.NotificationEventOrderPaidSuccess,
 		BizType:   constants.NotificationBizTypeOrder,
 		BizID:     order.ID,
@@ -148,7 +149,7 @@ func (s *PaymentService) enqueueWalletRechargeSuccessAsync(recharge *models.Wall
 		return
 	}
 	payload := s.buildWalletRechargeNotificationPayload(recharge, payment)
-	if err := s.notificationSvc.Enqueue(notification.EnqueueInput{
+	if err := s.notificationSvc.Enqueue(notificationcontract.EnqueueInput{
 		EventType: constants.NotificationEventWalletRechargeSuccess,
 		BizType:   constants.NotificationBizTypeWalletRecharge,
 		BizID:     recharge.ID,
@@ -235,7 +236,7 @@ func hasManualFulfillmentItems(order *models.Order) bool {
 		return false
 	}
 	for _, item := range order.Items {
-		if notification.NormalizeFulfillmentType(item.FulfillmentType) == constants.FulfillmentTypeManual {
+		if notificationformat.NormalizeFulfillmentType(item.FulfillmentType) == constants.FulfillmentTypeManual {
 			return true
 		}
 	}
@@ -247,7 +248,7 @@ func (s *PaymentService) enqueueManualFulfillmentPendingAsync(order *models.Orde
 		return
 	}
 	payload := s.buildManualFulfillmentNotificationPayload(order, parent)
-	if err := s.notificationSvc.Enqueue(notification.EnqueueInput{
+	if err := s.notificationSvc.Enqueue(notificationcontract.EnqueueInput{
 		EventType: constants.NotificationEventManualFulfillmentPending,
 		BizType:   constants.NotificationBizTypeOrder,
 		BizID:     order.ID,

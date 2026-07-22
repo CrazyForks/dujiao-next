@@ -1,8 +1,8 @@
 package telegram
 
-import "github.com/dujiao-next/internal/modules/notification"
+import notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 
 var (
-	ErrNotifyConfigInvalid = notification.ErrConfigInvalid
-	ErrNotifySendFailed    = notification.ErrSendFailed
+	ErrNotifyConfigInvalid = notificationcontract.ErrConfigInvalid
+	ErrNotifySendFailed    = notificationcontract.ErrSendFailed
 )

@@ -1,4 +1,4 @@
-package notification
+package format
 
 import (
 	"fmt"
@@ -6,13 +6,14 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/modules/dashboard"
+	"github.com/dujiao-next/internal/modules/notification/contract"
 	"github.com/dujiao-next/internal/queue"
 )
 
 // BuildPaymentOrderAlertDispatchPayloads 构建支付订单告警通知载荷。
 func BuildPaymentOrderAlertDispatchPayloads(
-	setting NotificationCenterSetting,
-	dashboardSetting DashboardSetting,
+	setting contract.NotificationCenterSetting,
+	dashboardSetting contract.DashboardSetting,
 	payload queue.NotificationDispatchPayload,
 	counts dashboard.PaymentOrderAlertCountsRow,
 ) []queue.NotificationDispatchPayload {
@@ -40,7 +41,7 @@ func BuildPaymentOrderAlertDispatchPayloads(
 
 // buildPaymentOrderAlertDispatchPayload 构建单个支付订单告警通知载荷
 func buildPaymentOrderAlertDispatchPayload(
-	setting NotificationCenterSetting,
+	setting contract.NotificationCenterSetting,
 	payload queue.NotificationDispatchPayload,
 	alertType string,
 	value int64,
@@ -50,8 +51,8 @@ func buildPaymentOrderAlertDispatchPayload(
 		return queue.NotificationDispatchPayload{}, false
 	}
 
-	locale := resolveNotificationLocale(payload.Locale, setting.DefaultLocale)
-	data := cloneNotificationVariables(payload.Data)
+	locale := ResolveLocale(payload.Locale, setting.DefaultLocale)
+	data := CloneVariables(payload.Data)
 	if data == nil {
 		data = map[string]interface{}{}
 	}

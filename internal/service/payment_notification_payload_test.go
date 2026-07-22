@@ -19,7 +19,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/dashboard"
-	"github.com/dujiao-next/internal/modules/notification"
+	notificationformat "github.com/dujiao-next/internal/modules/notification/application/format"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -445,7 +445,7 @@ func TestBuildPaymentOrderAlertDispatchPayloadsUseDashboardThresholds(t *testing
 	setting.DefaultLocale = constants.LocaleZhCN
 	setting.PaymentOrderAlertIntervalSeconds = 600
 
-	payloads := notification.BuildPaymentOrderAlertDispatchPayloads(
+	payloads := notificationformat.BuildPaymentOrderAlertDispatchPayloads(
 		setting,
 		settingsstorefront.DashboardSetting{
 			Alert: settingsstorefront.DashboardAlertSetting{
@@ -501,7 +501,7 @@ func TestBuildPaymentOrderAlertDispatchPayloadsUseDashboardThresholds(t *testing
 		t.Fatalf("unexpected payment failed message: %s", failedMessage)
 	}
 
-	payloads = notification.BuildPaymentOrderAlertDispatchPayloads(
+	payloads = notificationformat.BuildPaymentOrderAlertDispatchPayloads(
 		setting,
 		settingsstorefront.DashboardSetting{
 			Alert: settingsstorefront.DashboardAlertSetting{
@@ -530,7 +530,7 @@ func TestBuildInventoryAlertDispatchPayloadsIncludesSummaryAndIgnoreRules(t *tes
 		},
 	}
 
-	payloads := notification.BuildInventoryAlertDispatchPayloads(
+	payloads := notificationformat.BuildInventoryAlertDispatchPayloads(
 		setting,
 		dashboardSetting,
 		queue.NotificationDispatchPayload{
@@ -613,7 +613,7 @@ func TestBuildInventoryAlertDispatchPayloadsIncludesSummaryAndIgnoreRules(t *tes
 }
 
 func TestBuildNotificationTestVariablesIncludesSceneSpecificSamples(t *testing.T) {
-	orderVars := notification.BuildTestVariables(constants.NotificationEventOrderPaidSuccess, constants.LocaleEnUS)
+	orderVars := notificationformat.BuildTestVariables(constants.NotificationEventOrderPaidSuccess, constants.LocaleEnUS)
 	if !strings.Contains(fmt.Sprintf("%v", orderVars["items_summary"]), "Netflix Annual") {
 		t.Fatalf("order test variables should include order item summary, got: %v", orderVars["items_summary"])
 	}
@@ -621,7 +621,7 @@ func TestBuildNotificationTestVariablesIncludesSceneSpecificSamples(t *testing.T
 		t.Fatalf("payment_channel want epay/alipay got %s", got)
 	}
 
-	alertVars := notification.BuildTestVariables(constants.NotificationEventExceptionAlert, constants.LocaleEnUS)
+	alertVars := notificationformat.BuildTestVariables(constants.NotificationEventExceptionAlert, constants.LocaleEnUS)
 	if !strings.Contains(fmt.Sprintf("%v", alertVars["affected_items_summary"]), "Remaining 1") {
 		t.Fatalf("exception test variables should include inventory summary, got: %v", alertVars["affected_items_summary"])
 	}
@@ -676,7 +676,7 @@ func TestResolveInventoryAlertTypeKey(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := notification.ResolveInventoryAlertTypeKey(tc.data)
+			got := notificationformat.ResolveInventoryAlertTypeKey(tc.data)
 			if got != tc.want {
 				t.Fatalf("resolveInventoryAlertTypeKey want %q got %q", tc.want, got)
 			}

@@ -13,7 +13,8 @@ import (
 	contentgormstore "github.com/dujiao-next/internal/modules/content/store/gormstore"
 	"github.com/dujiao-next/internal/modules/dashboard"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
-	"github.com/dujiao-next/internal/modules/notification"
+	notificationapp "github.com/dujiao-next/internal/modules/notification/application"
+	notificationasyncqueue "github.com/dujiao-next/internal/modules/notification/infrastructure/asyncqueue"
 	"github.com/dujiao-next/internal/modules/procurement"
 	"github.com/dujiao-next/internal/modules/reconciliation"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
@@ -27,12 +28,12 @@ func (c *Container) initIntegrationServices() {
 	c.UserLoginLogService = auditlogapp.NewUserLoginService(c.UserLoginLogRepo)
 	c.AuthzAuditService = auditlogapp.NewAuthzService(c.AuthzAuditLogRepo)
 	c.AdminLoginLogService = auditlogapp.NewAdminLoginService(c.AdminLoginLogRepo)
-	c.NotificationLogService = notification.NewLogService(c.NotificationLogRepo)
+	c.NotificationLogService = notificationapp.NewLogService(c.NotificationLogRepo)
 	c.DashboardService = dashboard.NewService(c.DashboardRepo, c.SettingService)
-	c.NotificationService = notification.NewService(
+	c.NotificationService = notificationapp.NewService(
 		c.SettingService,
 		c.EmailService,
-		c.QueueClient,
+		notificationasyncqueue.New(c.QueueClient),
 		c.DashboardService,
 		c.NotificationLogService,
 		telegrammodule.NewNotifyService(c.SettingService, c.Config.TelegramAuth),
