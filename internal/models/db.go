@@ -11,6 +11,7 @@ import (
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
 	auditlogdomain "github.com/dujiao-next/internal/modules/auditlog/domain"
+	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -170,7 +171,7 @@ func AutoMigrate() error {
 		&Order{},
 		&OrderItem{},
 		&OrderRefundRecord{},
-		&CartItem{},
+		&cartdomain.Item{},
 		&PaymentChannel{},
 		&Payment{},
 		&CardSecret{},

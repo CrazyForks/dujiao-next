@@ -16,6 +16,7 @@ import (
 	apicredentialtransport "github.com/dujiao-next/internal/modules/apicredential/transport/http"
 	auditlogtransport "github.com/dujiao-next/internal/modules/auditlog/transport/http"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
+	carttransport "github.com/dujiao-next/internal/modules/cart/transport/http"
 	categoryhttp "github.com/dujiao-next/internal/modules/catalog/category/transport/http"
 	mappinghttp "github.com/dujiao-next/internal/modules/catalog/mapping/transport/http"
 	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
@@ -35,7 +36,6 @@ import (
 	adminauthwiring "github.com/dujiao-next/internal/wiring/adminauth"
 	adminauthzwiring "github.com/dujiao-next/internal/wiring/adminauthz"
 	adminuserwiring "github.com/dujiao-next/internal/wiring/adminuser"
-	cartwiring "github.com/dujiao-next/internal/wiring/cart"
 	channelwiring "github.com/dujiao-next/internal/wiring/channel"
 	channeluserwiring "github.com/dujiao-next/internal/wiring/channeluser"
 	fulfillmentwiring "github.com/dujiao-next/internal/wiring/fulfillment"
@@ -84,7 +84,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 	paymentWebhookHandler := paymentHandlers.Webhook
 	paymentCallbackHandler := paymentHandlers.Callback
 	publicConfigHandler := publicconfigwiring.NewHandler(c)
-	userCartHandler := cartwiring.NewUserHandler(c)
+	userCartHandler := carttransport.NewUserHandler(c.CartService)
 	channelHandler := channelwiring.NewHandler(c)
 	upstreamHandler := upstreamwiring.NewHandler(c)
 	publicContentHandler := contenttransport.NewPublicHandler(

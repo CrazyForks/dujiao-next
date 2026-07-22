@@ -4,8 +4,9 @@ import (
 	"errors"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/modules/cart"
+	cartapp "github.com/dujiao-next/internal/modules/cart/application"
+	cartcontract "github.com/dujiao-next/internal/modules/cart/contract"
+	cartpresenter "github.com/dujiao-next/internal/modules/cart/transport/presenter"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
@@ -16,8 +17,8 @@ import (
 
 // Service 购物车应用端口。
 type Service interface {
-	ListByUser(userID uint) ([]cart.ItemDetail, error)
-	UpsertItem(input cart.UpsertItemInput) error
+	ListByUser(userID uint) ([]cartapp.ItemDetail, error)
+	UpsertItem(input cartapp.UpsertItemInput) error
 	RemoveItem(userID, productID, skuID uint) error
 }
 
@@ -51,11 +52,11 @@ func (h *UserHandler) GetCart(c *gin.Context) {
 	items, err := h.carts.ListByUser(uid)
 	if err != nil {
 		switch {
-		case errors.Is(err, cart.ErrInvalidItem):
+		case errors.Is(err, cartcontract.ErrInvalidItem):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
-		case errors.Is(err, cart.ErrProductUnavailable):
+		case errors.Is(err, cartcontract.ErrProductUnavailable):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_not_available", nil)
-		case errors.Is(err, cart.ErrFulfillmentInvalid):
+		case errors.Is(err, cartcontract.ErrFulfillmentInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.fulfillment_invalid", nil)
 		case errors.Is(err, promotioncontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.promotion_invalid", nil)
@@ -65,7 +66,7 @@ func (h *UserHandler) GetCart(c *gin.Context) {
 		return
 	}
 
-	respItems := make([]dto.CartItemResp, 0, len(items))
+	respItems := make([]cartpresenter.CartItemResp, 0, len(items))
 	for _, item := range items {
 		if item.Product == nil {
 			continue
@@ -78,7 +79,7 @@ func (h *UserHandler) GetCart(c *gin.Context) {
 		if cartFT == constants.FulfillmentTypeUpstream {
 			cartFT = constants.FulfillmentTypeManual
 		}
-		product := dto.CartProductResp{
+		product := cartpresenter.CartProductResp{
 			Slug:                item.Product.Slug,
 			Title:               item.Product.TitleJSON,
 			PriceAmount:         item.Product.PriceAmount,
@@ -90,7 +91,7 @@ func (h *UserHandler) GetCart(c *gin.Context) {
 			FulfillmentType:     productFT,
 			IsActive:            item.Product.IsActive,
 		}
-		respItems = append(respItems, dto.CartItemResp{
+		respItems = append(respItems, cartpresenter.CartItemResp{
 			ProductID:       item.ProductID,
 			SKUID:           item.SKUID,
 			Quantity:        item.Quantity,
@@ -124,7 +125,7 @@ func (h *UserHandler) UpsertCartItem(c *gin.Context) {
 		response.Success(c, gin.H{"updated": true})
 		return
 	}
-	if err := h.carts.UpsertItem(cart.UpsertItemInput{
+	if err := h.carts.UpsertItem(cartapp.UpsertItemInput{
 		UserID:          uid,
 		ProductID:       req.ProductID,
 		SKUID:           req.SKUID,
@@ -155,7 +156,7 @@ func (h *UserHandler) DeleteCartItem(c *gin.Context) {
 	}
 	if err := h.carts.RemoveItem(uid, productID, skuID); err != nil {
 		switch {
-		case errors.Is(err, cart.ErrInvalidItem):
+		case errors.Is(err, cartcontract.ErrInvalidItem):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.order_update_failed", err)
@@ -167,19 +168,19 @@ func (h *UserHandler) DeleteCartItem(c *gin.Context) {
 
 func respondCartItemUpdateError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, cart.ErrSKURequired),
-		errors.Is(err, cart.ErrSKUInvalid),
-		errors.Is(err, cart.ErrInvalidItem):
+	case errors.Is(err, cartcontract.ErrSKURequired),
+		errors.Is(err, cartcontract.ErrSKUInvalid),
+		errors.Is(err, cartcontract.ErrInvalidItem):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.order_item_invalid", nil)
 	case errors.Is(err, productdomain.ErrMaxPurchaseExceeded):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.product_max_purchase_exceeded", nil)
 	case errors.Is(err, productdomain.ErrMinPurchaseNotMet):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.product_min_purchase_not_met", nil)
-	case errors.Is(err, cart.ErrProductUnavailable):
+	case errors.Is(err, cartcontract.ErrProductUnavailable):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.product_not_available", nil)
-	case errors.Is(err, cart.ErrManualStockInsufficient):
+	case errors.Is(err, cartcontract.ErrManualStockInsufficient):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.manual_stock_insufficient", nil)
-	case errors.Is(err, cart.ErrFulfillmentInvalid):
+	case errors.Is(err, cartcontract.ErrFulfillmentInvalid):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.fulfillment_invalid", nil)
 	default:
 		ginutil.RespondError(c, response.CodeInternal, "error.order_update_failed", err)

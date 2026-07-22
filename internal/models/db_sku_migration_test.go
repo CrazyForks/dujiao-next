@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -34,7 +36,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
 		&OrderItem{},
-		&CartItem{},
+		&cartdomain.Item{},
 		&CardSecret{},
 		&CardSecretBatch{},
 		&settingsstore.SettingRecord{},
@@ -75,7 +77,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		t.Fatalf("create order item failed: %v", err)
 	}
 
-	cartItem := &CartItem{
+	cartItem := &cartdomain.Item{
 		UserID:          1001,
 		ProductID:       product.ID,
 		SKUID:           0,
@@ -137,7 +139,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		t.Fatalf("order item sku_id want %d got %d", sku.ID, gotOrderItem.SKUID)
 	}
 
-	var gotCartItem CartItem
+	var gotCartItem cartdomain.Item
 	if err := db.First(&gotCartItem, cartItem.ID).Error; err != nil {
 		t.Fatalf("reload cart item failed: %v", err)
 	}
@@ -176,7 +178,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 
 func TestMigrateCartSKUUniqueIndex(t *testing.T) {
 	db := setupSKUMigrationTestDB(t)
-	if err := db.AutoMigrate(&CartItem{}); err != nil {
+	if err := db.AutoMigrate(&cartdomain.Item{}); err != nil {
 		t.Fatalf("auto migrate cart item failed: %v", err)
 	}
 
@@ -189,10 +191,10 @@ func TestMigrateCartSKUUniqueIndex(t *testing.T) {
 		t.Fatalf("migrate cart unique index failed: %v", err)
 	}
 
-	if db.Migrator().HasIndex(&CartItem{}, "idx_cart_user_product") {
+	if db.Migrator().HasIndex(&cartdomain.Item{}, "idx_cart_user_product") {
 		t.Fatalf("legacy unique index idx_cart_user_product should be dropped")
 	}
-	if !db.Migrator().HasIndex(&CartItem{}, "idx_cart_user_product_sku") {
+	if !db.Migrator().HasIndex(&cartdomain.Item{}, "idx_cart_user_product_sku") {
 		t.Fatalf("new unique index idx_cart_user_product_sku should exist")
 	}
 }

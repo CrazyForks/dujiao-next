@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
+
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
@@ -114,14 +116,14 @@ func migrateCartSKUUniqueIndex() error {
 	migrator := DB.Migrator()
 
 	// 历史唯一索引会阻止同一商品不同 SKU 共存，迁移时必须移除。
-	if migrator.HasIndex(&CartItem{}, "idx_cart_user_product") {
-		if err := migrator.DropIndex(&CartItem{}, "idx_cart_user_product"); err != nil {
+	if migrator.HasIndex(&cartdomain.Item{}, "idx_cart_user_product") {
+		if err := migrator.DropIndex(&cartdomain.Item{}, "idx_cart_user_product"); err != nil {
 			return err
 		}
 	}
 
-	if !migrator.HasIndex(&CartItem{}, "idx_cart_user_product_sku") {
-		if err := migrator.CreateIndex(&CartItem{}, "idx_cart_user_product_sku"); err != nil {
+	if !migrator.HasIndex(&cartdomain.Item{}, "idx_cart_user_product_sku") {
+		if err := migrator.CreateIndex(&cartdomain.Item{}, "idx_cart_user_product_sku"); err != nil {
 			return err
 		}
 	}
@@ -276,7 +278,7 @@ func backfillLegacySKUID(productToSKU map[uint]uint) error {
 				Update("sku_id", skuID).Error; err != nil {
 				return err
 			}
-			if err := tx.Unscoped().Model(&CartItem{}).
+			if err := tx.Model(&cartdomain.Item{}).
 				Where("product_id = ? AND sku_id = 0", productID).
 				Update("sku_id", skuID).Error; err != nil {
 				return err
@@ -316,7 +318,7 @@ func validateSKUMigrationIntegrity() error {
 			name: "cart_items",
 			query: func() (int64, error) {
 				var count int64
-				err := DB.Model(&CartItem{}).Where("sku_id = 0").Count(&count).Error
+				err := DB.Model(&cartdomain.Item{}).Where("sku_id = 0").Count(&count).Error
 				return count, err
 			},
 		},

@@ -13,7 +13,8 @@ import (
 	auditlogcontract "github.com/dujiao-next/internal/modules/auditlog/contract"
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/cardsecret"
-	"github.com/dujiao-next/internal/modules/cart"
+	cartapp "github.com/dujiao-next/internal/modules/cart/application"
+	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 	mappingapp "github.com/dujiao-next/internal/modules/catalog/mapping/application"
@@ -86,7 +87,7 @@ type Container struct {
 	FulfillmentRepo            repository.FulfillmentRepository
 	ProductRepo                *productgormstore.ProductStore
 	ProductSKURepo             *productgormstore.SKUStore
-	CartRepo                   repository.CartRepository
+	CartRepo                   *cartgormstore.Store
 	CouponRepo                 *coupongormstore.Store
 	CouponUsageRepo            *coupongormstore.UsageStore
 	PromotionRepo              *promotiongormstore.Store
@@ -137,7 +138,7 @@ type Container struct {
 	CategoryService               *categoryapp.Service
 	SettingService                *settingsapp.Service
 	SitemapService                *sitemap.Service
-	CartService                   *cart.Service
+	CartService                   *cartapp.Service
 	WalletService                 *service.WalletService
 	OrderRefundService            *service.OrderRefundService
 	OrderService                  *service.OrderService

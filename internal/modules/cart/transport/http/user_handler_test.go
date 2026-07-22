@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/modules/cart"
+	cartcontract "github.com/dujiao-next/internal/modules/cart/contract"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,13 +24,13 @@ func TestRespondCartItemUpdateError(t *testing.T) {
 	}{
 		{
 			name: "invalid fulfillment",
-			err:  cart.ErrFulfillmentInvalid,
+			err:  cartcontract.ErrFulfillmentInvalid,
 			code: response.CodeBadRequest,
 			msg:  "交付信息不合法",
 		},
 		{
 			name: "manual stock insufficient",
-			err:  cart.ErrManualStockInsufficient,
+			err:  cartcontract.ErrManualStockInsufficient,
 			code: response.CodeBadRequest,
 			msg:  "人工库存不足",
 		},

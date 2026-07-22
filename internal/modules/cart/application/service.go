@@ -1,84 +1,28 @@
-package cart
+package application
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/cart/contract"
+	"github.com/dujiao-next/internal/modules/cart/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
-	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
-	"github.com/dujiao-next/internal/shared/money"
 )
-
-var (
-	ErrInvalidItem             = errors.New("invalid cart item")
-	ErrProductUnavailable      = errors.New("product not available")
-	ErrFulfillmentInvalid      = errors.New("fulfillment invalid")
-	ErrSKURequired             = errors.New("product sku required")
-	ErrSKUInvalid              = errors.New("product sku invalid")
-	ErrManualStockInsufficient = errors.New("manual stock insufficient")
-)
-
-// ItemDetail 购物车项详情（用于响应）。
-type ItemDetail struct {
-	ProductID       uint                      `json:"product_id"`
-	SKUID           uint                      `json:"sku_id"`
-	Quantity        int                       `json:"quantity"`
-	FulfillmentType string                    `json:"fulfillment_type"`
-	UnitPrice       money.Amount              `json:"unit_price"`
-	OriginalPrice   money.Amount              `json:"original_price"`
-	Currency        string                    `json:"currency"`
-	Product         *productdomain.Product    `json:"product"`
-	SKU             *productdomain.ProductSKU `json:"sku"`
-}
-
-// UpsertItemInput 购物车更新输入。
-type UpsertItemInput struct {
-	UserID          uint
-	ProductID       uint
-	SKUID           uint
-	Quantity        int
-	FulfillmentType string
-}
-
-// Repository 是购物车服务所需的最小持久化端口。
-type Repository interface {
-	ListByUser(userID uint) ([]models.CartItem, error)
-	Upsert(item *models.CartItem) error
-	DeleteByUserProductSKU(userID, productID, skuID uint) error
-}
-
-// ProductReader 是购物车服务所需的商品读取端口。
-type ProductReader interface {
-	GetByID(id string) (*productdomain.Product, error)
-}
-
-// SKUReader 是购物车服务所需的 SKU 读取端口。
-type SKUReader interface {
-	GetByID(id uint) (*productdomain.ProductSKU, error)
-	ListByProduct(productID uint, onlyActive bool) ([]productdomain.ProductSKU, error)
-}
-
-// CurrencyReader 是购物车服务所需的站点币种端口。
-type CurrencyReader interface {
-	GetSiteCurrency(defaultCurrency string) (string, error)
-}
 
 // Service 购物车服务。
 type Service struct {
-	cartRepo       Repository
-	productRepo    ProductReader
-	productSKURepo SKUReader
-	promotionRepo  promotioncontract.Repository
-	currencyReader CurrencyReader
+	cartRepo       contract.Repository
+	productRepo    contract.ProductReader
+	productSKURepo contract.SKUReader
+	promotionRepo  contract.PromotionRepository
+	currencyReader contract.CurrencyReader
 }
 
 // NewService 创建购物车服务。
-func NewService(cartRepo Repository, productRepo ProductReader, productSKURepo SKUReader, promotionRepo promotioncontract.Repository, currencyReader CurrencyReader) *Service {
+func NewService(cartRepo contract.Repository, productRepo contract.ProductReader, productSKURepo contract.SKUReader, promotionRepo contract.PromotionRepository, currencyReader contract.CurrencyReader) *Service {
 	return &Service{
 		cartRepo:       cartRepo,
 		productRepo:    productRepo,
@@ -91,7 +35,7 @@ func NewService(cartRepo Repository, productRepo ProductReader, productSKURepo S
 // ListByUser 获取用户购物车
 func (s *Service) ListByUser(userID uint) ([]ItemDetail, error) {
 	if userID == 0 {
-		return nil, ErrInvalidItem
+		return nil, contract.ErrInvalidItem
 	}
 	items, err := s.cartRepo.ListByUser(userID)
 	if err != nil {
@@ -169,14 +113,14 @@ func (s *Service) ListByUser(userID uint) ([]ItemDetail, error) {
 // UpsertItem 添加或更新购物车项
 func (s *Service) UpsertItem(input UpsertItemInput) error {
 	if input.UserID == 0 || input.ProductID == 0 || input.Quantity <= 0 {
-		return ErrInvalidItem
+		return contract.ErrInvalidItem
 	}
 	product, err := s.productRepo.GetByID(strconv.FormatUint(uint64(input.ProductID), 10))
 	if err != nil {
 		return err
 	}
 	if product == nil || !product.IsActive {
-		return ErrProductUnavailable
+		return contract.ErrProductUnavailable
 	}
 	if err := productdomain.ValidatePurchaseQuantity(product, input.Quantity); err != nil {
 		return err
@@ -191,16 +135,16 @@ func (s *Service) UpsertItem(input UpsertItemInput) error {
 		fulfillmentType = constants.FulfillmentTypeManual
 	}
 	if fulfillmentType != constants.FulfillmentTypeManual && fulfillmentType != constants.FulfillmentTypeAuto {
-		return ErrFulfillmentInvalid
+		return contract.ErrFulfillmentInvalid
 	}
 	if fulfillmentType == constants.FulfillmentTypeManual &&
 		productdomain.ShouldEnforceManualSKUStock(product, sku) &&
 		productdomain.ManualSKUAvailable(sku) < input.Quantity {
-		return ErrManualStockInsufficient
+		return contract.ErrManualStockInsufficient
 	}
 
 	now := time.Now()
-	item := &models.CartItem{
+	item := &domain.Item{
 		UserID:          input.UserID,
 		ProductID:       input.ProductID,
 		SKUID:           sku.ID,
@@ -215,7 +159,7 @@ func (s *Service) UpsertItem(input UpsertItemInput) error {
 // RemoveItem 删除购物车项
 func (s *Service) RemoveItem(userID, productID, skuID uint) error {
 	if userID == 0 || productID == 0 {
-		return ErrInvalidItem
+		return contract.ErrInvalidItem
 	}
 	return s.cartRepo.DeleteByUserProductSKU(userID, productID, skuID)
 }
@@ -231,12 +175,12 @@ func (s *Service) siteCurrency() string {
 	return currency
 }
 
-func resolveProductSKU(repo SKUReader, product *productdomain.Product, rawSKUID uint) (*productdomain.ProductSKU, error) {
+func resolveProductSKU(repo contract.SKUReader, product *productdomain.Product, rawSKUID uint) (*productdomain.ProductSKU, error) {
 	if product == nil || product.ID == 0 {
-		return nil, ErrProductUnavailable
+		return nil, contract.ErrProductUnavailable
 	}
 	if repo == nil {
-		return nil, ErrSKUInvalid
+		return nil, contract.ErrSKUInvalid
 	}
 	if rawSKUID > 0 {
 		sku, err := repo.GetByID(rawSKUID)
@@ -244,7 +188,7 @@ func resolveProductSKU(repo SKUReader, product *productdomain.Product, rawSKUID 
 			return nil, err
 		}
 		if sku == nil || sku.ProductID != product.ID || !sku.IsActive {
-			return nil, ErrSKUInvalid
+			return nil, contract.ErrSKUInvalid
 		}
 		return sku, nil
 	}
@@ -256,7 +200,7 @@ func resolveProductSKU(repo SKUReader, product *productdomain.Product, rawSKUID 
 		return &activeSKUs[0], nil
 	}
 	if len(activeSKUs) == 0 {
-		return nil, ErrSKUInvalid
+		return nil, contract.ErrSKUInvalid
 	}
-	return nil, ErrSKURequired
+	return nil, contract.ErrSKURequired
 }

@@ -1,4 +1,4 @@
-package dto
+package presenter
 
 import (
 	"github.com/dujiao-next/internal/shared/jsonmap"

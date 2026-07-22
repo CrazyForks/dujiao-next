@@ -21,6 +21,8 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
+	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
@@ -49,7 +51,7 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		&models.CardSecret{},
 		&models.CardSecretBatch{},
 		&memberleveldomain.MemberLevelPrice{},
-		&models.CartItem{},
+		&cartdomain.Item{},
 		&mappingdomain.Mapping{},
 		&mappingdomain.SKUMapping{},
 		&models.Order{},
@@ -68,7 +70,7 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		CardSecretBatches: repository.NewCardSecretBatchRepository(db),
 		Categories:        categorygormstore.NewCategoryStore(db),
 		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
-		Carts:             repository.NewCartRepository(db),
+		Carts:             cartgormstore.New(db),
 		ProductMappings:   mappinggormstore.NewMappingStore(db),
 		Orders:            repository.NewOrderRepository(db),
 		PaymentChannels:   repository.NewPaymentChannelRepository(db),

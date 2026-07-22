@@ -18,7 +18,8 @@ import (
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
+	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
@@ -105,7 +106,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	}
 
 	// 创建购物车项
-	cart := models.CartItem{
+	cart := cartdomain.Item{
 		UserID:          1,
 		ProductID:       product.ID,
 		SKUID:           sku.ID,
@@ -157,7 +158,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	}
 
 	var cartCount int64
-	db.Model(&models.CartItem{}).Where("product_id = ?", product.ID).Count(&cartCount)
+	db.Model(&cartdomain.Item{}).Where("product_id = ? AND deleted_at IS NULL", product.ID).Count(&cartCount)
 	if cartCount != 0 {
 		t.Errorf("expected 0 cart items after delete, got %d", cartCount)
 	}
@@ -203,7 +204,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 		CardSecretBatches: repository.NewCardSecretBatchRepository(db),
 		Categories:        categorygormstore.NewCategoryStore(db),
 		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
-		Carts:             repository.NewCartRepository(db),
+		Carts:             cartgormstore.New(db),
 		ProductMappings:   mappinggormstore.NewMappingStore(db),
 		Orders:            repository.NewOrderRepository(db),
 		PaymentChannels:   repository.NewPaymentChannelRepository(db),
@@ -229,7 +230,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 	if err := db.Create(&sku).Error; err != nil {
 		t.Fatalf("create sku failed: %v", err)
 	}
-	cart := models.CartItem{
+	cart := cartdomain.Item{
 		UserID:          1,
 		ProductID:       product.ID,
 		SKUID:           sku.ID,
@@ -255,7 +256,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 
 	assertProductRelationCount(t, db, &productdomain.Product{}, "id = ?", product.ID, 1)
 	assertProductRelationCount(t, db, &productdomain.ProductSKU{}, "product_id = ?", product.ID, 1)
-	assertProductRelationCount(t, db, &models.CartItem{}, "product_id = ?", product.ID, 1)
+	assertProductRelationCount(t, db, &cartdomain.Item{}, "product_id = ? AND deleted_at IS NULL", product.ID, 1)
 	assertProductRelationCount(t, db, &mappingdomain.Mapping{}, "local_product_id = ?", product.ID, 1)
 }
 

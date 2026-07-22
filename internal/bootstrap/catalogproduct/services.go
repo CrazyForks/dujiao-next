@@ -7,6 +7,7 @@ import (
 
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 
+	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	mappingcontract "github.com/dujiao-next/internal/modules/catalog/mapping/contract"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
@@ -47,7 +48,7 @@ type Dependencies struct {
 	CardSecretBatches repository.CardSecretBatchRepository
 	Categories        categorycontract.Repository
 	MemberLevelPrices memberLevelPriceCleaner
-	Carts             repository.CartRepository
+	Carts             *cartgormstore.Store
 	ProductMappings   MappingStore
 	Orders            repository.OrderRepository
 	PaymentChannels   repository.PaymentChannelRepository
@@ -110,7 +111,7 @@ type productAdminUnitOfWork struct {
 	cardSecrets       repository.CardSecretRepository
 	cardSecretBatches repository.CardSecretBatchRepository
 	memberLevelPrices memberLevelPriceCleaner
-	carts             repository.CartRepository
+	carts             *cartgormstore.Store
 	productMappings   MappingStore
 }
 
@@ -120,7 +121,7 @@ func newProductAdminUnitOfWork(
 	cardSecrets repository.CardSecretRepository,
 	cardSecretBatches repository.CardSecretBatchRepository,
 	memberLevelPrices memberLevelPriceCleaner,
-	carts repository.CartRepository,
+	carts *cartgormstore.Store,
 	productMappings MappingStore,
 ) productadmin.UnitOfWork {
 	return &productAdminUnitOfWork{

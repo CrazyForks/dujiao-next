@@ -21,6 +21,8 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/store/gormstore"
+	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
+	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
@@ -68,18 +70,8 @@ type productAdminUoW struct {
 	cardSecrets       *cardsecretgormstore.Store
 	cardSecretBatches *cardsecretgormstore.BatchStore
 	memberLevelPrices *memberlevelgormstore.PriceStore
-	carts             *cartDeleteStore
+	carts             *cartgormstore.Store
 	productMappings   *mappinggormstore.MappingStore
-}
-
-type cartDeleteStore struct{ db *gorm.DB }
-
-func (s *cartDeleteStore) DeleteByProduct(productID uint) error {
-	return s.db.Where("product_id = ?", productID).Delete(&models.CartItem{}).Error
-}
-
-func (s *cartDeleteStore) WithTx(tx *gorm.DB) *cartDeleteStore {
-	return &cartDeleteStore{db: tx}
 }
 
 func (unit *productAdminUoW) WithinTransaction(fn func(productadmin.DeleteRepositories) error) error {
@@ -134,7 +126,7 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 		&models.CardSecret{},
 		&models.CardSecretBatch{},
 		&memberleveldomain.MemberLevelPrice{},
-		&models.CartItem{},
+		&cartdomain.Item{},
 		&mappingdomain.Mapping{},
 		&mappingdomain.SKUMapping{},
 		&models.Order{},
@@ -152,7 +144,7 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 	memberLevelPriceStore := memberlevelgormstore.NewPriceStore(db)
 	mappingStore := mappinggormstore.NewMappingStore(db)
 	skuMappingStore := mappinggormstore.NewSKUMappingStore(db)
-	cartStore := &cartDeleteStore{db: db}
+	cartStore := cartgormstore.New(db)
 
 	facade := &productHandlerFacade{
 		Service: productapplication.NewService(productapplication.Options{
