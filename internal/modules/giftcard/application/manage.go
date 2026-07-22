@@ -1,4 +1,4 @@
-package giftcard
+package application
 
 import (
 	"strings"
@@ -6,15 +6,16 @@ import (
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/models"
+	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
+	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 )
 
 // List 获取礼品卡列表。
-func (s *Service) List(input ListInput) ([]models.GiftCard, int64, error) {
+func (s *Service) List(input ListInput) ([]giftcarddomain.GiftCard, int64, error) {
 	if s == nil || s.repo == nil {
-		return nil, 0, ErrFetchFailed
+		return nil, 0, giftcardcontract.ErrFetchFailed
 	}
-	cards, total, err := s.repo.List(ListFilter{
+	cards, total, err := s.repo.List(giftcardcontract.ListFilter{
 		Code:           strings.TrimSpace(strings.ToUpper(input.Code)),
 		Status:         strings.TrimSpace(strings.ToLower(input.Status)),
 		BatchNo:        strings.TrimSpace(strings.ToUpper(input.BatchNo)),
@@ -29,41 +30,41 @@ func (s *Service) List(input ListInput) ([]models.GiftCard, int64, error) {
 		PageSize:       input.PageSize,
 	})
 	if err != nil {
-		return nil, 0, ErrFetchFailed
+		return nil, 0, giftcardcontract.ErrFetchFailed
 	}
 	return cards, total, nil
 }
 
 // Update 更新礼品卡。
-func (s *Service) Update(id uint, input UpdateInput) (*models.GiftCard, error) {
+func (s *Service) Update(id uint, input UpdateInput) (*giftcarddomain.GiftCard, error) {
 	if s == nil || s.repo == nil || id == 0 {
-		return nil, ErrInvalid
+		return nil, giftcardcontract.ErrInvalid
 	}
 	card, err := s.repo.GetByID(id)
 	if err != nil {
-		return nil, ErrFetchFailed
+		return nil, giftcardcontract.ErrFetchFailed
 	}
 	if card == nil {
-		return nil, ErrNotFound
+		return nil, giftcardcontract.ErrNotFound
 	}
 
 	if input.Name != nil {
 		name := strings.TrimSpace(*input.Name)
 		if name == "" {
-			return nil, ErrInvalid
+			return nil, giftcardcontract.ErrInvalid
 		}
 		card.Name = name
 	}
 	if input.Status != nil {
 		status := strings.TrimSpace(strings.ToLower(*input.Status))
 		switch status {
-		case models.GiftCardStatusActive, models.GiftCardStatusDisabled:
-			if card.Status == models.GiftCardStatusRedeemed {
-				return nil, ErrInvalid
+		case giftcarddomain.GiftCardStatusActive, giftcarddomain.GiftCardStatusDisabled:
+			if card.Status == giftcarddomain.GiftCardStatusRedeemed {
+				return nil, giftcardcontract.ErrInvalid
 			}
 			card.Status = status
 		default:
-			return nil, ErrInvalid
+			return nil, giftcardcontract.ErrInvalid
 		}
 	}
 	if input.ClearExpiresAt {
@@ -71,13 +72,13 @@ func (s *Service) Update(id uint, input UpdateInput) (*models.GiftCard, error) {
 	} else if input.ExpiresAt != nil {
 		normalized := normalizeExpireAt(input.ExpiresAt)
 		if normalized != nil && normalized.Before(time.Now()) {
-			return nil, ErrInvalid
+			return nil, giftcardcontract.ErrInvalid
 		}
 		card.ExpiresAt = normalized
 	}
 	card.UpdatedAt = time.Now()
 	if err := s.repo.Update(card); err != nil {
-		return nil, ErrUpdateFailed
+		return nil, giftcardcontract.ErrUpdateFailed
 	}
 	return card, nil
 }
@@ -85,20 +86,20 @@ func (s *Service) Update(id uint, input UpdateInput) (*models.GiftCard, error) {
 // Delete 删除礼品卡。
 func (s *Service) Delete(id uint) error {
 	if s == nil || s.repo == nil || id == 0 {
-		return ErrInvalid
+		return giftcardcontract.ErrInvalid
 	}
 	card, err := s.repo.GetByID(id)
 	if err != nil {
-		return ErrFetchFailed
+		return giftcardcontract.ErrFetchFailed
 	}
 	if card == nil {
-		return ErrNotFound
+		return giftcardcontract.ErrNotFound
 	}
-	if card.Status == models.GiftCardStatusRedeemed {
-		return ErrInvalid
+	if card.Status == giftcarddomain.GiftCardStatusRedeemed {
+		return giftcardcontract.ErrInvalid
 	}
 	if err := s.repo.Delete(id); err != nil {
-		return ErrDeleteFailed
+		return giftcardcontract.ErrDeleteFailed
 	}
 	return nil
 }
@@ -106,27 +107,27 @@ func (s *Service) Delete(id uint) error {
 // BatchUpdateStatus 批量更新礼品卡状态。
 func (s *Service) BatchUpdateStatus(ids []uint, status string) (int64, error) {
 	if s == nil || s.repo == nil {
-		return 0, ErrInvalid
+		return 0, giftcardcontract.ErrInvalid
 	}
 	normalizedIDs := normalizeIDs(ids)
 	if len(normalizedIDs) == 0 {
-		return 0, ErrInvalid
+		return 0, giftcardcontract.ErrInvalid
 	}
 	normalizedStatus := strings.TrimSpace(strings.ToLower(status))
 	switch normalizedStatus {
-	case models.GiftCardStatusActive, models.GiftCardStatusDisabled:
+	case giftcarddomain.GiftCardStatusActive, giftcarddomain.GiftCardStatusDisabled:
 	default:
-		return 0, ErrInvalid
+		return 0, giftcardcontract.ErrInvalid
 	}
 	rows, err := s.repo.BatchUpdateStatus(normalizedIDs, normalizedStatus, time.Now())
 	if err != nil {
-		return 0, ErrUpdateFailed
+		return 0, giftcardcontract.ErrUpdateFailed
 	}
 	return rows, nil
 }
 
 // ResolveRedeemedUsers 批量解析礼品卡兑换用户。
-func (s *Service) ResolveRedeemedUsers(cards []models.GiftCard) (map[uint]userdomain.User, error) {
+func (s *Service) ResolveRedeemedUsers(cards []giftcarddomain.GiftCard) (map[uint]userdomain.User, error) {
 	result := make(map[uint]userdomain.User)
 	if s == nil || s.users == nil || len(cards) == 0 {
 		return result, nil

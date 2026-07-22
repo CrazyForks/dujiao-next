@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/modules/giftcard"
+	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
 )
 
 func TestGenerateRequestMapsToGenerateInput(t *testing.T) {
@@ -22,7 +22,7 @@ func TestGenerateRequestMapsToGenerateInput(t *testing.T) {
 	if _, err := time.Parse(time.RFC3339, req.ExpiresAt); err != nil {
 		t.Fatalf("expires_at parse: %v", err)
 	}
-	_ = giftcard.GenerateInput{}
+	_ = giftcardapp.GenerateInput{}
 }
 
 func TestUpdateRequestClearExpiresAtConvention(t *testing.T) {

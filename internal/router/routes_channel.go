@@ -2,10 +2,10 @@ package router
 
 import (
 	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
+	giftcardtransport "github.com/dujiao-next/internal/modules/giftcard/transport/http"
 	memberleveltransport "github.com/dujiao-next/internal/modules/memberlevel/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
-	giftcardtransport "github.com/dujiao-next/internal/transport/http/giftcard"
 	telegramtransport "github.com/dujiao-next/internal/transport/http/telegram"
 	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
 

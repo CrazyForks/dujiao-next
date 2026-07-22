@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"errors"
@@ -15,16 +15,33 @@ import (
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/constants"
+	giftcardintegration "github.com/dujiao-next/internal/integration/giftcard"
 	"github.com/dujiao-next/internal/models"
-	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
+	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
+	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
+	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
+	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
+	"github.com/dujiao-next/internal/service"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
-func setupGiftCardServiceTest(t *testing.T) (*GiftCardService, *WalletService, *gorm.DB) {
+type giftCardTestCurrencyProvider struct {
+	settings *settingsapp.Service
+}
+
+func (provider giftCardTestCurrencyProvider) SiteCurrency() string {
+	currency, err := provider.settings.GetSiteCurrency(constants.SiteCurrencyDefault)
+	if err != nil {
+		return constants.SiteCurrencyDefault
+	}
+	return currency
+}
+
+func setupGiftCardServiceTest(t *testing.T) (*giftcardapp.Service, *service.WalletService, *gorm.DB) {
 	t.Helper()
 	dsn := fmt.Sprintf("file:gift_card_service_test_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
@@ -39,8 +56,8 @@ func setupGiftCardServiceTest(t *testing.T) (*GiftCardService, *WalletService, *
 		&models.WalletAccount{},
 		&models.WalletTransaction{},
 		&settingsstore.SettingRecord{},
-		&models.GiftCardBatch{},
-		&models.GiftCard{},
+		&giftcarddomain.GiftCardBatch{},
+		&giftcarddomain.GiftCard{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -49,8 +66,14 @@ func setupGiftCardServiceTest(t *testing.T) (*GiftCardService, *WalletService, *
 	userRepo := userstore.New(db)
 	settingRepo := settingsstore.New(db)
 	settingSvc := settingsapp.NewService(settingRepo)
-	walletSvc := NewWalletService(repository.NewWalletRepository(db), repository.NewOrderRepository(db), repository.NewOrderRefundRecordRepository(db), userRepo, nil, settingSvc)
-	giftSvc := NewGiftCardService(giftcardgormstore.New(db), userRepo, walletSvc, settingSvc)
+	walletSvc := service.NewWalletService(repository.NewWalletRepository(db), repository.NewOrderRepository(db), repository.NewOrderRefundRecordRepository(db), userRepo, nil, settingSvc)
+	cardStore := giftcardgormstore.New(db)
+	giftSvc := giftcardapp.NewService(giftcardapp.Options{
+		Repo:     cardStore,
+		Users:    userRepo,
+		Currency: giftCardTestCurrencyProvider{settings: settingSvc},
+		Redeemer: giftcardintegration.New(cardStore, walletSvc),
+	})
 	return giftSvc, walletSvc, db
 }
 
@@ -72,7 +95,7 @@ func seedGiftCardUser(t *testing.T, db *gorm.DB, id uint) {
 func TestGiftCardServiceGenerateGiftCards(t *testing.T) {
 	svc, _, db := setupGiftCardServiceTest(t)
 	adminID := uint(999)
-	batch, created, err := svc.GenerateGiftCards(GenerateGiftCardsInput{
+	batch, created, err := svc.Generate(giftcardapp.GenerateInput{
 		Name:      "测试礼品卡",
 		Quantity:  3,
 		Amount:    money.FromDecimal(decimal.RequireFromString("25.00")),
@@ -89,7 +112,7 @@ func TestGiftCardServiceGenerateGiftCards(t *testing.T) {
 	}
 
 	var count int64
-	if err := db.Model(&models.GiftCard{}).Where("batch_id = ?", batch.ID).Count(&count).Error; err != nil {
+	if err := db.Model(&giftcarddomain.GiftCard{}).Where("batch_id = ?", batch.ID).Count(&count).Error; err != nil {
 		t.Fatalf("count gift cards failed: %v", err)
 	}
 	if count != 3 {
@@ -108,7 +131,7 @@ func TestGiftCardServiceGenerateGiftCardsUsesSiteCurrency(t *testing.T) {
 		t.Fatalf("set site currency failed: %v", err)
 	}
 
-	batch, created, err := svc.GenerateGiftCards(GenerateGiftCardsInput{
+	batch, created, err := svc.Generate(giftcardapp.GenerateInput{
 		Name:     "站点币种礼品卡",
 		Quantity: 2,
 		Amount:   money.FromDecimal(decimal.RequireFromString("9.90")),
@@ -126,7 +149,7 @@ func TestGiftCardServiceGenerateGiftCardsUsesSiteCurrency(t *testing.T) {
 		t.Fatalf("expected batch currency USD, got: %s", batch.Currency)
 	}
 
-	var cards []models.GiftCard
+	var cards []giftcarddomain.GiftCard
 	if err := db.Where("batch_id = ?", batch.ID).Find(&cards).Error; err != nil {
 		t.Fatalf("query gift cards failed: %v", err)
 	}
@@ -145,7 +168,7 @@ func TestGiftCardServiceRedeemGiftCard(t *testing.T) {
 	userID := uint(2001)
 	seedGiftCardUser(t, db, userID)
 
-	batch, _, err := svc.GenerateGiftCards(GenerateGiftCardsInput{
+	batch, _, err := svc.Generate(giftcardapp.GenerateInput{
 		Name:     "兑换测试卡",
 		Quantity: 1,
 		Amount:   money.FromDecimal(decimal.RequireFromString("59.90")),
@@ -154,19 +177,19 @@ func TestGiftCardServiceRedeemGiftCard(t *testing.T) {
 		t.Fatalf("generate gift card failed: %v", err)
 	}
 
-	var card models.GiftCard
+	var card giftcarddomain.GiftCard
 	if err := db.Where("batch_id = ?", batch.ID).First(&card).Error; err != nil {
 		t.Fatalf("query generated card failed: %v", err)
 	}
 
-	redeemedCard, account, txn, err := svc.RedeemGiftCard(GiftCardRedeemInput{
+	redeemedCard, account, txn, err := svc.RedeemGiftCard(giftcardapp.RedeemInput{
 		UserID: userID,
 		Code:   card.Code,
 	})
 	if err != nil {
 		t.Fatalf("redeem gift card failed: %v", err)
 	}
-	if redeemedCard == nil || redeemedCard.Status != models.GiftCardStatusRedeemed {
+	if redeemedCard == nil || redeemedCard.Status != giftcarddomain.GiftCardStatusRedeemed {
 		t.Fatalf("unexpected redeemed card: %+v", redeemedCard)
 	}
 	if account == nil || !account.Balance.Decimal.Equal(decimal.RequireFromString("59.90")) {
@@ -176,12 +199,12 @@ func TestGiftCardServiceRedeemGiftCard(t *testing.T) {
 		t.Fatalf("unexpected wallet transaction: %+v", txn)
 	}
 
-	_, _, _, err = svc.RedeemGiftCard(GiftCardRedeemInput{
+	_, _, _, err = svc.RedeemGiftCard(giftcardapp.RedeemInput{
 		UserID: userID,
 		Code:   card.Code,
 	})
-	if !errors.Is(err, ErrGiftCardRedeemed) {
-		t.Fatalf("expected ErrGiftCardRedeemed, got: %v", err)
+	if !errors.Is(err, giftcardcontract.ErrRedeemed) {
+		t.Fatalf("expected giftcardcontract.ErrRedeemed, got: %v", err)
 	}
 
 	accountAfter, err := walletSvc.GetAccount(userID)
@@ -199,12 +222,12 @@ func TestGiftCardServiceRedeemExpiredGiftCard(t *testing.T) {
 	seedGiftCardUser(t, db, userID)
 	expiredAt := time.Now().Add(-1 * time.Hour)
 
-	card := models.GiftCard{
+	card := giftcarddomain.GiftCard{
 		Name:      "过期礼品卡",
 		Code:      "GC-EXPIRED-001",
 		Amount:    money.FromDecimal(decimal.RequireFromString("10.00")),
 		Currency:  "CNY",
-		Status:    models.GiftCardStatusActive,
+		Status:    giftcarddomain.GiftCardStatusActive,
 		ExpiresAt: &expiredAt,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -213,12 +236,12 @@ func TestGiftCardServiceRedeemExpiredGiftCard(t *testing.T) {
 		t.Fatalf("create expired gift card failed: %v", err)
 	}
 
-	_, _, _, err := svc.RedeemGiftCard(GiftCardRedeemInput{
+	_, _, _, err := svc.RedeemGiftCard(giftcardapp.RedeemInput{
 		UserID: userID,
 		Code:   card.Code,
 	})
-	if !errors.Is(err, ErrGiftCardExpired) {
-		t.Fatalf("expected ErrGiftCardExpired, got: %v", err)
+	if !errors.Is(err, giftcardcontract.ErrExpired) {
+		t.Fatalf("expected giftcardcontract.ErrExpired, got: %v", err)
 	}
 }
 
@@ -228,12 +251,12 @@ func TestGiftCardServiceBatchUpdateStatusSkipsRedeemed(t *testing.T) {
 	userID := uint(2003)
 	seedGiftCardUser(t, db, userID)
 
-	activeCard := models.GiftCard{
+	activeCard := giftcarddomain.GiftCard{
 		Name:      "可变更礼品卡",
 		Code:      "GC-BATCH-ACTIVE-001",
 		Amount:    money.FromDecimal(decimal.RequireFromString("20.00")),
 		Currency:  "CNY",
-		Status:    models.GiftCardStatusActive,
+		Status:    giftcarddomain.GiftCardStatusActive,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -242,12 +265,12 @@ func TestGiftCardServiceBatchUpdateStatusSkipsRedeemed(t *testing.T) {
 	}
 
 	redeemedAt := now.Add(-10 * time.Minute)
-	redeemedCard := models.GiftCard{
+	redeemedCard := giftcarddomain.GiftCard{
 		Name:           "已兑换礼品卡",
 		Code:           "GC-BATCH-REDEEMED-001",
 		Amount:         money.FromDecimal(decimal.RequireFromString("30.00")),
 		Currency:       "CNY",
-		Status:         models.GiftCardStatusRedeemed,
+		Status:         giftcarddomain.GiftCardStatusRedeemed,
 		RedeemedAt:     &redeemedAt,
 		RedeemedUserID: &userID,
 		CreatedAt:      now,
@@ -257,7 +280,7 @@ func TestGiftCardServiceBatchUpdateStatusSkipsRedeemed(t *testing.T) {
 		t.Fatalf("create redeemed card failed: %v", err)
 	}
 
-	affected, err := svc.BatchUpdateStatus([]uint{activeCard.ID, redeemedCard.ID}, models.GiftCardStatusDisabled)
+	affected, err := svc.BatchUpdateStatus([]uint{activeCard.ID, redeemedCard.ID}, giftcarddomain.GiftCardStatusDisabled)
 	if err != nil {
 		t.Fatalf("batch update status failed: %v", err)
 	}
@@ -265,19 +288,19 @@ func TestGiftCardServiceBatchUpdateStatusSkipsRedeemed(t *testing.T) {
 		t.Fatalf("expected affected=1, got: %d", affected)
 	}
 
-	var checkActive models.GiftCard
+	var checkActive giftcarddomain.GiftCard
 	if err := db.First(&checkActive, activeCard.ID).Error; err != nil {
 		t.Fatalf("query active card failed: %v", err)
 	}
-	if checkActive.Status != models.GiftCardStatusDisabled {
+	if checkActive.Status != giftcarddomain.GiftCardStatusDisabled {
 		t.Fatalf("expected active card status disabled, got: %s", checkActive.Status)
 	}
 
-	var checkRedeemed models.GiftCard
+	var checkRedeemed giftcarddomain.GiftCard
 	if err := db.First(&checkRedeemed, redeemedCard.ID).Error; err != nil {
 		t.Fatalf("query redeemed card failed: %v", err)
 	}
-	if checkRedeemed.Status != models.GiftCardStatusRedeemed {
+	if checkRedeemed.Status != giftcarddomain.GiftCardStatusRedeemed {
 		t.Fatalf("expected redeemed card status unchanged, got: %s", checkRedeemed.Status)
 	}
 }

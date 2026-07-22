@@ -5,6 +5,7 @@ import (
 
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
 
+	giftcardintegration "github.com/dujiao-next/internal/integration/giftcard"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/cardsecret"
@@ -12,6 +13,8 @@ import (
 	"github.com/dujiao-next/internal/modules/content"
 	"github.com/dujiao-next/internal/modules/content/store/gormstore"
 	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
+	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
+	giftcardsettingscurrency "github.com/dujiao-next/internal/modules/giftcard/infrastructure/settingscurrency"
 	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
 	"github.com/dujiao-next/internal/modules/orderrisk"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
@@ -98,7 +101,12 @@ func (c *Container) initApplicationServices() {
 		Products:     c.ProductRepo,
 		ProductSKUs:  c.ProductSKURepo,
 	})
-	c.GiftCardService = service.NewGiftCardService(c.GiftCardRepo, c.UserStore, c.WalletService, c.SettingService)
+	c.GiftCardService = giftcardapp.NewService(giftcardapp.Options{
+		Repo:     c.GiftCardRepo,
+		Users:    c.UserStore,
+		Currency: giftcardsettingscurrency.New(c.SettingService),
+		Redeemer: giftcardintegration.New(c.GiftCardRepo, c.WalletService),
+	})
 	c.CouponAdminService = couponapp.NewAdminService(c.CouponRepo)
 	c.PromotionAdminService = promotionapp.NewAdminService(c.PromotionRepo)
 	c.ContentBannerService = content.NewBannerService(

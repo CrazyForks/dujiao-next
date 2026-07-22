@@ -1,10 +1,9 @@
-package models
+package domain
 
 import (
 	"time"
 
 	"github.com/dujiao-next/internal/shared/money"
-	"gorm.io/gorm"
 )
 
 const (
@@ -28,7 +27,7 @@ type GiftCard struct {
 	WalletTxnID    *uint          `gorm:"index" json:"wallet_txn_id,omitempty"`                           // 钱包流水ID
 	CreatedAt      time.Time      `gorm:"index" json:"created_at"`                                        // 创建时间
 	UpdatedAt      time.Time      `gorm:"index" json:"updated_at"`                                        // 更新时间
-	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`                                                 // 软删除时间
+	DeletedAt      *time.Time     `gorm:"index" json:"-"`                                                 // 软删除时间
 	Batch          *GiftCardBatch `gorm:"foreignKey:BatchID" json:"batch,omitempty"`                      // 批次信息
 }
 

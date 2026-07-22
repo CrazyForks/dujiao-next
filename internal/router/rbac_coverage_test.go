@@ -123,7 +123,7 @@ func extractAdminRoutesFromSource() ([]adminRoute, error) {
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "transport", "http", "memberlevel", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "modules", "memberlevel", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
@@ -135,11 +135,15 @@ func extractAdminRoutesFromSource() ([]adminRoute, error) {
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "transport", "http", "coupon", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "modules", "coupon", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "transport", "http", "promotion", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "modules", "promotion", "transport", "http", "routes.go"),
+			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
+		},
+		routeSource{
+			path:       filepath.Join(routerDirectory, "..", "modules", "giftcard", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{

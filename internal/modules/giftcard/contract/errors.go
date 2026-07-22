@@ -1,4 +1,4 @@
-package giftcard
+package contract
 
 import "errors"
 

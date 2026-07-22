@@ -1,4 +1,4 @@
-package channel_test
+package integrationtest
 
 import (
 	"bytes"
@@ -19,8 +19,11 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
+	giftcardintegration "github.com/dujiao-next/internal/integration/giftcard"
 	"github.com/dujiao-next/internal/models"
-	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
+	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
+	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
+	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/infrastructure/gormstore"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
@@ -28,7 +31,7 @@ import (
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
-	giftcardtransport "github.com/dujiao-next/internal/transport/http/giftcard"
+	giftcardtransport "github.com/dujiao-next/internal/modules/giftcard/transport/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -78,8 +81,8 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 		&models.WalletAccount{},
 		&models.WalletTransaction{},
 		&settingsstore.SettingRecord{},
-		&models.GiftCardBatch{},
-		&models.GiftCard{},
+		&giftcarddomain.GiftCardBatch{},
+		&giftcarddomain.GiftCard{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -96,7 +99,12 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 	settingSvc := settingsapp.NewService(settingRepo)
 	refundRecordRepo := repository.NewOrderRefundRecordRepository(db)
 	walletSvc := service.NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, nil, settingSvc)
-	giftCardSvc := service.NewGiftCardService(giftCardRepo, userRepo, walletSvc, settingSvc)
+	giftCardSvc := giftcardapp.NewService(giftcardapp.Options{
+		Repo:     giftCardRepo,
+		Users:    userRepo,
+		Currency: giftCardTestCurrencyProvider{settings: settingSvc},
+		Redeemer: giftcardintegration.New(giftCardRepo, walletSvc),
+	})
 	userAuthSvc := userauthapp.NewService(&config.Config{}, userRepo, identityRepo, emailVerifyRepo, nil, nil, nil)
 
 	handler := giftcardtransport.NewChannelHandler(giftCardSvc, giftCardChannelUserProvisioner{auth: userAuthSvc})
@@ -109,7 +117,7 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 	return db, server
 }
 
-func seedChannelGiftCard(t *testing.T, db *gorm.DB, card models.GiftCard) models.GiftCard {
+func seedChannelGiftCard(t *testing.T, db *gorm.DB, card giftcarddomain.GiftCard) giftcarddomain.GiftCard {
 	t.Helper()
 	if err := db.Create(&card).Error; err != nil {
 		t.Fatalf("create gift card failed: %v", err)
@@ -142,12 +150,12 @@ func decodeChannelGiftCardResponse(t *testing.T, resp *http.Response) channelGif
 
 func TestRedeemGiftCardChannelHandlerSuccess(t *testing.T) {
 	db, server := setupChannelGiftCardHandlerTest(t)
-	card := seedChannelGiftCard(t, db, models.GiftCard{
+	card := seedChannelGiftCard(t, db, giftcarddomain.GiftCard{
 		Name:      "Telegram 礼品卡",
 		Code:      "GC-CHANNEL-SUCCESS-001",
 		Amount:    money.FromDecimal(decimal.RequireFromString("88.80")),
 		Currency:  "CNY",
-		Status:    models.GiftCardStatusActive,
+		Status:    giftcarddomain.GiftCardStatusActive,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	})
@@ -175,7 +183,7 @@ func TestRedeemGiftCardChannelHandlerSuccess(t *testing.T) {
 	if giftCardData["code"] != card.Code {
 		t.Fatalf("expected gift_card.code=%s, got %v", card.Code, giftCardData["code"])
 	}
-	if giftCardData["status"] != models.GiftCardStatusRedeemed {
+	if giftCardData["status"] != giftcarddomain.GiftCardStatusRedeemed {
 		t.Fatalf("expected gift_card.status=redeemed, got %v", giftCardData["status"])
 	}
 
@@ -211,11 +219,11 @@ func TestRedeemGiftCardChannelHandlerSuccess(t *testing.T) {
 		t.Fatalf("expected stored wallet balance=88.80, got %s", account.Balance.String())
 	}
 
-	var refreshedCard models.GiftCard
+	var refreshedCard giftcarddomain.GiftCard
 	if err := db.First(&refreshedCard, card.ID).Error; err != nil {
 		t.Fatalf("reload gift card failed: %v", err)
 	}
-	if refreshedCard.Status != models.GiftCardStatusRedeemed {
+	if refreshedCard.Status != giftcarddomain.GiftCardStatusRedeemed {
 		t.Fatalf("expected stored gift card status redeemed, got %s", refreshedCard.Status)
 	}
 	if refreshedCard.RedeemedUserID == nil || *refreshedCard.RedeemedUserID != identity.UserID {
@@ -227,12 +235,12 @@ func TestRedeemGiftCardChannelHandlerReturnsMappedRedeemedError(t *testing.T) {
 	db, server := setupChannelGiftCardHandlerTest(t)
 	redeemedUserID := uint(321)
 	redeemedAt := time.Now().Add(-10 * time.Minute)
-	seedChannelGiftCard(t, db, models.GiftCard{
+	seedChannelGiftCard(t, db, giftcarddomain.GiftCard{
 		Name:           "已兑换礼品卡",
 		Code:           "GC-CHANNEL-REDEEMED-001",
 		Amount:         money.FromDecimal(decimal.RequireFromString("50.00")),
 		Currency:       "CNY",
-		Status:         models.GiftCardStatusRedeemed,
+		Status:         giftcarddomain.GiftCardStatusRedeemed,
 		RedeemedAt:     &redeemedAt,
 		RedeemedUserID: &redeemedUserID,
 		CreatedAt:      time.Now(),

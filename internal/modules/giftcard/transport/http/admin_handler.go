@@ -9,8 +9,9 @@ import (
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/giftcard"
+	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
+	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
+	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/money"
@@ -21,13 +22,13 @@ import (
 
 // AdminService 是后台礼品卡管理端口。
 type AdminService interface {
-	GenerateGiftCards(input giftcard.GenerateInput) (*models.GiftCardBatch, int, error)
-	ListGiftCards(input giftcard.ListInput) ([]models.GiftCard, int64, error)
-	ResolveRedeemedUsers(cards []models.GiftCard) (map[uint]userdomain.User, error)
-	UpdateGiftCard(id uint, input giftcard.UpdateInput) (*models.GiftCard, error)
-	DeleteGiftCard(id uint) error
+	Generate(input giftcardapp.GenerateInput) (*giftcarddomain.GiftCardBatch, int, error)
+	List(input giftcardapp.ListInput) ([]giftcarddomain.GiftCard, int64, error)
+	ResolveRedeemedUsers(cards []giftcarddomain.GiftCard) (map[uint]userdomain.User, error)
+	Update(id uint, input giftcardapp.UpdateInput) (*giftcarddomain.GiftCard, error)
+	Delete(id uint) error
 	BatchUpdateStatus(ids []uint, status string) (int64, error)
-	ExportGiftCards(ids []uint, format string) ([]byte, string, error)
+	Export(ids []uint, format string) ([]byte, string, error)
 }
 
 // AdminHandler 处理后台礼品卡请求。
@@ -72,7 +73,7 @@ type adminGiftCardUser struct {
 }
 
 type adminGiftCardItem struct {
-	models.GiftCard
+	giftcarddomain.GiftCard
 	IsExpired    bool               `json:"is_expired"`
 	RedeemedUser *adminGiftCardUser `json:"redeemed_user,omitempty"`
 }
@@ -98,7 +99,7 @@ func (h *AdminHandler) Generate(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	batch, created, err := h.cards.GenerateGiftCards(giftcard.GenerateInput{
+	batch, created, err := h.cards.Generate(giftcardapp.GenerateInput{
 		Name:      req.Name,
 		Quantity:  req.Quantity,
 		Amount:    money.FromDecimal(amount),
@@ -107,7 +108,7 @@ func (h *AdminHandler) Generate(c *gin.Context) {
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, giftcard.ErrInvalid):
+		case errors.Is(err, giftcardcontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.gift_card_create_failed", err)
@@ -154,7 +155,7 @@ func (h *AdminHandler) List(c *gin.Context) {
 		return
 	}
 
-	cards, total, err := h.cards.ListGiftCards(giftcard.ListInput{
+	cards, total, err := h.cards.List(giftcardapp.ListInput{
 		Code:           code,
 		Status:         status,
 		BatchNo:        batchNo,
@@ -230,7 +231,7 @@ func (h *AdminHandler) Update(c *gin.Context) {
 			expiresAt = parsed
 		}
 	}
-	card, err := h.cards.UpdateGiftCard(id, giftcard.UpdateInput{
+	card, err := h.cards.Update(id, giftcardapp.UpdateInput{
 		Name:           req.Name,
 		Status:         req.Status,
 		ExpiresAt:      expiresAt,
@@ -238,9 +239,9 @@ func (h *AdminHandler) Update(c *gin.Context) {
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, giftcard.ErrNotFound):
+		case errors.Is(err, giftcardcontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.gift_card_not_found", nil)
-		case errors.Is(err, giftcard.ErrInvalid):
+		case errors.Is(err, giftcardcontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.gift_card_update_failed", err)
@@ -257,11 +258,11 @@ func (h *AdminHandler) Delete(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}
-	if err := h.cards.DeleteGiftCard(id); err != nil {
+	if err := h.cards.Delete(id); err != nil {
 		switch {
-		case errors.Is(err, giftcard.ErrNotFound):
+		case errors.Is(err, giftcardcontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.gift_card_not_found", nil)
-		case errors.Is(err, giftcard.ErrInvalid):
+		case errors.Is(err, giftcardcontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.gift_card_delete_failed", err)
@@ -281,7 +282,7 @@ func (h *AdminHandler) BatchUpdateStatus(c *gin.Context) {
 	affected, err := h.cards.BatchUpdateStatus(req.IDs, req.Status)
 	if err != nil {
 		switch {
-		case errors.Is(err, giftcard.ErrInvalid):
+		case errors.Is(err, giftcardcontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.gift_card_update_failed", err)
@@ -298,12 +299,12 @@ func (h *AdminHandler) Export(c *gin.Context) {
 		ginutil.RespondBindError(c, err)
 		return
 	}
-	content, contentType, err := h.cards.ExportGiftCards(req.IDs, req.Format)
+	content, contentType, err := h.cards.Export(req.IDs, req.Format)
 	if err != nil {
 		switch {
-		case errors.Is(err, giftcard.ErrNotFound):
+		case errors.Is(err, giftcardcontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.gift_card_not_found", nil)
-		case errors.Is(err, giftcard.ErrInvalid):
+		case errors.Is(err, giftcardcontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.gift_card_fetch_failed", err)

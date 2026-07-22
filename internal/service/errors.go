@@ -9,7 +9,6 @@ import (
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
-	"github.com/dujiao-next/internal/modules/giftcard"
 	"github.com/dujiao-next/internal/modules/notification"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
@@ -105,16 +104,6 @@ var (
 	ErrCardSecretBatchFetchFailed          = cardsecret.ErrBatchFetchFailed
 	ErrCardSecretImportFailed              = cardsecret.ErrImportFailed
 	ErrCardSecretStatsFailed               = cardsecret.ErrStatsFailed
-	ErrGiftCardInvalid                     = giftcard.ErrInvalid
-	ErrGiftCardNotFound                    = giftcard.ErrNotFound
-	ErrGiftCardExpired                     = giftcard.ErrExpired
-	ErrGiftCardDisabled                    = giftcard.ErrDisabled
-	ErrGiftCardRedeemed                    = giftcard.ErrRedeemed
-	ErrGiftCardCreateFailed                = giftcard.ErrCreateFailed
-	ErrGiftCardFetchFailed                 = giftcard.ErrFetchFailed
-	ErrGiftCardUpdateFailed                = giftcard.ErrUpdateFailed
-	ErrGiftCardDeleteFailed                = giftcard.ErrDeleteFailed
-	ErrGiftCardBatchCreateFailed           = giftcard.ErrBatchCreateFailed
 	ErrQueueUnavailable                    = errors.New("queue unavailable")
 	ErrAffiliateConfigInvalid              = settingsintegration.ErrAffiliateConfigInvalid
 	ErrResellerAccountingUnavailable       = resellermodule.ErrAccountingUnavailable

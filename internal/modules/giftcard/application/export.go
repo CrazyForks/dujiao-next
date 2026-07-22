@@ -1,6 +1,7 @@
-package giftcard
+package application
 
 import (
+	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
 	"encoding/csv"
 	"strconv"
 	"strings"
@@ -12,23 +13,23 @@ import (
 // Export 导出礼品卡。
 func (s *Service) Export(ids []uint, format string) ([]byte, string, error) {
 	if s == nil || s.repo == nil {
-		return nil, "", ErrFetchFailed
+		return nil, "", giftcardcontract.ErrFetchFailed
 	}
 	normalizedIDs := normalizeIDs(ids)
 	if len(normalizedIDs) == 0 {
-		return nil, "", ErrInvalid
+		return nil, "", giftcardcontract.ErrInvalid
 	}
 	normalizedFormat := strings.TrimSpace(strings.ToLower(format))
 	if normalizedFormat != constants.ExportFormatCSV && normalizedFormat != constants.ExportFormatTXT {
-		return nil, "", ErrInvalid
+		return nil, "", giftcardcontract.ErrInvalid
 	}
 
 	cards, err := s.repo.ListByIDs(normalizedIDs)
 	if err != nil {
-		return nil, "", ErrFetchFailed
+		return nil, "", giftcardcontract.ErrFetchFailed
 	}
 	if len(cards) == 0 {
-		return nil, "", ErrNotFound
+		return nil, "", giftcardcontract.ErrNotFound
 	}
 
 	if normalizedFormat == constants.ExportFormatTXT {
@@ -54,7 +55,7 @@ func (s *Service) Export(ids []uint, format string) ([]byte, string, error) {
 		"expires_at",
 		"created_at",
 	}); err != nil {
-		return nil, "", ErrFetchFailed
+		return nil, "", giftcardcontract.ErrFetchFailed
 	}
 	for _, card := range cards {
 		batchNo := ""
@@ -79,12 +80,12 @@ func (s *Service) Export(ids []uint, format string) ([]byte, string, error) {
 			card.CreatedAt.Format(time.RFC3339),
 		}
 		if err := writer.Write(record); err != nil {
-			return nil, "", ErrFetchFailed
+			return nil, "", giftcardcontract.ErrFetchFailed
 		}
 	}
 	writer.Flush()
 	if err := writer.Error(); err != nil {
-		return nil, "", ErrFetchFailed
+		return nil, "", giftcardcontract.ErrFetchFailed
 	}
 	return []byte(builder.String()), "text/csv; charset=utf-8", nil
 }

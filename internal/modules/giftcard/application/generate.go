@@ -1,4 +1,4 @@
-package giftcard
+package application
 
 import (
 	"errors"
@@ -6,28 +6,29 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
+	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
 
 // Generate 生成礼品卡批次。
-func (s *Service) Generate(input GenerateInput) (*models.GiftCardBatch, int, error) {
+func (s *Service) Generate(input GenerateInput) (*giftcarddomain.GiftCardBatch, int, error) {
 	if s == nil || s.repo == nil {
-		return nil, 0, ErrCreateFailed
+		return nil, 0, giftcardcontract.ErrCreateFailed
 	}
 
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
-		return nil, 0, ErrInvalid
+		return nil, 0, giftcardcontract.ErrInvalid
 	}
 	if input.Quantity <= 0 || input.Quantity > 10000 {
-		return nil, 0, ErrInvalid
+		return nil, 0, giftcardcontract.ErrInvalid
 	}
 	amount := input.Amount.Decimal.Round(2)
 	if amount.LessThanOrEqual(decimal.Zero) {
-		return nil, 0, ErrInvalid
+		return nil, 0, giftcardcontract.ErrInvalid
 	}
 	currency := constants.SiteCurrencyDefault
 	if s.currency != nil {
@@ -37,7 +38,7 @@ func (s *Service) Generate(input GenerateInput) (*models.GiftCardBatch, int, err
 	}
 
 	now := time.Now()
-	batch := &models.GiftCardBatch{
+	batch := &giftcarddomain.GiftCardBatch{
 		BatchNo:   generateBatchNo(now),
 		Name:      name,
 		Amount:    money.FromDecimal(amount),
@@ -49,30 +50,30 @@ func (s *Service) Generate(input GenerateInput) (*models.GiftCardBatch, int, err
 		UpdatedAt: now,
 	}
 
-	cards := make([]models.GiftCard, 0, input.Quantity)
+	cards := make([]giftcarddomain.GiftCard, 0, input.Quantity)
 	for i := 0; i < input.Quantity; i++ {
-		cards = append(cards, models.GiftCard{
+		cards = append(cards, giftcarddomain.GiftCard{
 			Name:      name,
 			Code:      generateCode(now, i),
 			Amount:    money.FromDecimal(amount),
 			Currency:  currency,
-			Status:    models.GiftCardStatusActive,
+			Status:    giftcarddomain.GiftCardStatusActive,
 			ExpiresAt: normalizeExpireAt(input.ExpiresAt),
 			CreatedAt: now,
 			UpdatedAt: now,
 		})
 	}
 
-	if err := s.repo.WithinTransaction(func(repo Repository) error {
+	if err := s.repo.WithinTransaction(func(repo giftcardcontract.Repository) error {
 		if err := repo.CreateBatch(batch, cards); err != nil {
-			return ErrBatchCreateFailed
+			return giftcardcontract.ErrBatchCreateFailed
 		}
 		return nil
 	}); err != nil {
-		if errors.Is(err, ErrBatchCreateFailed) {
-			return nil, 0, ErrBatchCreateFailed
+		if errors.Is(err, giftcardcontract.ErrBatchCreateFailed) {
+			return nil, 0, giftcardcontract.ErrBatchCreateFailed
 		}
-		return nil, 0, ErrCreateFailed
+		return nil, 0, giftcardcontract.ErrCreateFailed
 	}
 
 	return batch, input.Quantity, nil

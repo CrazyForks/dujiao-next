@@ -28,7 +28,8 @@ import (
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/dashboard"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
-	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
+	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
+	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/infrastructure/gormstore"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
 	admintotpapp "github.com/dujiao-next/internal/modules/identity/adminauth/totp/application"
@@ -142,7 +143,7 @@ type Container struct {
 	PromotionAdminService         *promotionapp.AdminService
 	PaymentService                *service.PaymentService
 	CardSecretService             *cardsecret.Service
-	GiftCardService               *service.GiftCardService
+	GiftCardService               *giftcardapp.Service
 	UserLoginLogService           *auditlog.UserLoginService
 	AuthzAuditService             *auditlog.AuthzService
 	NotificationLogService        *notification.LogService

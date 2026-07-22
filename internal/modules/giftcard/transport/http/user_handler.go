@@ -1,15 +1,17 @@
 package giftcardhttp
 
 import (
+	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	"errors"
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/dto"
+	giftcardpresenter "github.com/dujiao-next/internal/modules/giftcard/transport/presenter"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
-	"github.com/dujiao-next/internal/modules/giftcard"
+	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
+	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -23,7 +25,7 @@ type CaptchaVerifier interface {
 
 // UserService 是用户侧礼品卡兑换端口。
 type UserService interface {
-	RedeemGiftCard(input giftcard.RedeemInput) (*models.GiftCard, *models.WalletAccount, *models.WalletTransaction, error)
+	RedeemGiftCard(input giftcardapp.RedeemInput) (*giftcarddomain.GiftCard, *models.WalletAccount, *models.WalletTransaction, error)
 }
 
 // UserHandler 处理用户中心礼品卡请求。
@@ -61,7 +63,7 @@ func (h *UserHandler) Redeem(c *gin.Context) {
 			return
 		}
 	}
-	card, account, txn, err := h.cards.RedeemGiftCard(giftcard.RedeemInput{
+	card, account, txn, err := h.cards.RedeemGiftCard(giftcardapp.RedeemInput{
 		UserID: uid,
 		Code:   strings.TrimSpace(req.Code),
 	})
@@ -69,7 +71,7 @@ func (h *UserHandler) Redeem(c *gin.Context) {
 		respondUserGiftCardError(c, err)
 		return
 	}
-	response.Success(c, dto.NewGiftCardRedeemResp(card, account, txn))
+	response.Success(c, giftcardpresenter.NewGiftCardRedeemResp(card, account, txn))
 }
 
 func respondCaptchaError(c *gin.Context, err error) {
@@ -87,15 +89,15 @@ func respondCaptchaError(c *gin.Context, err error) {
 
 func respondUserGiftCardError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, giftcard.ErrInvalid):
+	case errors.Is(err, giftcardcontract.ErrInvalid):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_invalid", nil)
-	case errors.Is(err, giftcard.ErrNotFound):
+	case errors.Is(err, giftcardcontract.ErrNotFound):
 		ginutil.RespondError(c, response.CodeNotFound, "error.gift_card_not_found", nil)
-	case errors.Is(err, giftcard.ErrExpired):
+	case errors.Is(err, giftcardcontract.ErrExpired):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_expired", nil)
-	case errors.Is(err, giftcard.ErrDisabled):
+	case errors.Is(err, giftcardcontract.ErrDisabled):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_disabled", nil)
-	case errors.Is(err, giftcard.ErrRedeemed):
+	case errors.Is(err, giftcardcontract.ErrRedeemed):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.gift_card_redeemed", nil)
 	default:
 		ginutil.RespondError(c, response.CodeInternal, "error.gift_card_redeem_failed", err)

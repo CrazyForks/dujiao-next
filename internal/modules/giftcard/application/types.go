@@ -1,4 +1,4 @@
-package giftcard
+package application
 
 import (
 	"time"
