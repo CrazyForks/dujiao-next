@@ -58,6 +58,13 @@ var transitionalPackageFileBudgets = map[string]packageFileBudget{
 // bounded context reaches this list, recreating its former horizontal package
 // is an architecture regression rather than an allowed transitional change.
 var completedMigrationPaths = []string{
+	"internal/models/reconciliation.go",
+	"internal/modules/reconciliation/service.go",
+	"internal/modules/reconciliation/execute.go",
+	"internal/modules/reconciliation/query.go",
+	"internal/modules/reconciliation/service_test.go",
+	"internal/modules/reconciliation/store",
+	"internal/transport/http/reconciliation",
 	"internal/modules/reporting/window.go",
 	"internal/modules/reporting/window_test.go",
 	"internal/modules/orderrisk/service.go",

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/reconciliation"
+	reconciliationcontract "github.com/dujiao-next/internal/modules/reconciliation/contract"
+	reconciliationdomain "github.com/dujiao-next/internal/modules/reconciliation/domain"
 
 	"github.com/gin-gonic/gin"
 )
@@ -20,19 +20,19 @@ type reconciliationServiceStub struct {
 	remark     string
 }
 
-func (s *reconciliationServiceStub) CreateAndEnqueue(reconciliation.RunInput) (*models.ReconciliationJob, error) {
+func (s *reconciliationServiceStub) CreateAndEnqueue(reconciliationcontract.RunInput) (*reconciliationdomain.Job, error) {
 	return nil, nil
 }
 
-func (s *reconciliationServiceStub) ListJobs(reconciliation.JobListFilter) ([]models.ReconciliationJob, int64, error) {
+func (s *reconciliationServiceStub) ListJobs(reconciliationcontract.JobListFilter) ([]reconciliationdomain.Job, int64, error) {
 	return nil, 0, nil
 }
 
-func (s *reconciliationServiceStub) GetJob(uint) (*models.ReconciliationJob, error) {
+func (s *reconciliationServiceStub) GetJob(uint) (*reconciliationdomain.Job, error) {
 	return nil, nil
 }
 
-func (s *reconciliationServiceStub) GetJobItems(uint, int, int) ([]models.ReconciliationItem, int64, error) {
+func (s *reconciliationServiceStub) GetJobItems(uint, int, int) ([]reconciliationdomain.Item, int64, error) {
 	return nil, 0, nil
 }
 
@@ -49,7 +49,7 @@ func TestResolveItemMapsNotFoundAndPassesAdminIdentity(t *testing.T) {
 		wantCode   int
 	}{
 		{"success", nil, 0},
-		{"not found", reconciliation.ErrItemNotFound, 404},
+		{"not found", reconciliationcontract.ErrItemNotFound, 404},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			service := &reconciliationServiceStub{resolveErr: test.resolveErr}

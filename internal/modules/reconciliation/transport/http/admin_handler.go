@@ -4,8 +4,8 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/reconciliation"
+	reconciliationcontract "github.com/dujiao-next/internal/modules/reconciliation/contract"
+	reconciliationdomain "github.com/dujiao-next/internal/modules/reconciliation/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -13,10 +13,10 @@ import (
 )
 
 type Service interface {
-	CreateAndEnqueue(input reconciliation.RunInput) (*models.ReconciliationJob, error)
-	ListJobs(filter reconciliation.JobListFilter) ([]models.ReconciliationJob, int64, error)
-	GetJob(id uint) (*models.ReconciliationJob, error)
-	GetJobItems(jobID uint, page, pageSize int) ([]models.ReconciliationItem, int64, error)
+	CreateAndEnqueue(input reconciliationcontract.RunInput) (*reconciliationdomain.Job, error)
+	ListJobs(filter reconciliationcontract.JobListFilter) ([]reconciliationdomain.Job, int64, error)
+	GetJob(id uint) (*reconciliationdomain.Job, error)
+	GetJobItems(jobID uint, page, pageSize int) ([]reconciliationdomain.Item, int64, error)
 	ResolveItem(itemID, adminID uint, remark string) error
 }
 
@@ -32,7 +32,7 @@ func NewAdminHandler(service Service) *AdminHandler {
 }
 
 func (h *AdminHandler) Run(c *gin.Context) {
-	var input reconciliation.RunInput
+	var input reconciliationcontract.RunInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
@@ -47,7 +47,7 @@ func (h *AdminHandler) Run(c *gin.Context) {
 
 func (h *AdminHandler) ListJobs(c *gin.Context) {
 	page, pageSize := ginutil.ParsePagination(c)
-	filter := reconciliation.JobListFilter{Page: page, PageSize: pageSize}
+	filter := reconciliationcontract.JobListFilter{Page: page, PageSize: pageSize}
 	if connectionID := strings.TrimSpace(c.Query("connection_id")); connectionID != "" {
 		if id, err := ginutil.ParseQueryUint(connectionID, false); err == nil {
 			filter.ConnectionID = id
@@ -102,7 +102,7 @@ func (h *AdminHandler) ResolveItem(c *gin.Context) {
 		return
 	}
 	if err := h.service.ResolveItem(id, adminID, input.Remark); err != nil {
-		if errors.Is(err, reconciliation.ErrItemNotFound) {
+		if errors.Is(err, reconciliationcontract.ErrItemNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.reconciliation_item_not_found", nil)
 			return
 		}

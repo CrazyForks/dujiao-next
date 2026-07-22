@@ -1,4 +1,4 @@
-package reconciliation
+package domain
 
 import (
 	"testing"
@@ -20,7 +20,7 @@ func TestStatusConsistencyRefundWindows(t *testing.T) {
 		{"submitted refunded", constants.ProcurementStatusSubmitted, "refunded", false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			if got := isStatusConsistent(test.local, test.upstream); got != test.want {
+			if got := IsStatusConsistent(test.local, test.upstream); got != test.want {
 				t.Fatalf("isStatusConsistent(%q, %q)=%v want %v", test.local, test.upstream, got, test.want)
 			}
 		})

@@ -24,6 +24,7 @@ import (
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 	notificationdomain "github.com/dujiao-next/internal/modules/notification/domain"
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+	reconciliationdomain "github.com/dujiao-next/internal/modules/reconciliation/domain"
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
@@ -198,8 +199,8 @@ func AutoMigrate() error {
 		&mappingdomain.SKUMapping{},
 		&ProcurementOrder{},
 		&downstreamcallbackdomain.OrderRef{},
-		&ReconciliationJob{},
-		&ReconciliationItem{},
+		&reconciliationdomain.Job{},
+		&reconciliationdomain.Item{},
 		&channelclientdomain.Client{},
 		&broadcastdomain.Broadcast{},
 		&memberleveldomain.MemberLevel{},

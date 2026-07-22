@@ -23,7 +23,7 @@ import (
 	notificationgormstore "github.com/dujiao-next/internal/modules/notification/infrastructure/gormstore"
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/store/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
-	reconciliationgormstore "github.com/dujiao-next/internal/modules/reconciliation/store/gormstore"
+	reconciliationgormstore "github.com/dujiao-next/internal/modules/reconciliation/infrastructure/gormstore"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"
 	broadcaststore "github.com/dujiao-next/internal/modules/telegram/broadcast/infrastructure/gormstore"
@@ -68,9 +68,8 @@ func (c *Container) initRepositories() {
 	c.SKUMappingRepo = mappinggormstore.NewSKUMappingStore(db)
 	c.ProcurementOrderRepo = procurementgormstore.New(db)
 	c.DownstreamOrderRefRepo = downstreamcallbackgormstore.New(db)
-	reconciliationStore := reconciliationgormstore.New(db)
-	c.ReconciliationJobRepo = reconciliationStore
-	c.ReconciliationItemRepo = reconciliationgormstore.NewItemStore(reconciliationStore)
+	c.ReconciliationJobRepo = reconciliationgormstore.NewJobStore(db)
+	c.ReconciliationItemRepo = reconciliationgormstore.NewItemStore(db)
 	c.ChannelClientStore = channelclientstore.New(db)
 	c.TelegramBroadcastRepo = broadcaststore.New(db)
 	c.MemberLevelRepo = memberlevelgormstore.NewLevelStore(db)

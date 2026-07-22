@@ -21,7 +21,11 @@ import (
 	notificationapp "github.com/dujiao-next/internal/modules/notification/application"
 	notificationasyncqueue "github.com/dujiao-next/internal/modules/notification/infrastructure/asyncqueue"
 	"github.com/dujiao-next/internal/modules/procurement"
-	"github.com/dujiao-next/internal/modules/reconciliation"
+	reconciliationapp "github.com/dujiao-next/internal/modules/reconciliation/application"
+	reconciliationnotification "github.com/dujiao-next/internal/modules/reconciliation/infrastructure/notificationadapter"
+	reconciliationprocurement "github.com/dujiao-next/internal/modules/reconciliation/infrastructure/procurementreader"
+	reconciliationqueue "github.com/dujiao-next/internal/modules/reconciliation/infrastructure/queueadapter"
+	reconciliationupstream "github.com/dujiao-next/internal/modules/reconciliation/infrastructure/upstreamreader"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
 	notifyapp "github.com/dujiao-next/internal/modules/telegram/notify/application"
@@ -113,10 +117,12 @@ func (c *Container) initIntegrationServices() {
 		BotNotifier:        c.FulfillmentService,
 		Notifications:      c.NotificationService,
 	})
-	c.ReconciliationService = reconciliation.NewService(reconciliation.ServiceOptions{
+	c.ReconciliationService = reconciliationapp.NewService(reconciliationapp.Options{
 		Jobs: c.ReconciliationJobRepo, Items: c.ReconciliationItemRepo,
-		Procurements: c.ProcurementOrderRepo, Connections: c.SiteConnectionService,
-		Queue: c.QueueClient, Notifications: c.NotificationService,
+		Procurements:  reconciliationprocurement.New(c.ProcurementOrderRepo),
+		Upstream:      reconciliationupstream.New(c.SiteConnectionService),
+		Queue:         reconciliationqueue.New(c.QueueClient),
+		Notifications: reconciliationnotification.New(c.NotificationService),
 	})
 	c.ChannelClientService = channelclientapp.NewService(c.ChannelClientStore, c.Config.App.SecretKey)
 	c.TelegramBroadcastService = broadcastapp.NewService(

@@ -54,7 +54,8 @@ import (
 	"github.com/dujiao-next/internal/modules/procurement"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/modules/reconciliation"
+	reconciliationapp "github.com/dujiao-next/internal/modules/reconciliation/application"
+	reconciliationcontract "github.com/dujiao-next/internal/modules/reconciliation/contract"
 	"github.com/dujiao-next/internal/modules/reseller"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingscontract "github.com/dujiao-next/internal/modules/settings/contract"
@@ -112,8 +113,8 @@ type Container struct {
 	SKUMappingRepo             *mappinggormstore.SKUMappingStore
 	ProcurementOrderRepo       procurement.Repository
 	DownstreamOrderRefRepo     downstreamcallbackcontract.Repository
-	ReconciliationJobRepo      reconciliation.JobRepository
-	ReconciliationItemRepo     reconciliation.ItemRepository
+	ReconciliationJobRepo      reconciliationcontract.JobRepository
+	ReconciliationItemRepo     reconciliationcontract.ItemRepository
 	ChannelClientStore         channelclientcontract.Store
 	TelegramBroadcastRepo      broadcastcontract.Store
 	MemberLevelRepo            memberlevelcontract.LevelRepository
@@ -171,7 +172,7 @@ type Container struct {
 	ProductMappingService         *mappingapp.Service
 	ProcurementOrderService       *procurement.Service
 	DownstreamCallbackService     *downstreamcallbackapp.Service
-	ReconciliationService         *reconciliation.Service
+	ReconciliationService         *reconciliationapp.Service
 	ChannelClientService          *channelclientapp.Service
 	TelegramBroadcastService      *broadcastapp.Service
 	MemberLevelService            *memberlevelapp.Service
