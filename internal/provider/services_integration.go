@@ -69,7 +69,7 @@ func (c *Container) initIntegrationServices() {
 		PaymentRepo:               c.PaymentRepo,
 		ChannelRepo:               c.PaymentChannelRepo,
 		WalletRepo:                c.WalletRepo,
-		UserRepo:                  c.UserRepo,
+		UserStore:                  c.UserStore,
 		ExternalIdentityStore:     c.ExternalIdentityStore,
 		QueueClient:               c.QueueClient,
 		WalletService:             c.WalletService,

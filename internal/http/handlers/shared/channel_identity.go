@@ -1,14 +1,14 @@
 package shared
 
 import (
-	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/gin-gonic/gin"
 )
 
 // BuildChannelIdentityResponse 构造 Telegram 渠道身份响应载荷。
-func BuildChannelIdentityResponse(bound, created bool, user *models.User, identity *externalidentitydomain.Identity) gin.H {
+func BuildChannelIdentityResponse(bound, created bool, user *userdomain.User, identity *externalidentitydomain.Identity) gin.H {
 	resp := gin.H{
 		"bound": bound,
 	}

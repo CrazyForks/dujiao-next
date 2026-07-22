@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -23,7 +25,7 @@ func openResellerPricingRepoTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
@@ -219,9 +221,9 @@ func TestResellerPricingRepositoryRelatedAccountAndSnapshot(t *testing.T) {
 	otherProfile := seedResellerProfile(t, db, "snapshot-other@example.com")
 	repo := NewResellerRepository(db)
 
-	activeUser := models.User{Email: "related-active@example.com", PasswordHash: "hash"}
-	disabledUser := models.User{Email: "related-disabled@example.com", PasswordHash: "hash"}
-	otherUser := models.User{Email: "related-other@example.com", PasswordHash: "hash"}
+	activeUser := userdomain.User{Email: "related-active@example.com", PasswordHash: "hash"}
+	disabledUser := userdomain.User{Email: "related-disabled@example.com", PasswordHash: "hash"}
+	otherUser := userdomain.User{Email: "related-other@example.com", PasswordHash: "hash"}
 	if err := db.Create(&activeUser).Error; err != nil {
 		t.Fatalf("create active user failed: %v", err)
 	}

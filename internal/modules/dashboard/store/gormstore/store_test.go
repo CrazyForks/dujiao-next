@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -23,7 +25,7 @@ func setupDashboardRepositoryTest(t *testing.T) (*Store, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.Category{}, &models.Product{}, &models.Order{}, &models.OrderItem{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &models.Category{}, &models.Product{}, &models.Order{}, &models.OrderItem{}); err != nil {
 		t.Fatalf("migrate dashboard models failed: %v", err)
 	}
 	if err := db.AutoMigrate(&models.ProductSKU{}); err != nil {

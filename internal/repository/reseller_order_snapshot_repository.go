@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"gorm.io/gorm"
 )
@@ -208,8 +210,8 @@ func (r *GormResellerRepository) buildResellerOrderSnapshotRows(resellerID uint,
 	}
 	buyerEmailByID := map[uint]string{}
 	if len(buyerUserIDs) > 0 {
-		var users []models.User
-		if err := r.db.Select("id", "email").Where("id IN ?", buyerUserIDs).Find(&users).Error; err != nil {
+		var users []userdomain.User
+		if err := r.db.Select("id", "email").Where("id IN ? AND deleted_at IS NULL", buyerUserIDs).Find(&users).Error; err != nil {
 			return nil, err
 		}
 		for i := range users {

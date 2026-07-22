@@ -3,7 +3,8 @@ package service
 import (
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/telegramidentity"
 )
 
@@ -40,7 +41,7 @@ func TestIsTelegramPlaceholderEmail(t *testing.T) {
 func TestResolvePasswordChangeMode(t *testing.T) {
 	svc := &UserAuthService{}
 
-	mode, err := svc.ResolvePasswordChangeMode(&models.User{
+	mode, err := svc.ResolvePasswordChangeMode(&userdomain.User{
 		Email:                 "telegram_1@login.local",
 		PasswordSetupRequired: true,
 	})
@@ -51,7 +52,7 @@ func TestResolvePasswordChangeMode(t *testing.T) {
 		t.Fatalf("unexpected mode for telegram placeholder user: %s", mode)
 	}
 
-	mode, err = svc.ResolvePasswordChangeMode(&models.User{
+	mode, err = svc.ResolvePasswordChangeMode(&userdomain.User{
 		Email:                 "user@example.com",
 		PasswordSetupRequired: false,
 	})

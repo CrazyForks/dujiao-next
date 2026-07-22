@@ -3,6 +3,8 @@ package models
 import (
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"gorm.io/gorm"
 )
 
@@ -16,7 +18,7 @@ type AffiliateProfile struct {
 	UpdatedAt     time.Time      `gorm:"index" json:"updated_at"`                           // 更新时间
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`                                    // 软删除时间
 
-	User User `gorm:"foreignKey:UserID" json:"user,omitempty"` // 用户信息
+	User userdomain.User `gorm:"foreignKey:UserID" json:"user,omitempty"` // 用户信息
 }
 
 // TableName 指定表名

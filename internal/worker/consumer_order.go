@@ -80,7 +80,7 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 	var receiverEmail string
 	var locale string
 	if order.UserID != 0 {
-		user, err := c.UserRepo.GetByID(order.UserID)
+		user, err := c.UserStore.GetByID(order.UserID)
 		if err != nil {
 			logger.Warnw("worker_order_status_email_fetch_user_failed", "order_id", order.ID, "user_id", order.UserID, "error", err)
 			return err

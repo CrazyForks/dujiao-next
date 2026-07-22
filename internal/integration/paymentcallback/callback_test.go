@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	paymentprovider "github.com/dujiao-next/internal/payment/provider"
@@ -61,7 +63,7 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.Order{},
@@ -74,7 +76,7 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 	}
 
 	now := time.Now().UTC().Truncate(time.Second)
-	user := &models.User{
+	user := &userdomain.User{
 		Email:        "okpay-callback@example.com",
 		PasswordHash: "hash",
 		Status:       constants.UserStatusActive,

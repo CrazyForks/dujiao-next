@@ -5,9 +5,10 @@ import (
 	"strings"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/telegramidentity"
 
 	"golang.org/x/crypto/bcrypt"
@@ -97,7 +98,7 @@ func (s *UserAuthService) ChangePassword(userID uint, oldPassword, newPassword s
 }
 
 // UpdateProfile 更新用户资料
-func (s *UserAuthService) UpdateProfile(userID uint, nickname, locale *string) (*models.User, error) {
+func (s *UserAuthService) UpdateProfile(userID uint, nickname, locale *string) (*userdomain.User, error) {
 	if userID == 0 {
 		return nil, ErrNotFound
 	}
@@ -187,7 +188,7 @@ func (s *UserAuthService) SendChangeEmailCode(userID uint, kind, newEmail, local
 }
 
 // ChangeEmail 更换邮箱（旧邮箱/新邮箱双验证）
-func (s *UserAuthService) ChangeEmail(userID uint, newEmail, oldCode, newCode string) (*models.User, error) {
+func (s *UserAuthService) ChangeEmail(userID uint, newEmail, oldCode, newCode string) (*userdomain.User, error) {
 	if userID == 0 {
 		return nil, ErrNotFound
 	}
@@ -238,7 +239,7 @@ func (s *UserAuthService) ChangeEmail(userID uint, newEmail, oldCode, newCode st
 }
 
 // GetUserByID 获取用户信息
-func (s *UserAuthService) GetUserByID(id uint) (*models.User, error) {
+func (s *UserAuthService) GetUserByID(id uint) (*userdomain.User, error) {
 	if id == 0 {
 		return nil, ErrNotFound
 	}
@@ -253,7 +254,7 @@ func (s *UserAuthService) GetUserByID(id uint) (*models.User, error) {
 }
 
 // ResolveEmailChangeMode 返回当前用户邮箱修改模式
-func (s *UserAuthService) ResolveEmailChangeMode(user *models.User) (string, error) {
+func (s *UserAuthService) ResolveEmailChangeMode(user *userdomain.User) (string, error) {
 	if user == nil {
 		return EmailChangeModeChangeWithOldAndNew, nil
 	}
@@ -267,7 +268,7 @@ func (s *UserAuthService) ResolveEmailChangeMode(user *models.User) (string, err
 }
 
 // ResolvePasswordChangeMode 返回当前用户密码修改模式
-func (s *UserAuthService) ResolvePasswordChangeMode(user *models.User) (string, error) {
+func (s *UserAuthService) ResolvePasswordChangeMode(user *userdomain.User) (string, error) {
 	if user == nil {
 		return PasswordChangeModeChangeWithOld, nil
 	}
@@ -280,7 +281,7 @@ func (s *UserAuthService) ResolvePasswordChangeMode(user *models.User) (string, 
 	return PasswordChangeModeChangeWithOld, nil
 }
 
-func (s *UserAuthService) ensureTelegramVirtualEmailState(user *models.User) error {
+func (s *UserAuthService) ensureTelegramVirtualEmailState(user *userdomain.User) error {
 	if user == nil || !telegramidentity.IsPlaceholderEmail(user.Email) {
 		return nil
 	}

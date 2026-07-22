@@ -6,17 +6,19 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/repository"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -29,7 +31,7 @@ func newRegistrationDomainPolicyAuthService(t *testing.T) (*UserAuthService, *go
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 	cfg := &config.Config{
@@ -40,7 +42,7 @@ func newRegistrationDomainPolicyAuthService(t *testing.T) (*UserAuthService, *go
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
 	return NewUserAuthService(
 		cfg,
-		repository.NewUserRepository(db),
+		userstore.New(db),
 		externalidentitystore.New(db),
 		emailverificationstore.New(db),
 		settingSvc,

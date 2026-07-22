@@ -3,9 +3,10 @@ package userauthhttp
 import (
 	"errors"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -28,9 +29,9 @@ var (
 // UserEmailService 是更换邮箱端点所需的最小端口。
 type UserEmailService interface {
 	SendChangeEmailCode(userID uint, kind, newEmail, locale string) error
-	ChangeEmail(userID uint, newEmail, oldCode, newCode string) (*models.User, error)
-	ResolveEmailChangeMode(user *models.User) (string, error)
-	ResolvePasswordChangeMode(user *models.User) (string, error)
+	ChangeEmail(userID uint, newEmail, oldCode, newCode string) (*userdomain.User, error)
+	ResolveEmailChangeMode(user *userdomain.User) (string, error)
+	ResolvePasswordChangeMode(user *userdomain.User) (string, error)
 }
 
 // UserEmailHandler 处理当前用户更换邮箱 HTTP 请求。
@@ -142,7 +143,7 @@ func (h *UserEmailHandler) ChangeEmail(c *gin.Context) {
 	response.Success(c, profile)
 }
 
-func (h *UserEmailHandler) changeEmailProfileResponse(user *models.User) (dto.UserProfileResp, error) {
+func (h *UserEmailHandler) changeEmailProfileResponse(user *userdomain.User) (dto.UserProfileResp, error) {
 	emailMode, err := h.service.ResolveEmailChangeMode(user)
 	if err != nil {
 		return dto.UserProfileResp{}, err

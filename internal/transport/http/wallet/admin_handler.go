@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -28,8 +30,8 @@ type AdminWalletService interface {
 
 // AdminUserReader 是后台钱包所需的用户读取端口。
 type AdminUserReader interface {
-	GetByID(id uint) (*models.User, error)
-	ListByIDs(ids []uint) ([]models.User, error)
+	GetByID(id uint) (*userdomain.User, error)
+	ListByIDs(ids []uint) ([]userdomain.User, error)
 }
 
 // PaymentChannelReader 读取支付渠道名称。
@@ -247,7 +249,7 @@ func (h *AdminHandler) GetRecharges(c *gin.Context) {
 		}
 	}
 
-	userMap := make(map[uint]models.User, len(userIDs))
+	userMap := make(map[uint]userdomain.User, len(userIDs))
 	if len(userIDs) > 0 {
 		users, userErr := h.users.ListByIDs(userIDs)
 		if userErr != nil {

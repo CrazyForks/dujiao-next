@@ -3,7 +3,8 @@ package dto
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/shared/money"
 )
@@ -22,8 +23,8 @@ type UserProfileResp struct {
 	PasswordChangeMode string       `json:"password_change_mode,omitempty"`
 }
 
-// NewUserProfileResp 从 models.User 构造用户资料响应
-func NewUserProfileResp(user *models.User, emailMode, passwordMode string) UserProfileResp {
+// NewUserProfileResp 从 userdomain.User 构造用户资料响应
+func NewUserProfileResp(user *userdomain.User, emailMode, passwordMode string) UserProfileResp {
 	if user == nil {
 		return UserProfileResp{}
 	}
@@ -77,8 +78,8 @@ type UserAuthBriefResp struct {
 	EmailVerifiedAt *time.Time `json:"email_verified_at"`
 }
 
-// NewUserAuthBriefResp 从 models.User 构造登录/注册精简响应
-func NewUserAuthBriefResp(user *models.User) UserAuthBriefResp {
+// NewUserAuthBriefResp 从 userdomain.User 构造登录/注册精简响应
+func NewUserAuthBriefResp(user *userdomain.User) UserAuthBriefResp {
 	return UserAuthBriefResp{
 		ID:              user.ID,
 		Email:           user.Email,

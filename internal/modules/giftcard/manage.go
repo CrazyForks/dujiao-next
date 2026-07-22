@@ -4,6 +4,8 @@ import (
 	"strings"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 )
 
@@ -124,8 +126,8 @@ func (s *Service) BatchUpdateStatus(ids []uint, status string) (int64, error) {
 }
 
 // ResolveRedeemedUsers 批量解析礼品卡兑换用户。
-func (s *Service) ResolveRedeemedUsers(cards []models.GiftCard) (map[uint]models.User, error) {
-	result := make(map[uint]models.User)
+func (s *Service) ResolveRedeemedUsers(cards []models.GiftCard) (map[uint]userdomain.User, error) {
+	result := make(map[uint]userdomain.User)
 	if s == nil || s.users == nil || len(cards) == 0 {
 		return result, nil
 	}

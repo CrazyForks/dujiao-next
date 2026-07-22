@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
@@ -26,7 +28,7 @@ func newProductServiceForResellerPublicTest(t *testing.T) (*ProductService, repo
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
@@ -121,7 +123,7 @@ func TestProductServiceListPublicForTenantExcludesResellerHiddenProductsBeforePa
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
-	owner := models.User{Email: "reseller-public-owner@example.com", PasswordHash: "hash"}
+	owner := userdomain.User{Email: "reseller-public-owner@example.com", PasswordHash: "hash"}
 	if err := db.Create(&owner).Error; err != nil {
 		t.Fatalf("create owner failed: %v", err)
 	}
@@ -164,7 +166,7 @@ func TestProductServiceGetPublicBySlugForTenantRejectsHiddenProduct(t *testing.T
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
-	owner := models.User{Email: "reseller-detail-owner@example.com", PasswordHash: "hash"}
+	owner := userdomain.User{Email: "reseller-detail-owner@example.com", PasswordHash: "hash"}
 	if err := db.Create(&owner).Error; err != nil {
 		t.Fatalf("create owner failed: %v", err)
 	}

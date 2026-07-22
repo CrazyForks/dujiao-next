@@ -7,7 +7,7 @@ import (
 
 func NewHandler(c *provider.Container) *adminusertransport.AdminHandler {
 	return adminusertransport.NewAdminHandler(
-		adminUserDirectoryAdapter{users: c.UserRepo},
+		adminUserDirectoryAdapter{users: c.UserStore},
 		adminUserEmailAdapter{},
 		adminUserWalletAdapter{wallets: c.WalletService},
 		adminUserOAuthAdapter{identities: c.ExternalIdentityStore},

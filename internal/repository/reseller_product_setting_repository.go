@@ -230,7 +230,7 @@ func (r *GormResellerProductSettingRepository) ListAdminSettings(filter Reseller
 	query := r.db.Model(&models.ResellerProductSetting{}).
 		Preload("Product").
 		Preload("Profile").
-		Preload("Profile.User")
+		Preload("Profile.User", "deleted_at IS NULL")
 	if filter.ResellerID > 0 {
 		query = query.Where("reseller_product_settings.reseller_id = ?", filter.ResellerID)
 	}

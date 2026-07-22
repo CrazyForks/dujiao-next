@@ -6,6 +6,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
@@ -206,7 +210,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.Promotion{},
-		&models.User{},
+		&userdomain.User{},
 		&models.MemberLevel{},
 		&models.MemberLevelPrice{},
 	); err != nil {
@@ -234,7 +238,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 	if err := db.Create(&level).Error; err != nil {
 		t.Fatalf("create member level failed: %v", err)
 	}
-	user := models.User{
+	user := userdomain.User{
 		Email:         "manual-preview@example.com",
 		PasswordHash:  "hash",
 		Status:        "active",
@@ -288,9 +292,9 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 
 	levelRepo := memberlevelgormstore.NewLevelStore(db)
 	priceRepo := memberlevelgormstore.NewPriceStore(db)
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	svc := NewOrderService(OrderServiceOptions{
-		UserRepo:           userRepo,
+		UserStore:          userRepo,
 		ProductRepo:        repository.NewProductRepository(db),
 		ProductSKURepo:     repository.NewProductSKURepository(db),
 		PromotionRepo:      promotiongormstore.New(db),
@@ -337,7 +341,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 		&models.Product{},
 		&models.ProductSKU{},
 		&models.Promotion{},
-		&models.User{},
+		&userdomain.User{},
 		&models.MemberLevel{},
 		&models.MemberLevelPrice{},
 	); err != nil {
@@ -365,7 +369,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 	if err := db.Create(&level).Error; err != nil {
 		t.Fatalf("create member level failed: %v", err)
 	}
-	user := models.User{
+	user := userdomain.User{
 		Email:         "stack-promo-member@example.com",
 		PasswordHash:  "hash",
 		Status:        "active",
@@ -419,9 +423,9 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 
 	levelRepo := memberlevelgormstore.NewLevelStore(db)
 	priceRepo := memberlevelgormstore.NewPriceStore(db)
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	svc := NewOrderService(OrderServiceOptions{
-		UserRepo:           userRepo,
+		UserStore:          userRepo,
 		ProductRepo:        repository.NewProductRepository(db),
 		ProductSKURepo:     repository.NewProductSKURepository(db),
 		PromotionRepo:      promotiongormstore.New(db),

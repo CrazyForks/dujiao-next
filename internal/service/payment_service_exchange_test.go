@@ -5,6 +5,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
@@ -26,7 +30,7 @@ func setupExchangeTest(t *testing.T) (*PaymentService, *gorm.DB) {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
@@ -48,7 +52,7 @@ func setupExchangeTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	paymentRepo := repository.NewPaymentRepository(db)
 	channelRepo := repository.NewPaymentChannelRepository(db)
 	walletRepo := repository.NewWalletRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	refundRecordRepo := repository.NewOrderRefundRecordRepository(db)
 	walletSvc := NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, nil, nil)
 	paymentSvc := NewPaymentService(PaymentServiceOptions{
@@ -68,7 +72,7 @@ func createExchangePaymentFixture(t *testing.T, db *gorm.DB, originalAmount deci
 	t.Helper()
 	now := time.Now()
 
-	user := &models.User{
+	user := &userdomain.User{
 		Email:        fmt.Sprintf("exchange_test_%d@example.com", now.UnixNano()),
 		PasswordHash: "hash",
 		Status:       constants.UserStatusActive,
@@ -259,7 +263,7 @@ func TestCallbackNoConversionPaymentStillWorks(t *testing.T) {
 	svc, db := setupExchangeTest(t)
 	now := time.Now()
 
-	user := &models.User{
+	user := &userdomain.User{
 		Email: fmt.Sprintf("noconv_%d@example.com", now.UnixNano()), PasswordHash: "h", Status: constants.UserStatusActive,
 		CreatedAt: now, UpdatedAt: now,
 	}
@@ -309,7 +313,7 @@ func TestCallbackRejectsAmountMismatchWithoutConversion(t *testing.T) {
 	svc, db := setupExchangeTest(t)
 	now := time.Now()
 
-	user := &models.User{
+	user := &userdomain.User{
 		Email: fmt.Sprintf("mismatch_%d@example.com", now.UnixNano()), PasswordHash: "h", Status: constants.UserStatusActive,
 		CreatedAt: now, UpdatedAt: now,
 	}

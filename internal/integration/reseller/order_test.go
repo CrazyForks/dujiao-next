@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
@@ -23,7 +25,7 @@ func openResellerOrderServiceTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.ResellerProfile{},
@@ -37,7 +39,7 @@ func openResellerOrderServiceTestDB(t *testing.T) *gorm.DB {
 
 func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (models.ResellerProfile, models.Order, models.ResellerOrderSnapshot) {
 	t.Helper()
-	user := models.User{Email: email, PasswordHash: "hash", Status: constants.UserStatusActive}
+	user := userdomain.User{Email: email, PasswordHash: "hash", Status: constants.UserStatusActive}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
@@ -117,7 +119,7 @@ func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (models.R
 
 func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email string) (models.ResellerProfile, models.Order, []models.OrderItem) {
 	t.Helper()
-	user := models.User{Email: email, PasswordHash: "hash", Status: constants.UserStatusActive}
+	user := userdomain.User{Email: email, PasswordHash: "hash", Status: constants.UserStatusActive}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
@@ -241,7 +243,7 @@ func TestResellerOrderServiceListUsesSnapshotAndHidesRiskFields(t *testing.T) {
 func TestResellerOrderServiceBuyerLabelMasksMemberEmail(t *testing.T) {
 	db := openResellerOrderServiceTestDB(t)
 	profile, order, _ := seedResellerOrderFixture(t, db, "reseller-buyer-label@example.test")
-	buyer := models.User{
+	buyer := userdomain.User{
 		Email:        "buyer-label@example.test",
 		PasswordHash: "hash",
 		Status:       constants.UserStatusActive,

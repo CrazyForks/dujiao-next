@@ -9,6 +9,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/money"
@@ -64,7 +68,7 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&externalidentitydomain.Identity{},
 		&emailverificationdomain.Code{},
 		&models.Order{},
@@ -80,7 +84,7 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 	}
 	models.DB = db
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	identityRepo := externalidentitystore.New(db)
 	emailVerifyRepo := emailverificationstore.New(db)
 	orderRepo := repository.NewOrderRepository(db)

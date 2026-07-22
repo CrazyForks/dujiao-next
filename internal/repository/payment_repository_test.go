@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -23,7 +25,7 @@ func setupPaymentRepositoryTest(t *testing.T) (*GormPaymentRepository, *gorm.DB)
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Order{},
 		&models.Payment{},
 		&models.WalletRechargeOrder{},
@@ -37,14 +39,14 @@ func TestPaymentRepositoryListAdminByUserIncludesWalletRechargePayments(t *testi
 	repo, db := setupPaymentRepositoryTest(t)
 	now := time.Now().UTC().Truncate(time.Second)
 
-	user1 := models.User{
+	user1 := userdomain.User{
 		Email:        "payment_repo_user1@example.com",
 		PasswordHash: "hash",
 		Status:       constants.UserStatusActive,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	user2 := models.User{
+	user2 := userdomain.User{
 		Email:        "payment_repo_user2@example.com",
 		PasswordHash: "hash",
 		Status:       constants.UserStatusActive,
@@ -209,7 +211,7 @@ func TestPaymentRepositoryListAdminLightweightSkipCount(t *testing.T) {
 	repo, db := setupPaymentRepositoryTest(t)
 	now := time.Now().UTC().Truncate(time.Second)
 
-	user := models.User{
+	user := userdomain.User{
 		Email:        "payment_repo_lightweight@example.com",
 		PasswordHash: "hash",
 		Status:       constants.UserStatusActive,

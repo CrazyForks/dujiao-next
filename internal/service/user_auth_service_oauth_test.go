@@ -7,6 +7,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 
@@ -20,7 +24,6 @@ import (
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/telegramidentity"
 
@@ -36,7 +39,7 @@ func setupTelegramOAuthTestService(t *testing.T) (*UserAuthService, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -49,7 +52,7 @@ func setupTelegramOAuthTestService(t *testing.T) (*UserAuthService, *gorm.DB) {
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
 	svc := NewUserAuthService(
 		cfg,
-		repository.NewUserRepository(db),
+		userstore.New(db),
 		externalidentitystore.New(db),
 		emailverificationstore.New(db),
 		settingSvc,
@@ -79,7 +82,7 @@ func TestFindOrCreateTelegramUserRespectsRegistrationSetting(t *testing.T) {
 	}
 
 	var count int64
-	if err := db.Model(&models.User{}).Count(&count).Error; err != nil {
+	if err := db.Model(&userdomain.User{}).Count(&count).Error; err != nil {
 		t.Fatalf("count users failed: %v", err)
 	}
 	if count != 0 {
@@ -111,7 +114,7 @@ func TestFindOrCreateTelegramUserIgnoresEmailDomainAllowlist(t *testing.T) {
 	}
 
 	var count int64
-	if err := db.Model(&models.User{}).Count(&count).Error; err != nil {
+	if err := db.Model(&userdomain.User{}).Count(&count).Error; err != nil {
 		t.Fatalf("count users failed: %v", err)
 	}
 	if count != 1 {
@@ -123,7 +126,7 @@ func TestLoginWithTelegramAllowsExistingIdentityWhenRegistrationDisabled(t *test
 	svc, db := setupTelegramOAuthTestService(t)
 
 	now := time.Now()
-	user := &models.User{
+	user := &userdomain.User{
 		Email:        telegramidentity.BuildPlaceholderEmail("10002"),
 		PasswordHash: "telegram-auto",
 		DisplayName:  "TG Existing",
@@ -176,7 +179,7 @@ func TestLoginWithTelegramMigratesOIDCSubjectIdentityToTelegramID(t *testing.T) 
 	svc, db := setupTelegramOAuthTestService(t)
 
 	now := time.Now()
-	user := &models.User{
+	user := &userdomain.User{
 		Email:        telegramidentity.BuildPlaceholderEmail("1234123412341234123"),
 		PasswordHash: "telegram-auto",
 		DisplayName:  "OIDC Existing",
@@ -278,7 +281,7 @@ func TestLoginWithTelegramAssignsDefaultMemberLevel(t *testing.T) {
 	svc.SetMemberLevelService(memberlevel.NewService(
 		memberlevelgormstore.NewLevelStore(db),
 		nil,
-		repository.NewUserRepository(db),
+		userstore.New(db),
 	))
 
 	res, err := svc.loginWithVerifiedTelegram(&telegramauthapp.IdentityVerified{
@@ -298,7 +301,7 @@ func TestLoginWithTelegramAssignsDefaultMemberLevel(t *testing.T) {
 	}
 
 	// 关键断言：数据库中的等级未被登录流程末尾的 Update 覆盖
-	var persisted models.User
+	var persisted userdomain.User
 	if err := db.First(&persisted, res.User.ID).Error; err != nil {
 		t.Fatalf("load persisted user failed: %v", err)
 	}

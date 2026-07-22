@@ -5,30 +5,35 @@ import (
 	"testing"
 	"time"
 
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
-func setupAdminSearchRepositoryTest(t *testing.T) (*GormUserRepository, *GormOrderRepository, *gorm.DB) {
+func setupAdminSearchRepositoryTest(t *testing.T) (*userstore.Store, *GormOrderRepository, *gorm.DB) {
 	t.Helper()
 	dsn := fmt.Sprintf("file:admin_search_repo_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &externalidentitydomain.Identity{}, &models.Order{}, &models.OrderItem{}, &models.Fulfillment{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &externalidentitydomain.Identity{}, &models.Order{}, &models.OrderItem{}, &models.Fulfillment{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
-	return NewUserRepository(db), NewOrderRepository(db), db
+	return userstore.New(db), NewOrderRepository(db), db
 }
 
 func TestUserRepositoryListSupportsOAuthKeyword(t *testing.T) {
 	userRepo, _, db := setupAdminSearchRepositoryTest(t)
 
-	user1 := models.User{Email: "telegram_6059928735@login.local", PasswordHash: "hash", DisplayName: "TG Buyer", Status: "active"}
-	user2 := models.User{Email: "normal@example.com", PasswordHash: "hash", DisplayName: "Normal User", Status: "active"}
+	user1 := userdomain.User{Email: "telegram_6059928735@login.local", PasswordHash: "hash", DisplayName: "TG Buyer", Status: "active"}
+	user2 := userdomain.User{Email: "normal@example.com", PasswordHash: "hash", DisplayName: "Normal User", Status: "active"}
 	if err := db.Create(&user1).Error; err != nil {
 		t.Fatalf("create user1 failed: %v", err)
 	}
@@ -44,7 +49,7 @@ func TestUserRepositoryListSupportsOAuthKeyword(t *testing.T) {
 		t.Fatalf("create oauth identity failed: %v", err)
 	}
 
-	users, total, err := userRepo.List(UserListFilter{Page: 1, PageSize: 20, Keyword: "tg_demo_user"})
+	users, total, err := userRepo.List(usercontract.ListFilter{Page: 1, PageSize: 20, Keyword: "tg_demo_user"})
 	if err != nil {
 		t.Fatalf("list by username failed: %v", err)
 	}
@@ -52,7 +57,7 @@ func TestUserRepositoryListSupportsOAuthKeyword(t *testing.T) {
 		t.Fatalf("unexpected result by username: total=%d users=%+v", total, users)
 	}
 
-	users, total, err = userRepo.List(UserListFilter{Page: 1, PageSize: 20, Keyword: "6059928735"})
+	users, total, err = userRepo.List(usercontract.ListFilter{Page: 1, PageSize: 20, Keyword: "6059928735"})
 	if err != nil {
 		t.Fatalf("list by provider user id failed: %v", err)
 	}
@@ -60,7 +65,7 @@ func TestUserRepositoryListSupportsOAuthKeyword(t *testing.T) {
 		t.Fatalf("unexpected result by provider user id: total=%d users=%+v", total, users)
 	}
 
-	users, total, err = userRepo.List(UserListFilter{Page: 1, PageSize: 20, UserID: user2.ID})
+	users, total, err = userRepo.List(usercontract.ListFilter{Page: 1, PageSize: 20, UserID: user2.ID})
 	if err != nil {
 		t.Fatalf("list by user id failed: %v", err)
 	}
@@ -72,7 +77,7 @@ func TestUserRepositoryListSupportsOAuthKeyword(t *testing.T) {
 func TestOrderRepositoryListAdminSupportsUserKeyword(t *testing.T) {
 	_, orderRepo, db := setupAdminSearchRepositoryTest(t)
 
-	user := models.User{Email: "telegram_6059928735@login.local", PasswordHash: "hash", DisplayName: "TG Buyer", Status: "active"}
+	user := userdomain.User{Email: "telegram_6059928735@login.local", PasswordHash: "hash", DisplayName: "TG Buyer", Status: "active"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}

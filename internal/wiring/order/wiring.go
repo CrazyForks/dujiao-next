@@ -20,7 +20,7 @@ func New(c *provider.Container) Handlers {
 	return Handlers{
 		Admin: ordertransport.NewAdminHandler(
 			orderAdminQueryAdapter{orders: c.OrderService},
-			orderAdminUserAdapter{users: c.UserRepo},
+			orderAdminUserAdapter{users: c.UserStore},
 			orderAdminCouponAdapter{coupons: c.CouponRepo},
 			orderAdminPromotionAdapter{promotions: c.PromotionRepo},
 			orderAdminPaymentAdapter{payments: c.PaymentRepo},
@@ -31,7 +31,7 @@ func New(c *provider.Container) Handlers {
 			orderUserQueryAdapter{orders: c.OrderService},
 			orderUserPaymentChannelAdapter{payments: c.PaymentService},
 			orderUserRefundRecordAdapter{records: c.OrderRefundRecordRepo},
-			orderUserLookupAdapter{users: c.UserRepo},
+			orderUserLookupAdapter{users: c.UserStore},
 		),
 		Guest: ordertransport.NewGuestHandler(
 			orderGuestQueryAdapter{orders: c.OrderService},

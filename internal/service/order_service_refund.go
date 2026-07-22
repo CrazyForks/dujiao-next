@@ -5,6 +5,10 @@ import (
 	"strings"
 	"time"
 
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -51,7 +55,7 @@ type AdminOrderRefundItem struct {
 // OrderRefundService 订单退款服务（手动退款）
 type OrderRefundService struct {
 	orderRepo             repository.OrderRepository
-	userRepo              repository.UserRepository
+	userRepo              usercontract.Store
 	orderRefundRecordRepo repository.OrderRefundRecordRepository
 	affiliateSvc          *AffiliateService
 	settingService        *settingsapp.Service
@@ -91,7 +95,7 @@ func (s *OrderRefundService) ResolveOrderStatusEmailRefundDetails(order *models.
 // NewOrderRefundService 创建订单退款服务
 func NewOrderRefundService(
 	orderRepo repository.OrderRepository,
-	userRepo repository.UserRepository,
+	userRepo usercontract.Store,
 	orderRefundRecordRepo repository.OrderRefundRecordRepository,
 	affiliateSvc *AffiliateService,
 	settingService *settingsapp.Service,
@@ -482,8 +486,8 @@ func (s *OrderRefundService) resolveRefundOrders(records []models.OrderRefundRec
 }
 
 // resolveRefundUsers 批量加载退款记录关联用户（游客退款不加载用户）。
-func (s *OrderRefundService) resolveRefundUsers(records []models.OrderRefundRecord, orderMap map[uint]*models.Order) (map[uint]models.User, error) {
-	result := make(map[uint]models.User)
+func (s *OrderRefundService) resolveRefundUsers(records []models.OrderRefundRecord, orderMap map[uint]*models.Order) (map[uint]userdomain.User, error) {
+	result := make(map[uint]userdomain.User)
 	if s == nil || s.userRepo == nil {
 		return result, nil
 	}
@@ -516,7 +520,7 @@ func (s *OrderRefundService) resolveRefundUsers(records []models.OrderRefundReco
 }
 
 // buildAdminRefundItem 组装管理端退款记录展示项。
-func (s *OrderRefundService) buildAdminRefundItem(record models.OrderRefundRecord, order *models.Order, userMap map[uint]models.User) AdminOrderRefundItem {
+func (s *OrderRefundService) buildAdminRefundItem(record models.OrderRefundRecord, order *models.Order, userMap map[uint]userdomain.User) AdminOrderRefundItem {
 	recordGuestEmail := resolveRefundGuestEmail(record, order)
 	recordGuestLocale := resolveRefundGuestLocale(order)
 	recordForResponse := record

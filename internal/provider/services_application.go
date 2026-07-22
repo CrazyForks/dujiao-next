@@ -58,15 +58,15 @@ func (c *Container) initApplicationServices() {
 	}
 	c.SitemapService = sitemapService
 	c.CartService = cart.NewService(c.CartRepo, c.ProductRepo, c.ProductSKURepo, c.PromotionRepo, c.SettingService)
-	c.WalletService = service.NewWalletService(c.WalletRepo, c.OrderRepo, c.OrderRefundRecordRepo, c.UserRepo, c.AffiliateService, c.SettingService)
-	c.OrderRefundService = service.NewOrderRefundService(c.OrderRepo, c.UserRepo, c.OrderRefundRecordRepo, c.AffiliateService, c.SettingService)
+	c.WalletService = service.NewWalletService(c.WalletRepo, c.OrderRepo, c.OrderRefundRecordRepo, c.UserStore, c.AffiliateService, c.SettingService)
+	c.OrderRefundService = service.NewOrderRefundService(c.OrderRepo, c.UserStore, c.OrderRefundRecordRepo, c.AffiliateService, c.SettingService)
 	c.MemberLevelService = memberlevel.NewService(c.MemberLevelRepo, c.MemberLevelPriceRepo, c.MemberLevelUserRepo)
 	c.OrderRiskControlService = orderrisk.NewService(c.SettingService, c.OrderRepo)
 	c.OrderService = service.NewOrderService(service.OrderServiceOptions{
 		OrderRepo:                 c.OrderRepo,
 		OrderRefundRecordRepo:     c.OrderRefundRecordRepo,
 		PaymentRepo:               c.PaymentRepo,
-		UserRepo:                  c.UserRepo,
+		UserStore:                  c.UserStore,
 		ProductRepo:               c.ProductRepo,
 		ProductSKURepo:            c.ProductSKURepo,
 		CardSecretRepo:            c.CardSecretRepo,
@@ -97,7 +97,7 @@ func (c *Container) initApplicationServices() {
 		Products:     c.ProductRepo,
 		ProductSKUs:  c.ProductSKURepo,
 	})
-	c.GiftCardService = service.NewGiftCardService(c.GiftCardRepo, c.UserRepo, c.WalletService, c.SettingService)
+	c.GiftCardService = service.NewGiftCardService(c.GiftCardRepo, c.UserStore, c.WalletService, c.SettingService)
 	c.CouponAdminService = coupon.NewAdminService(c.CouponRepo)
 	c.PromotionAdminService = promotion.NewAdminService(c.PromotionRepo)
 	c.ContentBannerService = content.NewBannerService(

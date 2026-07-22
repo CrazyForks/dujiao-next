@@ -5,6 +5,8 @@ import (
 	"sort"
 	"testing"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonslice"
@@ -73,8 +75,8 @@ func TestGetAvailableChannelsFilters(t *testing.T) {
 	}
 
 	amount50 := money.FromDecimal(decimal.RequireFromString("50.00"))
-	memberLv2 := &models.User{MemberLevelID: 2}
-	memberLv3 := &models.User{MemberLevelID: 3}
+	memberLv2 := &userdomain.User{MemberLevelID: 2}
+	memberLv3 := &userdomain.User{MemberLevelID: 3}
 
 	tests := []struct {
 		name   string

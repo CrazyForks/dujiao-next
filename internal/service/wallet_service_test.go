@@ -6,6 +6,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 
@@ -28,7 +32,7 @@ func setupWalletServiceTest(t *testing.T) (*WalletService, *gorm.DB) {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
@@ -48,7 +52,7 @@ func setupWalletServiceTest(t *testing.T) (*WalletService, *gorm.DB) {
 	walletRepo := repository.NewWalletRepository(db)
 	orderRepo := repository.NewOrderRepository(db)
 	refundRecordRepo := repository.NewOrderRefundRecordRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	affiliateSvc := NewAffiliateService(repository.NewAffiliateRepository(db), nil, nil, nil, nil)
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
 	return NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, affiliateSvc, settingSvc), db
@@ -56,7 +60,7 @@ func setupWalletServiceTest(t *testing.T) (*WalletService, *gorm.DB) {
 
 func createTestUser(t *testing.T, db *gorm.DB, id uint) {
 	t.Helper()
-	user := models.User{
+	user := userdomain.User{
 		ID:           id,
 		Email:        fmt.Sprintf("wallet_user_%d@example.com", id),
 		PasswordHash: "hash",

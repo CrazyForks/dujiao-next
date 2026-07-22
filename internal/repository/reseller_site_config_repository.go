@@ -51,7 +51,7 @@ func (r *GormResellerRepository) GetSiteConfigByResellerID(resellerID uint) (*mo
 		return nil, nil
 	}
 	var row models.ResellerSiteConfig
-	err := r.db.Preload("Profile").Preload("Profile.User").
+	err := r.db.Preload("Profile").Preload("Profile.User", "deleted_at IS NULL").
 		Where("reseller_id = ?", resellerID).
 		First(&row).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -76,7 +76,7 @@ func (r *GormResellerRepository) ListSiteConfigs(filter ResellerSiteConfigListFi
 	var rows []models.ResellerSiteConfig
 	query := r.db.Model(&models.ResellerSiteConfig{}).
 		Preload("Profile").
-		Preload("Profile.User")
+		Preload("Profile.User", "deleted_at IS NULL")
 	if filter.ResellerID > 0 {
 		query = query.Where("reseller_site_configs.reseller_id = ?", filter.ResellerID)
 	}

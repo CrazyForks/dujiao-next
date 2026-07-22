@@ -2,6 +2,7 @@ package memberlevel
 
 import (
 	"github.com/dujiao-next/internal/models"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	"github.com/shopspring/decimal"
 )
 
@@ -36,8 +37,8 @@ type PriceRepository interface {
 
 // UserRepository is the member-level consumer's minimal user persistence port.
 type UserRepository interface {
-	GetByID(id uint) (*models.User, error)
-	Update(user *models.User) error
+	GetByID(id uint) (*userdomain.User, error)
+	Update(user *userdomain.User) error
 	IncrementTotalRecharged(userID uint, amount decimal.Decimal) error
 	IncrementTotalSpent(userID uint, amount decimal.Decimal) error
 	UpdateMemberLevelIfCurrent(userID, currentLevelID, nextLevelID uint) (int64, error)

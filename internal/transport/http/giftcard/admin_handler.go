@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/giftcard"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
@@ -21,7 +23,7 @@ import (
 type AdminService interface {
 	GenerateGiftCards(input giftcard.GenerateInput) (*models.GiftCardBatch, int, error)
 	ListGiftCards(input giftcard.ListInput) ([]models.GiftCard, int64, error)
-	ResolveRedeemedUsers(cards []models.GiftCard) (map[uint]models.User, error)
+	ResolveRedeemedUsers(cards []models.GiftCard) (map[uint]userdomain.User, error)
 	UpdateGiftCard(id uint, input giftcard.UpdateInput) (*models.GiftCard, error)
 	DeleteGiftCard(id uint) error
 	BatchUpdateStatus(ids []uint, status string) (int64, error)

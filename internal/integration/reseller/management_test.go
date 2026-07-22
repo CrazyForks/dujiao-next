@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/models"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
@@ -22,15 +24,15 @@ func openResellerManagementServiceTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open db failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &admindomain.Admin{}, &models.ResellerProfile{}, &models.ResellerDomain{}, &models.ResellerSiteConfig{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &admindomain.Admin{}, &models.ResellerProfile{}, &models.ResellerDomain{}, &models.ResellerSiteConfig{}); err != nil {
 		t.Fatalf("migrate failed: %v", err)
 	}
 	return db
 }
 
-func seedResellerManagementUser(t *testing.T, db *gorm.DB, email string) models.User {
+func seedResellerManagementUser(t *testing.T, db *gorm.DB, email string) userdomain.User {
 	t.Helper()
-	user := models.User{Email: email, PasswordHash: "hash", DisplayName: email}
+	user := userdomain.User{Email: email, PasswordHash: "hash", DisplayName: email}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}

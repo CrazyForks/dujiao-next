@@ -1,4 +1,4 @@
-package repository
+package userstore
 
 import (
 	"errors"
@@ -6,48 +6,28 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
-// UserRepository 用户数据访问接口
-type UserRepository interface {
-	GetByEmail(email string) (*models.User, error)
-	GetByID(id uint) (*models.User, error)
-	ListByIDs(ids []uint) ([]models.User, error)
-	Create(user *models.User) error
-	Update(user *models.User) error
-	IncrementTotalRecharged(userID uint, amount decimal.Decimal) error
-	IncrementTotalSpent(userID uint, amount decimal.Decimal) error
-	UpdateMemberLevelIfCurrent(userID, currentLevelID, nextLevelID uint) (int64, error)
-	List(filter UserListFilter) ([]models.User, int64, error)
-	BatchUpdateStatus(userIDs []uint, status string) error
-	AssignDefaultMemberLevel(defaultLevelID uint) (int64, error)
-
-	// TOTP 相关
-	UpdateTOTPPending(userID uint, encSecret string, expiresAt time.Time) error
-	UpdateTOTPEnabled(userID uint, encSecret string, enabledAt time.Time, recoveryCodesJSON string) error
-	UpdateRecoveryCodes(userID uint, recoveryCodesJSON string) error
-	ClearTOTP(userID uint) error
-}
-
-// GormUserRepository GORM 实现
-type GormUserRepository struct {
+// Store persists user accounts with GORM.
+type Store struct {
 	db *gorm.DB
 }
 
-// NewUserRepository 创建用户仓库
-func NewUserRepository(db *gorm.DB) *GormUserRepository {
-	return &GormUserRepository{db: db}
+// New creates a user account store.
+func New(db *gorm.DB) *Store {
+	return &Store{db: db}
 }
 
 // GetByEmail 根据邮箱获取用户
-func (r *GormUserRepository) GetByEmail(email string) (*models.User, error) {
-	var user models.User
-	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
+func (r *Store) GetByEmail(email string) (*userdomain.User, error) {
+	var user userdomain.User
+	if err := r.db.Where("email = ? AND deleted_at IS NULL", email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -57,9 +37,9 @@ func (r *GormUserRepository) GetByEmail(email string) (*models.User, error) {
 }
 
 // GetByID 根据 ID 获取用户
-func (r *GormUserRepository) GetByID(id uint) (*models.User, error) {
-	var user models.User
-	if err := r.db.First(&user, id).Error; err != nil {
+func (r *Store) GetByID(id uint) (*userdomain.User, error) {
+	var user userdomain.User
+	if err := r.db.Where("id = ? AND deleted_at IS NULL", id).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -69,38 +49,45 @@ func (r *GormUserRepository) GetByID(id uint) (*models.User, error) {
 }
 
 // ListByIDs 批量获取用户
-func (r *GormUserRepository) ListByIDs(ids []uint) ([]models.User, error) {
+func (r *Store) ListByIDs(ids []uint) ([]userdomain.User, error) {
 	if len(ids) == 0 {
-		return []models.User{}, nil
+		return []userdomain.User{}, nil
 	}
-	var users []models.User
-	if err := r.db.Where("id IN ?", ids).Find(&users).Error; err != nil {
+	var users []userdomain.User
+	if err := r.db.Where("id IN ? AND deleted_at IS NULL", ids).Find(&users).Error; err != nil {
 		return nil, err
 	}
 	return users, nil
 }
 
 // Create 创建用户
-func (r *GormUserRepository) Create(user *models.User) error {
+func (r *Store) Create(user *userdomain.User) error {
 	return r.db.Create(user).Error
 }
 
 // Update 更新用户
-func (r *GormUserRepository) Update(user *models.User) error {
-	return r.db.Save(user).Error
+func (r *Store) Update(user *userdomain.User) error {
+	if user == nil || user.ID == 0 {
+		return nil
+	}
+	return r.db.Model(&userdomain.User{}).
+		Where("id = ? AND deleted_at IS NULL", user.ID).
+		Select("*").
+		Omit("id", "deleted_at").
+		Updates(user).Error
 }
 
 // IncrementTotalRecharged 原子累加用户累计充值金额。
-func (r *GormUserRepository) IncrementTotalRecharged(userID uint, amount decimal.Decimal) error {
+func (r *Store) IncrementTotalRecharged(userID uint, amount decimal.Decimal) error {
 	return r.incrementMoneyColumn(userID, "total_recharged", amount)
 }
 
 // IncrementTotalSpent 原子累加用户累计消费金额。
-func (r *GormUserRepository) IncrementTotalSpent(userID uint, amount decimal.Decimal) error {
+func (r *Store) IncrementTotalSpent(userID uint, amount decimal.Decimal) error {
 	return r.incrementMoneyColumn(userID, "total_spent", amount)
 }
 
-func (r *GormUserRepository) incrementMoneyColumn(userID uint, column string, amount decimal.Decimal) error {
+func (r *Store) incrementMoneyColumn(userID uint, column string, amount decimal.Decimal) error {
 	if userID == 0 {
 		return nil
 	}
@@ -108,8 +95,8 @@ func (r *GormUserRepository) incrementMoneyColumn(userID uint, column string, am
 	if amount.LessThanOrEqual(decimal.Zero) {
 		return nil
 	}
-	return r.db.Model(&models.User{}).
-		Where("id = ?", userID).
+	return r.db.Model(&userdomain.User{}).
+		Where("id = ? AND deleted_at IS NULL", userID).
 		Updates(map[string]interface{}{
 			column:       gorm.Expr(column+" + ?", money.FromDecimal(amount)),
 			"updated_at": time.Now(),
@@ -117,12 +104,12 @@ func (r *GormUserRepository) incrementMoneyColumn(userID uint, column string, am
 }
 
 // UpdateMemberLevelIfCurrent 仅在用户当前等级未被其他流程改变时更新会员等级。
-func (r *GormUserRepository) UpdateMemberLevelIfCurrent(userID, currentLevelID, nextLevelID uint) (int64, error) {
+func (r *Store) UpdateMemberLevelIfCurrent(userID, currentLevelID, nextLevelID uint) (int64, error) {
 	if userID == 0 || currentLevelID == nextLevelID {
 		return 0, nil
 	}
-	result := r.db.Model(&models.User{}).
-		Where("id = ? AND member_level_id = ?", userID, currentLevelID).
+	result := r.db.Model(&userdomain.User{}).
+		Where("id = ? AND member_level_id = ? AND deleted_at IS NULL", userID, currentLevelID).
 		Updates(map[string]interface{}{
 			"member_level_id": nextLevelID,
 			"updated_at":      time.Now(),
@@ -131,8 +118,8 @@ func (r *GormUserRepository) UpdateMemberLevelIfCurrent(userID, currentLevelID, 
 }
 
 // List 用户列表
-func (r *GormUserRepository) List(filter UserListFilter) ([]models.User, int64, error) {
-	query := r.db.Model(&models.User{})
+func (r *Store) List(filter usercontract.ListFilter) ([]userdomain.User, int64, error) {
+	query := r.db.Model(&userdomain.User{}).Where("users.deleted_at IS NULL")
 
 	if filter.UserID != 0 {
 		query = query.Where("users.id = ?", filter.UserID)
@@ -176,7 +163,7 @@ func (r *GormUserRepository) List(filter UserListFilter) ([]models.User, int64, 
 	query = applyPagination(query, filter.Page, filter.PageSize)
 	query = applyUserSort(query, filter.SortBy, filter.SortOrder)
 
-	var users []models.User
+	var users []userdomain.User
 	if err := query.Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
@@ -209,7 +196,7 @@ func applyUserSort(query *gorm.DB, sortBy, sortOrder string) *gorm.DB {
 }
 
 // BatchUpdateStatus 批量更新用户状态
-func (r *GormUserRepository) BatchUpdateStatus(userIDs []uint, status string) error {
+func (r *Store) BatchUpdateStatus(userIDs []uint, status string) error {
 	if len(userIDs) == 0 {
 		return nil
 	}
@@ -222,16 +209,16 @@ func (r *GormUserRepository) BatchUpdateStatus(userIDs []uint, status string) er
 		updates["token_invalid_before"] = now
 		updates["token_version"] = gorm.Expr("token_version + 1")
 	}
-	return r.db.Model(&models.User{}).Where("id IN ?", userIDs).Updates(updates).Error
+	return r.db.Model(&userdomain.User{}).Where("id IN ? AND deleted_at IS NULL", userIDs).Updates(updates).Error
 }
 
 // AssignDefaultMemberLevel 为所有未分配等级(member_level_id=0)的用户批量分配默认等级
-func (r *GormUserRepository) AssignDefaultMemberLevel(defaultLevelID uint) (int64, error) {
+func (r *Store) AssignDefaultMemberLevel(defaultLevelID uint) (int64, error) {
 	if defaultLevelID == 0 {
 		return 0, nil
 	}
-	result := r.db.Model(&models.User{}).
-		Where("member_level_id = 0 OR member_level_id IS NULL").
+	result := r.db.Model(&userdomain.User{}).
+		Where("(member_level_id = 0 OR member_level_id IS NULL) AND deleted_at IS NULL").
 		Updates(map[string]interface{}{
 			"member_level_id": defaultLevelID,
 			"updated_at":      time.Now(),
@@ -240,11 +227,11 @@ func (r *GormUserRepository) AssignDefaultMemberLevel(defaultLevelID uint) (int6
 }
 
 // UpdateTOTPPending 写入待绑定 secret 与过期时间
-func (r *GormUserRepository) UpdateTOTPPending(userID uint, encSecret string, expiresAt time.Time) error {
+func (r *Store) UpdateTOTPPending(userID uint, encSecret string, expiresAt time.Time) error {
 	if userID == 0 {
 		return errors.New("invalid user id")
 	}
-	return r.db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+	return r.db.Model(&userdomain.User{}).Where("id = ? AND deleted_at IS NULL", userID).Updates(map[string]interface{}{
 		"totp_pending_secret":     encSecret,
 		"totp_pending_expires_at": expiresAt,
 	}).Error
@@ -252,11 +239,11 @@ func (r *GormUserRepository) UpdateTOTPPending(userID uint, encSecret string, ex
 
 // UpdateTOTPEnabled 完成绑定：迁移 pending → 正式 secret，写入恢复码，清空 pending；
 // 同时 TokenVersion++ 强制其他设备的旧 session 失效（提升安全级别等同于改密码）。
-func (r *GormUserRepository) UpdateTOTPEnabled(userID uint, encSecret string, enabledAt time.Time, recoveryCodesJSON string) error {
+func (r *Store) UpdateTOTPEnabled(userID uint, encSecret string, enabledAt time.Time, recoveryCodesJSON string) error {
 	if userID == 0 {
 		return errors.New("invalid user id")
 	}
-	return r.db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+	return r.db.Model(&userdomain.User{}).Where("id = ? AND deleted_at IS NULL", userID).Updates(map[string]interface{}{
 		"totp_secret":             encSecret,
 		"totp_enabled_at":         enabledAt,
 		"totp_pending_secret":     "",
@@ -268,20 +255,20 @@ func (r *GormUserRepository) UpdateTOTPEnabled(userID uint, encSecret string, en
 }
 
 // UpdateRecoveryCodes 替换恢复码 JSON
-func (r *GormUserRepository) UpdateRecoveryCodes(userID uint, recoveryCodesJSON string) error {
+func (r *Store) UpdateRecoveryCodes(userID uint, recoveryCodesJSON string) error {
 	if userID == 0 {
 		return errors.New("invalid user id")
 	}
-	return r.db.Model(&models.User{}).Where("id = ?", userID).Update("recovery_codes", recoveryCodesJSON).Error
+	return r.db.Model(&userdomain.User{}).Where("id = ? AND deleted_at IS NULL", userID).Update("recovery_codes", recoveryCodesJSON).Error
 }
 
 // ClearTOTP 清空所有 TOTP 字段，TokenVersion++ 强制下线
-func (r *GormUserRepository) ClearTOTP(userID uint) error {
+func (r *Store) ClearTOTP(userID uint) error {
 	if userID == 0 {
 		return errors.New("invalid user id")
 	}
 	now := time.Now()
-	return r.db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+	return r.db.Model(&userdomain.User{}).Where("id = ? AND deleted_at IS NULL", userID).Updates(map[string]interface{}{
 		"totp_secret":             "",
 		"totp_enabled_at":         nil,
 		"totp_pending_secret":     "",
@@ -290,4 +277,14 @@ func (r *GormUserRepository) ClearTOTP(userID uint) error {
 		"token_version":           gorm.Expr("token_version + 1"),
 		"token_invalid_before":    now,
 	}).Error
+}
+
+func applyPagination(query *gorm.DB, page, pageSize int) *gorm.DB {
+	if query == nil || pageSize <= 0 {
+		return query
+	}
+	if page < 1 {
+		page = 1
+	}
+	return query.Offset((page - 1) * pageSize).Limit(pageSize)
 }

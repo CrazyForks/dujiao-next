@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -45,7 +47,7 @@ func setupAdminResellerManagementHandlerTest(t *testing.T) (*adminResellerFixtur
 		t.Fatalf("open db failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&admindomain.Admin{},
 		&models.AuthzAuditLog{},
 		&models.Category{},
@@ -161,7 +163,7 @@ func adminResellerSiteConfigHTTP(h *adminResellerFixture) *resellerhttp.AdminSit
 
 func seedAdminResellerManagementProfile(t *testing.T, db *gorm.DB, status string) models.ResellerProfile {
 	t.Helper()
-	user := models.User{Email: fmt.Sprintf("reseller-management-%d@example.test", time.Now().UnixNano()), PasswordHash: "hash", DisplayName: "Reseller Management"}
+	user := userdomain.User{Email: fmt.Sprintf("reseller-management-%d@example.test", time.Now().UnixNano()), PasswordHash: "hash", DisplayName: "Reseller Management"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}

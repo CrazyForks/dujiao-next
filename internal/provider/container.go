@@ -24,6 +24,7 @@ import (
 	emailverificationcontract "github.com/dujiao-next/internal/modules/identity/emailverification/contract"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/modules/notification"
@@ -54,7 +55,7 @@ type Container struct {
 
 	// Repositories
 	AdminStore                 admincontract.Store
-	UserRepo                   repository.UserRepository
+	UserStore                  usercontract.Store
 	ExternalIdentityStore      externalidentitycontract.Store
 	EmailVerificationStore     emailverificationcontract.Store
 	OrderRepo                  repository.OrderRepository

@@ -18,7 +18,7 @@ func NewHandler(c *provider.Container) *upstreamtransport.Handler {
 	return upstreamtransport.New(upstreamtransport.Dependencies{
 		Categories:        c.CategoryRepo,
 		Products:          productServiceAdapter{products: c.ProductService},
-		Users:             c.UserRepo,
+		Users:             c.UserStore,
 		ProductRepository: c.ProductRepo,
 		SKUs:              c.ProductSKURepo,
 		ProductMappings:   c.ProductMappingRepo,

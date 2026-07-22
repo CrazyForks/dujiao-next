@@ -6,6 +6,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/money"
@@ -28,7 +32,7 @@ func setupGiftCardServiceTest(t *testing.T) (*GiftCardService, *WalletService, *
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
@@ -42,7 +46,7 @@ func setupGiftCardServiceTest(t *testing.T) (*GiftCardService, *WalletService, *
 	}
 	models.DB = db
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	settingRepo := settingsstore.New(db)
 	settingSvc := settingsapp.NewService(settingRepo)
 	walletSvc := NewWalletService(repository.NewWalletRepository(db), repository.NewOrderRepository(db), repository.NewOrderRefundRecordRepository(db), userRepo, nil, settingSvc)
@@ -52,7 +56,7 @@ func setupGiftCardServiceTest(t *testing.T) (*GiftCardService, *WalletService, *
 
 func seedGiftCardUser(t *testing.T, db *gorm.DB, id uint) {
 	t.Helper()
-	user := models.User{
+	user := userdomain.User{
 		ID:           id,
 		Email:        fmt.Sprintf("gift_card_user_%d@example.com", id),
 		PasswordHash: "hash",

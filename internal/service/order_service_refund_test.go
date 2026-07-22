@@ -6,6 +6,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 
@@ -28,7 +32,7 @@ func setupOrderRefundServiceTest(t *testing.T) (*OrderRefundService, *gorm.DB) {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
@@ -49,7 +53,7 @@ func setupOrderRefundServiceTest(t *testing.T) (*OrderRefundService, *gorm.DB) {
 	orderRepo := repository.NewOrderRepository(db)
 	orderRefundRecordRepo := repository.NewOrderRefundRecordRepository(db)
 	affiliateSvc := NewAffiliateService(repository.NewAffiliateRepository(db), nil, nil, nil, nil)
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
 	return NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateSvc, settingSvc), db
 }

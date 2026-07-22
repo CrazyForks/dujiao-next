@@ -5,6 +5,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
@@ -25,7 +29,7 @@ func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
@@ -47,7 +51,7 @@ func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	paymentRepo := repository.NewPaymentRepository(db)
 	channelRepo := repository.NewPaymentChannelRepository(db)
 	walletRepo := repository.NewWalletRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	refundRecordRepo := repository.NewOrderRefundRecordRepository(db)
 	walletSvc := NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, nil, nil)
 
@@ -84,7 +88,7 @@ func TestCreatePaymentWalletFullAmountCreatesPaymentRecord(t *testing.T) {
 	svc, db := setupPaymentServiceWalletTest(t)
 	now := time.Now()
 
-	user := &models.User{
+	user := &userdomain.User{
 		Email:        "wallet_pay_user@example.com",
 		PasswordHash: "hash",
 		Status:       constants.UserStatusActive,

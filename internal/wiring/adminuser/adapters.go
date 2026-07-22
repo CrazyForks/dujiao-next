@@ -5,6 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/coupon"
@@ -17,11 +21,11 @@ import (
 )
 
 type adminUserDirectoryAdapter struct {
-	users repository.UserRepository
+	users usercontract.Store
 }
 
-func (a adminUserDirectoryAdapter) List(filter adminusertransport.UserListFilter) ([]models.User, int64, error) {
-	return a.users.List(repository.UserListFilter{
+func (a adminUserDirectoryAdapter) List(filter adminusertransport.UserListFilter) ([]userdomain.User, int64, error) {
+	return a.users.List(usercontract.ListFilter{
 		Page:          filter.Page,
 		PageSize:      filter.PageSize,
 		UserID:        filter.UserID,
@@ -36,15 +40,15 @@ func (a adminUserDirectoryAdapter) List(filter adminusertransport.UserListFilter
 	})
 }
 
-func (a adminUserDirectoryAdapter) GetByID(id uint) (*models.User, error) {
+func (a adminUserDirectoryAdapter) GetByID(id uint) (*userdomain.User, error) {
 	return a.users.GetByID(id)
 }
 
-func (a adminUserDirectoryAdapter) GetByEmail(email string) (*models.User, error) {
+func (a adminUserDirectoryAdapter) GetByEmail(email string) (*userdomain.User, error) {
 	return a.users.GetByEmail(email)
 }
 
-func (a adminUserDirectoryAdapter) Update(user *models.User) error {
+func (a adminUserDirectoryAdapter) Update(user *userdomain.User) error {
 	return a.users.Update(user)
 }
 
@@ -116,7 +120,7 @@ func (a adminUserProductAdapter) ListByIDs(ids []uint) ([]models.Product, error)
 
 type adminUserAuthStateAdapter struct{}
 
-func (adminUserAuthStateAdapter) SetUserAuthState(ctx context.Context, user *models.User) error {
+func (adminUserAuthStateAdapter) SetUserAuthState(ctx context.Context, user *userdomain.User) error {
 	return cache.SetUserAuthState(ctx, cache.BuildUserAuthState(user))
 }
 

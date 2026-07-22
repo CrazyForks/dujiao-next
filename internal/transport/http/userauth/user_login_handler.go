@@ -4,9 +4,10 @@ import (
 	"errors"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
@@ -29,7 +30,7 @@ type UserLoginSettings interface {
 
 // UserLoginAuth 是注册/登录端点所需的认证端口。
 type UserLoginAuth interface {
-	Register(email, password, code string, agreementAccepted, emailVerificationEnabled bool) (*models.User, string, time.Time, error)
+	Register(email, password, code string, agreementAccepted, emailVerificationEnabled bool) (*userdomain.User, string, time.Time, error)
 	LoginStep1(email, password string, rememberMe bool) (*AuthLoginResult, error)
 }
 
@@ -61,9 +62,9 @@ type UserRegisterRequest struct {
 
 // UserLoginRequest 登录请求。
 type UserLoginRequest struct {
-	Email          string                       `json:"email" binding:"required"`
-	Password       string                       `json:"password" binding:"required"`
-	RememberMe     bool                         `json:"remember_me"`
+	Email          string                            `json:"email" binding:"required"`
+	Password       string                            `json:"password" binding:"required"`
+	RememberMe     bool                              `json:"remember_me"`
 	CaptchaPayload captchahttp.CaptchaPayloadRequest `json:"captcha_payload"`
 }
 

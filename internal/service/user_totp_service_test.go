@@ -5,33 +5,36 @@ import (
 	"testing"
 	"time"
 
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
 
 	"github.com/glebarez/sqlite"
 	"github.com/pquerna/otp/totp"
 	"gorm.io/gorm"
 )
 
-func newUserTOTPTestService(t *testing.T) (*UserTOTPService, repository.UserRepository, *gorm.DB) {
+func newUserTOTPTestService(t *testing.T) (*UserTOTPService, usercontract.Store, *gorm.DB) {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	cfg := &config.Config{App: config.AppConfig{SecretKey: "test-secret-key-for-user-totp"}}
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	svc := NewUserTOTPService(cfg, userRepo, nil)
 	return svc, userRepo, db
 }
 
-func createUserTOTPTestUser(t *testing.T, repo repository.UserRepository, email string) *models.User {
+func createUserTOTPTestUser(t *testing.T, repo usercontract.Store, email string) *userdomain.User {
 	t.Helper()
-	user := &models.User{
+	user := &userdomain.User{
 		Email:        email,
 		PasswordHash: "x",
 		DisplayName:  email,
@@ -114,7 +117,7 @@ func TestUserTOTPEnableExpiredPending(t *testing.T) {
 		t.Fatalf("setup: %v", err)
 	}
 	past := time.Now().Add(-1 * time.Hour)
-	if err := db.Model(&models.User{}).Where("id = ?", user.ID).Update("totp_pending_expires_at", past).Error; err != nil {
+	if err := db.Model(&userdomain.User{}).Where("id = ?", user.ID).Update("totp_pending_expires_at", past).Error; err != nil {
 		t.Fatalf("force expire: %v", err)
 	}
 	if _, err := svc.Enable(user.ID, "123456"); err != ErrTOTPPendingExpired {

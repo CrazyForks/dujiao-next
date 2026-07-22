@@ -140,21 +140,6 @@ type PaymentChannelListFilter struct {
 	ActiveOnly   bool
 }
 
-// UserListFilter 查询用户列表的过滤条件
-type UserListFilter struct {
-	Page          int
-	PageSize      int
-	UserID        uint
-	Keyword       string
-	Status        string
-	CreatedFrom   *time.Time
-	CreatedTo     *time.Time
-	LastLoginFrom *time.Time
-	LastLoginTo   *time.Time
-	SortBy        string // 排序字段：created_at / last_login_at / wallet_balance，其它值回退默认
-	SortOrder     string // 排序方向：asc / desc（默认 desc）
-}
-
 // WalletAccountListFilter is retained for legacy callers.
 type WalletAccountListFilter = walletmodule.AccountListFilter
 

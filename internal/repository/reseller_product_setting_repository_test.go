@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -21,7 +23,7 @@ func openResellerProductSettingRepoTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
@@ -35,7 +37,7 @@ func openResellerProductSettingRepoTestDB(t *testing.T) *gorm.DB {
 
 func seedResellerProductSettingProfile(t *testing.T, db *gorm.DB, email string) models.ResellerProfile {
 	t.Helper()
-	user := models.User{Email: email, PasswordHash: "hash"}
+	user := userdomain.User{Email: email, PasswordHash: "hash"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}

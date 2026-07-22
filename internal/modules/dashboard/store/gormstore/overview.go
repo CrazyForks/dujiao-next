@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/dashboard"
@@ -74,8 +76,8 @@ func (r *Store) GetOverview(startAt, endAt time.Time) (dashboard.OverviewRow, er
 	result.PaymentsSuccess = paymentAgg.PaymentsSuccess
 	result.PaymentsFailed = paymentAgg.PaymentsFailed
 
-	if err := r.db.Model(&models.User{}).
-		Where("created_at >= ? AND created_at < ?", startAt, endAt).
+	if err := r.db.Model(&userdomain.User{}).
+		Where("created_at >= ? AND created_at < ? AND deleted_at IS NULL", startAt, endAt).
 		Count(&result.NewUsers).Error; err != nil {
 		return result, err
 	}

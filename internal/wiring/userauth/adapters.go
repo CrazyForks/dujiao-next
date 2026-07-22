@@ -7,14 +7,16 @@ import (
 	"strings"
 	"time"
 
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 
 	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	userauthtransport "github.com/dujiao-next/internal/transport/http/userauth"
 )
@@ -24,22 +26,22 @@ type userProfileTransportAdapter struct {
 	service *service.UserAuthService
 }
 
-func (a userProfileTransportAdapter) GetUserByID(id uint) (*models.User, error) {
+func (a userProfileTransportAdapter) GetUserByID(id uint) (*userdomain.User, error) {
 	user, err := a.service.GetUserByID(id)
 	return user, mapUserAuthTransportError(err)
 }
 
-func (a userProfileTransportAdapter) ResolveEmailChangeMode(user *models.User) (string, error) {
+func (a userProfileTransportAdapter) ResolveEmailChangeMode(user *userdomain.User) (string, error) {
 	mode, err := a.service.ResolveEmailChangeMode(user)
 	return mode, mapUserAuthTransportError(err)
 }
 
-func (a userProfileTransportAdapter) ResolvePasswordChangeMode(user *models.User) (string, error) {
+func (a userProfileTransportAdapter) ResolvePasswordChangeMode(user *userdomain.User) (string, error) {
 	mode, err := a.service.ResolvePasswordChangeMode(user)
 	return mode, mapUserAuthTransportError(err)
 }
 
-func (a userProfileTransportAdapter) UpdateProfile(userID uint, nickname, locale *string) (*models.User, error) {
+func (a userProfileTransportAdapter) UpdateProfile(userID uint, nickname, locale *string) (*userdomain.User, error) {
 	user, err := a.service.UpdateProfile(userID, nickname, locale)
 	return user, mapUserAuthTransportError(err)
 }
@@ -53,17 +55,17 @@ func (a userEmailTransportAdapter) SendChangeEmailCode(userID uint, kind, newEma
 	return mapUserAuthTransportError(a.service.SendChangeEmailCode(userID, kind, newEmail, locale))
 }
 
-func (a userEmailTransportAdapter) ChangeEmail(userID uint, newEmail, oldCode, newCode string) (*models.User, error) {
+func (a userEmailTransportAdapter) ChangeEmail(userID uint, newEmail, oldCode, newCode string) (*userdomain.User, error) {
 	user, err := a.service.ChangeEmail(userID, newEmail, oldCode, newCode)
 	return user, mapUserAuthTransportError(err)
 }
 
-func (a userEmailTransportAdapter) ResolveEmailChangeMode(user *models.User) (string, error) {
+func (a userEmailTransportAdapter) ResolveEmailChangeMode(user *userdomain.User) (string, error) {
 	mode, err := a.service.ResolveEmailChangeMode(user)
 	return mode, mapUserAuthTransportError(err)
 }
 
-func (a userEmailTransportAdapter) ResolvePasswordChangeMode(user *models.User) (string, error) {
+func (a userEmailTransportAdapter) ResolvePasswordChangeMode(user *userdomain.User) (string, error) {
 	mode, err := a.service.ResolvePasswordChangeMode(user)
 	return mode, mapUserAuthTransportError(err)
 }
@@ -244,7 +246,7 @@ func (a userLoginTransportAdapter) GetEmailVerificationEnabled(defaultValue bool
 	return a.settings.GetEmailVerificationEnabled(defaultValue)
 }
 
-func (a userLoginTransportAdapter) Register(email, password, code string, agreementAccepted, emailVerificationEnabled bool) (*models.User, string, time.Time, error) {
+func (a userLoginTransportAdapter) Register(email, password, code string, agreementAccepted, emailVerificationEnabled bool) (*userdomain.User, string, time.Time, error) {
 	user, token, expiresAt, err := a.auth.Register(email, password, code, agreementAccepted, emailVerificationEnabled)
 	return user, token, expiresAt, mapUserAuthTransportError(err)
 }
@@ -360,7 +362,7 @@ func (a user2FATOTPTransportAdapter) VerifyChallengeRecoveryCode(userID uint, co
 // user2FAAuthTransportAdapter 将用户认证/仓储适配为 2FA 登录完成端口。
 type user2FAAuthTransportAdapter struct {
 	auth  *service.UserAuthService
-	users repository.UserRepository
+	users usercontract.Store
 }
 
 func (a user2FAAuthTransportAdapter) ParseUserChallengeToken(tokenString string) (*userauthtransport.UserChallengeClaims, error) {

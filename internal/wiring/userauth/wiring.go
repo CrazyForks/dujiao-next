@@ -48,7 +48,7 @@ func New(c *provider.Container) Handlers {
 		),
 		TwoFA: userauthtransport.NewUser2FAHandler(
 			user2FATOTPTransportAdapter{totp: c.UserTOTPService},
-			user2FAAuthTransportAdapter{auth: c.UserAuthService, users: c.UserRepo},
+			user2FAAuthTransportAdapter{auth: c.UserAuthService, users: c.UserStore},
 			user2FAChallengeStoreAdapter{},
 			recorder,
 		),

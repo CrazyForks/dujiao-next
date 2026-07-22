@@ -16,10 +16,10 @@ func New(c *provider.Container) Handlers {
 	wallets := walletTransportAdapter{wallets: c.WalletService, payments: c.PaymentService}
 	return Handlers{
 		User: wallettransport.NewUserHandler(
-			wallets, wallets, c.UserRepo, c.SettingService,
+			wallets, wallets, c.UserStore, c.SettingService,
 		),
 		Admin: wallettransport.NewAdminHandler(
-			wallets, c.UserRepo, c.PaymentChannelRepo, c.PaymentRepo, c.SettingService,
+			wallets, c.UserStore, c.PaymentChannelRepo, c.PaymentRepo, c.SettingService,
 		),
 		Channel: wallettransport.NewChannelHandler(
 			wallets,

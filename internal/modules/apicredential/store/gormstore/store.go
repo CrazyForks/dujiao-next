@@ -56,7 +56,7 @@ func (r *Store) GetAnyByUserID(userID uint) (*models.ApiCredential, error) {
 // GetByApiKey 根据 API Key 获取（预加载 User 用于状态校验）
 func (r *Store) GetByApiKey(apiKey string) (*models.ApiCredential, error) {
 	var cred models.ApiCredential
-	if err := r.db.Preload("User").Where("api_key = ?", apiKey).First(&cred).Error; err != nil {
+	if err := r.db.Preload("User", "deleted_at IS NULL").Where("api_key = ?", apiKey).First(&cred).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -113,7 +113,7 @@ func (r *Store) List(filter apicredential.ListFilter) ([]models.ApiCredential, i
 		q = q.Offset((filter.Page - 1) * filter.PageSize).Limit(filter.PageSize)
 	}
 
-	if err := q.Preload("User").Find(&creds).Error; err != nil {
+	if err := q.Preload("User", "deleted_at IS NULL").Find(&creds).Error; err != nil {
 		return nil, 0, err
 	}
 

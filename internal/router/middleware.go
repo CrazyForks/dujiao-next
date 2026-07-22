@@ -1,11 +1,14 @@
 package router
 
 import (
-	"go.uber.org/zap"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+
+	"go.uber.org/zap"
 
 	"github.com/dujiao-next/internal/authz"
 	"github.com/dujiao-next/internal/cache"
@@ -15,7 +18,6 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -314,7 +316,7 @@ func AdminRBACMiddleware(authzService *authz.Service) gin.HandlerFunc {
 }
 
 // UserJWTAuthMiddleware 用户 JWT 鉴权中间件
-func UserJWTAuthMiddleware(secretKey string, userRepo repository.UserRepository) gin.HandlerFunc {
+func UserJWTAuthMiddleware(secretKey string, userRepo usercontract.Store) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if secretKey == "" {
 			msg := i18n.T(i18n.ResolveLocale(c), "error.jwt_secret_missing")

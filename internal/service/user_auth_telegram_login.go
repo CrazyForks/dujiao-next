@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 )
@@ -60,7 +61,7 @@ func (s *UserAuthService) loginWithVerifiedTelegram(verified *telegramauthapp.Id
 		return nil, err
 	}
 
-	var user *models.User
+	var user *userdomain.User
 	if identity != nil {
 		user, err = s.getActiveUserByID(identity.UserID)
 		if err != nil {

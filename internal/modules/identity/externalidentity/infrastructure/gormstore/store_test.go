@@ -4,7 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/glebarez/sqlite"
@@ -16,17 +17,17 @@ func TestListTelegramUsers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &externalidentitydomain.Identity{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &externalidentitydomain.Identity{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	user1 := &models.User{
+	user1 := &userdomain.User{
 		Email:        "alice@example.com",
 		PasswordHash: "hash",
 		DisplayName:  "Alice",
 		Status:       "active",
 	}
-	user2 := &models.User{
+	user2 := &userdomain.User{
 		Email:        "bob@example.com",
 		PasswordHash: "hash",
 		DisplayName:  "Bob",

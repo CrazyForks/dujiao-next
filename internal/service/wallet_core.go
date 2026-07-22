@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 
 	"github.com/dujiao-next/internal/repository"
@@ -19,7 +21,7 @@ type WalletService struct {
 	walletRepo            repository.WalletRepository
 	orderRepo             repository.OrderRepository
 	refundRecordRepo      repository.OrderRefundRecordRepository
-	userRepo              repository.UserRepository
+	userRepo              usercontract.Store
 	affiliateSvc          *AffiliateService
 	settingService        *settingsapp.Service
 	resellerAccountingSvc *ResellerAccountingService
@@ -30,7 +32,7 @@ func NewWalletService(
 	walletRepo repository.WalletRepository,
 	orderRepo repository.OrderRepository,
 	refundRecordRepo repository.OrderRefundRecordRepository,
-	userRepo repository.UserRepository,
+	userRepo usercontract.Store,
 	affiliateSvc *AffiliateService,
 	settingService *settingsapp.Service,
 ) *WalletService {

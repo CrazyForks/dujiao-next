@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
@@ -23,7 +25,7 @@ func TestResellerRepositoryPostgresActiveUniqueIndex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open postgres failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.ResellerProfile{}, &models.ResellerDomain{}, &models.ResellerSiteConfig{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &models.ResellerProfile{}, &models.ResellerDomain{}, &models.ResellerSiteConfig{}); err != nil {
 		t.Fatalf("migrate postgres failed: %v", err)
 	}
 	if err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_reseller_domains_active_domain ON reseller_domains(domain) WHERE deleted_at IS NULL").Error; err != nil {
@@ -69,7 +71,7 @@ func TestResellerRepositoryPostgresWithdrawLocksSameRows(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open postgres failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.ResellerProfile{}, &models.ResellerLedgerEntry{}, &models.ResellerBalanceAccount{}, &models.ResellerWithdrawRequest{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &models.ResellerProfile{}, &models.ResellerLedgerEntry{}, &models.ResellerBalanceAccount{}, &models.ResellerWithdrawRequest{}); err != nil {
 		t.Fatalf("migrate failed: %v", err)
 	}
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())

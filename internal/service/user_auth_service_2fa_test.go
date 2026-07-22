@@ -5,16 +5,19 @@ import (
 	"testing"
 	"time"
 
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/repository"
 
 	"github.com/glebarez/sqlite"
 	"github.com/pquerna/otp/totp"
@@ -22,14 +25,14 @@ import (
 	"gorm.io/gorm"
 )
 
-func newUser2FATestServices(t *testing.T) (*UserAuthService, *UserTOTPService, repository.UserRepository, *gorm.DB) {
+func newUser2FATestServices(t *testing.T) (*UserAuthService, *UserTOTPService, usercontract.Store, *gorm.DB) {
 	t.Helper()
 	dsn := fmt.Sprintf("file:user_auth_2fa_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	cfg := &config.Config{
@@ -39,7 +42,7 @@ func newUser2FATestServices(t *testing.T) (*UserAuthService, *UserTOTPService, r
 			ExpireHours: 24,
 		},
 	}
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	authSvc := NewUserAuthService(
 		cfg,
 		userRepo,
@@ -53,11 +56,11 @@ func newUser2FATestServices(t *testing.T) (*UserAuthService, *UserTOTPService, r
 	return authSvc, totpSvc, userRepo, db
 }
 
-func createActiveUser(t *testing.T, repo repository.UserRepository, email, password string) *models.User {
+func createActiveUser(t *testing.T, repo usercontract.Store, email, password string) *userdomain.User {
 	t.Helper()
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	now := time.Now()
-	user := &models.User{
+	user := &userdomain.User{
 		Email:           email,
 		PasswordHash:    string(hash),
 		DisplayName:     email,

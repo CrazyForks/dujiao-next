@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
@@ -129,7 +131,7 @@ func applyDBPool(sqlDB *sql.DB, pool DBPoolConfig) {
 func AutoMigrate() error {
 	if err := DB.AutoMigrate(
 		&admindomain.Admin{},
-		&User{},
+		&userdomain.User{},
 		&externalidentitydomain.Identity{},
 		&AffiliateProfile{},
 		&AffiliateClick{},

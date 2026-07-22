@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -18,7 +20,7 @@ func openResellerModelTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&User{}, &Order{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &Order{}); err != nil {
 		t.Fatalf("migrate base models failed: %v", err)
 	}
 	if err := db.AutoMigrate(
@@ -61,7 +63,7 @@ func TestResellerModelsAutoMigrateAndOrderColumns(t *testing.T) {
 
 func TestResellerDomainActiveUniqueAllowsSoftDeleteRecreate(t *testing.T) {
 	db := openResellerModelTestDB(t)
-	user := User{Email: "reseller@example.com", PasswordHash: "x"}
+	user := userdomain.User{Email: "reseller@example.com", PasswordHash: "x"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}

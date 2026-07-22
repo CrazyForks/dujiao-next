@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
@@ -22,7 +24,7 @@ func setupWalletRepositoryTest(t *testing.T) (*GormWalletRepository, *gorm.DB) {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.WalletRechargeOrder{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
@@ -34,7 +36,7 @@ func TestWalletRepositoryListRechargeOrdersAdmin(t *testing.T) {
 	repo, db := setupWalletRepositoryTest(t)
 	now := time.Now().UTC().Truncate(time.Second)
 
-	user1 := models.User{
+	user1 := userdomain.User{
 		Email:        "alpha_wallet_repo@example.com",
 		DisplayName:  "Alpha",
 		PasswordHash: "hash",
@@ -42,7 +44,7 @@ func TestWalletRepositoryListRechargeOrdersAdmin(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	user2 := models.User{
+	user2 := userdomain.User{
 		Email:        "beta_wallet_repo@example.com",
 		DisplayName:  "Beta",
 		PasswordHash: "hash",

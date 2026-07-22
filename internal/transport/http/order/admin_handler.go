@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -45,8 +47,8 @@ type OrderQuery interface {
 
 // UserDirectory 用户目录端口。
 type UserDirectory interface {
-	ListByIDs(ids []uint) ([]models.User, error)
-	GetByID(id uint) (*models.User, error)
+	ListByIDs(ids []uint) ([]userdomain.User, error)
+	GetByID(id uint) (*userdomain.User, error)
 }
 
 // CouponLookup 优惠券查询端口。
@@ -166,7 +168,7 @@ func (h *AdminHandler) AdminListOrders(c *gin.Context) {
 	}
 
 	pagination := response.BuildPagination(page, pageSize, total)
-	userMap := map[uint]models.User{}
+	userMap := map[uint]userdomain.User{}
 	userIDs := make([]uint, 0, len(orders))
 	seen := map[uint]struct{}{}
 	for _, order := range orders {

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
@@ -212,7 +214,7 @@ type adminUser2FATransportAdapter struct {
 	totp *service.UserTOTPService
 }
 
-func (a adminUser2FATransportAdapter) AdminResetUser2FA(operatorID, userID uint) (*models.User, error) {
+func (a adminUser2FATransportAdapter) AdminResetUser2FA(operatorID, userID uint) (*userdomain.User, error) {
 	user, err := a.totp.AdminResetUser2FA(operatorID, userID)
 	return user, mapAdminAuthTransportError(err)
 }

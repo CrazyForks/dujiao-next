@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
@@ -23,7 +25,7 @@ func openResellerAccountingRepoTestDB(t *testing.T) *gorm.DB {
 	}
 	if err := db.AutoMigrate(
 		&admindomain.Admin{},
-		&models.User{},
+		&userdomain.User{},
 		&models.Order{},
 		&models.Payment{},
 		&models.ResellerProfile{},
@@ -41,7 +43,7 @@ func openResellerAccountingRepoTestDB(t *testing.T) *gorm.DB {
 
 func seedResellerAccountingProfile(t *testing.T, db *gorm.DB) models.ResellerProfile {
 	t.Helper()
-	user := models.User{Email: fmt.Sprintf("reseller-%d@example.test", time.Now().UnixNano()), PasswordHash: "x"}
+	user := userdomain.User{Email: fmt.Sprintf("reseller-%d@example.test", time.Now().UnixNano()), PasswordHash: "x"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
@@ -58,7 +60,7 @@ func seedResellerAccountingProfile(t *testing.T, db *gorm.DB) models.ResellerPro
 
 func seedResellerAccountingProfileWithEmail(t *testing.T, db *gorm.DB, email string) models.ResellerProfile {
 	t.Helper()
-	user := models.User{Email: email, PasswordHash: "hash", Status: constants.UserStatusActive}
+	user := userdomain.User{Email: email, PasswordHash: "hash", Status: constants.UserStatusActive}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}

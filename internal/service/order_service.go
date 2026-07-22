@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 
 	"github.com/dujiao-next/internal/config"
@@ -31,7 +33,7 @@ type OrderService struct {
 	orderRepo               repository.OrderRepository
 	orderRefundRecordRepo   repository.OrderRefundRecordRepository
 	paymentRepo             repository.PaymentRepository
-	userRepo                repository.UserRepository
+	userRepo                usercontract.Store
 	productRepo             repository.ProductRepository
 	productSKURepo          repository.ProductSKURepository
 	cardSecretRepo          repository.CardSecretRepository
@@ -78,7 +80,7 @@ type OrderServiceOptions struct {
 	OrderRepo                 repository.OrderRepository
 	OrderRefundRecordRepo     repository.OrderRefundRecordRepository
 	PaymentRepo               repository.PaymentRepository
-	UserRepo                  repository.UserRepository
+	UserStore                 usercontract.Store
 	ProductRepo               repository.ProductRepository
 	ProductSKURepo            repository.ProductSKURepository
 	CardSecretRepo            repository.CardSecretRepository
@@ -114,7 +116,7 @@ func NewOrderService(opts OrderServiceOptions) *OrderService {
 		orderRepo:               opts.OrderRepo,
 		orderRefundRecordRepo:   opts.OrderRefundRecordRepo,
 		paymentRepo:             opts.PaymentRepo,
-		userRepo:                opts.UserRepo,
+		userRepo:                opts.UserStore,
 		productRepo:             opts.ProductRepo,
 		productSKURepo:          opts.ProductSKURepo,
 		cardSecretRepo:          opts.CardSecretRepo,

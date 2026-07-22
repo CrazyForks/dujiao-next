@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
@@ -54,7 +56,7 @@ func assertOrderMissing(t *testing.T, order *models.Order) {
 func TestOrderRepositoryTenantScopePointQueriesAndLists(t *testing.T) {
 	db := openResellerPricingRepoTestDB(t)
 	repo := NewOrderRepository(db)
-	user := models.User{Email: "scope-user@example.com", PasswordHash: "hash"}
+	user := userdomain.User{Email: "scope-user@example.com", PasswordHash: "hash"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}

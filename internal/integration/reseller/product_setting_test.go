@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
@@ -23,7 +25,7 @@ func openResellerProductSettingServiceTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
@@ -35,9 +37,9 @@ func openResellerProductSettingServiceTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (models.User, models.ResellerProfile, models.Product, []models.ProductSKU) {
+func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (userdomain.User, models.ResellerProfile, models.Product, []models.ProductSKU) {
 	t.Helper()
-	user := models.User{Email: fmt.Sprintf("setting-service-%d@example.test", time.Now().UnixNano()), PasswordHash: "hash", Status: constants.UserStatusActive}
+	user := userdomain.User{Email: fmt.Sprintf("setting-service-%d@example.test", time.Now().UnixNano()), PasswordHash: "hash", Status: constants.UserStatusActive}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}

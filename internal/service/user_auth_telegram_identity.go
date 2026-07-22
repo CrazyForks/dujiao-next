@@ -5,8 +5,9 @@ import (
 	"strings"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/telegramidentity"
@@ -14,7 +15,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (s *UserAuthService) getActiveUserByID(userID uint) (*models.User, error) {
+func (s *UserAuthService) getActiveUserByID(userID uint) (*userdomain.User, error) {
 	user, err := s.userRepo.GetByID(userID)
 	if err != nil {
 		return nil, err
@@ -28,7 +29,7 @@ func (s *UserAuthService) getActiveUserByID(userID uint) (*models.User, error) {
 	return user, nil
 }
 
-func (s *UserAuthService) findOrCreateTelegramUser(verified *telegramauthapp.IdentityVerified) (*models.User, error) {
+func (s *UserAuthService) findOrCreateTelegramUser(verified *telegramauthapp.IdentityVerified) (*userdomain.User, error) {
 	if verified == nil {
 		return nil, telegramauthapp.ErrTelegramAuthPayloadInvalid
 	}
@@ -64,7 +65,7 @@ func (s *UserAuthService) findOrCreateTelegramUser(verified *telegramauthapp.Ide
 	}
 
 	now := time.Now()
-	user = &models.User{
+	user = &userdomain.User{
 		Email:                 email,
 		PasswordHash:          string(hashedPassword),
 		PasswordSetupRequired: true,

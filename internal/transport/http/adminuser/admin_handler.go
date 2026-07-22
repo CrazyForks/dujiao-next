@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/coupon"
@@ -46,10 +48,10 @@ type UserListFilter struct {
 
 // UserDirectory 用户读写端口。
 type UserDirectory interface {
-	List(filter UserListFilter) ([]models.User, int64, error)
-	GetByID(id uint) (*models.User, error)
-	GetByEmail(email string) (*models.User, error)
-	Update(user *models.User) error
+	List(filter UserListFilter) ([]userdomain.User, int64, error)
+	GetByID(id uint) (*userdomain.User, error)
+	GetByEmail(email string) (*userdomain.User, error)
+	Update(user *userdomain.User) error
 	BatchUpdateStatus(ids []uint, status string) error
 }
 
@@ -91,7 +93,7 @@ type ProductDirectory interface {
 
 // AuthStateCache 用户鉴权状态缓存端口。
 type AuthStateCache interface {
-	SetUserAuthState(ctx context.Context, user *models.User) error
+	SetUserAuthState(ctx context.Context, user *userdomain.User) error
 	DelUserAuthState(ctx context.Context, userID uint) error
 }
 
@@ -194,7 +196,7 @@ type UserCouponUsageItem struct {
 
 // AdminUserListItem 管理端用户列表项。
 type AdminUserListItem struct {
-	models.User
+	userdomain.User
 	WalletBalance money.Amount `json:"wallet_balance"`
 }
 
@@ -211,7 +213,7 @@ type AdminUserOAuthIdentityItem struct {
 
 // AdminUserDetail 管理端用户详情。
 type AdminUserDetail struct {
-	models.User
+	userdomain.User
 	WalletBalance   money.Amount                 `json:"wallet_balance"`
 	OAuthIdentities []AdminUserOAuthIdentityItem `json:"oauth_identities"`
 }

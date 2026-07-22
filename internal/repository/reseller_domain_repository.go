@@ -54,7 +54,7 @@ func (r *GormResellerRepository) GetDomainByID(id uint) (*models.ResellerDomain,
 		return nil, nil
 	}
 	var row models.ResellerDomain
-	if err := r.db.Preload("Profile.User").First(&row, id).Error; err != nil {
+	if err := r.db.Preload("Profile.User", "deleted_at IS NULL").First(&row, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -69,7 +69,7 @@ func (r *GormResellerRepository) GetDomainByIDForUpdate(id uint) (*models.Resell
 		return nil, nil
 	}
 	var row models.ResellerDomain
-	if err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).Preload("Profile.User").First(&row, id).Error; err != nil {
+	if err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).Preload("Profile.User", "deleted_at IS NULL").First(&row, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -140,7 +140,7 @@ func (r *GormResellerRepository) ListDomainsByResellerID(resellerID uint) ([]mod
 // ListDomains 分页列出分销商域名。
 func (r *GormResellerRepository) ListDomains(filter ResellerDomainListFilter) ([]models.ResellerDomain, int64, error) {
 	rows := make([]models.ResellerDomain, 0)
-	query := r.db.Model(&models.ResellerDomain{}).Preload("Profile.User")
+	query := r.db.Model(&models.ResellerDomain{}).Preload("Profile.User", "deleted_at IS NULL")
 	if filter.ResellerID > 0 {
 		query = query.Where("reseller_domains.reseller_id = ?", filter.ResellerID)
 	}

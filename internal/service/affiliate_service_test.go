@@ -5,6 +5,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/testkit/memorysettings"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
@@ -136,7 +140,7 @@ func setupAffiliateServiceTest(t *testing.T) (*AffiliateService, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.AffiliateProfile{}, &models.AffiliateClick{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &models.AffiliateProfile{}, &models.AffiliateClick{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -150,13 +154,13 @@ func setupAffiliateServiceTest(t *testing.T) (*AffiliateService, *gorm.DB) {
 	}
 
 	affiliateRepo := repository.NewAffiliateRepository(db)
-	return NewAffiliateService(affiliateRepo, repository.NewUserRepository(db), nil, nil, settingSvc), db
+	return NewAffiliateService(affiliateRepo, userstore.New(db), nil, nil, settingSvc), db
 }
 
-func createAffiliateTestUser(t *testing.T, db *gorm.DB, email string) models.User {
+func createAffiliateTestUser(t *testing.T, db *gorm.DB, email string) userdomain.User {
 	t.Helper()
 
-	row := models.User{
+	row := userdomain.User{
 		Email:        email,
 		PasswordHash: "hash",
 		DisplayName:  "tester",

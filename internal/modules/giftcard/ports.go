@@ -3,6 +3,8 @@ package giftcard
 import (
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 )
 
@@ -36,7 +38,7 @@ type Repository interface {
 
 // UserDirectory 是兑换用户解析端口。
 type UserDirectory interface {
-	ListByIDs(ids []uint) ([]models.User, error)
+	ListByIDs(ids []uint) ([]userdomain.User, error)
 }
 
 // CurrencyProvider 是站点币种读取端口。

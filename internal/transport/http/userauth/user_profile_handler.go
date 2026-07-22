@@ -3,8 +3,9 @@ package userauthhttp
 import (
 	"errors"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -18,10 +19,10 @@ var (
 
 // UserProfileService 是用户资料端点所需的最小端口。
 type UserProfileService interface {
-	GetUserByID(id uint) (*models.User, error)
-	ResolveEmailChangeMode(user *models.User) (string, error)
-	ResolvePasswordChangeMode(user *models.User) (string, error)
-	UpdateProfile(userID uint, nickname, locale *string) (*models.User, error)
+	GetUserByID(id uint) (*userdomain.User, error)
+	ResolveEmailChangeMode(user *userdomain.User) (string, error)
+	ResolvePasswordChangeMode(user *userdomain.User) (string, error)
+	UpdateProfile(userID uint, nickname, locale *string) (*userdomain.User, error)
 }
 
 // UserProfileHandler 处理当前用户资料 HTTP 请求。
@@ -67,7 +68,7 @@ func (h *UserProfileHandler) GetCurrentUser(c *gin.Context) {
 	response.Success(c, profile)
 }
 
-func (h *UserProfileHandler) userProfileResponse(user *models.User) (dto.UserProfileResp, error) {
+func (h *UserProfileHandler) userProfileResponse(user *userdomain.User) (dto.UserProfileResp, error) {
 	emailMode, err := h.service.ResolveEmailChangeMode(user)
 	if err != nil {
 		return dto.UserProfileResp{}, err

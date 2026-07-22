@@ -3,14 +3,15 @@ package shared
 import (
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 
 	"github.com/gin-gonic/gin"
 )
 
 func TestBuildChannelIdentityResponse(t *testing.T) {
-	user := &models.User{
+	user := &userdomain.User{
 		ID:                    12,
 		Email:                 "telegram_12@login.local",
 		DisplayName:           "TG Buyer",

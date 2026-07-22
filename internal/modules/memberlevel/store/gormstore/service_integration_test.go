@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	"github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
@@ -23,7 +25,7 @@ func newMemberLevelServiceForTest(t *testing.T) (*memberlevel.Service, *gorm.DB)
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.MemberLevel{}, &models.MemberLevelPrice{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &models.MemberLevel{}, &models.MemberLevelPrice{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -61,10 +63,10 @@ func createMemberLevelFixture(
 	return level
 }
 
-func createUserFixture(t *testing.T, db *gorm.DB, email string, memberLevelID uint) models.User {
+func createUserFixture(t *testing.T, db *gorm.DB, email string, memberLevelID uint) userdomain.User {
 	t.Helper()
 
-	user := models.User{
+	user := userdomain.User{
 		Email:          email,
 		PasswordHash:   "test-hash",
 		Status:         "active",
@@ -88,7 +90,7 @@ func TestMemberLevelServiceOnOrderPaidDoesNotMoveToEqualSortOrder(t *testing.T) 
 		t.Fatalf("OnOrderPaid failed: %v", err)
 	}
 
-	var updated models.User
+	var updated userdomain.User
 	if err := db.First(&updated, user.ID).Error; err != nil {
 		t.Fatalf("fetch updated user failed: %v", err)
 	}
@@ -110,7 +112,7 @@ func TestMemberLevelServiceOnOrderPaidKeepsHigherLevel(t *testing.T) {
 		t.Fatalf("OnOrderPaid failed: %v", err)
 	}
 
-	var updated models.User
+	var updated userdomain.User
 	if err := db.First(&updated, user.ID).Error; err != nil {
 		t.Fatalf("fetch updated user failed: %v", err)
 	}
@@ -129,7 +131,7 @@ func TestMemberLevelServiceOnOrderPaidUpgradesToHigherSortOrder(t *testing.T) {
 		t.Fatalf("OnOrderPaid failed: %v", err)
 	}
 
-	var updated models.User
+	var updated userdomain.User
 	if err := db.First(&updated, user.ID).Error; err != nil {
 		t.Fatalf("fetch updated user failed: %v", err)
 	}
@@ -144,11 +146,11 @@ type concurrentUserRepository struct {
 	spendIncrementCalled     bool
 }
 
-func (r *concurrentUserRepository) GetByID(id uint) (*models.User, error) {
+func (r *concurrentUserRepository) GetByID(id uint) (*userdomain.User, error) {
 	return r.base.GetByID(id)
 }
 
-func (r *concurrentUserRepository) Update(user *models.User) error {
+func (r *concurrentUserRepository) Update(user *userdomain.User) error {
 	return r.base.Update(user)
 }
 
@@ -186,7 +188,7 @@ func TestMemberLevelServiceOnOrderPaidDoesNotOverwriteConcurrentHigherLevel(t *t
 	raceRepo := &concurrentUserRepository{
 		base: baseUserRepo,
 		afterFirstSpendIncrement: func() {
-			if err := db.Model(&models.User{}).Where("id = ?", user.ID).Update("member_level_id", highLevel.ID).Error; err != nil {
+			if err := db.Model(&userdomain.User{}).Where("id = ?", user.ID).Update("member_level_id", highLevel.ID).Error; err != nil {
 				t.Fatalf("simulate concurrent higher level update failed: %v", err)
 			}
 		},
@@ -201,7 +203,7 @@ func TestMemberLevelServiceOnOrderPaidDoesNotOverwriteConcurrentHigherLevel(t *t
 		t.Fatalf("OnOrderPaid failed: %v", err)
 	}
 
-	var updated models.User
+	var updated userdomain.User
 	if err := db.First(&updated, user.ID).Error; err != nil {
 		t.Fatalf("fetch updated user failed: %v", err)
 	}

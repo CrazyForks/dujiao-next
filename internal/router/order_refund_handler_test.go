@@ -8,6 +8,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
@@ -43,7 +47,7 @@ func setupAdminOrderRefundHandlerTest(t *testing.T) (*ordertransport.AdminRefund
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&externalidentitydomain.Identity{},
 		&models.Order{},
 		&models.OrderItem{},
@@ -60,7 +64,7 @@ func setupAdminOrderRefundHandlerTest(t *testing.T) (*ordertransport.AdminRefund
 
 	orderRepo := repository.NewOrderRepository(db)
 	orderRefundRecordRepo := repository.NewOrderRefundRecordRepository(db)
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	affiliateSvc := service.NewAffiliateService(repository.NewAffiliateRepository(db), nil, nil, nil, nil)
 	orderRefundService := service.NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateSvc, nil)
 
@@ -73,7 +77,7 @@ func seedAdminOrderRefundData(t *testing.T, db *gorm.DB) adminOrderRefundFixture
 	t.Helper()
 	now := time.Now().UTC().Truncate(time.Second)
 
-	member := &models.User{
+	member := &userdomain.User{
 		Email:        "refund-member@example.com",
 		DisplayName:  "Refund Member",
 		PasswordHash: "hash",

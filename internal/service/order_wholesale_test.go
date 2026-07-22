@@ -8,6 +8,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/coupon"
@@ -29,7 +33,7 @@ type wholesaleOrderFixture struct {
 	svc     *OrderService
 	product models.Product
 	sku     models.ProductSKU
-	user    models.User
+	user    userdomain.User
 }
 
 func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices models.WholesalePriceTiers, promotionPercent *decimal.Decimal, memberRate *decimal.Decimal) wholesaleOrderFixture {
@@ -47,7 +51,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 		&models.Promotion{},
 		&models.Coupon{},
 		&models.CouponUsage{},
-		&models.User{},
+		&userdomain.User{},
 		&models.MemberLevel{},
 		&models.MemberLevelPrice{},
 	); err != nil {
@@ -64,7 +68,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	var user models.User
+	var user userdomain.User
 	if memberRate != nil {
 		level := models.MemberLevel{
 			NameJSON:     jsonmap.JSON{"zh-CN": "批发会员"},
@@ -77,7 +81,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 		if err := db.Create(&level).Error; err != nil {
 			t.Fatalf("create member level failed: %v", err)
 		}
-		user = models.User{
+		user = userdomain.User{
 			Email:         name + "@example.com",
 			PasswordHash:  "hash",
 			Status:        "active",
@@ -135,11 +139,11 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices model
 		}
 	}
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	levelRepo := memberlevelgormstore.NewLevelStore(db)
 	priceRepo := memberlevelgormstore.NewPriceStore(db)
 	svc := NewOrderService(OrderServiceOptions{
-		UserRepo:           userRepo,
+		UserStore:          userRepo,
 		ProductRepo:        repository.NewProductRepository(db),
 		ProductSKURepo:     repository.NewProductSKURepository(db),
 		PromotionRepo:      promotiongormstore.New(db),

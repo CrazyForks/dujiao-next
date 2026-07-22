@@ -5,9 +5,10 @@ import (
 	"errors"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -33,7 +34,7 @@ var (
 // AuthLoginResult 是 transport 层登录结果视图。
 type AuthLoginResult struct {
 	RequiresTOTP       bool
-	User               *models.User
+	User               *userdomain.User
 	Token              string
 	ExpiresAt          time.Time
 	ChallengeToken     string

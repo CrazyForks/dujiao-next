@@ -22,7 +22,7 @@ func (r *GormResellerRepository) GetProfileByID(id uint) (*models.ResellerProfil
 		return nil, nil
 	}
 	var profile models.ResellerProfile
-	if err := r.db.Preload("User").First(&profile, id).Error; err != nil {
+	if err := r.db.Preload("User", "deleted_at IS NULL").First(&profile, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -37,7 +37,7 @@ func (r *GormResellerRepository) GetProfileByUserID(userID uint) (*models.Resell
 		return nil, nil
 	}
 	var profile models.ResellerProfile
-	if err := r.db.Preload("User").Where("user_id = ?", userID).First(&profile).Error; err != nil {
+	if err := r.db.Preload("User", "deleted_at IS NULL").Where("user_id = ?", userID).First(&profile).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -57,7 +57,7 @@ func (r *GormResellerRepository) UpdateProfile(profile *models.ResellerProfile) 
 // ListProfiles 分页列出分销商资料。
 func (r *GormResellerRepository) ListProfiles(filter ResellerProfileListFilter) ([]models.ResellerProfile, int64, error) {
 	rows := make([]models.ResellerProfile, 0)
-	query := r.db.Model(&models.ResellerProfile{}).Preload("User")
+	query := r.db.Model(&models.ResellerProfile{}).Preload("User", "deleted_at IS NULL")
 	if filter.UserID > 0 {
 		query = query.Where("reseller_profiles.user_id = ?", filter.UserID)
 	}

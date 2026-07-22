@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -158,10 +160,10 @@ type SKUMappingRepository interface {
 }
 
 type IdentityService interface {
-	ResolveTelegramChannelIdentity(input TelegramIdentityInput) (*models.User, *externalidentitydomain.Identity, error)
-	ProvisionTelegramChannelIdentity(input TelegramIdentityInput) (*models.User, *externalidentitydomain.Identity, bool, error)
+	ResolveTelegramChannelIdentity(input TelegramIdentityInput) (*userdomain.User, *externalidentitydomain.Identity, error)
+	ProvisionTelegramChannelIdentity(input TelegramIdentityInput) (*userdomain.User, *externalidentitydomain.Identity, bool, error)
 	ProvisionTelegramChannelUserID(input TelegramIdentityInput) (uint, error)
-	BindTelegramChannelByEmailCode(input BindTelegramIdentityInput) (*models.User, *externalidentitydomain.Identity, uint, error)
+	BindTelegramChannelByEmailCode(input BindTelegramIdentityInput) (*userdomain.User, *externalidentitydomain.Identity, uint, error)
 }
 
 type MemberLevelService interface {

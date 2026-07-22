@@ -8,8 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -20,19 +23,19 @@ import (
 
 const middlewareTestSecret = "user-jwt-test-secret-typ"
 
-func setupUserMiddlewareTestRepo(t *testing.T) (repository.UserRepository, *models.User) {
+func setupUserMiddlewareTestRepo(t *testing.T) (usercontract.Store, *userdomain.User) {
 	t.Helper()
 	dsn := fmt.Sprintf("file:user_middleware_typ_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
-	repo := repository.NewUserRepository(db)
+	repo := userstore.New(db)
 	now := time.Now()
-	user := &models.User{
+	user := &userdomain.User{
 		Email:           "mw@example.com",
 		PasswordHash:    "x",
 		Status:          "active",
@@ -58,7 +61,7 @@ func signToken(t *testing.T, claims jwt.Claims) string {
 
 // runUserMiddleware 跑一遍 UserJWTAuthMiddleware，返回业务 status_code：
 // 成功放行返回 200（handler 实际响应），失败时统一响应包内 status_code = 401。
-func runUserMiddleware(t *testing.T, repo repository.UserRepository, token string) int {
+func runUserMiddleware(t *testing.T, repo usercontract.Store, token string) int {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

@@ -6,12 +6,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 )
 
 func TestUserProfileRespOmitsSensitiveFields(t *testing.T) {
 	now := time.Now()
-	user := &models.User{
+	user := &userdomain.User{
 		ID:                    1,
 		Email:                 "user@test.com",
 		PasswordHash:          "hashed-secret",
@@ -64,7 +64,7 @@ func TestUserProfileRespNilSafe(t *testing.T) {
 }
 
 func TestUserAuthBriefRespFields(t *testing.T) {
-	user := &models.User{
+	user := &userdomain.User{
 		ID:          5,
 		Email:       "brief@test.com",
 		DisplayName: "Brief",

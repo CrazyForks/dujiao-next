@@ -85,6 +85,23 @@ func TestExternalIdentityLivesInIdentityModule(t *testing.T) {
 	}
 }
 
+func TestUserAccountPersistenceLivesInIdentityModule(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "identity", "user")
+
+	production, total := countDirectGoFiles(t, moduleRoot)
+	if production != 0 || total != 0 {
+		t.Fatalf("user identity module root must remain structural only, got production=%d total=%d", production, total)
+	}
+	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "domain", "user.go"), []string{"User"})
+	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "contract", "store.go"), []string{"Store", "ListFilter"})
+	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "infrastructure", "gormstore", "store.go"), []string{"Store"})
+	assertFileDeclaresFunctions(t, filepath.Join(moduleRoot, "infrastructure", "gormstore", "store.go"), []string{"New"})
+	assertDirectoryGoFileBudget(t, filepath.Join(moduleRoot, "domain"), 1)
+	assertDirectoryGoFileBudget(t, filepath.Join(moduleRoot, "contract"), 1)
+	assertDirectoryGoFileBudget(t, filepath.Join(moduleRoot, "infrastructure", "gormstore"), 2)
+}
+
 func TestUserProfileHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "userauth")

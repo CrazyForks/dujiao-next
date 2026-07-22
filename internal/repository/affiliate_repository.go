@@ -75,7 +75,7 @@ func (r *GormAffiliateRepository) GetProfileByID(id uint) (*models.AffiliateProf
 		return nil, nil
 	}
 	var profile models.AffiliateProfile
-	if err := r.db.Preload("User").First(&profile, id).Error; err != nil {
+	if err := r.db.Preload("User", "deleted_at IS NULL").First(&profile, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -120,7 +120,7 @@ func (r *GormAffiliateRepository) GetProfileByUserID(userID uint) (*models.Affil
 		return nil, nil
 	}
 	var profile models.AffiliateProfile
-	if err := r.db.Preload("User").Where("user_id = ?", userID).First(&profile).Error; err != nil {
+	if err := r.db.Preload("User", "deleted_at IS NULL").Where("user_id = ?", userID).First(&profile).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -136,7 +136,7 @@ func (r *GormAffiliateRepository) GetProfileByCode(code string) (*models.Affilia
 		return nil, nil
 	}
 	var profile models.AffiliateProfile
-	if err := r.db.Preload("User").Where("affiliate_code = ?", normalized).First(&profile).Error; err != nil {
+	if err := r.db.Preload("User", "deleted_at IS NULL").Where("affiliate_code = ?", normalized).First(&profile).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -152,7 +152,7 @@ func (r *GormAffiliateRepository) CreateProfile(profile *models.AffiliateProfile
 
 // ListProfiles 查询推广档案列表
 func (r *GormAffiliateRepository) ListProfiles(filter AffiliateProfileListFilter) ([]models.AffiliateProfile, int64, error) {
-	query := r.db.Model(&models.AffiliateProfile{}).Preload("User")
+	query := r.db.Model(&models.AffiliateProfile{}).Preload("User", "deleted_at IS NULL")
 	if filter.UserID != 0 {
 		query = query.Where("affiliate_profiles.user_id = ?", filter.UserID)
 	}
@@ -225,7 +225,7 @@ func (r *GormAffiliateRepository) GetLatestActiveProfileByVisitorKey(visitorKey 
 		).
 		Order("ac.created_at DESC, ac.id DESC").
 		Limit(1).
-		Preload("User").
+		Preload("User", "deleted_at IS NULL").
 		First(&profile).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -282,7 +282,7 @@ func (r *GormAffiliateRepository) UpdateCommission(commission *models.AffiliateC
 func (r *GormAffiliateRepository) ListCommissions(filter AffiliateCommissionListFilter) ([]models.AffiliateCommission, int64, error) {
 	query := r.db.Model(&models.AffiliateCommission{}).
 		Preload("AffiliateProfile").
-		Preload("AffiliateProfile.User").
+		Preload("AffiliateProfile.User", "deleted_at IS NULL").
 		Preload("Order")
 	if filter.AffiliateProfileID != 0 {
 		query = query.Where("affiliate_commissions.affiliate_profile_id = ?", filter.AffiliateProfileID)
@@ -464,7 +464,7 @@ func (r *GormAffiliateRepository) GetWithdrawByID(id uint) (*models.AffiliateWit
 		return nil, nil
 	}
 	var row models.AffiliateWithdrawRequest
-	if err := r.db.Preload("AffiliateProfile").Preload("AffiliateProfile.User").Preload("Processor", "deleted_at IS NULL").First(&row, id).Error; err != nil {
+	if err := r.db.Preload("AffiliateProfile").Preload("AffiliateProfile.User", "deleted_at IS NULL").Preload("Processor", "deleted_at IS NULL").First(&row, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -492,7 +492,7 @@ func (r *GormAffiliateRepository) GetWithdrawByIDForUpdate(id uint) (*models.Aff
 func (r *GormAffiliateRepository) ListWithdraws(filter AffiliateWithdrawListFilter) ([]models.AffiliateWithdrawRequest, int64, error) {
 	query := r.db.Model(&models.AffiliateWithdrawRequest{}).
 		Preload("AffiliateProfile").
-		Preload("AffiliateProfile.User").
+		Preload("AffiliateProfile.User", "deleted_at IS NULL").
 		Preload("Processor", "deleted_at IS NULL")
 
 	if filter.AffiliateProfileID != 0 {

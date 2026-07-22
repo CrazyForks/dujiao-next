@@ -3,6 +3,8 @@ package models
 import (
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -75,7 +77,7 @@ type ResellerProfile struct {
 	UpdatedAt            time.Time      `gorm:"index" json:"updated_at"`
 	DeletedAt            gorm.DeletedAt `gorm:"index" json:"-"`
 
-	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	User *userdomain.User `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
 
 func (ResellerProfile) TableName() string { return "reseller_profiles" }

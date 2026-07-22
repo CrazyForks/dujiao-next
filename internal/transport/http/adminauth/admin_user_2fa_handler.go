@@ -3,10 +3,11 @@ package adminauthhttp
 import (
 	"errors"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
@@ -14,7 +15,7 @@ import (
 
 // UserTOTPService 是管理员重置用户 2FA 端口。
 type UserTOTPService interface {
-	AdminResetUser2FA(operatorID, userID uint) (*models.User, error)
+	AdminResetUser2FA(operatorID, userID uint) (*userdomain.User, error)
 }
 
 // AdminUser2FAHandler 处理管理员对用户 2FA 的管理请求。

@@ -1,17 +1,17 @@
 package service
 
 import (
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/giftcard"
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
-	"github.com/dujiao-next/internal/repository"
 )
 
 type giftCardUserDirectoryAdapter struct {
-	repo repository.UserRepository
+	repo usercontract.Store
 }
 
-func (a giftCardUserDirectoryAdapter) ListByIDs(ids []uint) ([]models.User, error) {
+func (a giftCardUserDirectoryAdapter) ListByIDs(ids []uint) ([]userdomain.User, error) {
 	if a.repo == nil {
 		return nil, nil
 	}
@@ -28,7 +28,7 @@ func (a giftCardCurrencyAdapter) SiteCurrency() string {
 
 func newGiftCardAdminService(
 	repo giftcard.Repository,
-	userRepo repository.UserRepository,
+	userRepo usercontract.Store,
 	settingSvc *settingsapp.Service,
 ) *giftcard.Service {
 	return giftcard.NewService(giftcard.Options{

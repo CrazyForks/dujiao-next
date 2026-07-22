@@ -13,7 +13,7 @@ func (r *GormResellerRepository) ListAdminResellerLedgerEntries(filter ResellerA
 	rows := make([]models.ResellerLedgerEntry, 0)
 	query := r.db.Model(&models.ResellerLedgerEntry{}).
 		Preload("Profile").
-		Preload("Profile.User").
+		Preload("Profile.User", "deleted_at IS NULL").
 		Preload("Order")
 
 	query = r.applyAdminResellerProfileFilters(query, "reseller_ledger_entries", filter.ResellerID, filter.UserID, filter.Keyword, "")
@@ -57,7 +57,7 @@ func (r *GormResellerRepository) ListAdminResellerBalanceAccounts(filter Reselle
 	rows := make([]models.ResellerBalanceAccount, 0)
 	query := r.db.Model(&models.ResellerBalanceAccount{}).
 		Preload("Profile").
-		Preload("Profile.User")
+		Preload("Profile.User", "deleted_at IS NULL")
 
 	query = r.applyAdminResellerProfileFilters(query, "reseller_balance_accounts", filter.ResellerID, filter.UserID, filter.Keyword, "")
 	if currency := strings.TrimSpace(filter.Currency); currency != "" {
@@ -84,7 +84,7 @@ func (r *GormResellerRepository) ListAdminResellerWithdrawRequests(filter Resell
 	rows := make([]models.ResellerWithdrawRequest, 0)
 	query := r.db.Model(&models.ResellerWithdrawRequest{}).
 		Preload("Profile").
-		Preload("Profile.User").
+		Preload("Profile.User", "deleted_at IS NULL").
 		Preload("Processor", "deleted_at IS NULL")
 
 	query = r.applyAdminResellerProfileFilters(query, "reseller_withdraw_requests", filter.ResellerID, filter.UserID, filter.Keyword, "reseller_withdraw_requests.account")

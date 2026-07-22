@@ -7,11 +7,13 @@ import (
 	"strings"
 	"time"
 
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/crypto"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
 
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
@@ -46,13 +48,13 @@ func UserChallengeRevokedKey(jti string) string { return "2fa:user:challenge:" +
 type UserTOTPService struct {
 	cfg      *config.Config
 	encKey   []byte
-	userRepo repository.UserRepository
+	userRepo usercontract.Store
 	redis    *redis.Client
 	now      func() time.Time
 }
 
 // NewUserTOTPService 创建实例
-func NewUserTOTPService(cfg *config.Config, userRepo repository.UserRepository, rds *redis.Client) *UserTOTPService {
+func NewUserTOTPService(cfg *config.Config, userRepo usercontract.Store, rds *redis.Client) *UserTOTPService {
 	return &UserTOTPService{
 		cfg:      cfg,
 		encKey:   crypto.DeriveKey(cfg.App.SecretKey),
@@ -276,7 +278,7 @@ func (s *UserTOTPService) VerifyChallengeRecoveryCode(userID uint, code string) 
 // 同步 bump TokenVersion 强制其他设备下线（由 ClearTOTP 完成）。
 // operatorID 仅用于让调用方留痕；service 内部不依赖它，但要求非零以避免来路不明的调用绕过审计。
 // 返回 (targetUser, error)：targetUser 供 handler 写审计日志（邮箱等）。
-func (s *UserTOTPService) AdminResetUser2FA(operatorID, targetID uint) (*models.User, error) {
+func (s *UserTOTPService) AdminResetUser2FA(operatorID, targetID uint) (*userdomain.User, error) {
 	if operatorID == 0 {
 		return nil, fmt.Errorf("operatorID is required for audit")
 	}
@@ -316,7 +318,7 @@ func (s *UserTOTPService) generateRecoveryCodes(n int) (plaintext []string, code
 	return generateRecoveryCodesPair(n)
 }
 
-func (s *UserTOTPService) consumeRecoveryCode(user *models.User, code string) error {
+func (s *UserTOTPService) consumeRecoveryCode(user *userdomain.User, code string) error {
 	js, err := matchAndConsumeRecoveryCode(user.RecoveryCodes, code, s.now())
 	if err != nil {
 		return err

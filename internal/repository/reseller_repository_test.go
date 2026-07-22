@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
@@ -18,7 +20,7 @@ func openResellerRepoTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.ResellerProfile{}, &models.ResellerDomain{}, &models.ResellerSiteConfig{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &models.ResellerProfile{}, &models.ResellerDomain{}, &models.ResellerSiteConfig{}); err != nil {
 		t.Fatalf("migrate failed: %v", err)
 	}
 	if err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_reseller_domains_active_domain ON reseller_domains(domain) WHERE deleted_at IS NULL").Error; err != nil {
@@ -32,7 +34,7 @@ func openResellerRepoTestDB(t *testing.T) *gorm.DB {
 
 func seedResellerProfile(t *testing.T, db *gorm.DB, email string) models.ResellerProfile {
 	t.Helper()
-	user := models.User{Email: email, PasswordHash: "hash"}
+	user := userdomain.User{Email: email, PasswordHash: "hash"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
@@ -146,11 +148,11 @@ func TestResellerRepositoryFindActiveVerifiedDomain(t *testing.T) {
 func TestResellerRepositoryListProfilesFiltersAndPreloadsUser(t *testing.T) {
 	db := openResellerRepoTestDB(t)
 	repo := NewResellerRepository(db)
-	user := models.User{Email: "reseller-list@example.test", PasswordHash: "hash", DisplayName: "Reseller List"}
+	user := userdomain.User{Email: "reseller-list@example.test", PasswordHash: "hash", DisplayName: "Reseller List"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	other := models.User{Email: "other-reseller-list@example.test", PasswordHash: "hash", DisplayName: "Other"}
+	other := userdomain.User{Email: "other-reseller-list@example.test", PasswordHash: "hash", DisplayName: "Other"}
 	if err := db.Create(&other).Error; err != nil {
 		t.Fatalf("create other user failed: %v", err)
 	}
@@ -179,7 +181,7 @@ func TestResellerRepositoryListProfilesFiltersAndPreloadsUser(t *testing.T) {
 func TestResellerRepositoryListDomainsFiltersAndPreloadsProfileUser(t *testing.T) {
 	db := openResellerRepoTestDB(t)
 	repo := NewResellerRepository(db)
-	user := models.User{Email: "domain-owner@example.test", PasswordHash: "hash", DisplayName: "Domain Owner"}
+	user := userdomain.User{Email: "domain-owner@example.test", PasswordHash: "hash", DisplayName: "Domain Owner"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
@@ -299,7 +301,7 @@ func TestResellerRepositoryListSiteConfigsFiltersAndPreloadsProfileUser(t *testi
 func TestResellerRepositoryUpdateProfileAndDomain(t *testing.T) {
 	db := openResellerRepoTestDB(t)
 	repo := NewResellerRepository(db)
-	user := models.User{Email: "update-reseller@example.test", PasswordHash: "hash"}
+	user := userdomain.User{Email: "update-reseller@example.test", PasswordHash: "hash"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}

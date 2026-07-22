@@ -3,6 +3,8 @@ package memberlevel
 import (
 	"errors"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 
 	"github.com/shopspring/decimal"
@@ -234,7 +236,7 @@ func (s *Service) CheckAndUpgrade(userID uint) error {
 	return nil
 }
 
-func (s *Service) findUpgradeTarget(user *models.User, levels []models.MemberLevel) (*models.MemberLevel, error) {
+func (s *Service) findUpgradeTarget(user *userdomain.User, levels []models.MemberLevel) (*models.MemberLevel, error) {
 	if user == nil {
 		return nil, nil
 	}
@@ -274,7 +276,7 @@ func (s *Service) resolveCurrentSortOrder(levelID uint, activeLevels []models.Me
 }
 
 // meetsThreshold 判断用户是否满足等级阈值（充值累计 OR 消费累计）
-func (s *Service) meetsThreshold(user *models.User, level *models.MemberLevel) bool {
+func (s *Service) meetsThreshold(user *userdomain.User, level *models.MemberLevel) bool {
 	rechargeThreshold := level.RechargeThreshold.Decimal
 	spendThreshold := level.SpendThreshold.Decimal
 

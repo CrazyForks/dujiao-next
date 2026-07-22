@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/models"
@@ -50,7 +52,7 @@ type WalletService interface {
 
 // PaymentService 是用户钱包充值支付所需的最小端口。
 type PaymentService interface {
-	GetAvailableWalletRechargeChannels(amount money.Amount, user *models.User) ([]map[string]interface{}, error)
+	GetAvailableWalletRechargeChannels(amount money.Amount, user *userdomain.User) ([]map[string]interface{}, error)
 	CreateWalletRechargePayment(input CreateRechargePaymentInput) (*CreateRechargePaymentResult, error)
 	GetPayment(id uint) (*models.Payment, error)
 	CapturePayment(input CapturePaymentInput) (*models.Payment, error)
@@ -58,7 +60,7 @@ type PaymentService interface {
 
 // UserReader 用于读取支付渠道匹配需要的用户信息。
 type UserReader interface {
-	GetByID(id uint) (*models.User, error)
+	GetByID(id uint) (*userdomain.User, error)
 }
 
 // SiteCurrencyReader 用于提供默认站点币种。

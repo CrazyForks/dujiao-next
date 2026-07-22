@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 
@@ -141,9 +143,9 @@ func (r *GormOrderRepository) ResolveReceiverEmailByOrderID(orderID uint) (strin
 	var userRow struct {
 		Email string
 	}
-	if err := r.db.Model(&models.User{}).
+	if err := r.db.Model(&userdomain.User{}).
 		Select("email").
-		Where("id = ?", orderRow.UserID).
+		Where("id = ? AND deleted_at IS NULL", orderRow.UserID).
 		Take(&userRow).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return "", nil

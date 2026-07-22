@@ -10,17 +10,19 @@ import (
 	"strings"
 	"time"
 
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	emailverificationcontract "github.com/dujiao-next/internal/modules/identity/emailverification/contract"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
-	"github.com/dujiao-next/internal/repository"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -30,7 +32,7 @@ import (
 // UserAuthService 用户认证服务
 type UserAuthService struct {
 	cfg                   *config.Config
-	userRepo              repository.UserRepository
+	userRepo              usercontract.Store
 	userOAuthIdentityRepo externalidentitycontract.Store
 	codeRepo              emailverificationcontract.Store
 	settingService        *settingsapp.Service
@@ -51,7 +53,7 @@ func (s *UserAuthService) SetMemberLevelService(svc MemberLevelAssigner) {
 // NewUserAuthService 创建用户认证服务
 func NewUserAuthService(
 	cfg *config.Config,
-	userRepo repository.UserRepository,
+	userRepo usercontract.Store,
 	userOAuthIdentityRepo externalidentitycontract.Store,
 	codeRepo emailverificationcontract.Store,
 	settingService *settingsapp.Service,
@@ -94,7 +96,7 @@ type UserChallengeClaims struct {
 // UserLoginResult 用户登录第一步结果
 type UserLoginResult struct {
 	RequiresTOTP       bool
-	User               *models.User
+	User               *userdomain.User
 	Token              string
 	ExpiresAt          time.Time
 	ChallengeToken     string
@@ -114,7 +116,7 @@ const (
 )
 
 // GenerateUserJWT 生成用户 JWT Token
-func (s *UserAuthService) GenerateUserJWT(user *models.User, expireHours int) (string, time.Time, error) {
+func (s *UserAuthService) GenerateUserJWT(user *userdomain.User, expireHours int) (string, time.Time, error) {
 	resolvedHours := expireHours
 	if resolvedHours <= 0 {
 		resolvedHours = resolveUserJWTExpireHours(s.cfg.UserJWT)
@@ -224,7 +226,7 @@ func (s *UserAuthService) checkRegistrationEmailDomain(email string) error {
 }
 
 // Register 用户注册
-func (s *UserAuthService) Register(email, password, code string, agreementAccepted bool, emailVerificationEnabled bool) (*models.User, string, time.Time, error) {
+func (s *UserAuthService) Register(email, password, code string, agreementAccepted bool, emailVerificationEnabled bool) (*userdomain.User, string, time.Time, error) {
 	if !agreementAccepted {
 		return nil, "", time.Time{}, ErrAgreementRequired
 	}
@@ -260,7 +262,7 @@ func (s *UserAuthService) Register(email, password, code string, agreementAccept
 
 	now := time.Now()
 	nickname := resolveNicknameFromEmail(normalized)
-	user := &models.User{
+	user := &userdomain.User{
 		Email:           normalized,
 		PasswordHash:    string(hashedPassword),
 		DisplayName:     nickname,

@@ -8,6 +8,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
@@ -46,8 +50,8 @@ type orderResellerSnapshotFixture struct {
 	svc          *OrderService
 	resellerRepo repository.ResellerRepository
 	queue        *fakeOrderTimeoutQueue
-	owner        models.User
-	buyer        models.User
+	owner        userdomain.User
+	buyer        userdomain.User
 	profile      models.ResellerProfile
 	product      models.Product
 	sku          models.ProductSKU
@@ -63,7 +67,7 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Category{},
 		&models.Product{},
 		&models.ProductSKU{},
@@ -86,8 +90,8 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	if err := db.Create(&category).Error; err != nil {
 		t.Fatalf("create category failed: %v", err)
 	}
-	owner := models.User{Email: "reseller-order-owner@example.com", PasswordHash: "hash"}
-	buyer := models.User{Email: "reseller-order-buyer@example.com", PasswordHash: "hash"}
+	owner := userdomain.User{Email: "reseller-order-owner@example.com", PasswordHash: "hash"}
+	buyer := userdomain.User{Email: "reseller-order-buyer@example.com", PasswordHash: "hash"}
 	if err := db.Create(&owner).Error; err != nil {
 		t.Fatalf("create owner failed: %v", err)
 	}
@@ -165,7 +169,7 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	svc := NewOrderService(OrderServiceOptions{
 		OrderRepo:               orderRepo,
 		PaymentRepo:             repository.NewPaymentRepository(db),
-		UserRepo:                repository.NewUserRepository(db),
+		UserStore:               userstore.New(db),
 		ProductRepo:             repository.NewProductRepository(db),
 		ProductSKURepo:          repository.NewProductSKURepository(db),
 		CardSecretRepo:          repository.NewCardSecretRepository(db),

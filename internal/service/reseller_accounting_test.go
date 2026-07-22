@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
@@ -24,7 +26,7 @@ func openResellerAccountingServiceTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&models.Order{},
 		&models.Payment{},
 		&models.PaymentChannel{},
@@ -42,7 +44,7 @@ func openResellerAccountingServiceTestDB(t *testing.T) *gorm.DB {
 
 func seedResellerAccountingProfile(t *testing.T, db *gorm.DB) models.ResellerProfile {
 	t.Helper()
-	user := models.User{Email: fmt.Sprintf("reseller-%d@example.test", time.Now().UnixNano()), PasswordHash: "x"}
+	user := userdomain.User{Email: fmt.Sprintf("reseller-%d@example.test", time.Now().UnixNano()), PasswordHash: "x"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create reseller user failed: %v", err)
 	}
@@ -182,7 +184,7 @@ func TestResellerAccountingServiceApplyUserWithdrawRequiresActiveNormalProfile(t
 
 func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (models.Order, models.Payment, models.ResellerOrderSnapshot) {
 	t.Helper()
-	user := models.User{Email: fmt.Sprintf("buyer-%d@example.test", time.Now().UnixNano()), PasswordHash: "x"}
+	user := userdomain.User{Email: fmt.Sprintf("buyer-%d@example.test", time.Now().UnixNano()), PasswordHash: "x"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}

@@ -6,6 +6,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/testkit/memorysettings"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
@@ -17,7 +21,6 @@ import (
 	"github.com/dujiao-next/internal/modules/dashboard"
 	"github.com/dujiao-next/internal/modules/notification"
 	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -32,11 +35,11 @@ func TestBuildOrderNotificationPayloadIncludesCustomerAndItemSummary(t *testing.
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}); err != nil {
 		t.Fatalf("auto migrate user failed: %v", err)
 	}
 
-	user := &models.User{
+	user := &userdomain.User{
 		Email:        "member@example.com",
 		DisplayName:  "Member User",
 		PasswordHash: "hash",
@@ -52,7 +55,7 @@ func TestBuildOrderNotificationPayloadIncludesCustomerAndItemSummary(t *testing.
 	}
 
 	svc := &PaymentService{
-		userRepo:       repository.NewUserRepository(db),
+		userRepo:       userstore.New(db),
 		settingService: settingsapp.NewService(repo),
 	}
 	order := &models.Order{

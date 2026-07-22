@@ -3,6 +3,8 @@ package models
 import (
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"gorm.io/gorm"
 )
 
@@ -22,7 +24,7 @@ type ApiCredential struct {
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// 关联
-	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	User *userdomain.User `gorm:"foreignKey:UserID" json:"user,omitempty"`
 }
 
 // TableName 指定表名

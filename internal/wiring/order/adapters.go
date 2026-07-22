@@ -4,6 +4,10 @@ import (
 	"errors"
 	"fmt"
 
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/captcha"
@@ -51,14 +55,14 @@ func (a orderAdminQueryAdapter) UpdateOrderStatus(orderID uint, status string) (
 }
 
 type orderAdminUserAdapter struct {
-	users repository.UserRepository
+	users usercontract.Store
 }
 
-func (a orderAdminUserAdapter) ListByIDs(ids []uint) ([]models.User, error) {
+func (a orderAdminUserAdapter) ListByIDs(ids []uint) ([]userdomain.User, error) {
 	return a.users.ListByIDs(ids)
 }
 
-func (a orderAdminUserAdapter) GetByID(id uint) (*models.User, error) {
+func (a orderAdminUserAdapter) GetByID(id uint) (*userdomain.User, error) {
 	return a.users.GetByID(id)
 }
 
@@ -153,10 +157,10 @@ func (a orderUserPaymentChannelAdapter) GetAvailableChannels(filter ordertranspo
 }
 
 type orderUserLookupAdapter struct {
-	users repository.UserRepository
+	users usercontract.Store
 }
 
-func (a orderUserLookupAdapter) GetByID(id uint) (*models.User, error) {
+func (a orderUserLookupAdapter) GetByID(id uint) (*userdomain.User, error) {
 	return a.users.GetByID(id)
 }
 

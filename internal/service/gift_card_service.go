@@ -5,13 +5,16 @@ import (
 	"strings"
 	"time"
 
+	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/giftcard"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
-	"github.com/dujiao-next/internal/repository"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -30,7 +33,7 @@ type UpdateGiftCardInput = giftcard.UpdateInput
 type GiftCardRedeemInput = giftcard.RedeemInput
 
 // NewGiftCardService 创建礼品卡服务
-func NewGiftCardService(store *giftcardgormstore.Store, userRepo repository.UserRepository, walletService *WalletService, settingSvc *settingsapp.Service) *GiftCardService {
+func NewGiftCardService(store *giftcardgormstore.Store, userRepo usercontract.Store, walletService *WalletService, settingSvc *settingsapp.Service) *GiftCardService {
 	return &GiftCardService{
 		admin:         newGiftCardAdminService(store, userRepo, settingSvc),
 		store:         store,
@@ -87,9 +90,9 @@ func (s *GiftCardService) ExportGiftCards(ids []uint, format string) ([]byte, st
 }
 
 // ResolveRedeemedUsers 批量解析礼品卡兑换用户
-func (s *GiftCardService) ResolveRedeemedUsers(cards []models.GiftCard) (map[uint]models.User, error) {
+func (s *GiftCardService) ResolveRedeemedUsers(cards []models.GiftCard) (map[uint]userdomain.User, error) {
 	if s == nil || s.admin == nil {
-		return map[uint]models.User{}, nil
+		return map[uint]userdomain.User{}, nil
 	}
 	return s.admin.ResolveRedeemedUsers(cards)
 }

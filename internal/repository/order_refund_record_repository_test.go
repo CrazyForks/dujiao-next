@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
@@ -24,7 +26,7 @@ func setupOrderRefundRecordRepositoryTest(t *testing.T) (*GormOrderRefundRecordR
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&externalidentitydomain.Identity{},
 		&models.Order{},
 		&models.OrderItem{},
@@ -39,7 +41,7 @@ func TestOrderRefundRecordRepositoryListAdminFilters(t *testing.T) {
 	repo, db := setupOrderRefundRecordRepositoryTest(t)
 	now := time.Now().UTC().Truncate(time.Second)
 
-	user1 := &models.User{
+	user1 := &userdomain.User{
 		Email:        "member-alpha@example.com",
 		DisplayName:  "Alpha",
 		PasswordHash: "hash",
@@ -47,7 +49,7 @@ func TestOrderRefundRecordRepositoryListAdminFilters(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	user2 := &models.User{
+	user2 := &userdomain.User{
 		Email:        "member-beta@example.com",
 		DisplayName:  "Beta",
 		PasswordHash: "hash",

@@ -4,7 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
@@ -20,9 +21,9 @@ func NewUserStore(db *gorm.DB) *UserStore {
 	return &UserStore{db: db}
 }
 
-func (r *UserStore) GetByID(id uint) (*models.User, error) {
-	var user models.User
-	if err := r.db.First(&user, id).Error; err != nil {
+func (r *UserStore) GetByID(id uint) (*userdomain.User, error) {
+	var user userdomain.User
+	if err := r.db.Where("id = ? AND deleted_at IS NULL", id).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -31,8 +32,15 @@ func (r *UserStore) GetByID(id uint) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *UserStore) Update(user *models.User) error {
-	return r.db.Save(user).Error
+func (r *UserStore) Update(user *userdomain.User) error {
+	if user == nil || user.ID == 0 {
+		return nil
+	}
+	return r.db.Model(&userdomain.User{}).
+		Where("id = ? AND deleted_at IS NULL", user.ID).
+		Select("*").
+		Omit("id", "deleted_at").
+		Updates(user).Error
 }
 
 func (r *UserStore) IncrementTotalRecharged(userID uint, amount decimal.Decimal) error {
@@ -51,8 +59,8 @@ func (r *UserStore) incrementMoneyColumn(userID uint, column string, amount deci
 	if amount.LessThanOrEqual(decimal.Zero) {
 		return nil
 	}
-	return r.db.Model(&models.User{}).
-		Where("id = ?", userID).
+	return r.db.Model(&userdomain.User{}).
+		Where("id = ? AND deleted_at IS NULL", userID).
 		Updates(map[string]interface{}{
 			column:       gorm.Expr(column+" + ?", money.FromDecimal(amount)),
 			"updated_at": time.Now(),
@@ -63,8 +71,8 @@ func (r *UserStore) UpdateMemberLevelIfCurrent(userID, currentLevelID, nextLevel
 	if userID == 0 || currentLevelID == nextLevelID {
 		return 0, nil
 	}
-	result := r.db.Model(&models.User{}).
-		Where("id = ? AND member_level_id = ?", userID, currentLevelID).
+	result := r.db.Model(&userdomain.User{}).
+		Where("id = ? AND member_level_id = ? AND deleted_at IS NULL", userID, currentLevelID).
 		Updates(map[string]interface{}{
 			"member_level_id": nextLevelID,
 			"updated_at":      time.Now(),
@@ -76,8 +84,8 @@ func (r *UserStore) AssignDefaultMemberLevel(defaultLevelID uint) (int64, error)
 	if defaultLevelID == 0 {
 		return 0, nil
 	}
-	result := r.db.Model(&models.User{}).
-		Where("member_level_id = 0 OR member_level_id IS NULL").
+	result := r.db.Model(&userdomain.User{}).
+		Where("(member_level_id = 0 OR member_level_id IS NULL) AND deleted_at IS NULL").
 		Updates(map[string]interface{}{
 			"member_level_id": defaultLevelID,
 			"updated_at":      time.Now(),

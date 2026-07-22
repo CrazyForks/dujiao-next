@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 )
 
@@ -42,7 +43,7 @@ func adminAuthStateKey(adminID uint) string {
 }
 
 // BuildUserAuthState 从用户模型构建鉴权快照
-func BuildUserAuthState(user *models.User) *UserAuthState {
+func BuildUserAuthState(user *userdomain.User) *UserAuthState {
 	if user == nil {
 		return nil
 	}

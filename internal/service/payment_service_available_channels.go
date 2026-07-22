@@ -3,6 +3,7 @@ package service
 import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/money"
 )
@@ -10,7 +11,7 @@ import (
 // AvailablePaymentChannelFilter 可用支付渠道过滤参数
 type AvailablePaymentChannelFilter struct {
 	TargetAmount *money.Amount
-	User         *models.User
+	User         *userdomain.User
 	PaymentType  string
 }
 
@@ -77,7 +78,7 @@ func matchesChannelAmount(channel models.PaymentChannel, targetAmount *money.Amo
 	return true
 }
 
-func matchesChannelRole(channel models.PaymentChannel, user *models.User) bool {
+func matchesChannelRole(channel models.PaymentChannel, user *userdomain.User) bool {
 	if len(channel.PaymentRoles) == 0 {
 		return true
 	}
@@ -93,7 +94,7 @@ func matchesChannelRole(channel models.PaymentChannel, user *models.User) bool {
 	return false
 }
 
-func matchesChannelMemberLevel(channel models.PaymentChannel, user *models.User) bool {
+func matchesChannelMemberLevel(channel models.PaymentChannel, user *userdomain.User) bool {
 	if len(channel.MemberLevels) == 0 {
 		return true
 	}

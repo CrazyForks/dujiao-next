@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/logger"
@@ -38,7 +40,7 @@ type UserOrderQuery interface {
 // AvailablePaymentChannelFilter 可用支付渠道过滤。
 type AvailablePaymentChannelFilter struct {
 	TargetAmount *money.Amount
-	User         *models.User
+	User         *userdomain.User
 	PaymentType  string
 }
 
@@ -55,7 +57,7 @@ type RefundRecordDirectory interface {
 
 // UserLookup 用户查询端口。
 type UserLookup interface {
-	GetByID(id uint) (*models.User, error)
+	GetByID(id uint) (*userdomain.User, error)
 }
 
 // OrderPaymentChannelsRequest 查询订单可用支付渠道请求
@@ -222,7 +224,7 @@ func (h *UserHandler) GetOrderPaymentChannels(c *gin.Context) {
 		return
 	}
 
-	var user *models.User
+	var user *userdomain.User
 	if h.users != nil {
 		user, _ = h.users.GetByID(uid)
 	}

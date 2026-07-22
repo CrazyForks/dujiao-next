@@ -100,7 +100,7 @@ func registerStorefrontRoutes(
 
 	// 用户接口（需鉴权）
 	user := storefront.Group("")
-	user.Use(UserJWTAuthMiddleware(cfg.UserJWT.SecretKey, c.UserRepo))
+	user.Use(UserJWTAuthMiddleware(cfg.UserJWT.SecretKey, c.UserStore))
 	{
 		userauthtransport.RegisterUserProfileRoutes(user, userProfileHandler)
 		auditlogtransport.RegisterUserRoutes(user, userAuditLogHandler)

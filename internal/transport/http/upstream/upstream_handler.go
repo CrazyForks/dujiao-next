@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	upstreamadapter "github.com/dujiao-next/internal/upstream"
@@ -66,7 +68,7 @@ type ProductService interface {
 }
 
 type UserRepository interface {
-	GetByID(id uint) (*models.User, error)
+	GetByID(id uint) (*userdomain.User, error)
 }
 
 type ProductRepository interface {

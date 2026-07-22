@@ -9,6 +9,10 @@ import (
 	"testing"
 	"time"
 
+	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
+
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
@@ -97,7 +101,7 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.User{},
+		&userdomain.User{},
 		&externalidentitydomain.Identity{},
 		&emailverificationdomain.Code{},
 		&settingsstore.SettingRecord{},
@@ -113,7 +117,7 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 	}
 	models.DB = db
 
-	userRepo := repository.NewUserRepository(db)
+	userRepo := userstore.New(db)
 	identityRepo := externalidentitystore.New(db)
 	emailVerifyRepo := emailverificationstore.New(db)
 	settingRepo := settingsstore.New(db)
@@ -222,7 +226,7 @@ func TestChannelAffiliateOpenAndDashboard(t *testing.T) {
 func TestChannelAffiliateListsCommissionAndWithdrawRecords(t *testing.T) {
 	db, server := setupChannelAffiliateHandlerTest(t)
 
-	user := models.User{
+	user := userdomain.User{
 		Email:     "affiliate-bot@example.com",
 		Status:    constants.UserStatusActive,
 		CreatedAt: time.Now(),
@@ -368,7 +372,7 @@ func TestChannelAffiliateTrackClick(t *testing.T) {
 		t.Fatalf("expected status_code=0, got %d", payload.StatusCode)
 	}
 
-	user := models.User{
+	user := userdomain.User{
 		Email:        "affiliate-click@example.com",
 		PasswordHash: "telegram-auto",
 		Status:       constants.UserStatusActive,
@@ -420,7 +424,7 @@ func TestChannelAffiliateTrackClick(t *testing.T) {
 func TestChannelAffiliateApplyWithdraw(t *testing.T) {
 	db, server := setupChannelAffiliateHandlerTest(t)
 
-	user := models.User{
+	user := userdomain.User{
 		Email:     "affiliate-withdraw@example.com",
 		Status:    constants.UserStatusActive,
 		CreatedAt: time.Now(),
