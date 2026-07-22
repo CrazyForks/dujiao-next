@@ -20,8 +20,9 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/auditlog"
-	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/store/gormstore"
+	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
+	auditlogdomain "github.com/dujiao-next/internal/modules/auditlog/domain"
+	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/infrastructure/gormstore"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
@@ -55,7 +56,7 @@ func setupAdminResellerManagementHandlerTest(t *testing.T) (*adminResellerFixtur
 	if err := db.AutoMigrate(
 		&userdomain.User{},
 		&admindomain.Admin{},
-		&models.AuthzAuditLog{},
+		&auditlogdomain.AuthzAuditLog{},
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
@@ -93,7 +94,7 @@ func setupAdminResellerManagementHandlerTest(t *testing.T) (*adminResellerFixtur
 		ResellerProductSettingService: resellermodule.NewProductSettingService(resellerpersistence.NewProductSettingStore(settingRepo, resellerRepo), productRepo),
 		ResellerAccountingService:     service.NewResellerAccountingService(resellerRepo, service.ResellerAccountingOptions{ConfirmDays: 7}),
 		ResellerOrderService:          resellermodule.NewOrderQueryService(resellerRepo),
-		AuthzAuditService:             auditlog.NewAuthzService(auditRepo),
+		AuthzAuditService:             auditlogapp.NewAuthzService(auditRepo),
 	}}, db
 }
 
@@ -198,7 +199,7 @@ func TestAdminResellerManagementApproveProfileActivatesWithoutAutoDomain(t *test
 		t.Fatalf("expected approval to skip automatic domain creation, got %d domains", domainCount)
 	}
 	var auditCount int64
-	if err := db.Model(&models.AuthzAuditLog{}).Where("action = ?", "reseller_profile_approve").Count(&auditCount).Error; err != nil {
+	if err := db.Model(&auditlogdomain.AuthzAuditLog{}).Where("action = ?", "reseller_profile_approve").Count(&auditCount).Error; err != nil {
 		t.Fatalf("count audit failed: %v", err)
 	}
 	if auditCount != 1 {
@@ -224,7 +225,7 @@ func TestAdminResellerManagementAssignSystemSubdomainCreatesDomainAndAudit(t *te
 		t.Fatalf("unexpected system domain: %+v", domain)
 	}
 	var auditCount int64
-	if err := db.Model(&models.AuthzAuditLog{}).Where("action = ?", "reseller_profile_system_domain_update").Count(&auditCount).Error; err != nil {
+	if err := db.Model(&auditlogdomain.AuthzAuditLog{}).Where("action = ?", "reseller_profile_system_domain_update").Count(&auditCount).Error; err != nil {
 		t.Fatalf("count audit failed: %v", err)
 	}
 	if auditCount != 1 {
@@ -434,7 +435,7 @@ func TestAdminResellerManagementUpdateProfileOperationalConfig(t *testing.T) {
 		t.Fatalf("unexpected updated profile: %+v", loaded)
 	}
 	var auditCount int64
-	if err := db.Model(&models.AuthzAuditLog{}).Where("action = ?", "reseller_profile_update").Count(&auditCount).Error; err != nil {
+	if err := db.Model(&auditlogdomain.AuthzAuditLog{}).Where("action = ?", "reseller_profile_update").Count(&auditCount).Error; err != nil {
 		t.Fatalf("count audit failed: %v", err)
 	}
 	if auditCount != 1 {
@@ -473,7 +474,7 @@ func TestAdminResellerManagementSetPrimaryDomain(t *testing.T) {
 		t.Fatalf("unexpected primary state old=%+v next=%+v", loadedOld, loadedNext)
 	}
 	var auditCount int64
-	if err := db.Model(&models.AuthzAuditLog{}).Where("action = ?", "reseller_domain_set_primary").Count(&auditCount).Error; err != nil {
+	if err := db.Model(&auditlogdomain.AuthzAuditLog{}).Where("action = ?", "reseller_domain_set_primary").Count(&auditCount).Error; err != nil {
 		t.Fatalf("count audit failed: %v", err)
 	}
 	if auditCount != 1 {

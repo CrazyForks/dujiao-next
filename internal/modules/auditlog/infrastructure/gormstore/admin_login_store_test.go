@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/auditlog"
-	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/store/gormstore"
+	"github.com/dujiao-next/internal/modules/auditlog/contract"
+	"github.com/dujiao-next/internal/modules/auditlog/domain"
+	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/infrastructure/gormstore"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -18,7 +18,7 @@ func setupAdminLoginLogTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
-	if err := db.AutoMigrate(&models.AdminLoginLog{}); err != nil {
+	if err := db.AutoMigrate(&domain.AdminLoginLog{}); err != nil {
 		t.Fatalf("automigrate: %v", err)
 	}
 	return db
@@ -28,7 +28,7 @@ func TestAdminLoginLogRepository_CreateAndList(t *testing.T) {
 	db := setupAdminLoginLogTestDB(t)
 	repo := auditloggormstore.NewAdminLoginStore(db)
 
-	entries := []models.AdminLoginLog{
+	entries := []domain.AdminLoginLog{
 		{AdminID: 1, Username: "admin", EventType: constants.AdminLoginEventLoginPassword, Status: constants.AdminLoginStatusSuccess, ClientIP: "1.1.1.1"},
 		{AdminID: 1, Username: "admin", EventType: constants.AdminLoginEventLogin2FAVerify, Status: constants.AdminLoginStatusFailed, FailReason: constants.AdminLoginFailInvalidTOTPCode, ClientIP: "1.1.1.1"},
 		{AdminID: 2, Username: "alice", EventType: constants.AdminLoginEventLoginPassword, Status: constants.AdminLoginStatusSuccess, ClientIP: "2.2.2.2"},
@@ -39,7 +39,7 @@ func TestAdminLoginLogRepository_CreateAndList(t *testing.T) {
 		}
 	}
 
-	all, total, err := repo.List(auditlog.AdminLoginFilter{Page: 1, PageSize: 10})
+	all, total, err := repo.List(contract.AdminLoginFilter{Page: 1, PageSize: 10})
 	if err != nil {
 		t.Fatalf("list all: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestAdminLoginLogRepository_CreateAndList(t *testing.T) {
 	}
 
 	id := uint(1)
-	byAdmin, total, err := repo.List(auditlog.AdminLoginFilter{AdminID: &id, Page: 1, PageSize: 10})
+	byAdmin, total, err := repo.List(contract.AdminLoginFilter{AdminID: &id, Page: 1, PageSize: 10})
 	if err != nil {
 		t.Fatalf("list by admin: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestAdminLoginLogRepository_CreateAndList(t *testing.T) {
 		t.Fatalf("expected 2 records for admin 1, got %d/%d", total, len(byAdmin))
 	}
 
-	failed, total, err := repo.List(auditlog.AdminLoginFilter{Status: constants.AdminLoginStatusFailed, Page: 1, PageSize: 10})
+	failed, total, err := repo.List(contract.AdminLoginFilter{Status: constants.AdminLoginStatusFailed, Page: 1, PageSize: 10})
 	if err != nil {
 		t.Fatalf("list failed: %v", err)
 	}

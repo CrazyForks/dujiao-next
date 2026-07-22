@@ -17,7 +17,8 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/store/gormstore"
+	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
+	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/infrastructure/gormstore"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
 
 	"github.com/google/uuid"
@@ -118,7 +119,7 @@ func listAdmins() {
 
 func resetTOTP(username string) {
 	repo := adminstore.New(models.DB)
-	logRepo := auditloggormstore.NewAdminLoginStore(models.DB)
+	logService := auditlogapp.NewAdminLoginService(auditloggormstore.NewAdminLoginStore(models.DB))
 
 	admin, err := repo.GetByUsername(username)
 	if err != nil {
@@ -134,7 +135,7 @@ func resetTOTP(username string) {
 		os.Exit(1)
 	}
 	rid := "cli-" + uuid.NewString()
-	_ = logRepo.Create(&models.AdminLoginLog{
+	_ = logService.Record(auditlogapp.AdminLoginRecord{
 		AdminID:   admin.ID,
 		Username:  admin.Username,
 		EventType: constants.AdminLoginEvent2FAResetByAdmin,
@@ -148,7 +149,7 @@ func resetTOTP(username string) {
 
 func resetPassword(username, providedPassword string) {
 	repo := adminstore.New(models.DB)
-	logRepo := auditloggormstore.NewAdminLoginStore(models.DB)
+	logService := auditlogapp.NewAdminLoginService(auditloggormstore.NewAdminLoginStore(models.DB))
 
 	admin, err := repo.GetByUsername(username)
 	if err != nil {
@@ -178,7 +179,7 @@ func resetPassword(username, providedPassword string) {
 	}
 
 	rid := "cli-" + uuid.NewString()
-	_ = logRepo.Create(&models.AdminLoginLog{
+	_ = logService.Record(auditlogapp.AdminLoginRecord{
 		AdminID:   admin.ID,
 		Username:  admin.Username,
 		EventType: constants.AdminLoginEventPasswordResetByCLI,

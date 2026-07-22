@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/models"
+	auditlogdomain "github.com/dujiao-next/internal/modules/auditlog/domain"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/repository"
 
@@ -34,7 +35,7 @@ func TestAdminResellerSiteConfigUpdateAndAudit(t *testing.T) {
 		t.Fatalf("unexpected site name: %s", row.SiteName)
 	}
 	var auditCount int64
-	if err := db.Model(&models.AuthzAuditLog{}).Where("action = ?", "reseller_site_config_update").Count(&auditCount).Error; err != nil {
+	if err := db.Model(&auditlogdomain.AuthzAuditLog{}).Where("action = ?", "reseller_site_config_update").Count(&auditCount).Error; err != nil {
 		t.Fatalf("count audit failed: %v", err)
 	}
 	if auditCount != 1 {

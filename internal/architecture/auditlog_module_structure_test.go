@@ -8,18 +8,27 @@ import (
 func TestAuditLogImplementationLivesInBoundedContextDirectories(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "auditlog")
-	storeRoot := filepath.Join(moduleRoot, "store", "gormstore")
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "auditlog")
+	domainRoot := filepath.Join(moduleRoot, "domain")
+	contractRoot := filepath.Join(moduleRoot, "contract")
+	applicationRoot := filepath.Join(moduleRoot, "application")
+	storeRoot := filepath.Join(moduleRoot, "infrastructure", "gormstore")
+	transportRoot := filepath.Join(moduleRoot, "transport", "http")
 
-	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "ports.go"), []string{
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "admin_login.go"), []string{"AdminLoginLog"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "user_login.go"), []string{"UserLoginLog"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "authz.go"), []string{"AuthzAuditLog"})
+	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "repository.go"), []string{
 		"UserLoginFilter", "AuthzFilter", "AdminLoginFilter",
 		"UserLoginRepository", "AuthzRepository", "AdminLoginRepository",
 	})
-	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "user_login_service.go"), []string{
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "user_login_service.go"), []string{
 		"UserLoginRecord", "UserLoginService",
 	})
-	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "authz_service.go"), []string{
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "authz_service.go"), []string{
 		"AuthzRecord", "AuthzService",
+	})
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "admin_login_service.go"), []string{
+		"AdminLoginRecord", "AdminLoginService",
 	})
 	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "user_login_store.go"), []string{"UserLoginStore"})
 	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "authz_store.go"), []string{"AuthzStore"})
@@ -28,9 +37,15 @@ func TestAuditLogImplementationLivesInBoundedContextDirectories(t *testing.T) {
 		"RegisterAdminRoutes", "RegisterUserRoutes",
 	})
 
-	assertDirectoryGoFileBudget(t, moduleRoot, 4)
+	production, total := countDirectGoFiles(t, moduleRoot)
+	if production != 0 || total != 0 {
+		t.Fatalf("auditlog module root must remain structural only, got production=%d total=%d", production, total)
+	}
+	assertDirectoryGoFileBudget(t, domainRoot, 3)
+	assertDirectoryGoFileBudget(t, contractRoot, 1)
+	assertDirectoryGoFileBudget(t, applicationRoot, 4)
 	assertDirectoryGoFileBudget(t, storeRoot, 5)
-	assertDirectoryGoFileBudget(t, transportRoot, 4)
+	assertDirectoryGoFileBudget(t, transportRoot, 5)
 }
 
 func TestAuditLogLegacyFlatFilesStayRemoved(t *testing.T) {
@@ -44,6 +59,13 @@ func TestAuditLogLegacyFlatFilesStayRemoved(t *testing.T) {
 		filepath.Join(repositoryRoot, "internal", "http", "handlers", "admin", "admin_authz_audit.go"),
 		filepath.Join(repositoryRoot, "internal", "http", "handlers", "admin", "user_login_log_admin.go"),
 		filepath.Join(repositoryRoot, "internal", "http", "handlers", "public", "user_login_log.go"),
+		filepath.Join(repositoryRoot, "internal", "models", "admin_login_log.go"),
+		filepath.Join(repositoryRoot, "internal", "models", "user_login_log.go"),
+		filepath.Join(repositoryRoot, "internal", "models", "authz_audit_log.go"),
+		filepath.Join(repositoryRoot, "internal", "modules", "auditlog", "ports.go"),
+		filepath.Join(repositoryRoot, "internal", "modules", "auditlog", "store"),
+		filepath.Join(repositoryRoot, "internal", "transport", "http", "auditlog"),
+		filepath.Join(repositoryRoot, "internal", "dto", "login_log.go"),
 	}
 	for _, pattern := range patterns {
 		matches, err := filepath.Glob(pattern)

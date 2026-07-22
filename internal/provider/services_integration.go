@@ -6,7 +6,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	apicredentialapp "github.com/dujiao-next/internal/modules/apicredential/application"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
 	"github.com/dujiao-next/internal/modules/content"
 	localfilestore "github.com/dujiao-next/internal/modules/content/filestore/local"
@@ -24,8 +24,9 @@ import (
 
 // initIntegrationServices 装配通知、站点对接、支付、采购、渠道与 Telegram 集成。
 func (c *Container) initIntegrationServices() {
-	c.UserLoginLogService = auditlog.NewUserLoginService(c.UserLoginLogRepo)
-	c.AuthzAuditService = auditlog.NewAuthzService(c.AuthzAuditLogRepo)
+	c.UserLoginLogService = auditlogapp.NewUserLoginService(c.UserLoginLogRepo)
+	c.AuthzAuditService = auditlogapp.NewAuthzService(c.AuthzAuditLogRepo)
+	c.AdminLoginLogService = auditlogapp.NewAdminLoginService(c.AdminLoginLogRepo)
 	c.NotificationLogService = notification.NewLogService(c.NotificationLogRepo)
 	c.DashboardService = dashboard.NewService(c.DashboardRepo, c.SettingService)
 	c.NotificationService = notification.NewService(

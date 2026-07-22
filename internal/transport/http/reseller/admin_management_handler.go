@@ -7,7 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -30,7 +30,7 @@ type AdminManagementService interface {
 }
 
 type AuditRecorder interface {
-	Record(input auditlog.AuthzRecord) error
+	Record(input auditlogapp.AuthzRecord) error
 }
 
 type AdminManagementHandler struct {
@@ -369,7 +369,7 @@ func (h *AdminManagementHandler) recordAudit(c *gin.Context, action string, obje
 	if c.Request != nil && c.Request.Method != "" {
 		method = c.Request.Method
 	}
-	_ = h.audit.Record(auditlog.AuthzRecord{
+	_ = h.audit.Record(auditlogapp.AuthzRecord{
 		OperatorAdminID:  c.GetUint("admin_id"),
 		OperatorUsername: c.GetString("username"),
 		Action:           action,

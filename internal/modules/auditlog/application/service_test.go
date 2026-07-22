@@ -1,39 +1,40 @@
-package auditlog
+package application
 
 import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/auditlog/contract"
+	"github.com/dujiao-next/internal/modules/auditlog/domain"
 )
 
 type userLoginRepositoryStub struct {
-	created *models.UserLoginLog
+	created *domain.UserLoginLog
 }
 
-func (s *userLoginRepositoryStub) Create(item *models.UserLoginLog) error {
+func (s *userLoginRepositoryStub) Create(item *domain.UserLoginLog) error {
 	s.created = item
 	return nil
 }
 
-func (s *userLoginRepositoryStub) ListAdmin(UserLoginFilter) ([]models.UserLoginLog, int64, error) {
+func (s *userLoginRepositoryStub) ListAdmin(contract.UserLoginFilter) ([]domain.UserLoginLog, int64, error) {
 	return nil, 0, nil
 }
 
-func (s *userLoginRepositoryStub) ListByUser(uint, int, int) ([]models.UserLoginLog, int64, error) {
+func (s *userLoginRepositoryStub) ListByUser(uint, int, int) ([]domain.UserLoginLog, int64, error) {
 	return nil, 0, nil
 }
 
 type authzRepositoryStub struct {
-	created *models.AuthzAuditLog
+	created *domain.AuthzAuditLog
 }
 
-func (s *authzRepositoryStub) Create(item *models.AuthzAuditLog) error {
+func (s *authzRepositoryStub) Create(item *domain.AuthzAuditLog) error {
 	s.created = item
 	return nil
 }
 
-func (s *authzRepositoryStub) ListAdmin(AuthzFilter) ([]models.AuthzAuditLog, int64, error) {
+func (s *authzRepositoryStub) ListAdmin(contract.AuthzFilter) ([]domain.AuthzAuditLog, int64, error) {
 	return nil, 0, nil
 }
 

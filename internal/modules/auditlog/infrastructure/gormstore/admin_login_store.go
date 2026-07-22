@@ -1,8 +1,8 @@
 package gormstore
 
 import (
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	"github.com/dujiao-next/internal/modules/auditlog/contract"
+	"github.com/dujiao-next/internal/modules/auditlog/domain"
 
 	"gorm.io/gorm"
 )
@@ -17,7 +17,7 @@ func NewAdminLoginStore(db *gorm.DB) *AdminLoginStore {
 }
 
 // Create 写入一条日志
-func (r *AdminLoginStore) Create(log *models.AdminLoginLog) error {
+func (r *AdminLoginStore) Create(log *domain.AdminLoginLog) error {
 	if log == nil {
 		return nil
 	}
@@ -25,8 +25,8 @@ func (r *AdminLoginStore) Create(log *models.AdminLoginLog) error {
 }
 
 // List 分页查询
-func (r *AdminLoginStore) List(filter auditlog.AdminLoginFilter) ([]models.AdminLoginLog, int64, error) {
-	query := r.db.Model(&models.AdminLoginLog{})
+func (r *AdminLoginStore) List(filter contract.AdminLoginFilter) ([]domain.AdminLoginLog, int64, error) {
+	query := r.db.Model(&domain.AdminLoginLog{})
 	if filter.AdminID != nil {
 		query = query.Where("admin_id = ?", *filter.AdminID)
 	}
@@ -46,11 +46,11 @@ func (r *AdminLoginStore) List(filter auditlog.AdminLoginFilter) ([]models.Admin
 	}
 	query = applyPagination(query, filter.Page, filter.PageSize)
 
-	logs := make([]models.AdminLoginLog, 0)
+	logs := make([]domain.AdminLoginLog, 0)
 	if err := query.Order("id desc").Find(&logs).Error; err != nil {
 		return nil, 0, err
 	}
 	return logs, total, nil
 }
 
-var _ auditlog.AdminLoginRepository = (*AdminLoginStore)(nil)
+var _ contract.AdminLoginRepository = (*AdminLoginStore)(nil)

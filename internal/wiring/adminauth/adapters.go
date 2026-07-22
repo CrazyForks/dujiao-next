@@ -13,8 +13,7 @@ import (
 	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
 
 	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
 	adminchallenge "github.com/dujiao-next/internal/modules/identity/adminauth/challenge"
 	admintotpapp "github.com/dujiao-next/internal/modules/identity/adminauth/totp/application"
@@ -196,14 +195,14 @@ func (admin2FAChallengeStoreAdapter) Revoke(ctx context.Context, jti string) {
 }
 
 type adminLoginRecorderAdapter struct {
-	logs auditlog.AdminLoginRepository
+	logs *auditlogapp.AdminLoginService
 }
 
 func (a adminLoginRecorderAdapter) Record(adminID uint, username, eventType, status, failReason, clientIP, userAgent, requestID string, operatorID *uint) {
 	if a.logs == nil {
 		return
 	}
-	_ = a.logs.Create(&models.AdminLoginLog{
+	_ = a.logs.Record(auditlogapp.AdminLoginRecord{
 		AdminID:    adminID,
 		Username:   username,
 		EventType:  eventType,

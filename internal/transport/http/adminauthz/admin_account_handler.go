@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -92,7 +92,7 @@ func (h *AdminHandler) CreateAuthzAdmin(c *gin.Context) {
 
 	_ = h.authState.SetAdminAuthState(c.Request.Context(), admin)
 
-	h.recordAuthzAudit(c, auditlog.AuthzRecord{
+	h.recordAuthzAudit(c, auditlogapp.AuthzRecord{
 		OperatorAdminID:  c.GetUint("admin_id"),
 		OperatorUsername: strings.TrimSpace(c.GetString("username")),
 		TargetAdminID:    &admin.ID,
@@ -215,7 +215,7 @@ func (h *AdminHandler) UpdateAuthzAdmin(c *gin.Context) {
 		c.Set("admin_is_super", admin.IsSuper)
 	}
 
-	h.recordAuthzAudit(c, auditlog.AuthzRecord{
+	h.recordAuthzAudit(c, auditlogapp.AuthzRecord{
 		OperatorAdminID:  c.GetUint("admin_id"),
 		OperatorUsername: strings.TrimSpace(c.GetString("username")),
 		TargetAdminID:    &admin.ID,
@@ -285,7 +285,7 @@ func (h *AdminHandler) DeleteAuthzAdmin(c *gin.Context) {
 	}
 	_ = h.authState.DelAdminAuthState(c.Request.Context(), adminID)
 
-	h.recordAuthzAudit(c, auditlog.AuthzRecord{
+	h.recordAuthzAudit(c, auditlogapp.AuthzRecord{
 		OperatorAdminID:  c.GetUint("admin_id"),
 		OperatorUsername: strings.TrimSpace(c.GetString("username")),
 		TargetAdminID:    &adminID,

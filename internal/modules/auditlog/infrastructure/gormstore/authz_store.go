@@ -1,8 +1,8 @@
 package gormstore
 
 import (
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	"github.com/dujiao-next/internal/modules/auditlog/contract"
+	"github.com/dujiao-next/internal/modules/auditlog/domain"
 
 	"gorm.io/gorm"
 )
@@ -17,7 +17,7 @@ func NewAuthzStore(db *gorm.DB) *AuthzStore {
 }
 
 // Create 创建权限审计日志
-func (r *AuthzStore) Create(log *models.AuthzAuditLog) error {
+func (r *AuthzStore) Create(log *domain.AuthzAuditLog) error {
 	if log == nil {
 		return nil
 	}
@@ -25,8 +25,8 @@ func (r *AuthzStore) Create(log *models.AuthzAuditLog) error {
 }
 
 // ListAdmin 管理端查询权限审计日志
-func (r *AuthzStore) ListAdmin(filter auditlog.AuthzFilter) ([]models.AuthzAuditLog, int64, error) {
-	query := r.db.Model(&models.AuthzAuditLog{})
+func (r *AuthzStore) ListAdmin(filter contract.AuthzFilter) ([]domain.AuthzAuditLog, int64, error) {
+	query := r.db.Model(&domain.AuthzAuditLog{})
 	if filter.OperatorAdminID != 0 {
 		query = query.Where("operator_admin_id = ?", filter.OperatorAdminID)
 	}
@@ -58,11 +58,11 @@ func (r *AuthzStore) ListAdmin(filter auditlog.AuthzFilter) ([]models.AuthzAudit
 	}
 	query = applyPagination(query, filter.Page, filter.PageSize)
 
-	logs := make([]models.AuthzAuditLog, 0)
+	logs := make([]domain.AuthzAuditLog, 0)
 	if err := query.Order("id DESC").Find(&logs).Error; err != nil {
 		return nil, 0, err
 	}
 	return logs, total, nil
 }
 
-var _ auditlog.AuthzRepository = (*AuthzStore)(nil)
+var _ contract.AuthzRepository = (*AuthzStore)(nil)

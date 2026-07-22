@@ -251,6 +251,16 @@ var completedMigrationPaths = []string{
 	"internal/modules/apicredential/service.go",
 	"internal/modules/apicredential/store",
 	"internal/transport/http/apicredential",
+	"internal/models/admin_login_log.go",
+	"internal/models/user_login_log.go",
+	"internal/models/authz_audit_log.go",
+	"internal/modules/auditlog/authz_service.go",
+	"internal/modules/auditlog/ports.go",
+	"internal/modules/auditlog/service_test.go",
+	"internal/modules/auditlog/store",
+	"internal/modules/auditlog/user_login_service.go",
+	"internal/transport/http/auditlog",
+	"internal/dto/login_log.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

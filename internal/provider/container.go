@@ -9,7 +9,8 @@ import (
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	apicredentialapp "github.com/dujiao-next/internal/modules/apicredential/application"
 	apicredentialcontract "github.com/dujiao-next/internal/modules/apicredential/contract"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
+	auditlogcontract "github.com/dujiao-next/internal/modules/auditlog/contract"
 	"github.com/dujiao-next/internal/modules/captcha"
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	"github.com/dujiao-next/internal/modules/cart"
@@ -92,10 +93,10 @@ type Container struct {
 	OrderRefundRecordRepo      repository.OrderRefundRecordRepository
 	CategoryRepo               categorycontract.Repository
 	SettingRepo                settingscontract.Store
-	UserLoginLogRepo           auditlog.UserLoginRepository
-	AuthzAuditLogRepo          auditlog.AuthzRepository
+	UserLoginLogRepo           auditlogcontract.UserLoginRepository
+	AuthzAuditLogRepo          auditlogcontract.AuthzRepository
 	NotificationLogRepo        *notificationgormstore.LogStore
-	AdminLoginLogRepo          auditlog.AdminLoginRepository
+	AdminLoginLogRepo          auditlogcontract.AdminLoginRepository
 	DashboardRepo              dashboard.Repository
 	AffiliateRepo              affiliatecontract.Store
 	ResellerRepo               repository.ResellerRepository
@@ -145,8 +146,9 @@ type Container struct {
 	PaymentService                *service.PaymentService
 	CardSecretService             *cardsecret.Service
 	GiftCardService               *giftcardapp.Service
-	UserLoginLogService           *auditlog.UserLoginService
-	AuthzAuditService             *auditlog.AuthzService
+	UserLoginLogService           *auditlogapp.UserLoginService
+	AuthzAuditService             *auditlogapp.AuthzService
+	AdminLoginLogService          *auditlogapp.AdminLoginService
 	NotificationLogService        *notification.LogService
 	DashboardService              *dashboard.Service
 	NotificationService           *notification.Service

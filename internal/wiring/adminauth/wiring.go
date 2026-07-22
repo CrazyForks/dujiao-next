@@ -13,7 +13,7 @@ type Handlers struct {
 }
 
 func New(c *provider.Container) Handlers {
-	recorder := adminLoginRecorderAdapter{logs: c.AdminLoginLogRepo}
+	recorder := adminLoginRecorderAdapter{logs: c.AdminLoginLogService}
 	return Handlers{
 		Login: adminauthtransport.NewAdminLoginHandler(
 			adminLoginAuthTransportAdapter{auth: c.AuthService},

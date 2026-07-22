@@ -1,10 +1,11 @@
-package auditlog
+package application
 
 import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/auditlog/contract"
+	"github.com/dujiao-next/internal/modules/auditlog/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -24,11 +25,11 @@ type AuthzRecord struct {
 
 // AuthzService 权限审计服务
 type AuthzService struct {
-	repo AuthzRepository
+	repo contract.AuthzRepository
 }
 
 // NewAuthzService 创建权限审计服务
-func NewAuthzService(repo AuthzRepository) *AuthzService {
+func NewAuthzService(repo contract.AuthzRepository) *AuthzService {
 	return &AuthzService{repo: repo}
 }
 
@@ -44,7 +45,7 @@ func (s *AuthzService) Record(input AuthzRecord) error {
 		return nil
 	}
 
-	item := &models.AuthzAuditLog{
+	item := &domain.AuthzAuditLog{
 		OperatorAdminID:  input.OperatorAdminID,
 		OperatorUsername: strings.TrimSpace(input.OperatorUsername),
 		TargetAdminID:    input.TargetAdminID,
@@ -61,9 +62,9 @@ func (s *AuthzService) Record(input AuthzRecord) error {
 }
 
 // ListForAdmin 管理端查询权限审计日志
-func (s *AuthzService) ListForAdmin(filter AuthzFilter) ([]models.AuthzAuditLog, int64, error) {
+func (s *AuthzService) ListForAdmin(filter contract.AuthzFilter) ([]domain.AuthzAuditLog, int64, error) {
 	if s == nil || s.repo == nil {
-		return []models.AuthzAuditLog{}, 0, nil
+		return []domain.AuthzAuditLog{}, 0, nil
 	}
 	return s.repo.ListAdmin(filter)
 }

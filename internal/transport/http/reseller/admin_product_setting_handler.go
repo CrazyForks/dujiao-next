@@ -5,7 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -188,7 +188,7 @@ func (h *AdminProductSettingHandler) recordAudit(c *gin.Context, action, object,
 	if h == nil || h.audit == nil {
 		return
 	}
-	_ = h.audit.Record(auditlog.AuthzRecord{
+	_ = h.audit.Record(auditlogapp.AuthzRecord{
 		OperatorAdminID:  c.GetUint("admin_id"),
 		OperatorUsername: c.GetString("username"),
 		Action:           action,

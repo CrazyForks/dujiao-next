@@ -17,7 +17,7 @@ import (
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 
 	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
@@ -277,14 +277,14 @@ func (a userLoginTransportAdapter) LoginStep1(email, password string, rememberMe
 
 // userLoginRecorderAdapter 将登录日志服务适配为 transport 记录端口。
 type userLoginRecorderAdapter struct {
-	logs *auditlog.UserLoginService
+	logs *auditlogapp.UserLoginService
 }
 
 func (a userLoginRecorderAdapter) Record(email string, userID uint, status, failReason, source, clientIP, userAgent, requestID string) {
 	if a.logs == nil {
 		return
 	}
-	_ = a.logs.Record(auditlog.UserLoginRecord{
+	_ = a.logs.Record(auditlogapp.UserLoginRecord{
 		UserID:      userID,
 		Email:       email,
 		Status:      status,

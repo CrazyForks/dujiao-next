@@ -13,7 +13,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/money"
@@ -76,7 +76,7 @@ type auditStub struct {
 	actions []string
 }
 
-func (a *auditStub) Record(input auditlog.AuthzRecord) error {
+func (a *auditStub) Record(input auditlogapp.AuthzRecord) error {
 	a.actions = append(a.actions, input.Action)
 	return nil
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/authz"
 	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
@@ -122,10 +122,10 @@ func (adminAuthzAuthStateAdapter) DelAdminAuthState(ctx context.Context, adminID
 }
 
 type adminAuthzAuditAdapter struct {
-	svc *auditlog.AuthzService
+	svc *auditlogapp.AuthzService
 }
 
-func (a adminAuthzAuditAdapter) Record(input auditlog.AuthzRecord) error {
+func (a adminAuthzAuditAdapter) Record(input auditlogapp.AuthzRecord) error {
 	if a.svc == nil {
 		return nil
 	}

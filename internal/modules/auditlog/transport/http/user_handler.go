@@ -1,8 +1,7 @@
 package auditloghttp
 
 import (
-	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/auditlog/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -10,7 +9,7 @@ import (
 )
 
 type UserLoginHistoryReader interface {
-	ListByUser(userID uint, page, pageSize int) ([]models.UserLoginLog, int64, error)
+	ListByUser(userID uint, page, pageSize int) ([]domain.UserLoginLog, int64, error)
 }
 
 type UserHandler struct {
@@ -37,5 +36,5 @@ func (h *UserHandler) GetMyLoginLogs(c *gin.Context) {
 	}
 
 	pagination := response.BuildPagination(page, pageSize, total)
-	response.SuccessWithPage(c, dto.NewLoginLogRespList(logs), pagination)
+	response.SuccessWithPage(c, newUserLoginResponseList(logs), pagination)
 }

@@ -1,4 +1,4 @@
-package auditlog
+package application
 
 import (
 	"net/mail"
@@ -6,16 +6,17 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/auditlog/contract"
+	"github.com/dujiao-next/internal/modules/auditlog/domain"
 )
 
 // UserLoginService 用户登录日志服务
 type UserLoginService struct {
-	repo UserLoginRepository
+	repo contract.UserLoginRepository
 }
 
 // NewUserLoginService 创建用户登录日志服务
-func NewUserLoginService(repo UserLoginRepository) *UserLoginService {
+func NewUserLoginService(repo contract.UserLoginRepository) *UserLoginService {
 	return &UserLoginService{repo: repo}
 }
 
@@ -60,7 +61,7 @@ func (s *UserLoginService) Record(input UserLoginRecord) error {
 	}
 
 	now := time.Now()
-	return s.repo.Create(&models.UserLoginLog{
+	return s.repo.Create(&domain.UserLoginLog{
 		UserID:      input.UserID,
 		Email:       email,
 		Status:      status,
@@ -74,17 +75,17 @@ func (s *UserLoginService) Record(input UserLoginRecord) error {
 }
 
 // ListForAdmin 管理端查询登录日志
-func (s *UserLoginService) ListForAdmin(filter UserLoginFilter) ([]models.UserLoginLog, int64, error) {
+func (s *UserLoginService) ListForAdmin(filter contract.UserLoginFilter) ([]domain.UserLoginLog, int64, error) {
 	if s == nil || s.repo == nil {
-		return []models.UserLoginLog{}, 0, nil
+		return []domain.UserLoginLog{}, 0, nil
 	}
 	return s.repo.ListAdmin(filter)
 }
 
 // ListByUser 用户侧查询自己的登录日志
-func (s *UserLoginService) ListByUser(userID uint, page, pageSize int) ([]models.UserLoginLog, int64, error) {
+func (s *UserLoginService) ListByUser(userID uint, page, pageSize int) ([]domain.UserLoginLog, int64, error) {
 	if s == nil || s.repo == nil || userID == 0 {
-		return []models.UserLoginLog{}, 0, nil
+		return []domain.UserLoginLog{}, 0, nil
 	}
 	if page < 1 {
 		page = 1

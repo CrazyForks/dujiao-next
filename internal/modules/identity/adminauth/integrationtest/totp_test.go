@@ -8,7 +8,6 @@ import (
 	totpapplication "github.com/dujiao-next/internal/modules/identity/totp/application"
 
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/models"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
@@ -25,7 +24,7 @@ func newTOTPTestService(t *testing.T) (*admintotpapp.Service, admincontract.Stor
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	if err := db.AutoMigrate(&admindomain.Admin{}, &models.AdminLoginLog{}); err != nil {
+	if err := db.AutoMigrate(&admindomain.Admin{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	cfg := &config.Config{App: config.AppConfig{SecretKey: "test-secret-key-for-totp"}}

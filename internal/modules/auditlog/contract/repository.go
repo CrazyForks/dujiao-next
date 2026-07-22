@@ -1,9 +1,9 @@
-package auditlog
+package contract
 
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/auditlog/domain"
 )
 
 type UserLoginFilter struct {
@@ -41,17 +41,17 @@ type AdminLoginFilter struct {
 }
 
 type UserLoginRepository interface {
-	Create(log *models.UserLoginLog) error
-	ListAdmin(filter UserLoginFilter) ([]models.UserLoginLog, int64, error)
-	ListByUser(userID uint, page, pageSize int) ([]models.UserLoginLog, int64, error)
+	Create(log *domain.UserLoginLog) error
+	ListAdmin(filter UserLoginFilter) ([]domain.UserLoginLog, int64, error)
+	ListByUser(userID uint, page, pageSize int) ([]domain.UserLoginLog, int64, error)
 }
 
 type AuthzRepository interface {
-	Create(log *models.AuthzAuditLog) error
-	ListAdmin(filter AuthzFilter) ([]models.AuthzAuditLog, int64, error)
+	Create(log *domain.AuthzAuditLog) error
+	ListAdmin(filter AuthzFilter) ([]domain.AuthzAuditLog, int64, error)
 }
 
 type AdminLoginRepository interface {
-	Create(log *models.AdminLoginLog) error
-	List(filter AdminLoginFilter) ([]models.AdminLoginLog, int64, error)
+	Create(log *domain.AdminLoginLog) error
+	List(filter AdminLoginFilter) ([]domain.AdminLoginLog, int64, error)
 }

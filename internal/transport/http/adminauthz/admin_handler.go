@@ -8,7 +8,7 @@ import (
 
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -85,7 +85,7 @@ type AuthStateCache interface {
 
 // AuditRecorder 权限审计端口。
 type AuditRecorder interface {
-	Record(input auditlog.AuthzRecord) error
+	Record(input auditlogapp.AuthzRecord) error
 }
 
 // AdminHandler 处理后台权限管理 HTTP。
@@ -142,8 +142,8 @@ type authzSetAdminRolesPayload struct {
 	Roles []string `json:"roles"`
 }
 
-func buildAuthzPolicyAuditRecord(c *gin.Context, req authzPolicyPayload, action string) auditlog.AuthzRecord {
-	return auditlog.AuthzRecord{
+func buildAuthzPolicyAuditRecord(c *gin.Context, req authzPolicyPayload, action string) auditlogapp.AuthzRecord {
+	return auditlogapp.AuthzRecord{
 		OperatorAdminID:  c.GetUint("admin_id"),
 		OperatorUsername: strings.TrimSpace(c.GetString("username")),
 		Action:           action,
@@ -246,7 +246,7 @@ func (h *AdminHandler) CreateAuthzRole(c *gin.Context) {
 		return
 	}
 
-	h.recordAuthzAudit(c, auditlog.AuthzRecord{
+	h.recordAuthzAudit(c, auditlogapp.AuthzRecord{
 		OperatorAdminID:  c.GetUint("admin_id"),
 		OperatorUsername: strings.TrimSpace(c.GetString("username")),
 		Action:           "role_create",
@@ -278,7 +278,7 @@ func (h *AdminHandler) DeleteAuthzRole(c *gin.Context) {
 		return
 	}
 
-	h.recordAuthzAudit(c, auditlog.AuthzRecord{
+	h.recordAuthzAudit(c, auditlogapp.AuthzRecord{
 		OperatorAdminID:  c.GetUint("admin_id"),
 		OperatorUsername: strings.TrimSpace(c.GetString("username")),
 		Action:           "role_delete",
@@ -409,7 +409,7 @@ func (h *AdminHandler) SetAuthzAdminRoles(c *gin.Context) {
 		return
 	}
 
-	h.recordAuthzAudit(c, auditlog.AuthzRecord{
+	h.recordAuthzAudit(c, auditlogapp.AuthzRecord{
 		OperatorAdminID:  c.GetUint("admin_id"),
 		OperatorUsername: strings.TrimSpace(c.GetString("username")),
 		TargetAdminID:    &adminID,
@@ -432,7 +432,7 @@ func (h *AdminHandler) SetAuthzAdminRoles(c *gin.Context) {
 	response.Success(c, nil)
 }
 
-func (h *AdminHandler) recordAuthzAudit(c *gin.Context, input auditlog.AuthzRecord) {
+func (h *AdminHandler) recordAuthzAudit(c *gin.Context, input auditlogapp.AuthzRecord) {
 	if h == nil || h.audit == nil {
 		return
 	}

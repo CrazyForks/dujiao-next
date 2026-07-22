@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/models"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
@@ -25,7 +24,7 @@ func newAuthTestService(t *testing.T) (*adminauthapp.Service, *admintotpapp.Serv
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	if err := db.AutoMigrate(&admindomain.Admin{}, &models.AdminLoginLog{}); err != nil {
+	if err := db.AutoMigrate(&admindomain.Admin{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	cfg := &config.Config{

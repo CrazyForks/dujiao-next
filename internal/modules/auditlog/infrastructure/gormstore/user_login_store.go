@@ -1,8 +1,8 @@
 package gormstore
 
 import (
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/auditlog"
+	"github.com/dujiao-next/internal/modules/auditlog/contract"
+	"github.com/dujiao-next/internal/modules/auditlog/domain"
 
 	"gorm.io/gorm"
 )
@@ -17,7 +17,7 @@ func NewUserLoginStore(db *gorm.DB) *UserLoginStore {
 }
 
 // Create 创建登录日志
-func (r *UserLoginStore) Create(log *models.UserLoginLog) error {
+func (r *UserLoginStore) Create(log *domain.UserLoginLog) error {
 	if log == nil {
 		return nil
 	}
@@ -25,8 +25,8 @@ func (r *UserLoginStore) Create(log *models.UserLoginLog) error {
 }
 
 // ListAdmin 管理端查询登录日志
-func (r *UserLoginStore) ListAdmin(filter auditlog.UserLoginFilter) ([]models.UserLoginLog, int64, error) {
-	query := r.db.Model(&models.UserLoginLog{})
+func (r *UserLoginStore) ListAdmin(filter contract.UserLoginFilter) ([]domain.UserLoginLog, int64, error) {
+	query := r.db.Model(&domain.UserLoginLog{})
 	if filter.UserID != 0 {
 		query = query.Where("user_id = ?", filter.UserID)
 	}
@@ -55,7 +55,7 @@ func (r *UserLoginStore) ListAdmin(filter auditlog.UserLoginFilter) ([]models.Us
 	}
 	query = applyPagination(query, filter.Page, filter.PageSize)
 
-	var logs []models.UserLoginLog
+	logs := make([]domain.UserLoginLog, 0)
 	if err := query.Order("id desc").Find(&logs).Error; err != nil {
 		return nil, 0, err
 	}
@@ -63,8 +63,8 @@ func (r *UserLoginStore) ListAdmin(filter auditlog.UserLoginFilter) ([]models.Us
 }
 
 // ListByUser 用户侧查询自己的登录日志
-func (r *UserLoginStore) ListByUser(userID uint, page, pageSize int) ([]models.UserLoginLog, int64, error) {
-	query := r.db.Model(&models.UserLoginLog{}).Where("user_id = ?", userID)
+func (r *UserLoginStore) ListByUser(userID uint, page, pageSize int) ([]domain.UserLoginLog, int64, error) {
+	query := r.db.Model(&domain.UserLoginLog{}).Where("user_id = ?", userID)
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {
@@ -76,11 +76,11 @@ func (r *UserLoginStore) ListByUser(userID uint, page, pageSize int) ([]models.U
 		offset = 0
 	}
 
-	var logs []models.UserLoginLog
+	logs := make([]domain.UserLoginLog, 0)
 	if err := query.Order("id desc").Limit(pageSize).Offset(offset).Find(&logs).Error; err != nil {
 		return nil, 0, err
 	}
 	return logs, total, nil
 }
 
-var _ auditlog.UserLoginRepository = (*UserLoginStore)(nil)
+var _ contract.UserLoginRepository = (*UserLoginStore)(nil)

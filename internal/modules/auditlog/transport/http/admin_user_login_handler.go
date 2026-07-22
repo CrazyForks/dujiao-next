@@ -3,7 +3,7 @@ package auditloghttp
 import (
 	"strings"
 
-	"github.com/dujiao-next/internal/modules/auditlog"
+	"github.com/dujiao-next/internal/modules/auditlog/contract"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -36,7 +36,7 @@ func (h *AdminHandler) GetUserLoginLogs(c *gin.Context) {
 		return
 	}
 
-	logs, total, err := h.userLoginLogs.ListForAdmin(auditlog.UserLoginFilter{
+	logs, total, err := h.userLoginLogs.ListForAdmin(contract.UserLoginFilter{
 		Page:        page,
 		PageSize:    pageSize,
 		UserID:      userID,

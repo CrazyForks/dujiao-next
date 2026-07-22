@@ -10,6 +10,7 @@ import (
 
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
+	auditlogdomain "github.com/dujiao-next/internal/modules/auditlog/domain"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -159,10 +160,10 @@ func AutoMigrate() error {
 		&WalletAccount{},
 		&WalletTransaction{},
 		&WalletRechargeOrder{},
-		&UserLoginLog{},
-		&AuthzAuditLog{},
+		&auditlogdomain.UserLoginLog{},
+		&auditlogdomain.AuthzAuditLog{},
 		&NotificationLog{},
-		&AdminLoginLog{},
+		&auditlogdomain.AdminLoginLog{},
 		&emailverificationdomain.Code{},
 		&Order{},
 		&OrderItem{},
