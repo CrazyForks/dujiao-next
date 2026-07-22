@@ -8,6 +8,8 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
+	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 
 	"github.com/glebarez/sqlite"
@@ -22,14 +24,14 @@ func setupUserAuthServiceChannelIdentityTest(t *testing.T) (*UserAuthService, *g
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &models.EmailVerifyCode{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &emailverificationdomain.Code{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
 	userRepo := repository.NewUserRepository(db)
 	identityRepo := repository.NewUserOAuthIdentityRepository(db)
 
-	return NewUserAuthService(&config.Config{}, userRepo, identityRepo, repository.NewEmailVerifyCodeRepository(db), nil, nil, nil), db
+	return NewUserAuthService(&config.Config{}, userRepo, identityRepo, emailverificationstore.New(db), nil, nil, nil), db
 }
 
 func TestResolveTelegramChannelIdentityReturnsBoundUser(t *testing.T) {
@@ -186,7 +188,7 @@ func TestBindTelegramChannelByEmailCodeRebindsPlaceholderIdentity(t *testing.T) 
 		t.Fatalf("create identity failed: %v", err)
 	}
 
-	verifyCode := &models.EmailVerifyCode{
+	verifyCode := &emailverificationdomain.Code{
 		Email:     targetUser.Email,
 		Purpose:   constants.VerifyPurposeTelegramBind,
 		Code:      "123456",
@@ -225,7 +227,7 @@ func TestBindTelegramChannelByEmailCodeRebindsPlaceholderIdentity(t *testing.T) 
 		t.Fatalf("identity username want bound_user got %s", boundIdentity.Username)
 	}
 
-	var refreshedCode models.EmailVerifyCode
+	var refreshedCode emailverificationdomain.Code
 	if err := db.First(&refreshedCode, verifyCode.ID).Error; err != nil {
 		t.Fatalf("reload verify code failed: %v", err)
 	}

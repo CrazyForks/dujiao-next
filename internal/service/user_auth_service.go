@@ -17,6 +17,8 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	emailverificationcontract "github.com/dujiao-next/internal/modules/identity/emailverification/contract"
+	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	"github.com/dujiao-next/internal/repository"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -29,7 +31,7 @@ type UserAuthService struct {
 	cfg                   *config.Config
 	userRepo              repository.UserRepository
 	userOAuthIdentityRepo repository.UserOAuthIdentityRepository
-	codeRepo              repository.EmailVerifyCodeRepository
+	codeRepo              emailverificationcontract.Store
 	settingService        *settingsapp.Service
 	emailService          *EmailService
 	telegramAuthService   *telegramauthapp.Service
@@ -50,7 +52,7 @@ func NewUserAuthService(
 	cfg *config.Config,
 	userRepo repository.UserRepository,
 	userOAuthIdentityRepo repository.UserOAuthIdentityRepository,
-	codeRepo repository.EmailVerifyCodeRepository,
+	codeRepo emailverificationcontract.Store,
 	settingService *settingsapp.Service,
 	emailService *EmailService,
 	telegramAuthService *telegramauthapp.Service,
@@ -421,7 +423,7 @@ func (s *UserAuthService) CompleteLoginAfter2FA(userID uint, rememberMe bool) (*
 	return &UserLoginResult{RequiresTOTP: false, User: user, Token: token, ExpiresAt: expiresAt}, nil
 }
 
-func (s *UserAuthService) verifyCode(email, purpose, code string) (*models.EmailVerifyCode, error) {
+func (s *UserAuthService) verifyCode(email, purpose, code string) (*emailverificationdomain.Code, error) {
 	record, err := s.codeRepo.GetLatest(email, purpose)
 	if err != nil {
 		return nil, err
@@ -472,7 +474,7 @@ func (s *UserAuthService) sendVerifyCode(email, purpose, locale string) error {
 		return err
 	}
 
-	record := &models.EmailVerifyCode{
+	record := &emailverificationdomain.Code{
 		Email:     email,
 		Purpose:   strings.ToLower(purpose),
 		Code:      code,

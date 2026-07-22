@@ -9,6 +9,7 @@ import (
 	"time"
 
 	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
+	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
 	"github.com/glebarez/sqlite" // 纯 Go SQLite 驱动（基于 modernc.org/sqlite）
@@ -148,7 +149,7 @@ func AutoMigrate() error {
 		&AuthzAuditLog{},
 		&NotificationLog{},
 		&AdminLoginLog{},
-		&EmailVerifyCode{},
+		&emailverificationdomain.Code{},
 		&Order{},
 		&OrderItem{},
 		&OrderRefundRecord{},

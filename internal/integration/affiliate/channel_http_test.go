@@ -17,6 +17,8 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate"
+	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
+	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	affiliatetransport "github.com/dujiao-next/internal/transport/http/affiliate"
@@ -94,7 +96,7 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.UserOAuthIdentity{},
-		&models.EmailVerifyCode{},
+		&emailverificationdomain.Code{},
 		&settingsstore.SettingRecord{},
 		&models.Order{},
 		&models.OrderItem{},
@@ -110,7 +112,7 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 
 	userRepo := repository.NewUserRepository(db)
 	identityRepo := repository.NewUserOAuthIdentityRepository(db)
-	emailVerifyRepo := repository.NewEmailVerifyCodeRepository(db)
+	emailVerifyRepo := emailverificationstore.New(db)
 	settingRepo := settingsstore.New(db)
 	orderRepo := repository.NewOrderRepository(db)
 	affiliateRepo := repository.NewAffiliateRepository(db)

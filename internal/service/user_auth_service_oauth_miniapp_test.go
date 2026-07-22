@@ -9,6 +9,8 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
+	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/repository"
 
@@ -22,7 +24,7 @@ func TestLoginWithTelegramMiniAppCreatesUserIdentityAndToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &models.EmailVerifyCode{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &emailverificationdomain.Code{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -45,7 +47,7 @@ func TestLoginWithTelegramMiniAppCreatesUserIdentityAndToken(t *testing.T) {
 		cfg,
 		repository.NewUserRepository(db),
 		repository.NewUserOAuthIdentityRepository(db),
-		repository.NewEmailVerifyCodeRepository(db),
+		emailverificationstore.New(db),
 		nil,
 		nil,
 		telegramSvc,

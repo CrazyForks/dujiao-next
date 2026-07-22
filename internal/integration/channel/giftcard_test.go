@@ -16,6 +16,8 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
+	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
+	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	giftcardtransport "github.com/dujiao-next/internal/transport/http/giftcard"
@@ -61,7 +63,7 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 	if err := db.AutoMigrate(
 		&models.User{},
 		&models.UserOAuthIdentity{},
-		&models.EmailVerifyCode{},
+		&emailverificationdomain.Code{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
@@ -77,7 +79,7 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 
 	userRepo := repository.NewUserRepository(db)
 	identityRepo := repository.NewUserOAuthIdentityRepository(db)
-	emailVerifyRepo := repository.NewEmailVerifyCodeRepository(db)
+	emailVerifyRepo := emailverificationstore.New(db)
 	orderRepo := repository.NewOrderRepository(db)
 	walletRepo := repository.NewWalletRepository(db)
 	settingRepo := settingsstore.New(db)

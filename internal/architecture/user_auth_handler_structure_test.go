@@ -36,6 +36,29 @@ func TestTelegramAuthLivesInIdentityModule(t *testing.T) {
 	}
 }
 
+func TestEmailVerificationLivesInIdentityModule(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "identity", "emailverification")
+
+	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "domain", "code.go"), []string{"Code"})
+	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "contract", "store.go"), []string{"Store"})
+	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "infrastructure", "gormstore", "store.go"), []string{"Store"})
+	assertFileDeclaresFunctions(t, filepath.Join(moduleRoot, "infrastructure", "gormstore", "store.go"), []string{"New"})
+	assertDirectoryGoFileBudget(t, moduleRoot, 0)
+	assertDirectoryGoFileBudget(t, filepath.Join(moduleRoot, "infrastructure", "gormstore"), 2)
+
+	for _, legacy := range []string{
+		filepath.Join(repositoryRoot, "internal", "models", "email_verify_code.go"),
+		filepath.Join(repositoryRoot, "internal", "repository", "email_verify_code_repository.go"),
+	} {
+		if _, err := os.Stat(legacy); err == nil {
+			t.Fatalf("legacy email verification path must stay removed: %s", legacy)
+		} else if !os.IsNotExist(err) {
+			t.Fatalf("stat legacy email verification path: %v", err)
+		}
+	}
+}
+
 func TestUserProfileHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "userauth")

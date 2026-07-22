@@ -10,6 +10,8 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
+	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 
 	"github.com/glebarez/sqlite"
@@ -25,7 +27,7 @@ func newUser2FATestServices(t *testing.T) (*UserAuthService, *UserTOTPService, r
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &models.EmailVerifyCode{}, &settingsstore.SettingRecord{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	cfg := &config.Config{
@@ -40,7 +42,7 @@ func newUser2FATestServices(t *testing.T) (*UserAuthService, *UserTOTPService, r
 		cfg,
 		userRepo,
 		repository.NewUserOAuthIdentityRepository(db),
-		repository.NewEmailVerifyCodeRepository(db),
+		emailverificationstore.New(db),
 		nil,
 		nil,
 		nil,

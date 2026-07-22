@@ -13,6 +13,8 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
+	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/modules/memberlevel"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
@@ -32,7 +34,7 @@ func setupTelegramOAuthTestService(t *testing.T) (*UserAuthService, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &models.EmailVerifyCode{}, &settingsstore.SettingRecord{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -47,7 +49,7 @@ func setupTelegramOAuthTestService(t *testing.T) (*UserAuthService, *gorm.DB) {
 		cfg,
 		repository.NewUserRepository(db),
 		repository.NewUserOAuthIdentityRepository(db),
-		repository.NewEmailVerifyCodeRepository(db),
+		emailverificationstore.New(db),
 		settingSvc,
 		nil,
 		nil,
