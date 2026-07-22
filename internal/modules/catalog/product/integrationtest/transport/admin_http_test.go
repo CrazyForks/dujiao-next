@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
@@ -20,7 +21,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/store/gormstore"
+	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
@@ -59,7 +60,7 @@ func (unit *productWriteUoW) WithinTransaction(fn func(productwrite.TransactionR
 		return fn(productwrite.TransactionRepositories{
 			Products:    unit.products.BindTx(tx),
 			SKUs:        unit.skus.BindTx(tx),
-			CardSecrets: unit.cardSecrets.WithTx(tx),
+			CardSecrets: unit.cardSecrets.BindTx(tx),
 		})
 	})
 }
@@ -81,8 +82,8 @@ func (unit *productAdminUoW) WithinTransaction(fn func(productadmin.DeleteReposi
 	return unit.products.Transaction(func(tx *gorm.DB) error {
 		return fn(productadmin.DeleteRepositories{
 			Products:          unit.products.BindTx(tx),
-			CardSecrets:       unit.cardSecrets.WithTx(tx),
-			CardSecretBatches: unit.cardSecretBatches.WithTx(tx),
+			CardSecrets:       unit.cardSecrets.BindTx(tx),
+			CardSecretBatches: unit.cardSecretBatches.BindTx(tx),
 			SKUs:              unit.productSKUs.BindTx(tx),
 			MemberLevelPrices: memberlevelgormstore.NewPriceStore(tx),
 			Carts:             unit.carts.WithTx(tx),
@@ -123,8 +124,8 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.CardSecret{},
-		&models.CardSecretBatch{},
+		&cardsecretdomain.Secret{},
+		&cardsecretdomain.Batch{},
 		&memberleveldomain.MemberLevelPrice{},
 		&cartdomain.Item{},
 		&mappingdomain.Mapping{},

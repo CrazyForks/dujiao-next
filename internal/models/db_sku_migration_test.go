@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -37,8 +38,8 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		&productdomain.ProductSKU{},
 		&OrderItem{},
 		&cartdomain.Item{},
-		&CardSecret{},
-		&CardSecretBatch{},
+		&cardsecretdomain.Secret{},
+		&cardsecretdomain.Batch{},
 		&settingsstore.SettingRecord{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
@@ -90,7 +91,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		t.Fatalf("create cart item failed: %v", err)
 	}
 
-	batch := &CardSecretBatch{
+	batch := &cardsecretdomain.Batch{
 		ProductID:  product.ID,
 		SKUID:      0,
 		BatchNo:    "SKU-MIGRATION-BATCH-001",
@@ -103,12 +104,12 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		t.Fatalf("create card secret batch failed: %v", err)
 	}
 
-	secret := &CardSecret{
+	secret := &cardsecretdomain.Secret{
 		ProductID: product.ID,
 		SKUID:     0,
 		BatchID:   &batch.ID,
 		Secret:    "CARD-001",
-		Status:    CardSecretStatusAvailable,
+		Status:    cardsecretdomain.StatusAvailable,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -147,7 +148,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		t.Fatalf("cart item sku_id want %d got %d", sku.ID, gotCartItem.SKUID)
 	}
 
-	var gotBatch CardSecretBatch
+	var gotBatch cardsecretdomain.Batch
 	if err := db.First(&gotBatch, batch.ID).Error; err != nil {
 		t.Fatalf("reload card secret batch failed: %v", err)
 	}
@@ -155,7 +156,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		t.Fatalf("card secret batch sku_id want %d got %d", sku.ID, gotBatch.SKUID)
 	}
 
-	var gotSecret CardSecret
+	var gotSecret cardsecretdomain.Secret
 	if err := db.First(&gotSecret, secret.ID).Error; err != nil {
 		t.Fatalf("reload card secret failed: %v", err)
 	}

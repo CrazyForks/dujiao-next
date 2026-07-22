@@ -6,7 +6,6 @@ import (
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 
 	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
-	"github.com/dujiao-next/internal/modules/cardsecret"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
@@ -93,17 +92,8 @@ var (
 	ErrWalletRechargeNotFound              = walletmodule.ErrRechargeNotFound
 	ErrWalletRechargeStatusInvalid         = walletmodule.ErrRechargeStatusInvalid
 	ErrRefundRecordCreateFailed            = errors.New("refund record create failed")
-	ErrCardSecretInsufficient              = cardsecret.ErrInsufficient
+	ErrCardSecretInsufficient              = errors.New("card secret insufficient")
 	ErrFulfillmentNotAuto                  = errors.New("fulfillment not auto")
-	ErrCardSecretInvalid                   = cardsecret.ErrInvalid
-	ErrCardSecretCreateFailed              = cardsecret.ErrCreateFailed
-	ErrCardSecretFetchFailed               = cardsecret.ErrFetchFailed
-	ErrCardSecretUpdateFailed              = cardsecret.ErrUpdateFailed
-	ErrCardSecretDeleteFailed              = cardsecret.ErrDeleteFailed
-	ErrCardSecretBatchCreateFailed         = cardsecret.ErrBatchCreateFailed
-	ErrCardSecretBatchFetchFailed          = cardsecret.ErrBatchFetchFailed
-	ErrCardSecretImportFailed              = cardsecret.ErrImportFailed
-	ErrCardSecretStatsFailed               = cardsecret.ErrStatsFailed
 	ErrQueueUnavailable                    = errors.New("queue unavailable")
 	ErrAffiliateConfigInvalid              = settingsintegration.ErrAffiliateConfigInvalid
 	ErrResellerAccountingUnavailable       = resellermodule.ErrAccountingUnavailable

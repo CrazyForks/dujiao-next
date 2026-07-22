@@ -1,10 +1,11 @@
-package cardsecret
+package application
 
 import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 )
 
 // ListCardSecretInput 卡密列表输入
@@ -20,7 +21,7 @@ type ListCardSecretInput struct {
 }
 
 // ListCardSecrets 获取卡密列表
-func (s *Service) ListCardSecrets(input ListCardSecretInput) ([]models.CardSecret, int64, error) {
+func (s *Service) ListCardSecrets(input ListCardSecretInput) ([]cardsecretdomain.Secret, int64, error) {
 	if input.SKUID > 0 && input.ProductID == 0 {
 		return nil, 0, ErrInvalid
 	}
@@ -30,7 +31,7 @@ func (s *Service) ListCardSecrets(input ListCardSecretInput) ([]models.CardSecre
 		}
 	}
 
-	items, total, err := s.secretRepo.List(ListFilter{
+	items, total, err := s.secretRepo.List(cardsecretcontract.ListFilter{
 		ProductID: input.ProductID,
 		SKUID:     input.SKUID,
 		BatchID:   input.BatchID,
@@ -46,8 +47,8 @@ func (s *Service) ListCardSecrets(input ListCardSecretInput) ([]models.CardSecre
 	return items, total, nil
 }
 
-func (s *Service) buildRepositoryFilter(input ListCardSecretInput) ListFilter {
-	return ListFilter{
+func (s *Service) buildRepositoryFilter(input ListCardSecretInput) cardsecretcontract.ListFilter {
+	return cardsecretcontract.ListFilter{
 		ProductID: input.ProductID,
 		SKUID:     input.SKUID,
 		BatchID:   input.BatchID,
@@ -73,7 +74,7 @@ func (s *Service) hasListFilter(input ListCardSecretInput) bool {
 func (s *Service) BatchUpdateCardSecretStatus(ids []uint, batchID uint, filter ListCardSecretInput, status string) (int64, error) {
 	normalizedStatus := strings.TrimSpace(status)
 	switch normalizedStatus {
-	case models.CardSecretStatusAvailable, models.CardSecretStatusReserved, models.CardSecretStatusUsed:
+	case cardsecretdomain.StatusAvailable, cardsecretdomain.StatusReserved, cardsecretdomain.StatusUsed:
 	default:
 		return 0, ErrInvalid
 	}
@@ -102,7 +103,7 @@ func (s *Service) BatchDeleteCardSecrets(ids []uint, batchID uint, filter ListCa
 }
 
 // UpdateCardSecret 更新卡密
-func (s *Service) UpdateCardSecret(id uint, secret, status string) (*models.CardSecret, error) {
+func (s *Service) UpdateCardSecret(id uint, secret, status string) (*cardsecretdomain.Secret, error) {
 	if id == 0 {
 		return nil, ErrInvalid
 	}
@@ -120,7 +121,7 @@ func (s *Service) UpdateCardSecret(id uint, secret, status string) (*models.Card
 	trimmedStatus := strings.TrimSpace(status)
 	if trimmedStatus != "" {
 		switch trimmedStatus {
-		case models.CardSecretStatusAvailable, models.CardSecretStatusReserved, models.CardSecretStatusUsed:
+		case cardsecretdomain.StatusAvailable, cardsecretdomain.StatusReserved, cardsecretdomain.StatusUsed:
 			item.Status = trimmedStatus
 		default:
 			return nil, ErrInvalid

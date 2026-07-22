@@ -9,6 +9,8 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
+	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -31,8 +33,8 @@ func setupFulfillmentServiceTestDB(t *testing.T) *gorm.DB {
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
-		&models.CardSecret{},
-		&models.CardSecretBatch{},
+		&cardsecretdomain.Secret{},
+		&cardsecretdomain.Batch{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -79,22 +81,22 @@ func TestCreateAutoFulfillmentRespectsSKUBoundary(t *testing.T) {
 		t.Fatalf("create order item failed: %v", err)
 	}
 
-	secretTarget := &models.CardSecret{
+	secretTarget := &cardsecretdomain.Secret{
 		ProductID: 100,
 		SKUID:     1001,
 		Secret:    "SECRET-SKU-1001",
-		Status:    models.CardSecretStatusAvailable,
+		Status:    cardsecretdomain.StatusAvailable,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
 	if err := db.Create(secretTarget).Error; err != nil {
 		t.Fatalf("create target secret failed: %v", err)
 	}
-	secretOther := &models.CardSecret{
+	secretOther := &cardsecretdomain.Secret{
 		ProductID: 100,
 		SKUID:     1002,
 		Secret:    "SECRET-SKU-1002",
-		Status:    models.CardSecretStatusAvailable,
+		Status:    cardsecretdomain.StatusAvailable,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
@@ -105,7 +107,7 @@ func TestCreateAutoFulfillmentRespectsSKUBoundary(t *testing.T) {
 	svc := NewFulfillmentService(
 		repository.NewOrderRepository(db),
 		repository.NewFulfillmentRepository(db),
-		repository.NewCardSecretRepository(db),
+		cardsecretgormstore.New(db),
 		nil, nil, config.EmailConfig{}, nil,
 	)
 
@@ -123,19 +125,19 @@ func TestCreateAutoFulfillmentRespectsSKUBoundary(t *testing.T) {
 		t.Fatalf("payload should not contain other sku secret, got: %s", result.Payload)
 	}
 
-	var targetAfter models.CardSecret
+	var targetAfter cardsecretdomain.Secret
 	if err := db.First(&targetAfter, secretTarget.ID).Error; err != nil {
 		t.Fatalf("query target secret failed: %v", err)
 	}
-	if targetAfter.Status != models.CardSecretStatusUsed {
+	if targetAfter.Status != cardsecretdomain.StatusUsed {
 		t.Fatalf("target secret status want used got %s", targetAfter.Status)
 	}
 
-	var otherAfter models.CardSecret
+	var otherAfter cardsecretdomain.Secret
 	if err := db.First(&otherAfter, secretOther.ID).Error; err != nil {
 		t.Fatalf("query other secret failed: %v", err)
 	}
-	if otherAfter.Status != models.CardSecretStatusAvailable {
+	if otherAfter.Status != cardsecretdomain.StatusAvailable {
 		t.Fatalf("other secret status should stay available got %s", otherAfter.Status)
 	}
 

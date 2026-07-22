@@ -6,7 +6,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 )
 
 // ApplyAutoStockCounts 聚合卡密自动发货库存信息并填充到商品中
@@ -49,9 +49,9 @@ func (s *Service) ApplyAutoStockCounts(products []productdomain.Product) error {
 
 		var pAvailable, pLocked, pUsed int64
 		for _, statusMap := range pMap {
-			pAvailable += statusMap[models.CardSecretStatusAvailable]
-			pLocked += statusMap[models.CardSecretStatusReserved]
-			pUsed += statusMap[models.CardSecretStatusUsed]
+			pAvailable += statusMap[cardsecretdomain.StatusAvailable]
+			pLocked += statusMap[cardsecretdomain.StatusReserved]
+			pUsed += statusMap[cardsecretdomain.StatusUsed]
 		}
 		products[i].AutoStockAvailable = pAvailable
 		products[i].AutoStockTotal = pAvailable + pLocked
@@ -63,16 +63,16 @@ func (s *Service) ApplyAutoStockCounts(products []productdomain.Product) error {
 			skuID := products[i].SKUs[j].ID
 			statusMap := pMap[skuID]
 
-			available := statusMap[models.CardSecretStatusAvailable]
-			locked := statusMap[models.CardSecretStatusReserved]
-			used := statusMap[models.CardSecretStatusUsed]
+			available := statusMap[cardsecretdomain.StatusAvailable]
+			locked := statusMap[cardsecretdomain.StatusReserved]
+			used := statusMap[cardsecretdomain.StatusUsed]
 
 			// 如果 skuID 为 0 的历史卡密存在，优先归并到 DEFAULT SKU。
 			// 若不存在 DEFAULT SKU，则回退到首个启用 SKU，避免重复叠加到所有 SKU。
 			if j == legacyTargetIdx && pMap[0] != nil {
-				available += pMap[0][models.CardSecretStatusAvailable]
-				locked += pMap[0][models.CardSecretStatusReserved]
-				used += pMap[0][models.CardSecretStatusUsed]
+				available += pMap[0][cardsecretdomain.StatusAvailable]
+				locked += pMap[0][cardsecretdomain.StatusReserved]
+				used += pMap[0][cardsecretdomain.StatusUsed]
 			}
 
 			products[i].SKUs[j].AutoStockAvailable = available

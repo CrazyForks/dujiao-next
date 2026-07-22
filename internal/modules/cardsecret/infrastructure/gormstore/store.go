@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/cardsecret"
+	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -17,11 +17,17 @@ type Store struct {
 	db *gorm.DB
 }
 
+var (
+	_ cardsecretcontract.Repository = (*Store)(nil)
+	_ cardsecretcontract.UnitOfWork = (*Store)(nil)
+)
+
 func New(db *gorm.DB) *Store {
 	return &Store{db: db}
 }
 
-func (r *Store) WithTx(tx *gorm.DB) *Store {
+// BindTx 将库存端口绑定到调用方事务，不暴露具体 Store 类型。
+func (r *Store) BindTx(tx *gorm.DB) cardsecretcontract.Repository {
 	if tx == nil {
 		return r
 	}
@@ -29,22 +35,24 @@ func (r *Store) WithTx(tx *gorm.DB) *Store {
 }
 
 // Transaction 为卡密与批次写入提供同一事务中的模块端口。
-func (r *Store) Transaction(fn func(cardsecret.Repository, cardsecret.BatchRepository) error) error {
+func (r *Store) Transaction(fn func(cardsecretcontract.Repository, cardsecretcontract.BatchRepository) error) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		return fn(New(tx), NewBatch(tx))
 	})
 }
 
 // CreateBatch 批量创建卡密
-func (r *Store) CreateBatch(items []models.CardSecret) error {
+func (r *Store) CreateBatch(items []cardsecretdomain.Secret) error {
 	if len(items) == 0 {
 		return nil
 	}
 	return r.db.CreateInBatches(&items, 200).Error
 }
 
-func (r *Store) buildListQuery(filter cardsecret.ListFilter) *gorm.DB {
-	query := r.db.Model(&models.CardSecret{}).Preload("Batch")
+func (r *Store) buildListQuery(filter cardsecretcontract.ListFilter) *gorm.DB {
+	query := r.db.Model(&cardsecretdomain.Secret{}).
+		Where("card_secrets.deleted_at IS NULL").
+		Preload("Batch", "deleted_at IS NULL")
 	if filter.ProductID > 0 {
 		query = query.Where("card_secrets.product_id = ?", filter.ProductID)
 	}
@@ -62,13 +70,13 @@ func (r *Store) buildListQuery(filter cardsecret.ListFilter) *gorm.DB {
 	}
 	if batchNo := strings.TrimSpace(filter.BatchNo); batchNo != "" {
 		query = query.Joins("LEFT JOIN card_secret_batches ON card_secret_batches.id = card_secrets.batch_id").
-			Where("LOWER(card_secret_batches.batch_no) LIKE LOWER(?)", "%"+batchNo+"%")
+			Where("card_secret_batches.deleted_at IS NULL AND LOWER(card_secret_batches.batch_no) LIKE LOWER(?)", "%"+batchNo+"%")
 	}
 	return query
 }
 
 // List 查询卡密列表
-func (r *Store) List(filter cardsecret.ListFilter) ([]models.CardSecret, int64, error) {
+func (r *Store) List(filter cardsecretcontract.ListFilter) ([]cardsecretdomain.Secret, int64, error) {
 	if filter.ProductID == 0 && filter.SKUID > 0 {
 		return nil, 0, errors.New("invalid product id")
 	}
@@ -87,7 +95,7 @@ func (r *Store) List(filter cardsecret.ListFilter) ([]models.CardSecret, int64, 
 		query = query.Offset((page - 1) * filter.PageSize).Limit(filter.PageSize)
 	}
 
-	var items []models.CardSecret
+	var items []cardsecretdomain.Secret
 	if err := query.Order("card_secrets.id asc").Find(&items).Error; err != nil {
 		return nil, 0, err
 	}
@@ -95,7 +103,7 @@ func (r *Store) List(filter cardsecret.ListFilter) ([]models.CardSecret, int64, 
 }
 
 // ListIDs 按筛选条件查询卡密 ID 列表
-func (r *Store) ListIDs(filter cardsecret.ListFilter) ([]uint, error) {
+func (r *Store) ListIDs(filter cardsecretcontract.ListFilter) ([]uint, error) {
 	query := r.buildListQuery(filter)
 	var ids []uint
 	if err := query.Order("card_secrets.id asc").Pluck("card_secrets.id", &ids).Error; err != nil {
@@ -105,12 +113,12 @@ func (r *Store) ListIDs(filter cardsecret.ListFilter) ([]uint, error) {
 }
 
 // ListByIDs 按 ID 列表查询卡密
-func (r *Store) ListByIDs(ids []uint) ([]models.CardSecret, error) {
+func (r *Store) ListByIDs(ids []uint) ([]cardsecretdomain.Secret, error) {
 	if len(ids) == 0 {
-		return []models.CardSecret{}, nil
+		return []cardsecretdomain.Secret{}, nil
 	}
-	var items []models.CardSecret
-	if err := r.db.Where("id IN ?", ids).Order("id asc").Find(&items).Error; err != nil {
+	var items []cardsecretdomain.Secret
+	if err := r.db.Where("id IN ? AND deleted_at IS NULL", ids).Order("id asc").Find(&items).Error; err != nil {
 		return nil, err
 	}
 	return items, nil
@@ -122,21 +130,21 @@ func (r *Store) ListIDsByBatchID(batchID uint) ([]uint, error) {
 		return []uint{}, nil
 	}
 	var ids []uint
-	if err := r.db.Model(&models.CardSecret{}).Where("batch_id = ?", batchID).Order("id asc").Pluck("id", &ids).Error; err != nil {
+	if err := r.db.Model(&cardsecretdomain.Secret{}).Where("batch_id = ? AND deleted_at IS NULL", batchID).Order("id asc").Pluck("id", &ids).Error; err != nil {
 		return nil, err
 	}
 	return ids, nil
 }
 
 // CountByBatchIDs 统计多个批次下各状态的实时数量
-func (r *Store) CountByBatchIDs(batchIDs []uint) ([]cardsecret.BatchStatusCount, error) {
+func (r *Store) CountByBatchIDs(batchIDs []uint) ([]cardsecretcontract.BatchStatusCount, error) {
 	if len(batchIDs) == 0 {
-		return []cardsecret.BatchStatusCount{}, nil
+		return []cardsecretcontract.BatchStatusCount{}, nil
 	}
-	var rows []cardsecret.BatchStatusCount
-	if err := r.db.Model(&models.CardSecret{}).
+	var rows []cardsecretcontract.BatchStatusCount
+	if err := r.db.Model(&cardsecretdomain.Secret{}).
 		Select("batch_id, status, COUNT(*) as total").
-		Where("batch_id IN ?", batchIDs).
+		Where("batch_id IN ? AND deleted_at IS NULL", batchIDs).
 		Group("batch_id, status").
 		Scan(&rows).Error; err != nil {
 		return nil, err
@@ -145,15 +153,15 @@ func (r *Store) CountByBatchIDs(batchIDs []uint) ([]cardsecret.BatchStatusCount,
 }
 
 // ListByOrderAndStatus 按订单与状态获取卡密
-func (r *Store) ListByOrderAndStatus(orderID uint, status string) ([]models.CardSecret, error) {
+func (r *Store) ListByOrderAndStatus(orderID uint, status string) ([]cardsecretdomain.Secret, error) {
 	if orderID == 0 {
 		return nil, errors.New("invalid order id")
 	}
-	query := r.db.Model(&models.CardSecret{}).Where("order_id = ?", orderID)
+	query := r.db.Model(&cardsecretdomain.Secret{}).Where("order_id = ? AND deleted_at IS NULL", orderID)
 	if status != "" {
 		query = query.Where("status = ?", status)
 	}
-	var items []models.CardSecret
+	var items []cardsecretdomain.Secret
 	if err := query.Order("id asc").Find(&items).Error; err != nil {
 		return nil, err
 	}
@@ -162,15 +170,15 @@ func (r *Store) ListByOrderAndStatus(orderID uint, status string) ([]models.Card
 
 // ListAvailableByProduct 在事务中按 product_id + (可选)sku_id + status=available 列出
 // 最多 limit 条卡密,按 id 升序。
-func (r *Store) ListAvailableByProduct(productID, skuID uint, limit int) ([]models.CardSecret, error) {
+func (r *Store) ListAvailableByProduct(productID, skuID uint, limit int) ([]cardsecretdomain.Secret, error) {
 	if productID == 0 || limit <= 0 {
 		return nil, nil
 	}
-	query := r.db.Where("product_id = ? AND status = ?", productID, models.CardSecretStatusAvailable)
+	query := r.db.Where("product_id = ? AND status = ? AND deleted_at IS NULL", productID, cardsecretdomain.StatusAvailable)
 	if skuID > 0 {
 		query = query.Where("sku_id = ?", skuID)
 	}
-	var rows []models.CardSecret
+	var rows []cardsecretdomain.Secret
 	if err := query.Order("id asc").Limit(limit).Find(&rows).Error; err != nil {
 		return nil, err
 	}
@@ -178,16 +186,16 @@ func (r *Store) ListAvailableByProduct(productID, skuID uint, limit int) ([]mode
 }
 
 // ListAvailableByProductForUpdate 加 FOR UPDATE 行锁的版本(用于事务内扣库存)。
-func (r *Store) ListAvailableByProductForUpdate(productID, skuID uint, limit int) ([]models.CardSecret, error) {
+func (r *Store) ListAvailableByProductForUpdate(productID, skuID uint, limit int) ([]cardsecretdomain.Secret, error) {
 	if productID == 0 || limit <= 0 {
 		return nil, nil
 	}
 	query := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("product_id = ? AND status = ?", productID, models.CardSecretStatusAvailable)
+		Where("product_id = ? AND status = ? AND deleted_at IS NULL", productID, cardsecretdomain.StatusAvailable)
 	if skuID > 0 {
 		query = query.Where("sku_id = ?", skuID)
 	}
-	var rows []models.CardSecret
+	var rows []cardsecretdomain.Secret
 	if err := query.Order("id asc").Limit(limit).Find(&rows).Error; err != nil {
 		return nil, err
 	}
@@ -195,19 +203,19 @@ func (r *Store) ListAvailableByProductForUpdate(productID, skuID uint, limit int
 }
 
 // ListAvailableByProductBatchForUpdate 按商品/SKU/批次锁定可用卡密。
-func (r *Store) ListAvailableByProductBatchForUpdate(productID, skuID, batchID uint, limit int) ([]models.CardSecret, error) {
+func (r *Store) ListAvailableByProductBatchForUpdate(productID, skuID, batchID uint, limit int) ([]cardsecretdomain.Secret, error) {
 	if productID == 0 || limit <= 0 {
 		return nil, nil
 	}
 	query := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
-		Where("product_id = ? AND status = ?", productID, models.CardSecretStatusAvailable)
+		Where("product_id = ? AND status = ? AND deleted_at IS NULL", productID, cardsecretdomain.StatusAvailable)
 	if skuID > 0 {
 		query = query.Where("sku_id = ?", skuID)
 	}
 	if batchID > 0 {
 		query = query.Where("batch_id = ?", batchID)
 	}
-	var rows []models.CardSecret
+	var rows []cardsecretdomain.Secret
 	if err := query.Order("id asc").Limit(limit).Find(&rows).Error; err != nil {
 		return nil, err
 	}
@@ -215,9 +223,9 @@ func (r *Store) ListAvailableByProductBatchForUpdate(productID, skuID, batchID u
 }
 
 // GetByID 根据 ID 获取卡密
-func (r *Store) GetByID(id uint) (*models.CardSecret, error) {
-	var secret models.CardSecret
-	if err := r.db.First(&secret, id).Error; err != nil {
+func (r *Store) GetByID(id uint) (*cardsecretdomain.Secret, error) {
+	var secret cardsecretdomain.Secret
+	if err := r.db.Where("deleted_at IS NULL").First(&secret, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -227,7 +235,7 @@ func (r *Store) GetByID(id uint) (*models.CardSecret, error) {
 }
 
 // Update 更新卡密
-func (r *Store) Update(secret *models.CardSecret) error {
+func (r *Store) Update(secret *cardsecretdomain.Secret) error {
 	return r.db.Save(secret).Error
 }
 
@@ -239,8 +247,8 @@ func (r *Store) BatchUpdateStatus(ids []uint, status string, updatedAt time.Time
 	if updatedAt.IsZero() {
 		updatedAt = time.Now()
 	}
-	result := r.db.Model(&models.CardSecret{}).
-		Where("id IN ?", ids).
+	result := r.db.Model(&cardsecretdomain.Secret{}).
+		Where("id IN ? AND deleted_at IS NULL", ids).
 		Updates(map[string]interface{}{
 			"status":     status,
 			"updated_at": updatedAt,
@@ -253,7 +261,10 @@ func (r *Store) BatchDeleteByIDs(ids []uint) (int64, error) {
 	if len(ids) == 0 {
 		return 0, nil
 	}
-	result := r.db.Where("id IN ?", ids).Delete(&models.CardSecret{})
+	now := time.Now()
+	result := r.db.Model(&cardsecretdomain.Secret{}).
+		Where("id IN ? AND deleted_at IS NULL", ids).
+		Updates(map[string]interface{}{"deleted_at": now, "updated_at": now})
 	return result.RowsAffected, result.Error
 }
 
@@ -262,7 +273,10 @@ func (r *Store) DeleteByProduct(productID uint) error {
 	if productID == 0 {
 		return errors.New("invalid product id")
 	}
-	return r.db.Where("product_id = ?", productID).Delete(&models.CardSecret{}).Error
+	now := time.Now()
+	return r.db.Model(&cardsecretdomain.Secret{}).
+		Where("product_id = ? AND deleted_at IS NULL", productID).
+		Updates(map[string]interface{}{"deleted_at": now, "updated_at": now}).Error
 }
 
 // CountByProduct 统计库存数量（总/可用/已用）
@@ -272,7 +286,7 @@ func (r *Store) CountByProduct(productID, skuID uint) (int64, int64, int64, erro
 	}
 
 	buildQuery := func() *gorm.DB {
-		query := r.db.Model(&models.CardSecret{}).Where("product_id = ?", productID)
+		query := r.db.Model(&cardsecretdomain.Secret{}).Where("product_id = ? AND deleted_at IS NULL", productID)
 		if skuID > 0 {
 			query = query.Where("sku_id = ?", skuID)
 		}
@@ -285,13 +299,13 @@ func (r *Store) CountByProduct(productID, skuID uint) (int64, int64, int64, erro
 	}
 
 	var available int64
-	if err := buildQuery().Where("status = ?", models.CardSecretStatusAvailable).
+	if err := buildQuery().Where("status = ?", cardsecretdomain.StatusAvailable).
 		Count(&available).Error; err != nil {
 		return 0, 0, 0, err
 	}
 
 	var used int64
-	if err := buildQuery().Where("status = ?", models.CardSecretStatusUsed).
+	if err := buildQuery().Where("status = ?", cardsecretdomain.StatusUsed).
 		Count(&used).Error; err != nil {
 		return 0, 0, 0, err
 	}
@@ -303,8 +317,8 @@ func (r *Store) CountAvailable(productID, skuID uint) (int64, error) {
 	if productID == 0 {
 		return 0, errors.New("invalid product id")
 	}
-	query := r.db.Model(&models.CardSecret{}).
-		Where("product_id = ? AND status = ?", productID, models.CardSecretStatusAvailable)
+	query := r.db.Model(&cardsecretdomain.Secret{}).
+		Where("product_id = ? AND status = ? AND deleted_at IS NULL", productID, cardsecretdomain.StatusAvailable)
 	if skuID > 0 {
 		query = query.Where("sku_id = ?", skuID)
 	}
@@ -329,9 +343,9 @@ func (r *Store) CountAvailableByProductIDs(productIDs []uint) (map[uint]int64, e
 	}
 
 	var rows []countRow
-	if err := r.db.Model(&models.CardSecret{}).
+	if err := r.db.Model(&cardsecretdomain.Secret{}).
 		Select("product_id, COUNT(*) as total").
-		Where("product_id IN ? AND status = ?", productIDs, models.CardSecretStatusAvailable).
+		Where("product_id IN ? AND status = ? AND deleted_at IS NULL", productIDs, cardsecretdomain.StatusAvailable).
 		Group("product_id").
 		Scan(&rows).Error; err != nil {
 		return nil, err
@@ -345,15 +359,15 @@ func (r *Store) CountAvailableByProductIDs(productIDs []uint) (map[uint]int64, e
 }
 
 // CountStockByProductIDs 批量获取商品的 SKUs 的各状态卡密数量
-func (r *Store) CountStockByProductIDs(productIDs []uint) ([]cardsecret.SKUStockCount, error) {
+func (r *Store) CountStockByProductIDs(productIDs []uint) ([]cardsecretcontract.SKUStockCount, error) {
 	if len(productIDs) == 0 {
-		return []cardsecret.SKUStockCount{}, nil
+		return []cardsecretcontract.SKUStockCount{}, nil
 	}
 
-	var rows []cardsecret.SKUStockCount
-	if err := r.db.Model(&models.CardSecret{}).
+	var rows []cardsecretcontract.SKUStockCount
+	if err := r.db.Model(&cardsecretdomain.Secret{}).
 		Select("product_id, sku_id, status, COUNT(*) as total").
-		Where("product_id IN ?", productIDs).
+		Where("product_id IN ? AND deleted_at IS NULL", productIDs).
 		Group("product_id, sku_id, status").
 		Scan(&rows).Error; err != nil {
 		return nil, err
@@ -367,8 +381,8 @@ func (r *Store) CountReserved(productID, skuID uint) (int64, error) {
 	if productID == 0 {
 		return 0, errors.New("invalid product id")
 	}
-	query := r.db.Model(&models.CardSecret{}).
-		Where("product_id = ? AND status = ?", productID, models.CardSecretStatusReserved)
+	query := r.db.Model(&cardsecretdomain.Secret{}).
+		Where("product_id = ? AND status = ? AND deleted_at IS NULL", productID, cardsecretdomain.StatusReserved)
 	if skuID > 0 {
 		query = query.Where("sku_id = ?", skuID)
 	}
@@ -385,10 +399,10 @@ func (r *Store) Reserve(ids []uint, orderID uint, reservedAt time.Time) (int64, 
 	if len(ids) == 0 || orderID == 0 {
 		return 0, nil
 	}
-	result := r.db.Model(&models.CardSecret{}).
-		Where("id IN ? AND status = ?", ids, models.CardSecretStatusAvailable).
+	result := r.db.Model(&cardsecretdomain.Secret{}).
+		Where("id IN ? AND status = ? AND deleted_at IS NULL", ids, cardsecretdomain.StatusAvailable).
 		Updates(map[string]interface{}{
-			"status":      models.CardSecretStatusReserved,
+			"status":      cardsecretdomain.StatusReserved,
 			"order_id":    orderID,
 			"reserved_at": reservedAt,
 			"updated_at":  reservedAt,
@@ -402,10 +416,10 @@ func (r *Store) ReleaseByOrder(orderID uint) (int64, error) {
 		return 0, nil
 	}
 	now := time.Now()
-	result := r.db.Model(&models.CardSecret{}).
-		Where("order_id = ? AND status = ?", orderID, models.CardSecretStatusReserved).
+	result := r.db.Model(&cardsecretdomain.Secret{}).
+		Where("order_id = ? AND status = ? AND deleted_at IS NULL", orderID, cardsecretdomain.StatusReserved).
 		Updates(map[string]interface{}{
-			"status":      models.CardSecretStatusAvailable,
+			"status":      cardsecretdomain.StatusAvailable,
 			"order_id":    nil,
 			"reserved_at": nil,
 			"updated_at":  now,
@@ -418,10 +432,10 @@ func (r *Store) MarkUsed(ids []uint, orderID uint, usedAt time.Time) (int64, err
 	if len(ids) == 0 || orderID == 0 {
 		return 0, nil
 	}
-	result := r.db.Model(&models.CardSecret{}).
-		Where("id IN ? AND status IN ? AND (order_id IS NULL OR order_id = ?)", ids, []string{models.CardSecretStatusAvailable, models.CardSecretStatusReserved}, orderID).
+	result := r.db.Model(&cardsecretdomain.Secret{}).
+		Where("id IN ? AND status IN ? AND (order_id IS NULL OR order_id = ?) AND deleted_at IS NULL", ids, []string{cardsecretdomain.StatusAvailable, cardsecretdomain.StatusReserved}, orderID).
 		Updates(map[string]interface{}{
-			"status":      models.CardSecretStatusUsed,
+			"status":      cardsecretdomain.StatusUsed,
 			"order_id":    orderID,
 			"used_at":     usedAt,
 			"reserved_at": nil,

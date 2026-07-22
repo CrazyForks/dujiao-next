@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
+	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
@@ -35,17 +37,17 @@ func newAutoStockProductService(t *testing.T) (catalogproductbootstrap.Services,
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.CardSecret{}); err != nil {
+	if err := db.AutoMigrate(&cardsecretdomain.Secret{}); err != nil {
 		t.Fatalf("auto migrate card secret failed: %v", err)
 	}
-	secretRepo := repository.NewCardSecretRepository(db)
+	secretRepo := cardsecretgormstore.New(db)
 	return catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{CardSecrets: secretRepo}), db
 }
 
 func insertCardSecrets(t *testing.T, db *gorm.DB, productID, skuID uint, status string, count int) {
 	t.Helper()
 	for i := 0; i < count; i++ {
-		row := models.CardSecret{
+		row := cardsecretdomain.Secret{
 			ProductID: productID,
 			SKUID:     skuID,
 			Secret:    fmt.Sprintf("secret-%d-%d-%s-%d", productID, skuID, status, i),
@@ -65,15 +67,15 @@ func newProductServiceForTest(t *testing.T) (catalogproductbootstrap.Services, *
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.CardSecret{}, &models.CardSecretBatch{}, &memberleveldomain.MemberLevelPrice{}, &cartdomain.Item{}, &mappingdomain.Mapping{}, &mappingdomain.SKUMapping{}, &models.Order{}, &models.OrderItem{}, &models.PaymentChannel{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &cardsecretdomain.Secret{}, &cardsecretdomain.Batch{}, &memberleveldomain.MemberLevelPrice{}, &cartdomain.Item{}, &mappingdomain.Mapping{}, &mappingdomain.SKUMapping{}, &models.Order{}, &models.OrderItem{}, &models.PaymentChannel{}); err != nil {
 		t.Fatalf("auto migrate product service tables failed: %v", err)
 	}
 
 	return catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
 		Products:          productgormstore.NewProductStore(db),
 		SKUs:              productgormstore.NewSKUStore(db),
-		CardSecrets:       repository.NewCardSecretRepository(db),
-		CardSecretBatches: repository.NewCardSecretBatchRepository(db),
+		CardSecrets:       cardsecretgormstore.New(db),
+		CardSecretBatches: cardsecretgormstore.NewBatch(db),
 		Categories:        categorygormstore.NewCategoryStore(db),
 		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
 		Carts:             cartgormstore.New(db),

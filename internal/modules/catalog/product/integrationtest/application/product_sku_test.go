@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"testing"
 
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -11,7 +12,6 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
@@ -64,7 +64,7 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 		t.Fatalf("create spare sku failed: %v", err)
 	}
 
-	insertCardSecrets(t, db, product.ID, stockSKU.ID, models.CardSecretStatusAvailable, 1)
+	insertCardSecrets(t, db, product.ID, stockSKU.ID, cardsecretdomain.StatusAvailable, 1)
 
 	_, err := svc.Write.Update(strconv.FormatUint(uint64(product.ID), 10), productwrite.CreateProductInput{
 		CategoryID:      category.ID,

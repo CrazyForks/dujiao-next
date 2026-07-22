@@ -5,6 +5,7 @@ import (
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	apicredentialgormstore "github.com/dujiao-next/internal/modules/apicredential/infrastructure/gormstore"
 	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/infrastructure/gormstore"
+	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
@@ -38,8 +39,8 @@ func (c *Container) initRepositories() {
 	c.OrderRepo = repository.NewOrderRepository(db)
 	c.PaymentRepo = repository.NewPaymentRepository(db)
 	c.PaymentChannelRepo = repository.NewPaymentChannelRepository(db)
-	c.CardSecretRepo = repository.NewCardSecretRepository(db)
-	c.CardSecretBatchRepo = repository.NewCardSecretBatchRepository(db)
+	c.CardSecretRepo = cardsecretgormstore.New(db)
+	c.CardSecretBatchRepo = cardsecretgormstore.NewBatch(db)
 	c.GiftCardRepo = giftcardgormstore.New(db)
 	c.FulfillmentRepo = repository.NewFulfillmentRepository(db)
 	c.ProductRepo = productgormstore.NewProductStore(db)

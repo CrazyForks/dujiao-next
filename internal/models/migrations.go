@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -283,12 +284,12 @@ func backfillLegacySKUID(productToSKU map[uint]uint) error {
 				Update("sku_id", skuID).Error; err != nil {
 				return err
 			}
-			if err := tx.Unscoped().Model(&CardSecret{}).
+			if err := tx.Unscoped().Model(&cardsecretdomain.Secret{}).
 				Where("product_id = ? AND sku_id = 0", productID).
 				Update("sku_id", skuID).Error; err != nil {
 				return err
 			}
-			if err := tx.Unscoped().Model(&CardSecretBatch{}).
+			if err := tx.Unscoped().Model(&cardsecretdomain.Batch{}).
 				Where("product_id = ? AND sku_id = 0", productID).
 				Update("sku_id", skuID).Error; err != nil {
 				return err
@@ -326,7 +327,7 @@ func validateSKUMigrationIntegrity() error {
 			name: "card_secrets",
 			query: func() (int64, error) {
 				var count int64
-				err := DB.Model(&CardSecret{}).Where("sku_id = 0").Count(&count).Error
+				err := DB.Model(&cardsecretdomain.Secret{}).Where("sku_id = 0 AND deleted_at IS NULL").Count(&count).Error
 				return count, err
 			},
 		},
@@ -334,7 +335,7 @@ func validateSKUMigrationIntegrity() error {
 			name: "card_secret_batches",
 			query: func() (int64, error) {
 				var count int64
-				err := DB.Model(&CardSecretBatch{}).Where("sku_id = 0").Count(&count).Error
+				err := DB.Model(&cardsecretdomain.Batch{}).Where("sku_id = 0 AND deleted_at IS NULL").Count(&count).Error
 				return count, err
 			},
 		},

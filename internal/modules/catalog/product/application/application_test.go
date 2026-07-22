@@ -10,8 +10,8 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/cardsecret"
+	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 )
 
@@ -58,10 +58,10 @@ func (stub hiddenProductRepositoryStub) ListHiddenProductIDs(uint) ([]uint, erro
 }
 
 type stockCounterStub struct {
-	counts []cardsecret.SKUStockCount
+	counts []cardsecretcontract.SKUStockCount
 }
 
-func (stub stockCounterStub) CountStockByProductIDs([]uint) ([]cardsecret.SKUStockCount, error) {
+func (stub stockCounterStub) CountStockByProductIDs([]uint) ([]cardsecretcontract.SKUStockCount, error) {
 	return stub.counts, nil
 }
 
@@ -124,10 +124,10 @@ func TestQueryServicePreservesInjectedCompatibilityErrors(t *testing.T) {
 }
 
 func TestApplyAutoStockCountsAssignsLegacyStockToOneSKU(t *testing.T) {
-	service := NewService(Options{Stock: stockCounterStub{counts: []cardsecret.SKUStockCount{
-		{ProductID: 30, SKUID: 0, Status: models.CardSecretStatusAvailable, Total: 2},
-		{ProductID: 30, SKUID: 101, Status: models.CardSecretStatusAvailable, Total: 3},
-		{ProductID: 30, SKUID: 102, Status: models.CardSecretStatusAvailable, Total: 4},
+	service := NewService(Options{Stock: stockCounterStub{counts: []cardsecretcontract.SKUStockCount{
+		{ProductID: 30, SKUID: 0, Status: cardsecretdomain.StatusAvailable, Total: 2},
+		{ProductID: 30, SKUID: 101, Status: cardsecretdomain.StatusAvailable, Total: 3},
+		{ProductID: 30, SKUID: 102, Status: cardsecretdomain.StatusAvailable, Total: 4},
 	}}})
 	products := []productdomain.Product{{
 		ID:              30,

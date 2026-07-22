@@ -3,10 +3,10 @@ package gormstore
 import (
 	"strings"
 
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
 
 	"gorm.io/gorm"
@@ -112,9 +112,9 @@ func (r *Store) GetStockStats(lowStockThreshold int64) (dashboard.StockStatsRow,
 		Total     int64
 	}
 	var rows []countRow
-	query := r.db.Model(&models.CardSecret{}).
+	query := r.db.Model(&cardsecretdomain.Secret{}).
 		Select("product_id, sku_id, COUNT(*) as total").
-		Where("product_id IN ? AND status = ?", autoProductIDs, models.CardSecretStatusAvailable)
+		Where("product_id IN ? AND status = ? AND deleted_at IS NULL", autoProductIDs, cardsecretdomain.StatusAvailable)
 	if len(allActiveSKUIDs) > 0 {
 		query = query.Where("sku_id = 0 OR sku_id IN ?", allActiveSKUIDs)
 	} else {
@@ -202,9 +202,9 @@ func (r *Store) GetInventoryAlertItems(lowStockThreshold int64) ([]dashboard.Inv
 			Total     int64
 		}
 		rows := make([]countRow, 0)
-		if err := r.db.Model(&models.CardSecret{}).
+		if err := r.db.Model(&cardsecretdomain.Secret{}).
 			Select("product_id, sku_id, COUNT(*) as total").
-			Where("product_id IN ? AND status = ?", autoProductIDs, models.CardSecretStatusAvailable).
+			Where("product_id IN ? AND status = ? AND deleted_at IS NULL", autoProductIDs, cardsecretdomain.StatusAvailable).
 			Group("product_id, sku_id").
 			Scan(&rows).Error; err != nil {
 			return nil, err

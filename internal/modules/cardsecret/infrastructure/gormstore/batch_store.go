@@ -2,8 +2,10 @@ package gormstore
 
 import (
 	"errors"
+	"time"
 
-	"github.com/dujiao-next/internal/models"
+	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 
 	"gorm.io/gorm"
 )
@@ -13,11 +15,14 @@ type BatchStore struct {
 	db *gorm.DB
 }
 
+var _ cardsecretcontract.BatchRepository = (*BatchStore)(nil)
+
 func NewBatch(db *gorm.DB) *BatchStore {
 	return &BatchStore{db: db}
 }
 
-func (r *BatchStore) WithTx(tx *gorm.DB) *BatchStore {
+// BindTx 将批次端口绑定到调用方事务，不暴露具体 BatchStore 类型。
+func (r *BatchStore) BindTx(tx *gorm.DB) cardsecretcontract.BatchRepository {
 	if tx == nil {
 		return r
 	}
@@ -25,7 +30,7 @@ func (r *BatchStore) WithTx(tx *gorm.DB) *BatchStore {
 }
 
 // Create 创建批次
-func (r *BatchStore) Create(batch *models.CardSecretBatch) error {
+func (r *BatchStore) Create(batch *cardsecretdomain.Batch) error {
 	if batch == nil {
 		return errors.New("batch is nil")
 	}
@@ -33,12 +38,12 @@ func (r *BatchStore) Create(batch *models.CardSecretBatch) error {
 }
 
 // GetByID 获取批次
-func (r *BatchStore) GetByID(id uint) (*models.CardSecretBatch, error) {
+func (r *BatchStore) GetByID(id uint) (*cardsecretdomain.Batch, error) {
 	if id == 0 {
 		return nil, errors.New("invalid batch id")
 	}
-	var batch models.CardSecretBatch
-	if err := r.db.First(&batch, id).Error; err != nil {
+	var batch cardsecretdomain.Batch
+	if err := r.db.Where("deleted_at IS NULL").First(&batch, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -48,11 +53,11 @@ func (r *BatchStore) GetByID(id uint) (*models.CardSecretBatch, error) {
 }
 
 // ListByProduct 按商品获取批次列表
-func (r *BatchStore) ListByProduct(productID, skuID uint, page, pageSize int) ([]models.CardSecretBatch, int64, error) {
+func (r *BatchStore) ListByProduct(productID, skuID uint, page, pageSize int) ([]cardsecretdomain.Batch, int64, error) {
 	if productID == 0 {
 		return nil, 0, errors.New("invalid product id")
 	}
-	query := r.db.Model(&models.CardSecretBatch{}).Where("product_id = ?", productID)
+	query := r.db.Model(&cardsecretdomain.Batch{}).Where("product_id = ? AND deleted_at IS NULL", productID)
 	if skuID > 0 {
 		query = query.Where("sku_id = ?", skuID)
 	}
@@ -67,7 +72,7 @@ func (r *BatchStore) ListByProduct(productID, skuID uint, page, pageSize int) ([
 		query = query.Limit(pageSize).Offset(offset)
 	}
 
-	var items []models.CardSecretBatch
+	var items []cardsecretdomain.Batch
 	if err := query.Order("id desc").Find(&items).Error; err != nil {
 		return nil, 0, err
 	}
@@ -79,5 +84,8 @@ func (r *BatchStore) DeleteByProduct(productID uint) error {
 	if productID == 0 {
 		return errors.New("invalid product id")
 	}
-	return r.db.Where("product_id = ?", productID).Delete(&models.CardSecretBatch{}).Error
+	now := time.Now()
+	return r.db.Model(&cardsecretdomain.Batch{}).
+		Where("product_id = ? AND deleted_at IS NULL", productID).
+		Updates(map[string]interface{}{"deleted_at": now, "updated_at": now}).Error
 }

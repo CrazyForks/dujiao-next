@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
@@ -200,8 +201,8 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 	service := catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
 		Products:          productRepo,
 		SKUs:              productgormstore.NewSKUStore(db),
-		CardSecrets:       repository.NewCardSecretRepository(db),
-		CardSecretBatches: repository.NewCardSecretBatchRepository(db),
+		CardSecrets:       cardsecretgormstore.New(db),
+		CardSecretBatches: cardsecretgormstore.NewBatch(db),
 		Categories:        categorygormstore.NewCategoryStore(db),
 		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
 		Carts:             cartgormstore.New(db),

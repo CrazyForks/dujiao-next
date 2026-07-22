@@ -1,9 +1,9 @@
-package cardsecret
+package application
 
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 )
 
 // CardSecretStats 卡密统计
@@ -95,11 +95,11 @@ func (s *Service) ListBatches(productID, skuID uint, page, pageSize int) ([]Card
 	for _, row := range countRows {
 		counter := counterMap[row.BatchID]
 		switch row.Status {
-		case models.CardSecretStatusAvailable:
+		case cardsecretdomain.StatusAvailable:
 			counter.available = row.Total
-		case models.CardSecretStatusReserved:
+		case cardsecretdomain.StatusReserved:
 			counter.reserved = row.Total
-		case models.CardSecretStatusUsed:
+		case cardsecretdomain.StatusUsed:
 			counter.used = row.Total
 		}
 		counterMap[row.BatchID] = counter

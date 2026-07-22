@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
@@ -40,7 +41,7 @@ type OrderService struct {
 	userRepo                usercontract.Store
 	productRepo             orderProductStore
 	productSKURepo          orderSKUStore
-	cardSecretRepo          repository.CardSecretRepository
+	cardSecretRepo          cardSecretStore
 	resellerRepo            repository.ResellerRepository
 	couponRepo              orderCouponRepository
 	couponUsageRepo         orderCouponUsageRepository
@@ -80,6 +81,11 @@ type orderSKUStore interface {
 	BindTx(tx *gorm.DB) productcontract.SKURepository
 }
 
+type cardSecretStore interface {
+	cardsecretcontract.Repository
+	BindTx(tx *gorm.DB) cardsecretcontract.Repository
+}
+
 type orderCouponRepository interface {
 	couponcontract.Repository
 	WithTx(tx *gorm.DB) couponcontract.Repository
@@ -109,7 +115,7 @@ type OrderServiceOptions struct {
 	UserStore                 usercontract.Store
 	ProductRepo               orderProductStore
 	ProductSKURepo            orderSKUStore
-	CardSecretRepo            repository.CardSecretRepository
+	CardSecretRepo            cardSecretStore
 	ResellerRepo              repository.ResellerRepository
 	CouponRepo                orderCouponRepository
 	CouponUsageRepo           orderCouponUsageRepository
@@ -629,7 +635,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 				if s.cardSecretRepo == nil {
 					return ErrCardSecretInsufficient
 				}
-				secretRepo := s.cardSecretRepo.WithTx(tx)
+				secretRepo := s.cardSecretRepo.BindTx(tx)
 				rows, err := secretRepo.ListAvailableByProductForUpdate(plan.Item.ProductID, plan.Item.SKUID, plan.Item.Quantity)
 				if err != nil {
 					return err

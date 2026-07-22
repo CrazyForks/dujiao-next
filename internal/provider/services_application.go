@@ -10,7 +10,7 @@ import (
 	giftcardintegration "github.com/dujiao-next/internal/integration/giftcard"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/cardsecret"
+	cardsecretapp "github.com/dujiao-next/internal/modules/cardsecret/application"
 	cartapp "github.com/dujiao-next/internal/modules/cart/application"
 	contentapp "github.com/dujiao-next/internal/modules/content/application"
 	"github.com/dujiao-next/internal/modules/content/infrastructure/gormstore"
@@ -100,7 +100,7 @@ func (c *Container) initApplicationServices() {
 		c.SettingService, c.Config.Email,
 		c.ExternalIdentityStore,
 	)
-	c.CardSecretService = cardsecret.NewService(cardsecret.ServiceOptions{
+	c.CardSecretService = cardsecretapp.NewService(cardsecretapp.ServiceOptions{
 		Secrets:      c.CardSecretRepo,
 		Batches:      c.CardSecretBatchRepo,
 		Transactions: c.CardSecretRepo,

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
+	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
@@ -48,8 +50,8 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.CardSecret{},
-		&models.CardSecretBatch{},
+		&cardsecretdomain.Secret{},
+		&cardsecretdomain.Batch{},
 		&memberleveldomain.MemberLevelPrice{},
 		&cartdomain.Item{},
 		&mappingdomain.Mapping{},
@@ -66,8 +68,8 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 	svc := catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
 		Products:          productgormstore.NewProductStore(db),
 		SKUs:              productgormstore.NewSKUStore(db),
-		CardSecrets:       repository.NewCardSecretRepository(db),
-		CardSecretBatches: repository.NewCardSecretBatchRepository(db),
+		CardSecrets:       cardsecretgormstore.New(db),
+		CardSecretBatches: cardsecretgormstore.NewBatch(db),
 		Categories:        categorygormstore.NewCategoryStore(db),
 		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
 		Carts:             cartgormstore.New(db),

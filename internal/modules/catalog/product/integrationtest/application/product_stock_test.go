@@ -3,11 +3,11 @@ package integrationtest
 import (
 	"testing"
 
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
+	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
 )
 
 func TestApplyAutoStockCounts_LegacyStockPrefersDefaultSKU(t *testing.T) {
@@ -16,12 +16,12 @@ func TestApplyAutoStockCounts_LegacyStockPrefersDefaultSKU(t *testing.T) {
 	defaultSKUID := uint(101)
 	otherSKUID := uint(102)
 
-	insertCardSecrets(t, db, productID, 0, models.CardSecretStatusAvailable, 2)
-	insertCardSecrets(t, db, productID, 0, models.CardSecretStatusReserved, 1)
-	insertCardSecrets(t, db, productID, 0, models.CardSecretStatusUsed, 1)
-	insertCardSecrets(t, db, productID, defaultSKUID, models.CardSecretStatusAvailable, 3)
-	insertCardSecrets(t, db, productID, otherSKUID, models.CardSecretStatusAvailable, 4)
-	counts, err := repository.NewCardSecretRepository(db).CountStockByProductIDs([]uint{productID})
+	insertCardSecrets(t, db, productID, 0, cardsecretdomain.StatusAvailable, 2)
+	insertCardSecrets(t, db, productID, 0, cardsecretdomain.StatusReserved, 1)
+	insertCardSecrets(t, db, productID, 0, cardsecretdomain.StatusUsed, 1)
+	insertCardSecrets(t, db, productID, defaultSKUID, cardsecretdomain.StatusAvailable, 3)
+	insertCardSecrets(t, db, productID, otherSKUID, cardsecretdomain.StatusAvailable, 4)
+	counts, err := cardsecretgormstore.New(db).CountStockByProductIDs([]uint{productID})
 	if err != nil {
 		t.Fatalf("count stock by product ids failed: %v", err)
 	}
@@ -35,15 +35,15 @@ func TestApplyAutoStockCounts_LegacyStockPrefersDefaultSKU(t *testing.T) {
 		}
 		bySKUAndStatus[row.SKUID][row.Status] = row.Total
 	}
-	if bySKUAndStatus[0][models.CardSecretStatusAvailable] != 2 ||
-		bySKUAndStatus[0][models.CardSecretStatusReserved] != 1 ||
-		bySKUAndStatus[0][models.CardSecretStatusUsed] != 1 {
+	if bySKUAndStatus[0][cardsecretdomain.StatusAvailable] != 2 ||
+		bySKUAndStatus[0][cardsecretdomain.StatusReserved] != 1 ||
+		bySKUAndStatus[0][cardsecretdomain.StatusUsed] != 1 {
 		t.Fatalf("unexpected legacy sku(0) rows: %+v", bySKUAndStatus[0])
 	}
-	if bySKUAndStatus[defaultSKUID][models.CardSecretStatusAvailable] != 3 {
+	if bySKUAndStatus[defaultSKUID][cardsecretdomain.StatusAvailable] != 3 {
 		t.Fatalf("unexpected default sku rows: %+v", bySKUAndStatus[defaultSKUID])
 	}
-	if bySKUAndStatus[otherSKUID][models.CardSecretStatusAvailable] != 4 {
+	if bySKUAndStatus[otherSKUID][cardsecretdomain.StatusAvailable] != 4 {
 		t.Fatalf("unexpected other sku rows: %+v", bySKUAndStatus[otherSKUID])
 	}
 

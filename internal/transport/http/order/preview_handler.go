@@ -9,7 +9,7 @@ import (
 
 	"github.com/dujiao-next/internal/i18n"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
-	"github.com/dujiao-next/internal/modules/cardsecret"
+	cardsecretapp "github.com/dujiao-next/internal/modules/cardsecret/application"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
@@ -329,7 +329,7 @@ var userOrderCommonErrorRules = []mappedError{
 	{target: productdomain.ErrMaxPurchaseExceeded, code: response.CodeBadRequest, key: "error.product_max_purchase_exceeded"},
 	{target: productdomain.ErrMinPurchaseNotMet, code: response.CodeBadRequest, key: "error.product_min_purchase_not_met"},
 	{target: ErrManualStockInsufficient, code: response.CodeBadRequest, key: "error.manual_stock_insufficient"},
-	{target: cardsecret.ErrInsufficient, code: response.CodeBadRequest, key: "error.card_secret_insufficient"},
+	{target: cardsecretapp.ErrInsufficient, code: response.CodeBadRequest, key: "error.card_secret_insufficient"},
 	{target: ErrOrderCurrencyMismatch, code: response.CodeBadRequest, key: "error.order_currency_mismatch"},
 	{target: productcontract.ErrProductPriceInvalid, code: response.CodeBadRequest, key: "error.product_price_invalid"},
 	{target: ErrProductNotAvailable, code: response.CodeBadRequest, key: "error.product_not_available"},
@@ -377,7 +377,7 @@ var guestOrderCommonErrorRules = []mappedError{
 	{target: productdomain.ErrPurchaseQuantityInvalid, code: response.CodeBadRequest, key: "error.order_item_invalid"},
 	{target: ErrInvalidOrderAmount, code: response.CodeBadRequest, key: "error.order_amount_invalid"},
 	{target: ErrManualStockInsufficient, code: response.CodeBadRequest, key: "error.manual_stock_insufficient"},
-	{target: cardsecret.ErrInsufficient, code: response.CodeBadRequest, key: "error.card_secret_insufficient"},
+	{target: cardsecretapp.ErrInsufficient, code: response.CodeBadRequest, key: "error.card_secret_insufficient"},
 	{target: ErrOrderCurrencyMismatch, code: response.CodeBadRequest, key: "error.order_currency_mismatch"},
 	{target: productcontract.ErrProductPriceInvalid, code: response.CodeBadRequest, key: "error.product_price_invalid"},
 	{target: ErrProductNotAvailable, code: response.CodeBadRequest, key: "error.product_not_available"},

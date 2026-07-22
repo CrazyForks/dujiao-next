@@ -40,7 +40,7 @@ func (s *OrderService) cancelOrderWithChildren(order *models.Order, rollbackCoup
 			}
 		}
 		if s.cardSecretRepo != nil {
-			secretRepo := s.cardSecretRepo.WithTx(tx)
+			secretRepo := s.cardSecretRepo.BindTx(tx)
 			if len(order.Children) > 0 {
 				for _, child := range order.Children {
 					if _, err := secretRepo.ReleaseByOrder(child.ID); err != nil {
@@ -505,7 +505,7 @@ func (s *OrderService) cancelSingleOrderInTx(tx *gorm.DB, order *models.Order, t
 		return ErrOrderUpdateFailed
 	}
 	if s.cardSecretRepo != nil {
-		secretRepo := s.cardSecretRepo.WithTx(tx)
+		secretRepo := s.cardSecretRepo.BindTx(tx)
 		if _, err := secretRepo.ReleaseByOrder(order.ID); err != nil {
 			return err
 		}

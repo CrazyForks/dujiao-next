@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"testing"
 
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -102,7 +102,7 @@ func TestGetStockStatsUsesActiveManualSKUs(t *testing.T) {
 
 func TestGetInventoryAlertItemsFallsBackToProductLevelWhenOnlyInactiveAutoSKUHasStock(t *testing.T) {
 	repo, db := setupDashboardRepositoryTest(t)
-	if err := db.AutoMigrate(&models.CardSecret{}); err != nil {
+	if err := db.AutoMigrate(&cardsecretdomain.Secret{}); err != nil {
 		t.Fatalf("migrate card secret failed: %v", err)
 	}
 
@@ -145,11 +145,11 @@ func TestGetInventoryAlertItemsFallsBackToProductLevelWhenOnlyInactiveAutoSKUHas
 	}
 
 	for idx := 0; idx < 2; idx++ {
-		row := &models.CardSecret{
+		row := &cardsecretdomain.Secret{
 			ProductID: product.ID,
 			SKUID:     legacySKU.ID,
 			Secret:    fmt.Sprintf("LEGACY-%d", idx),
-			Status:    models.CardSecretStatusAvailable,
+			Status:    cardsecretdomain.StatusAvailable,
 		}
 		if err := db.Create(row).Error; err != nil {
 			t.Fatalf("create legacy card secret failed: %v", err)

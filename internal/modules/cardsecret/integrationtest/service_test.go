@@ -1,4 +1,4 @@
-package cardsecret_test
+package integrationtest
 
 import (
 	"bytes"
@@ -15,8 +15,10 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/cardsecret"
-	"github.com/dujiao-next/internal/repository"
+	cardsecretapp "github.com/dujiao-next/internal/modules/cardsecret/application"
+	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
+	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -25,26 +27,26 @@ import (
 	"gorm.io/gorm"
 )
 
-type CreateCardSecretBatchInput = cardsecret.CreateCardSecretBatchInput
-type ImportCardSecretCSVInput = cardsecret.ImportCardSecretCSVInput
-type ListCardSecretInput = cardsecret.ListCardSecretInput
-type ExportAvailableCardSecretInput = cardsecret.ExportAvailableCardSecretInput
+type CreateCardSecretBatchInput = cardsecretapp.CreateCardSecretBatchInput
+type ImportCardSecretCSVInput = cardsecretapp.ImportCardSecretCSVInput
+type ListCardSecretInput = cardsecretapp.ListCardSecretInput
+type ExportAvailableCardSecretInput = cardsecretapp.ExportAvailableCardSecretInput
 
 var (
-	ErrProductSKURequired     = cardsecret.ErrProductSKURequired
-	ErrProductSKUInvalid      = cardsecret.ErrProductSKUInvalid
-	ErrNotFound               = cardsecret.ErrNotFound
-	ErrCardSecretInvalid      = cardsecret.ErrInvalid
-	ErrCardSecretInsufficient = cardsecret.ErrInsufficient
+	ErrProductSKURequired     = cardsecretapp.ErrProductSKURequired
+	ErrProductSKUInvalid      = cardsecretapp.ErrProductSKUInvalid
+	ErrNotFound               = cardsecretapp.ErrNotFound
+	ErrCardSecretInvalid      = cardsecretapp.ErrInvalid
+	ErrCardSecretInsufficient = cardsecretapp.ErrInsufficient
 )
 
 func NewCardSecretService(
-	secrets repository.CardSecretRepository,
-	batches repository.CardSecretBatchRepository,
+	secrets *cardsecretgormstore.Store,
+	batches *cardsecretgormstore.BatchStore,
 	products productcontract.Repository,
 	productSKUs productcontract.SKURepository,
-) *cardsecret.Service {
-	return cardsecret.NewService(cardsecret.ServiceOptions{
+) *cardsecretapp.Service {
+	return cardsecretapp.NewService(cardsecretapp.ServiceOptions{
 		Secrets:      secrets,
 		Batches:      batches,
 		Transactions: secrets,
@@ -65,8 +67,8 @@ func setupCardSecretServiceTestDB(t *testing.T) *gorm.DB {
 	if err := db.AutoMigrate(
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.CardSecretBatch{},
-		&models.CardSecret{},
+		&cardsecretdomain.Batch{},
+		&cardsecretdomain.Secret{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -137,8 +139,8 @@ func TestCreateCardSecretBatchAutoMultiSKURequiresExplicitSKU(t *testing.T) {
 	}
 
 	svc := NewCardSecretService(
-		repository.NewCardSecretRepository(db),
-		repository.NewCardSecretBatchRepository(db),
+		cardsecretgormstore.New(db),
+		cardsecretgormstore.NewBatch(db),
 		productgormstore.NewProductStore(db),
 		productgormstore.NewSKUStore(db),
 	)
@@ -196,8 +198,8 @@ func TestCreateCardSecretBatchAutoSingleActiveFallsBackToOnlyActiveSKU(t *testin
 	}
 
 	svc := NewCardSecretService(
-		repository.NewCardSecretRepository(db),
-		repository.NewCardSecretBatchRepository(db),
+		cardsecretgormstore.New(db),
+		cardsecretgormstore.NewBatch(db),
 		productgormstore.NewProductStore(db),
 		productgormstore.NewSKUStore(db),
 	)
@@ -246,8 +248,8 @@ func TestCreateCardSecretBatchDeduplicateOption(t *testing.T) {
 	}
 
 	svc := NewCardSecretService(
-		repository.NewCardSecretRepository(db),
-		repository.NewCardSecretBatchRepository(db),
+		cardsecretgormstore.New(db),
+		cardsecretgormstore.NewBatch(db),
 		productgormstore.NewProductStore(db),
 		productgormstore.NewSKUStore(db),
 	)
@@ -330,8 +332,8 @@ func TestImportCardSecretCSVKeepsDuplicatesWhenDeduplicateDisabled(t *testing.T)
 	}
 
 	svc := NewCardSecretService(
-		repository.NewCardSecretRepository(db),
-		repository.NewCardSecretBatchRepository(db),
+		cardsecretgormstore.New(db),
+		cardsecretgormstore.NewBatch(db),
 		productgormstore.NewProductStore(db),
 		productgormstore.NewSKUStore(db),
 	)
@@ -399,10 +401,10 @@ func TestCardSecretServiceSupportsBatchTargetOperations(t *testing.T) {
 		t.Fatalf("create default sku failed: %v", err)
 	}
 
-	secretRepo := repository.NewCardSecretRepository(db)
+	secretRepo := cardsecretgormstore.New(db)
 	svc := NewCardSecretService(
 		secretRepo,
-		repository.NewCardSecretBatchRepository(db),
+		cardsecretgormstore.NewBatch(db),
 		productgormstore.NewProductStore(db),
 		productgormstore.NewSKUStore(db),
 	)
@@ -449,7 +451,7 @@ func TestCardSecretServiceSupportsBatchTargetOperations(t *testing.T) {
 		}
 	}
 
-	affected, err := svc.BatchUpdateCardSecretStatus(nil, batchA.ID, ListCardSecretInput{}, models.CardSecretStatusUsed)
+	affected, err := svc.BatchUpdateCardSecretStatus(nil, batchA.ID, ListCardSecretInput{}, cardsecretdomain.StatusUsed)
 	if err != nil {
 		t.Fatalf("batch update status by batch id failed: %v", err)
 	}
@@ -466,7 +468,7 @@ func TestCardSecretServiceSupportsBatchTargetOperations(t *testing.T) {
 		t.Fatalf("list batch A secrets failed: %v", err)
 	}
 	for _, row := range batchASecrets {
-		if row.Status != models.CardSecretStatusUsed {
+		if row.Status != cardsecretdomain.StatusUsed {
 			t.Fatalf("batch A status want used got %s", row.Status)
 		}
 	}
@@ -479,7 +481,7 @@ func TestCardSecretServiceSupportsBatchTargetOperations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list batch B secrets failed: %v", err)
 	}
-	if len(batchBSecrets) != 1 || batchBSecrets[0].Status != models.CardSecretStatusAvailable {
+	if len(batchBSecrets) != 1 || batchBSecrets[0].Status != cardsecretdomain.StatusAvailable {
 		t.Fatalf("batch B status should remain available, got %+v", batchBSecrets)
 	}
 
@@ -504,6 +506,13 @@ func TestCardSecretServiceSupportsBatchTargetOperations(t *testing.T) {
 	}
 	if deleted != 1 {
 		t.Fatalf("delete batch B affected want 1 got %d", deleted)
+	}
+	var softDeleted cardsecretdomain.Secret
+	if err := db.First(&softDeleted, batchBIDs[0]).Error; err != nil {
+		t.Fatalf("load soft-deleted batch B secret failed: %v", err)
+	}
+	if softDeleted.DeletedAt == nil {
+		t.Fatal("batch delete must preserve the row with deleted_at set")
 	}
 
 	batchBIDs, err = secretRepo.ListIDsByBatchID(batchB.ID)
@@ -541,8 +550,8 @@ func TestExportCardSecretsWithEmptyFilterExportsCurrentResults(t *testing.T) {
 	}
 
 	svc := NewCardSecretService(
-		repository.NewCardSecretRepository(db),
-		repository.NewCardSecretBatchRepository(db),
+		cardsecretgormstore.New(db),
+		cardsecretgormstore.NewBatch(db),
 		productgormstore.NewProductStore(db),
 		productgormstore.NewSKUStore(db),
 	)
@@ -595,8 +604,8 @@ func TestCardSecretServiceSupportsKeywordAndBatchNoFilters(t *testing.T) {
 	}
 
 	svc := NewCardSecretService(
-		repository.NewCardSecretRepository(db),
-		repository.NewCardSecretBatchRepository(db),
+		cardsecretgormstore.New(db),
+		cardsecretgormstore.NewBatch(db),
 		productgormstore.NewProductStore(db),
 		productgormstore.NewSKUStore(db),
 	)
@@ -672,8 +681,8 @@ func TestCardSecretServiceListBatchesReturnsRealtimeCounts(t *testing.T) {
 	}
 
 	svc := NewCardSecretService(
-		repository.NewCardSecretRepository(db),
-		repository.NewCardSecretBatchRepository(db),
+		cardsecretgormstore.New(db),
+		cardsecretgormstore.NewBatch(db),
 		productgormstore.NewProductStore(db),
 		productgormstore.NewSKUStore(db),
 	)
@@ -697,17 +706,17 @@ func TestCardSecretServiceListBatchesReturnsRealtimeCounts(t *testing.T) {
 		t.Fatalf("create batch B failed: %v", err)
 	}
 
-	rows, err := repository.NewCardSecretRepository(db).ListIDs(repository.CardSecretListFilter{
+	rows, err := cardsecretgormstore.New(db).ListIDs(cardsecretcontract.ListFilter{
 		ProductID: product.ID,
 		BatchID:   batchA.ID,
 	})
 	if err != nil {
 		t.Fatalf("list batch A ids failed: %v", err)
 	}
-	if _, err := svc.BatchUpdateCardSecretStatus(rows[:1], 0, ListCardSecretInput{}, models.CardSecretStatusReserved); err != nil {
+	if _, err := svc.BatchUpdateCardSecretStatus(rows[:1], 0, ListCardSecretInput{}, cardsecretdomain.StatusReserved); err != nil {
 		t.Fatalf("mark batch A reserved failed: %v", err)
 	}
-	if _, err := svc.BatchUpdateCardSecretStatus(rows[1:], 0, ListCardSecretInput{}, models.CardSecretStatusUsed); err != nil {
+	if _, err := svc.BatchUpdateCardSecretStatus(rows[1:], 0, ListCardSecretInput{}, cardsecretdomain.StatusUsed); err != nil {
 		t.Fatalf("mark batch A used failed: %v", err)
 	}
 	if _, err := svc.BatchDeleteCardSecrets(nil, batchB.ID, ListCardSecretInput{}); err != nil {
@@ -763,8 +772,8 @@ func TestExportAvailableCardSecretsMarksUsed(t *testing.T) {
 	}
 
 	svc := NewCardSecretService(
-		repository.NewCardSecretRepository(db),
-		repository.NewCardSecretBatchRepository(db),
+		cardsecretgormstore.New(db),
+		cardsecretgormstore.NewBatch(db),
 		productgormstore.NewProductStore(db),
 		productgormstore.NewSKUStore(db),
 	)
@@ -806,9 +815,9 @@ func TestExportAvailableCardSecretsMarksUsed(t *testing.T) {
 	for _, row := range rows {
 		statusBySecret[row.Secret] = row.Status
 	}
-	if statusBySecret["EXP-A-001"] != models.CardSecretStatusUsed ||
-		statusBySecret["EXP-A-002"] != models.CardSecretStatusUsed ||
-		statusBySecret["EXP-A-003"] != models.CardSecretStatusAvailable {
+	if statusBySecret["EXP-A-001"] != cardsecretdomain.StatusUsed ||
+		statusBySecret["EXP-A-002"] != cardsecretdomain.StatusUsed ||
+		statusBySecret["EXP-A-003"] != cardsecretdomain.StatusAvailable {
 		t.Fatalf("unexpected statuses: %+v", statusBySecret)
 	}
 }
@@ -838,8 +847,8 @@ func TestExportAvailableCardSecretsDeletesAfterExport(t *testing.T) {
 	}
 
 	svc := NewCardSecretService(
-		repository.NewCardSecretRepository(db),
-		repository.NewCardSecretBatchRepository(db),
+		cardsecretgormstore.New(db),
+		cardsecretgormstore.NewBatch(db),
 		productgormstore.NewProductStore(db),
 		productgormstore.NewSKUStore(db),
 	)
@@ -878,7 +887,7 @@ func TestExportAvailableCardSecretsDeletesAfterExport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list secrets failed: %v", err)
 	}
-	if len(rows) != 1 || rows[0].Secret != "EXP-D-002" || rows[0].Status != models.CardSecretStatusAvailable {
+	if len(rows) != 1 || rows[0].Secret != "EXP-D-002" || rows[0].Status != cardsecretdomain.StatusAvailable {
 		t.Fatalf("unexpected remaining rows: %+v", rows)
 	}
 }

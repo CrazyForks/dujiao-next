@@ -5,6 +5,7 @@ import (
 
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 
+	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
 	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 
 	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
@@ -34,6 +35,18 @@ type SKUStore interface {
 	BindTx(tx *gorm.DB) productcontract.SKURepository
 }
 
+// CardSecretStore 是商品事务所需的卡密库存端口与事务绑定能力。
+type CardSecretStore interface {
+	cardsecretcontract.Repository
+	BindTx(tx *gorm.DB) cardsecretcontract.Repository
+}
+
+// CardSecretBatchStore 是商品级联删除所需的卡密批次端口与事务绑定能力。
+type CardSecretBatchStore interface {
+	cardsecretcontract.BatchRepository
+	BindTx(tx *gorm.DB) cardsecretcontract.BatchRepository
+}
+
 // MappingStore 是商品级联删除所需的映射持久化与事务能力。
 type MappingStore interface {
 	mappingcontract.MappingRepository
@@ -44,8 +57,8 @@ type MappingStore interface {
 type Dependencies struct {
 	Products          ProductStore
 	SKUs              SKUStore
-	CardSecrets       repository.CardSecretRepository
-	CardSecretBatches repository.CardSecretBatchRepository
+	CardSecrets       CardSecretStore
+	CardSecretBatches CardSecretBatchStore
 	Categories        categorycontract.Repository
 	MemberLevelPrices memberLevelPriceCleaner
 	Carts             *cartgormstore.Store
@@ -65,13 +78,13 @@ type Services struct {
 type productWriteUnitOfWork struct {
 	products    ProductStore
 	skus        SKUStore
-	cardSecrets repository.CardSecretRepository
+	cardSecrets CardSecretStore
 }
 
 func newProductWriteUnitOfWork(
 	products ProductStore,
 	skus SKUStore,
-	cardSecrets repository.CardSecretRepository,
+	cardSecrets CardSecretStore,
 ) productwrite.UnitOfWork {
 	return &productWriteUnitOfWork{
 		products:    products,
@@ -94,7 +107,7 @@ func (unit *productWriteUnitOfWork) WithinTransaction(fn func(repositories produ
 		}
 		var cardSecrets productwrite.CardSecretStockRepository
 		if unit.cardSecrets != nil {
-			cardSecrets = unit.cardSecrets.WithTx(tx)
+			cardSecrets = unit.cardSecrets.BindTx(tx)
 		}
 		return fn(productwrite.TransactionRepositories{
 			Products:    unit.products.BindTx(tx),
@@ -108,8 +121,8 @@ func (unit *productWriteUnitOfWork) WithinTransaction(fn func(repositories produ
 type productAdminUnitOfWork struct {
 	products          ProductStore
 	productSKUs       SKUStore
-	cardSecrets       repository.CardSecretRepository
-	cardSecretBatches repository.CardSecretBatchRepository
+	cardSecrets       CardSecretStore
+	cardSecretBatches CardSecretBatchStore
 	memberLevelPrices memberLevelPriceCleaner
 	carts             *cartgormstore.Store
 	productMappings   MappingStore
@@ -118,8 +131,8 @@ type productAdminUnitOfWork struct {
 func newProductAdminUnitOfWork(
 	products ProductStore,
 	productSKUs SKUStore,
-	cardSecrets repository.CardSecretRepository,
-	cardSecretBatches repository.CardSecretBatchRepository,
+	cardSecrets CardSecretStore,
+	cardSecretBatches CardSecretBatchStore,
 	memberLevelPrices memberLevelPriceCleaner,
 	carts *cartgormstore.Store,
 	productMappings MappingStore,
@@ -145,8 +158,8 @@ func (unit *productAdminUnitOfWork) WithinTransaction(fn func(productadmin.Delet
 	return unit.products.Transaction(func(tx *gorm.DB) error {
 		return fn(productadmin.DeleteRepositories{
 			Products:          unit.products.BindTx(tx),
-			CardSecrets:       unit.cardSecrets.WithTx(tx),
-			CardSecretBatches: unit.cardSecretBatches.WithTx(tx),
+			CardSecrets:       unit.cardSecrets.BindTx(tx),
+			CardSecretBatches: unit.cardSecretBatches.BindTx(tx),
 			SKUs:              unit.productSKUs.BindTx(tx),
 			MemberLevelPrices: memberLevelPriceDeleteAdapter{tx: tx, cleaner: unit.memberLevelPrices},
 			Carts:             unit.carts.WithTx(tx),

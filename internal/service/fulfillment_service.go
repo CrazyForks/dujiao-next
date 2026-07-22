@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
@@ -25,7 +26,7 @@ import (
 type FulfillmentService struct {
 	orderRepo             repository.OrderRepository
 	fulfillmentRepo       repository.FulfillmentRepository
-	secretRepo            repository.CardSecretRepository
+	secretRepo            cardSecretStore
 	queueClient           *queue.Client
 	settingService        *settingsapp.Service
 	defaultEmailConfig    config.EmailConfig
@@ -42,7 +43,7 @@ func (s *FulfillmentService) SetDownstreamCallbackService(svc DownstreamCallback
 func NewFulfillmentService(
 	orderRepo repository.OrderRepository,
 	fulfillmentRepo repository.FulfillmentRepository,
-	secretRepo repository.CardSecretRepository,
+	secretRepo cardSecretStore,
 	queueClient *queue.Client,
 	settingService *settingsapp.Service,
 	defaultEmailConfig config.EmailConfig,
@@ -232,24 +233,24 @@ func (s *FulfillmentService) CreateAuto(orderID uint) (*models.Fulfillment, erro
 		if s.secretRepo == nil {
 			return ErrFulfillmentCreateFailed
 		}
-		secretRepo := s.secretRepo.WithTx(tx)
-		reservedRows, err := secretRepo.ListByOrderAndStatus(orderID, models.CardSecretStatusReserved)
+		secretRepo := s.secretRepo.BindTx(tx)
+		reservedRows, err := secretRepo.ListByOrderAndStatus(orderID, cardsecretdomain.StatusReserved)
 		if err != nil {
 			return err
 		}
-		reservedByKey := make(map[string][]models.CardSecret)
+		reservedByKey := make(map[string][]cardsecretdomain.Secret)
 		for _, reserved := range reservedRows {
 			key := buildOrderItemKey(reserved.ProductID, reserved.SKUID)
 			reservedByKey[key] = append(reservedByKey[key], reserved)
 		}
-		var secrets []models.CardSecret
+		var secrets []cardsecretdomain.Secret
 		for _, item := range order.Items {
 			if item.ProductID == 0 || item.Quantity <= 0 {
 				return ErrFulfillmentInvalid
 			}
 			key := buildOrderItemKey(item.ProductID, item.SKUID)
 			cachedReserved := reservedByKey[key]
-			selected := make([]models.CardSecret, 0, item.Quantity)
+			selected := make([]cardsecretdomain.Secret, 0, item.Quantity)
 			if len(cachedReserved) > 0 {
 				take := item.Quantity
 				if len(cachedReserved) < take {

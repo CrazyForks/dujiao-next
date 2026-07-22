@@ -9,7 +9,7 @@ import (
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
-	"github.com/dujiao-next/internal/modules/cardsecret"
+	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	"github.com/dujiao-next/internal/modules/reseller"
 )
@@ -39,7 +39,7 @@ type HiddenProductRepository interface {
 
 // StockCounter 是商品库存聚合所需的最小卡密库存端口。
 type StockCounter interface {
-	CountStockByProductIDs(productIDs []uint) ([]cardsecret.SKUStockCount, error)
+	CountStockByProductIDs(productIDs []uint) ([]cardsecretcontract.SKUStockCount, error)
 }
 
 // TenantContext 商品读取用例关心的租户上下文；值对象归属 modules/reseller。

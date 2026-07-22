@@ -1,4 +1,4 @@
-package cardsecret
+package application
 
 import (
 	"encoding/csv"
@@ -12,7 +12,8 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 )
 
 // CreateCardSecretBatchInput 批量录入卡密输入
@@ -28,7 +29,7 @@ type CreateCardSecretBatchInput struct {
 }
 
 // CreateCardSecretBatch 批量录入卡密
-func (s *Service) CreateCardSecretBatch(input CreateCardSecretBatchInput) (*models.CardSecretBatch, int, error) {
+func (s *Service) CreateCardSecretBatch(input CreateCardSecretBatchInput) (*cardsecretdomain.Batch, int, error) {
 	if input.ProductID == 0 {
 		return nil, 0, ErrInvalid
 	}
@@ -66,7 +67,7 @@ func (s *Service) CreateCardSecretBatch(input CreateCardSecretBatchInput) (*mode
 	}
 
 	now := time.Now()
-	batch := &models.CardSecretBatch{
+	batch := &cardsecretdomain.Batch{
 		ProductID:  input.ProductID,
 		SKUID:      sku.ID,
 		BatchNo:    batchNo,
@@ -83,18 +84,18 @@ func (s *Service) CreateCardSecretBatch(input CreateCardSecretBatchInput) (*mode
 	if s.transactions == nil {
 		return nil, 0, ErrBatchCreateFailed
 	}
-	err = s.transactions.Transaction(func(secretRepo Repository, batchRepo BatchRepository) error {
+	err = s.transactions.Transaction(func(secretRepo cardsecretcontract.Repository, batchRepo cardsecretcontract.BatchRepository) error {
 		if err := batchRepo.Create(batch); err != nil {
 			return ErrBatchCreateFailed
 		}
-		items := make([]models.CardSecret, 0, len(normalized))
+		items := make([]cardsecretdomain.Secret, 0, len(normalized))
 		for _, secret := range normalized {
-			items = append(items, models.CardSecret{
+			items = append(items, cardsecretdomain.Secret{
 				ProductID: input.ProductID,
 				SKUID:     sku.ID,
 				BatchID:   &batch.ID,
 				Secret:    secret,
-				Status:    models.CardSecretStatusAvailable,
+				Status:    cardsecretdomain.StatusAvailable,
 				CreatedAt: now,
 				UpdatedAt: now,
 			})
@@ -125,7 +126,7 @@ type ImportCardSecretCSVInput struct {
 }
 
 // ImportCardSecretCSV 从 CSV 导入卡密
-func (s *Service) ImportCardSecretCSV(input ImportCardSecretCSVInput) (*models.CardSecretBatch, int, error) {
+func (s *Service) ImportCardSecretCSV(input ImportCardSecretCSVInput) (*cardsecretdomain.Batch, int, error) {
 	if input.ProductID == 0 || input.File == nil {
 		return nil, 0, ErrInvalid
 	}

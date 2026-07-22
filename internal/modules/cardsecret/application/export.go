@@ -1,4 +1,4 @@
-package cardsecret
+package application
 
 import (
 	"bytes"
@@ -9,7 +9,8 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 )
 
 // ExportAvailableCardSecretInput 可用卡密出库导出输入。
@@ -64,7 +65,7 @@ func (s *Service) ExportAvailableCardSecrets(input ExportAvailableCardSecretInpu
 	if s.transactions == nil {
 		return nil, ErrFetchFailed
 	}
-	err = s.transactions.Transaction(func(secretRepo Repository, _ BatchRepository) error {
+	err = s.transactions.Transaction(func(secretRepo cardsecretcontract.Repository, _ cardsecretcontract.BatchRepository) error {
 		items, err := secretRepo.ListAvailableByProductBatchForUpdate(input.ProductID, input.SKUID, input.BatchID, input.Limit)
 		if err != nil {
 			return ErrFetchFailed
@@ -93,7 +94,7 @@ func (s *Service) ExportAvailableCardSecrets(input ExportAvailableCardSecretInpu
 				return ErrDeleteFailed
 			}
 		} else {
-			affected, err = secretRepo.BatchUpdateStatus(ids, models.CardSecretStatusUsed, time.Now())
+			affected, err = secretRepo.BatchUpdateStatus(ids, cardsecretdomain.StatusUsed, time.Now())
 			if err != nil {
 				return ErrUpdateFailed
 			}
@@ -128,7 +129,7 @@ func normalizeCardSecretExportFormat(format string) (string, error) {
 	}
 }
 
-func buildCardSecretExportContent(items []models.CardSecret, normalizedFormat string) ([]byte, string, error) {
+func buildCardSecretExportContent(items []cardsecretdomain.Secret, normalizedFormat string) ([]byte, string, error) {
 	if normalizedFormat == constants.ExportFormatTXT {
 		lines := make([]string, 0, len(items))
 		for _, item := range items {

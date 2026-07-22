@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
@@ -16,7 +17,6 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -36,7 +36,7 @@ func setupProductStoreTest(t *testing.T) (*ProductStore, *gorm.DB) {
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.CardSecret{},
+		&cardsecretdomain.Secret{},
 		&siteconnectiondomain.Connection{},
 		&mappingdomain.Mapping{},
 		&mappingdomain.SKUMapping{},
@@ -119,11 +119,11 @@ func createAutoProduct(t *testing.T, repo *ProductStore, slug string) *productdo
 func createAvailableCardSecrets(t *testing.T, db *gorm.DB, productID uint, count int) {
 	t.Helper()
 	for i := 0; i < count; i++ {
-		secret := &models.CardSecret{
+		secret := &cardsecretdomain.Secret{
 			ProductID: productID,
 			SKUID:     0,
 			Secret:    fmt.Sprintf("AUTO-SECRET-%d-%d", productID, i),
-			Status:    models.CardSecretStatusAvailable,
+			Status:    cardsecretdomain.StatusAvailable,
 		}
 		if err := db.Create(secret).Error; err != nil {
 			t.Fatalf("create card secret failed: %v", err)

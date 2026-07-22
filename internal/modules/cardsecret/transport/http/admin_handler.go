@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/cardsecret"
+	cardsecretapp "github.com/dujiao-next/internal/modules/cardsecret/application"
+	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -16,16 +16,16 @@ import (
 )
 
 type Service interface {
-	CreateCardSecretBatch(cardsecret.CreateCardSecretBatchInput) (*models.CardSecretBatch, int, error)
-	ImportCardSecretCSV(cardsecret.ImportCardSecretCSVInput) (*models.CardSecretBatch, int, error)
-	ListCardSecrets(cardsecret.ListCardSecretInput) ([]models.CardSecret, int64, error)
-	UpdateCardSecret(id uint, secret, status string) (*models.CardSecret, error)
-	BatchUpdateCardSecretStatus(ids []uint, batchID uint, filter cardsecret.ListCardSecretInput, status string) (int64, error)
-	BatchDeleteCardSecrets(ids []uint, batchID uint, filter cardsecret.ListCardSecretInput) (int64, error)
-	ExportCardSecrets(ids []uint, batchID uint, filter cardsecret.ListCardSecretInput, format string) ([]byte, string, error)
-	ExportAvailableCardSecrets(cardsecret.ExportAvailableCardSecretInput) (*cardsecret.ExportAvailableCardSecretResult, error)
-	GetStats(productID, skuID uint) (*cardsecret.CardSecretStats, error)
-	ListBatches(productID, skuID uint, page, pageSize int) ([]cardsecret.CardSecretBatchSummary, int64, error)
+	CreateCardSecretBatch(cardsecretapp.CreateCardSecretBatchInput) (*cardsecretdomain.Batch, int, error)
+	ImportCardSecretCSV(cardsecretapp.ImportCardSecretCSVInput) (*cardsecretdomain.Batch, int, error)
+	ListCardSecrets(cardsecretapp.ListCardSecretInput) ([]cardsecretdomain.Secret, int64, error)
+	UpdateCardSecret(id uint, secret, status string) (*cardsecretdomain.Secret, error)
+	BatchUpdateCardSecretStatus(ids []uint, batchID uint, filter cardsecretapp.ListCardSecretInput, status string) (int64, error)
+	BatchDeleteCardSecrets(ids []uint, batchID uint, filter cardsecretapp.ListCardSecretInput) (int64, error)
+	ExportCardSecrets(ids []uint, batchID uint, filter cardsecretapp.ListCardSecretInput, format string) ([]byte, string, error)
+	ExportAvailableCardSecrets(cardsecretapp.ExportAvailableCardSecretInput) (*cardsecretapp.ExportAvailableCardSecretResult, error)
+	GetStats(productID, skuID uint) (*cardsecretapp.CardSecretStats, error)
+	ListBatches(productID, skuID uint, page, pageSize int) ([]cardsecretapp.CardSecretBatchSummary, int64, error)
 }
 
 type AdminHandler struct {
@@ -98,11 +98,11 @@ type ExportAvailableCardSecretRequest struct {
 	DeleteAfterExport bool   `json:"delete_after_export"`
 }
 
-func buildCardSecretListInput(filter *CardSecretQueryRequest) cardsecret.ListCardSecretInput {
+func buildCardSecretListInput(filter *CardSecretQueryRequest) cardsecretapp.ListCardSecretInput {
 	if filter == nil {
-		return cardsecret.ListCardSecretInput{}
+		return cardsecretapp.ListCardSecretInput{}
 	}
-	return cardsecret.ListCardSecretInput{
+	return cardsecretapp.ListCardSecretInput{
 		ProductID: filter.ProductID,
 		SKUID:     filter.SKUID,
 		BatchID:   filter.BatchID,
@@ -124,7 +124,7 @@ func (h *AdminHandler) CreateCardSecretBatch(c *gin.Context) {
 		return
 	}
 
-	batch, created, err := h.service.CreateCardSecretBatch(cardsecret.CreateCardSecretBatchInput{
+	batch, created, err := h.service.CreateCardSecretBatch(cardsecretapp.CreateCardSecretBatchInput{
 		ProductID:   req.ProductID,
 		SKUID:       req.SKUID,
 		Secrets:     req.Secrets,
@@ -136,17 +136,17 @@ func (h *AdminHandler) CreateCardSecretBatch(c *gin.Context) {
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, cardsecret.ErrProductSKURequired):
+		case errors.Is(err, cardsecretapp.ErrProductSKURequired):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrProductSKUInvalid):
+		case errors.Is(err, cardsecretapp.ErrProductSKUInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrInvalid):
+		case errors.Is(err, cardsecretapp.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrProductNotFound):
+		case errors.Is(err, cardsecretapp.ErrProductNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
-		case errors.Is(err, cardsecret.ErrProductFetchFailed):
+		case errors.Is(err, cardsecretapp.ErrProductFetchFailed):
 			ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
-		case errors.Is(err, cardsecret.ErrBatchCreateFailed):
+		case errors.Is(err, cardsecretapp.ErrBatchCreateFailed):
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_batch_create_failed", err)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_create_failed", err)
@@ -190,7 +190,7 @@ func (h *AdminHandler) ImportCardSecretCSV(c *gin.Context) {
 		return
 	}
 
-	batch, created, err := h.service.ImportCardSecretCSV(cardsecret.ImportCardSecretCSVInput{
+	batch, created, err := h.service.ImportCardSecretCSV(cardsecretapp.ImportCardSecretCSVInput{
 		ProductID:   productID,
 		SKUID:       skuID,
 		File:        file,
@@ -201,17 +201,17 @@ func (h *AdminHandler) ImportCardSecretCSV(c *gin.Context) {
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, cardsecret.ErrProductSKURequired):
+		case errors.Is(err, cardsecretapp.ErrProductSKURequired):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrProductSKUInvalid):
+		case errors.Is(err, cardsecretapp.ErrProductSKUInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrInvalid):
+		case errors.Is(err, cardsecretapp.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrProductNotFound):
+		case errors.Is(err, cardsecretapp.ErrProductNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
-		case errors.Is(err, cardsecret.ErrProductFetchFailed):
+		case errors.Is(err, cardsecretapp.ErrProductFetchFailed):
 			ginutil.RespondError(c, response.CodeInternal, "error.product_fetch_failed", err)
-		case errors.Is(err, cardsecret.ErrBatchCreateFailed):
+		case errors.Is(err, cardsecretapp.ErrBatchCreateFailed):
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_batch_create_failed", err)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_import_failed", err)
@@ -263,7 +263,7 @@ func (h *AdminHandler) GetCardSecrets(c *gin.Context) {
 	secret := strings.TrimSpace(c.Query("secret"))
 	batchNo := strings.TrimSpace(c.Query("batch_no"))
 
-	items, total, err := h.service.ListCardSecrets(cardsecret.ListCardSecretInput{
+	items, total, err := h.service.ListCardSecrets(cardsecretapp.ListCardSecretInput{
 		ProductID: productID,
 		SKUID:     skuID,
 		BatchID:   batchID,
@@ -275,11 +275,11 @@ func (h *AdminHandler) GetCardSecrets(c *gin.Context) {
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, cardsecret.ErrProductSKURequired):
+		case errors.Is(err, cardsecretapp.ErrProductSKURequired):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrProductSKUInvalid):
+		case errors.Is(err, cardsecretapp.ErrProductSKUInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrInvalid):
+		case errors.Is(err, cardsecretapp.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_fetch_failed", err)
@@ -321,11 +321,11 @@ func (h *AdminHandler) UpdateCardSecret(c *gin.Context) {
 	item, err := h.service.UpdateCardSecret(rawID, secret, status)
 	if err != nil {
 		switch {
-		case errors.Is(err, cardsecret.ErrNotFound):
+		case errors.Is(err, cardsecretapp.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
-		case errors.Is(err, cardsecret.ErrInvalid):
+		case errors.Is(err, cardsecretapp.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrUpdateFailed):
+		case errors.Is(err, cardsecretapp.ErrUpdateFailed):
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
@@ -347,11 +347,11 @@ func (h *AdminHandler) BatchUpdateCardSecretStatus(c *gin.Context) {
 	rows, err := h.service.BatchUpdateCardSecretStatus(req.IDs, req.BatchID, buildCardSecretListInput(req.Filter), req.Status)
 	if err != nil {
 		switch {
-		case errors.Is(err, cardsecret.ErrInvalid):
+		case errors.Is(err, cardsecretapp.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrNotFound):
+		case errors.Is(err, cardsecretapp.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
-		case errors.Is(err, cardsecret.ErrUpdateFailed):
+		case errors.Is(err, cardsecretapp.ErrUpdateFailed):
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
@@ -375,11 +375,11 @@ func (h *AdminHandler) BatchDeleteCardSecrets(c *gin.Context) {
 	rows, err := h.service.BatchDeleteCardSecrets(req.IDs, req.BatchID, buildCardSecretListInput(req.Filter))
 	if err != nil {
 		switch {
-		case errors.Is(err, cardsecret.ErrInvalid):
+		case errors.Is(err, cardsecretapp.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrNotFound):
+		case errors.Is(err, cardsecretapp.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
-		case errors.Is(err, cardsecret.ErrDeleteFailed):
+		case errors.Is(err, cardsecretapp.ErrDeleteFailed):
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_delete_failed", err)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_delete_failed", err)
@@ -403,9 +403,9 @@ func (h *AdminHandler) ExportCardSecrets(c *gin.Context) {
 	content, contentType, err := h.service.ExportCardSecrets(req.IDs, req.BatchID, buildCardSecretListInput(req.Filter), req.Format)
 	if err != nil {
 		switch {
-		case errors.Is(err, cardsecret.ErrInvalid):
+		case errors.Is(err, cardsecretapp.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrNotFound):
+		case errors.Is(err, cardsecretapp.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_fetch_failed", err)
@@ -428,7 +428,7 @@ func (h *AdminHandler) ExportAvailableCardSecrets(c *gin.Context) {
 		return
 	}
 
-	result, err := h.service.ExportAvailableCardSecrets(cardsecret.ExportAvailableCardSecretInput{
+	result, err := h.service.ExportAvailableCardSecrets(cardsecretapp.ExportAvailableCardSecretInput{
 		ProductID:         req.ProductID,
 		SKUID:             req.SKUID,
 		BatchID:           req.BatchID,
@@ -438,17 +438,17 @@ func (h *AdminHandler) ExportAvailableCardSecrets(c *gin.Context) {
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, cardsecret.ErrInvalid),
-			errors.Is(err, cardsecret.ErrProductSKUInvalid):
+		case errors.Is(err, cardsecretapp.ErrInvalid),
+			errors.Is(err, cardsecretapp.ErrProductSKUInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrProductNotFound),
-			errors.Is(err, cardsecret.ErrNotFound):
+		case errors.Is(err, cardsecretapp.ErrProductNotFound),
+			errors.Is(err, cardsecretapp.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.card_secret_not_found", nil)
-		case errors.Is(err, cardsecret.ErrInsufficient):
+		case errors.Is(err, cardsecretapp.ErrInsufficient):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_insufficient", nil)
-		case errors.Is(err, cardsecret.ErrUpdateFailed):
+		case errors.Is(err, cardsecretapp.ErrUpdateFailed):
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_update_failed", err)
-		case errors.Is(err, cardsecret.ErrDeleteFailed):
+		case errors.Is(err, cardsecretapp.ErrDeleteFailed):
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_delete_failed", err)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_fetch_failed", err)
@@ -479,11 +479,11 @@ func (h *AdminHandler) GetCardSecretStats(c *gin.Context) {
 	stats, err := h.service.GetStats(productID, skuID)
 	if err != nil {
 		switch {
-		case errors.Is(err, cardsecret.ErrProductSKURequired):
+		case errors.Is(err, cardsecretapp.ErrProductSKURequired):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrProductSKUInvalid):
+		case errors.Is(err, cardsecretapp.ErrProductSKUInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrInvalid):
+		case errors.Is(err, cardsecretapp.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_stats_failed", err)
@@ -510,11 +510,11 @@ func (h *AdminHandler) GetCardSecretBatches(c *gin.Context) {
 	items, total, err := h.service.ListBatches(productID, skuID, page, pageSize)
 	if err != nil {
 		switch {
-		case errors.Is(err, cardsecret.ErrProductSKURequired):
+		case errors.Is(err, cardsecretapp.ErrProductSKURequired):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrProductSKUInvalid):
+		case errors.Is(err, cardsecretapp.ErrProductSKUInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
-		case errors.Is(err, cardsecret.ErrInvalid):
+		case errors.Is(err, cardsecretapp.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.card_secret_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.card_secret_batch_fetch_failed", err)

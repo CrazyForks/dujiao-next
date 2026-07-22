@@ -12,7 +12,8 @@ import (
 	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	auditlogcontract "github.com/dujiao-next/internal/modules/auditlog/contract"
 	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
-	"github.com/dujiao-next/internal/modules/cardsecret"
+	cardsecretapp "github.com/dujiao-next/internal/modules/cardsecret/application"
+	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	cartapp "github.com/dujiao-next/internal/modules/cart/application"
 	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
@@ -82,8 +83,8 @@ type Container struct {
 	OrderRepo                  repository.OrderRepository
 	PaymentRepo                repository.PaymentRepository
 	PaymentChannelRepo         repository.PaymentChannelRepository
-	CardSecretRepo             repository.CardSecretRepository
-	CardSecretBatchRepo        repository.CardSecretBatchRepository
+	CardSecretRepo             *cardsecretgormstore.Store
+	CardSecretBatchRepo        *cardsecretgormstore.BatchStore
 	GiftCardRepo               *giftcardgormstore.Store
 	FulfillmentRepo            repository.FulfillmentRepository
 	ProductRepo                *productgormstore.ProductStore
@@ -147,7 +148,7 @@ type Container struct {
 	CouponAdminService            *couponapp.AdminService
 	PromotionAdminService         *promotionapp.AdminService
 	PaymentService                *service.PaymentService
-	CardSecretService             *cardsecret.Service
+	CardSecretService             *cardsecretapp.Service
 	GiftCardService               *giftcardapp.Service
 	UserLoginLogService           *auditlogapp.UserLoginService
 	AuthzAuditService             *auditlogapp.AuthzService

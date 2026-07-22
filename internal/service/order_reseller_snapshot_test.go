@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
@@ -182,7 +183,7 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		UserStore:               userstore.New(db),
 		ProductRepo:             productgormstore.NewProductStore(db),
 		ProductSKURepo:          productgormstore.NewSKUStore(db),
-		CardSecretRepo:          repository.NewCardSecretRepository(db),
+		CardSecretRepo:          cardsecretgormstore.New(db),
 		CouponRepo:              coupongormstore.New(db),
 		CouponUsageRepo:         coupongormstore.NewUsageStore(db),
 		PromotionRepo:           promotiongormstore.New(db),
