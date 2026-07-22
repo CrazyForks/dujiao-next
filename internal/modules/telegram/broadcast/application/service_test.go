@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	telegrammodule "github.com/dujiao-next/internal/modules/telegram"
 	broadcastcontract "github.com/dujiao-next/internal/modules/telegram/broadcast/contract"
 	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
+	notifycontract "github.com/dujiao-next/internal/modules/telegram/notify/contract"
 	"github.com/dujiao-next/internal/shared/jsonslice"
 )
 
@@ -91,10 +91,10 @@ func (resolver tokenResolverStub) ResolveActiveBotToken() (string, error) {
 
 type senderStub struct {
 	failures map[string]error
-	calls    []telegrammodule.SendOptions
+	calls    []notifycontract.SendOptions
 }
 
-func (s *senderStub) SendWithBotToken(_ context.Context, _ string, options telegrammodule.SendOptions) error {
+func (s *senderStub) SendWithBotToken(_ context.Context, _ string, options notifycontract.SendOptions) error {
 	s.calls = append(s.calls, options)
 	if err, ok := s.failures[options.ChatID]; ok {
 		return err

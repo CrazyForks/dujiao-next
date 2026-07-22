@@ -18,8 +18,9 @@ import (
 	"github.com/dujiao-next/internal/modules/procurement"
 	"github.com/dujiao-next/internal/modules/reconciliation"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
-	telegrammodule "github.com/dujiao-next/internal/modules/telegram"
 	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
+	notifyapp "github.com/dujiao-next/internal/modules/telegram/notify/application"
+	notifybotapi "github.com/dujiao-next/internal/modules/telegram/notify/infrastructure/botapi"
 	"github.com/dujiao-next/internal/service"
 )
 
@@ -30,13 +31,14 @@ func (c *Container) initIntegrationServices() {
 	c.AdminLoginLogService = auditlogapp.NewAdminLoginService(c.AdminLoginLogRepo)
 	c.NotificationLogService = notificationapp.NewLogService(c.NotificationLogRepo)
 	c.DashboardService = dashboardapp.NewService(c.DashboardRepo, c.SettingService)
+	telegramNotifyService := notifyapp.NewService(c.SettingService, c.Config.TelegramAuth, notifybotapi.New())
 	c.NotificationService = notificationapp.NewService(
 		c.SettingService,
 		c.EmailService,
 		notificationasyncqueue.New(c.QueueClient),
 		c.DashboardService,
 		c.NotificationLogService,
-		telegrammodule.NewNotifyService(c.SettingService, c.Config.TelegramAuth),
+		telegramNotifyService,
 	)
 	c.ApiCredentialService = apicredentialapp.NewService(c.ApiCredentialRepo)
 	c.SiteConnectionService = siteconnectionapp.NewService(c.SiteConnectionRepo, c.Config.App.SecretKey, "uploads")
@@ -107,6 +109,6 @@ func (c *Container) initIntegrationServices() {
 		telegrambroadcast.NewUserDirectory(c.ExternalIdentityStore),
 		telegrambroadcast.NewBotTokenResolver(c.ChannelClientService),
 		telegrambroadcast.NewDispatcher(c.QueueClient),
-		telegrammodule.NewNotifyService(c.SettingService, c.Config.TelegramAuth),
+		telegramNotifyService,
 	)
 }

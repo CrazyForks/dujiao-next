@@ -1,4 +1,4 @@
-package telegram
+package botapi
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/config"
+	notifycontract "github.com/dujiao-next/internal/modules/telegram/notify/contract"
 )
 
 type rewriteTelegramTransport struct {
@@ -104,12 +104,11 @@ func TestTelegramNotifyServiceSendWithBotTokenUploadsLocalAttachment(t *testing.
 	}))
 	defer server.Close()
 
-	svc := NewNotifyService(nil, config.TelegramAuthConfig{})
-	svc.httpClient = &http.Client{
+	svc := NewWithHTTPClient(&http.Client{
 		Transport: rewriteTelegramTransport{baseURL: server.URL},
-	}
+	})
 
-	err = svc.SendWithBotToken(context.Background(), "bot-token", SendOptions{
+	err = svc.SendWithBotToken(context.Background(), "bot-token", notifycontract.SendOptions{
 		ChatID:        "10001",
 		Message:       "<b>Hello</b>",
 		ParseMode:     "HTML",
@@ -188,12 +187,11 @@ func TestTelegramNotifyServiceSendWithBotTokenUploadsLocalPhoto(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc := NewNotifyService(nil, config.TelegramAuthConfig{})
-	svc.httpClient = &http.Client{
+	svc := NewWithHTTPClient(&http.Client{
 		Transport: rewriteTelegramTransport{baseURL: server.URL},
-	}
+	})
 
-	err = svc.SendWithBotToken(context.Background(), "bot-token", SendOptions{
+	err = svc.SendWithBotToken(context.Background(), "bot-token", notifycontract.SendOptions{
 		ChatID:                "10001",
 		Message:               "<b>Hello</b>",
 		ParseMode:             "HTML",
@@ -232,12 +230,11 @@ func TestTelegramNotifyServiceSendWithBotTokenSendsRemotePhoto(t *testing.T) {
 	}))
 	defer server.Close()
 
-	svc := NewNotifyService(nil, config.TelegramAuthConfig{})
-	svc.httpClient = &http.Client{
+	svc := NewWithHTTPClient(&http.Client{
 		Transport: rewriteTelegramTransport{baseURL: server.URL},
-	}
+	})
 
-	err := svc.SendWithBotToken(context.Background(), "bot-token", SendOptions{
+	err := svc.SendWithBotToken(context.Background(), "bot-token", notifycontract.SendOptions{
 		ChatID:                "10001",
 		Message:               "<b>Hello</b>",
 		ParseMode:             "HTML",

@@ -4,9 +4,9 @@ import (
 	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	giftcardtransport "github.com/dujiao-next/internal/modules/giftcard/transport/http"
 	memberleveltransport "github.com/dujiao-next/internal/modules/memberlevel/transport/http"
+	telegramtransport "github.com/dujiao-next/internal/modules/telegram/channelbot/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
-	telegramtransport "github.com/dujiao-next/internal/transport/http/telegram"
 	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
 
 	"github.com/gin-gonic/gin"

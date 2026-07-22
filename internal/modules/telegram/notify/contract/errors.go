@@ -1,4 +1,4 @@
-package telegram
+package contract
 
 import notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 

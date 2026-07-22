@@ -334,6 +334,11 @@ var completedMigrationPaths = []string{
 	"internal/modules/captcha/service.go",
 	"internal/modules/captcha/errors.go",
 	"internal/bootstrap/captchahttp",
+	"internal/modules/telegram/notify.go",
+	"internal/modules/telegram/notify_test.go",
+	"internal/modules/telegram/errors.go",
+	"internal/transport/http/telegram",
+	"internal/wiring/telegram",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

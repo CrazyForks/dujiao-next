@@ -30,6 +30,7 @@ import (
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	sitemapbrand "github.com/dujiao-next/internal/modules/sitemap/infrastructure/settingsbrand"
 	sitemaptransport "github.com/dujiao-next/internal/modules/sitemap/transport/http"
+	telegramchanneltransport "github.com/dujiao-next/internal/modules/telegram/channelbot/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	cardsecrettransport "github.com/dujiao-next/internal/transport/http/cardsecret"
 	procurementtransport "github.com/dujiao-next/internal/transport/http/procurement"
@@ -44,7 +45,6 @@ import (
 	paymentwiring "github.com/dujiao-next/internal/wiring/payment"
 	publicconfigwiring "github.com/dujiao-next/internal/wiring/publicconfig"
 	resellerwiring "github.com/dujiao-next/internal/wiring/reseller"
-	telegramwiring "github.com/dujiao-next/internal/wiring/telegram"
 	upstreamwiring "github.com/dujiao-next/internal/wiring/upstream"
 	userauthwiring "github.com/dujiao-next/internal/wiring/userauth"
 	walletwiring "github.com/dujiao-next/internal/wiring/wallet"
@@ -149,7 +149,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 		channeluserwiring.NewSimpleProvisioner(c.UserAuthService),
 	)
 	channelAffiliateHandler := affiliatebootstrap.NewChannelHandler(c)
-	channelTelegramBotHandler := telegramwiring.NewChannelBotHandler(c)
+	channelTelegramBotHandler := telegramchanneltransport.NewChannelBotHandler(c.SettingService, c.ChannelClientService)
 	adminSettingsHandler := settingstransport.NewAdminHandler(c.SettingService)
 	adminPromotionHandler := promotiontransport.NewAdminHandler(c.PromotionAdminService)
 	adminNotificationHandler := notificationtransport.NewAdminHandler(c.SettingService, c.NotificationLogService, c.NotificationService)

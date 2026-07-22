@@ -1,4 +1,4 @@
-package telegram
+package botapi
 
 import (
 	"bytes"
@@ -15,8 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/config"
-	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
+	notifycontract "github.com/dujiao-next/internal/modules/telegram/notify/contract"
 )
 
 type telegramSendMessageResponse struct {
@@ -24,62 +23,33 @@ type telegramSendMessageResponse struct {
 	Description string `json:"description"`
 }
 
-// SendOptions Telegram 发送参数。
-type SendOptions struct {
-	ChatID                string
-	Message               string
-	ParseMode             string
-	DisableWebPagePreview bool
-	AttachmentURL         string
-	AttachmentDisplayName string
+// Client 通过 Telegram Bot API 发送消息。
+type Client struct {
+	httpClient *http.Client
 }
 
-// SettingReader 是通知发送器读取 Telegram 动态配置所需的最小端口。
-type SettingReader interface {
-	GetTelegramAuthSetting(defaultCfg config.TelegramAuthConfig) (settingssecurity.TelegramAuthSetting, error)
+var _ notifycontract.Sender = (*Client)(nil)
+
+// New 创建 Telegram Bot API 客户端。
+func New() *Client {
+	return NewWithHTTPClient(&http.Client{Timeout: 6 * time.Second})
 }
 
-// NotifyService Telegram 通知发送服务。
-type NotifyService struct {
-	settingService SettingReader
-	defaultCfg     config.TelegramAuthConfig
-	httpClient     *http.Client
-}
-
-// NewNotifyService 创建 Telegram 通知发送服务。
-func NewNotifyService(settingService SettingReader, defaultCfg config.TelegramAuthConfig) *NotifyService {
-	return &NotifyService{
-		settingService: settingService,
-		defaultCfg:     defaultCfg,
-		httpClient: &http.Client{
-			Timeout: 6 * time.Second,
-		},
+// NewWithHTTPClient 创建使用指定 HTTP 客户端的 Bot API 客户端。
+func NewWithHTTPClient(client *http.Client) *Client {
+	if client == nil {
+		panic("telegram bot api: http client is nil")
 	}
-}
-
-// SendMessage 发送 Telegram 消息
-func (s *NotifyService) SendMessage(ctx context.Context, chatID, message string) error {
-	token, err := s.resolveBotToken()
-	if err != nil {
-		return err
-	}
-	if token == "" {
-		return ErrNotifyConfigInvalid
-	}
-	return s.SendWithBotToken(ctx, token, SendOptions{
-		ChatID:                chatID,
-		Message:               message,
-		DisableWebPagePreview: true,
-	})
+	return &Client{httpClient: client}
 }
 
 // SendWithBotToken 使用显式 bot token 发送 Telegram 消息。
-func (s *NotifyService) SendWithBotToken(ctx context.Context, botToken string, options SendOptions) error {
+func (s *Client) SendWithBotToken(ctx context.Context, botToken string, options notifycontract.SendOptions) error {
 	chatID := strings.TrimSpace(options.ChatID)
 	message := strings.TrimSpace(options.Message)
 	botToken = strings.TrimSpace(botToken)
 	if chatID == "" || message == "" || botToken == "" {
-		return ErrNotifySendFailed
+		return notifycontract.ErrNotifySendFailed
 	}
 
 	if strings.TrimSpace(options.AttachmentURL) != "" {
@@ -123,10 +93,10 @@ func (s *NotifyService) SendWithBotToken(ctx context.Context, botToken string, o
 	return s.sendJSONRequest(ctx, botToken, "sendMessage", payload)
 }
 
-func (s *NotifyService) sendMultipartMedia(ctx context.Context, botToken, method, fieldName, filePath string, options SendOptions) error {
+func (s *Client) sendMultipartMedia(ctx context.Context, botToken, method, fieldName, filePath string, options notifycontract.SendOptions) error {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("%w: open attachment failed: %v", ErrNotifySendFailed, err)
+		return fmt.Errorf("%w: open attachment failed: %v", notifycontract.ErrNotifySendFailed, err)
 	}
 	defer file.Close()
 
@@ -166,7 +136,7 @@ func (s *NotifyService) sendMultipartMedia(ctx context.Context, botToken, method
 	return s.doRequest(req)
 }
 
-func (s *NotifyService) sendJSONRequest(ctx context.Context, botToken, method string, payload map[string]interface{}) error {
+func (s *Client) sendJSONRequest(ctx context.Context, botToken, method string, payload map[string]interface{}) error {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return err
@@ -181,27 +151,27 @@ func (s *NotifyService) sendJSONRequest(ctx context.Context, botToken, method st
 	return s.doRequest(req)
 }
 
-func (s *NotifyService) doRequest(req *http.Request) error {
+func (s *Client) doRequest(req *http.Request) error {
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrNotifySendFailed, err)
+		return fmt.Errorf("%w: %v", notifycontract.ErrNotifySendFailed, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrNotifySendFailed, err)
+		return fmt.Errorf("%w: %v", notifycontract.ErrNotifySendFailed, err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("%w: telegram status=%d body=%s", ErrNotifySendFailed, resp.StatusCode, strings.TrimSpace(string(body)))
+		return fmt.Errorf("%w: telegram status=%d body=%s", notifycontract.ErrNotifySendFailed, resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var parsed telegramSendMessageResponse
 	if err := json.Unmarshal(body, &parsed); err != nil {
-		return fmt.Errorf("%w: parse telegram response failed", ErrNotifySendFailed)
+		return fmt.Errorf("%w: parse telegram response failed", notifycontract.ErrNotifySendFailed)
 	}
 	if !parsed.OK {
-		return fmt.Errorf("%w: %s", ErrNotifySendFailed, strings.TrimSpace(parsed.Description))
+		return fmt.Errorf("%w: %s", notifycontract.ErrNotifySendFailed, strings.TrimSpace(parsed.Description))
 	}
 	return nil
 }
@@ -257,18 +227,4 @@ func isTelegramPhotoAttachment(rawURL, displayName string) bool {
 	}
 
 	return false
-}
-
-func (s *NotifyService) resolveBotToken() (string, error) {
-	if s == nil {
-		return "", nil
-	}
-	if s.settingService == nil {
-		return strings.TrimSpace(s.defaultCfg.BotToken), nil
-	}
-	setting, err := s.settingService.GetTelegramAuthSetting(s.defaultCfg)
-	if err != nil {
-		return "", err
-	}
-	return strings.TrimSpace(setting.BotToken), nil
 }

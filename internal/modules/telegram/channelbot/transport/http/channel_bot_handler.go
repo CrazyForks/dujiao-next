@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	"github.com/dujiao-next/internal/platform/http/channelresponse"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -53,7 +53,7 @@ type reportHeartbeatRequest struct {
 func (h *ChannelBotHandler) GetBotConfig(c *gin.Context) {
 	config, err := h.settings.GetTelegramBotConfig()
 	if err != nil {
-		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "internal_error", "error.internal_error", err)
+		channelresponse.Error(c, http.StatusInternalServerError, response.CodeInternal, "internal_error", "error.internal_error", err)
 		return
 	}
 
@@ -72,7 +72,7 @@ func (h *ChannelBotHandler) GetBotConfig(c *gin.Context) {
 		runtimeStatus = settingsmessaging.DefaultTelegramBotRuntimeStatus()
 	}
 
-	shared.ChannelSuccess(c, gin.H{
+	channelresponse.Success(c, gin.H{
 		"config":         settingsmessaging.SerializeTelegramBotConfigForChannel(config, botToken),
 		"config_version": runtimeStatus.ConfigVersion,
 	})
@@ -82,7 +82,7 @@ func (h *ChannelBotHandler) GetBotConfig(c *gin.Context) {
 func (h *ChannelBotHandler) ReportHeartbeat(c *gin.Context) {
 	var req reportHeartbeatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.ChannelBindError(c, err)
+		channelresponse.BindError(c, err)
 		return
 	}
 
@@ -108,9 +108,9 @@ func (h *ChannelBotHandler) ReportHeartbeat(c *gin.Context) {
 
 	if err := h.settings.UpdateTelegramBotRuntimeStatus(updated); err != nil {
 		ginutil.RequestLog(c).Errorw("channel_heartbeat_update_failed", "error", err)
-		shared.ChannelError(c, http.StatusInternalServerError, response.CodeInternal, "internal_error", "error.internal_error", err)
+		channelresponse.Error(c, http.StatusInternalServerError, response.CodeInternal, "internal_error", "error.internal_error", err)
 		return
 	}
 
-	shared.ChannelSuccess(c, gin.H{"config_version": updated.ConfigVersion})
+	channelresponse.Success(c, gin.H{"config_version": updated.ConfigVersion})
 }

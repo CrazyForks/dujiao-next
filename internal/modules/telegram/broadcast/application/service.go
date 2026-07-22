@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	telegrammodule "github.com/dujiao-next/internal/modules/telegram"
 	broadcastcontract "github.com/dujiao-next/internal/modules/telegram/broadcast/contract"
 	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
+	notifycontract "github.com/dujiao-next/internal/modules/telegram/notify/contract"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
 )
@@ -74,7 +74,7 @@ type Dispatcher interface {
 
 // Sender delivers one Telegram message.
 type Sender interface {
-	SendWithBotToken(context.Context, string, telegrammodule.SendOptions) error
+	SendWithBotToken(context.Context, string, notifycontract.SendOptions) error
 }
 
 // Service owns the Telegram broadcast use cases.
@@ -219,7 +219,7 @@ func (s *Service) ProcessBroadcast(ctx context.Context, broadcastID uint) error 
 	failedCount := 0
 	lastError := ""
 	for _, chatID := range chatIDs {
-		err := s.sender.SendWithBotToken(ctx, token, telegrammodule.SendOptions{
+		err := s.sender.SendWithBotToken(ctx, token, notifycontract.SendOptions{
 			ChatID:                chatID,
 			Message:               broadcast.MessageHTML,
 			ParseMode:             "HTML",
