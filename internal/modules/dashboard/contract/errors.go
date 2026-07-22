@@ -1,4 +1,4 @@
-package dashboard
+package contract
 
 import "github.com/dujiao-next/internal/modules/reporting"
 

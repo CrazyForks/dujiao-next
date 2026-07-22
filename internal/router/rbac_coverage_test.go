@@ -119,7 +119,7 @@ func extractAdminRoutesFromSource() ([]adminRoute, error) {
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "transport", "http", "dashboard", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "modules", "dashboard", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{

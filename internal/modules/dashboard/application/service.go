@@ -1,4 +1,4 @@
-package dashboard
+package application
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/cache"
+	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
 	"github.com/dujiao-next/internal/modules/reporting"
 	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 )
@@ -16,12 +17,12 @@ const dashboardCacheTTL = 45 * time.Second
 // Service 仪表盘服务
 // 说明：聚合后台首页核心经营数据。
 type Service struct {
-	repo           Repository
-	settingService SettingReader
+	repo           dashboardcontract.Repository
+	settingService dashboardcontract.SettingReader
 }
 
 // NewService 创建仪表盘服务
-func NewService(repo Repository, settingService SettingReader) *Service {
+func NewService(repo dashboardcontract.Repository, settingService dashboardcontract.SettingReader) *Service {
 	return &Service{repo: repo, settingService: settingService}
 }
 
@@ -146,17 +147,17 @@ func (s *Service) LoadDashboardAlertSetting() settingsstorefront.DashboardAlertS
 }
 
 // GetInventoryAlertItems 获取库存异常明细
-func (s *Service) GetInventoryAlertItems(_ context.Context, lowStockThreshold int64) ([]InventoryAlertRow, error) {
+func (s *Service) GetInventoryAlertItems(_ context.Context, lowStockThreshold int64) ([]dashboardcontract.InventoryAlertRow, error) {
 	if s == nil || s.repo == nil {
-		return []InventoryAlertRow{}, nil
+		return []dashboardcontract.InventoryAlertRow{}, nil
 	}
 	return s.repo.GetInventoryAlertItems(lowStockThreshold)
 }
 
 // GetPaymentOrderAlertCounts 获取支付订单告警计数
-func (s *Service) GetPaymentOrderAlertCounts(_ context.Context, startAt, endAt time.Time) (PaymentOrderAlertCountsRow, error) {
+func (s *Service) GetPaymentOrderAlertCounts(_ context.Context, startAt, endAt time.Time) (dashboardcontract.PaymentOrderAlertCountsRow, error) {
 	if s == nil || s.repo == nil {
-		return PaymentOrderAlertCountsRow{}, nil
+		return dashboardcontract.PaymentOrderAlertCountsRow{}, nil
 	}
 	return s.repo.GetPaymentOrderAlertCounts(startAt, endAt)
 }
@@ -194,15 +195,15 @@ func (s *Service) GetTrends(ctx context.Context, input QueryInput) (*TrendRespon
 		return nil, err
 	}
 
-	orderMap := make(map[string]OrderTrendRow, len(orderRows))
+	orderMap := make(map[string]dashboardcontract.OrderTrendRow, len(orderRows))
 	for _, item := range orderRows {
 		orderMap[item.Day] = item
 	}
-	paymentMap := make(map[string]PaymentTrendRow, len(paymentRows))
+	paymentMap := make(map[string]dashboardcontract.PaymentTrendRow, len(paymentRows))
 	for _, item := range paymentRows {
 		paymentMap[item.Day] = item
 	}
-	profitMap := make(map[string]ProfitTrendRow, len(profitRows))
+	profitMap := make(map[string]dashboardcontract.ProfitTrendRow, len(profitRows))
 	for _, item := range profitRows {
 		profitMap[item.Day] = item
 	}
@@ -347,7 +348,7 @@ func formatPercentValue(value float64) string {
 	return fmt.Sprintf("%.2f", value)
 }
 
-func buildDashboardAlerts(overview OverviewRow, stockStats StockStatsRow, alertSetting settingsstorefront.DashboardAlertSetting) []AlertItem {
+func buildDashboardAlerts(overview dashboardcontract.OverviewRow, stockStats dashboardcontract.StockStatsRow, alertSetting settingsstorefront.DashboardAlertSetting) []AlertItem {
 	alerts := make([]AlertItem, 0, 4)
 	if stockStats.OutOfStockProducts >= alertSetting.OutOfStockProductsThreshold {
 		alerts = append(alerts, AlertItem{Type: "out_of_stock_products", Level: "error", Value: stockStats.OutOfStockProducts})

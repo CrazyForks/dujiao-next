@@ -18,7 +18,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/dashboard"
+	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
 	notificationformat "github.com/dujiao-next/internal/modules/notification/application/format"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/jsonmap"

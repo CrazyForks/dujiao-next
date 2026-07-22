@@ -3,12 +3,12 @@ package dashboardhttp
 import (
 	"testing"
 
-	"github.com/dujiao-next/internal/modules/dashboard"
+	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestMapInventoryAlertsPreservesLocalizedAndSKUFields(t *testing.T) {
-	items := mapInventoryAlerts([]dashboard.InventoryAlertRow{{
+	items := mapInventoryAlerts([]dashboardcontract.InventoryAlertRow{{
 		ProductID:         7,
 		SKUID:             9,
 		ProductTitleJSON:  jsonmap.JSON{"zh-CN": "商品"},

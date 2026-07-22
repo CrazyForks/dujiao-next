@@ -28,7 +28,8 @@ import (
 	contentapp "github.com/dujiao-next/internal/modules/content/application"
 	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/modules/dashboard"
+	dashboardapp "github.com/dujiao-next/internal/modules/dashboard/application"
+	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/infrastructure/gormstore"
@@ -97,7 +98,7 @@ type Container struct {
 	AuthzAuditLogRepo          auditlogcontract.AuthzRepository
 	NotificationLogRepo        *notificationgormstore.LogStore
 	AdminLoginLogRepo          auditlogcontract.AdminLoginRepository
-	DashboardRepo              dashboard.Repository
+	DashboardRepo              dashboardcontract.Repository
 	AffiliateRepo              affiliatecontract.Store
 	ResellerRepo               repository.ResellerRepository
 	ResellerProductSettingRepo repository.ResellerProductSettingRepository
@@ -150,7 +151,7 @@ type Container struct {
 	AuthzAuditService             *auditlogapp.AuthzService
 	AdminLoginLogService          *auditlogapp.AdminLoginService
 	NotificationLogService        *notificationapp.LogService
-	DashboardService              *dashboard.Service
+	DashboardService              *dashboardapp.Service
 	NotificationService           *notificationapp.Service
 	AffiliateService              *affiliateapp.Service
 	AffiliateRefundHandler        *affiliategormstore.RefundHandler

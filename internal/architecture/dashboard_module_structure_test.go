@@ -11,19 +11,21 @@ import (
 func TestDashboardImplementationLivesInBoundedContextDirectories(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "dashboard")
-	storeRoot := filepath.Join(moduleRoot, "store", "gormstore")
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "dashboard")
+	applicationRoot := filepath.Join(moduleRoot, "application")
+	contractRoot := filepath.Join(moduleRoot, "contract")
+	storeRoot := filepath.Join(moduleRoot, "infrastructure", "gormstore")
+	transportRoot := filepath.Join(moduleRoot, "transport", "http")
 
-	assertFileDeclaresFunctions(t, filepath.Join(moduleRoot, "service.go"), []string{
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "service.go"), []string{
 		"NewService", "GetOverview", "GetTrends", "GetRankings",
 		"LoadDashboardAlertSetting", "GetInventoryAlertItems", "GetPaymentOrderAlertCounts",
 	})
-	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "ports.go"), []string{
+	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "ports.go"), []string{
 		"Repository", "SettingReader", "OverviewRow", "PaymentOrderAlertCountsRow",
 		"OrderTrendRow", "PaymentTrendRow", "ProfitOverviewRow", "ProfitTrendRow",
 		"StockStatsRow", "InventoryAlertRow", "ProductRankingRow", "ChannelRankingRow",
 	})
-	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "types.go"), []string{
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "types.go"), []string{
 		"QueryInput", "OverviewResponse", "KPI", "Funnel", "AlertItem", "TrendResponse",
 		"TrendPoint", "RankingsResponse", "ProductRanking", "ChannelRanking",
 	})
@@ -42,9 +44,17 @@ func TestDashboardImplementationLivesInBoundedContextDirectories(t *testing.T) {
 	}
 
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{"RegisterAdminRoutes"})
-	assertDirectoryGoFileBudget(t, moduleRoot, 8)
+	production, total := countDirectGoFiles(t, moduleRoot)
+	if production != 0 || total != 0 {
+		t.Fatalf("dashboard module root must remain structural only, got production=%d total=%d", production, total)
+	}
+	assertDirectoryGoFileBudget(t, applicationRoot, 4)
+	assertDirectoryGoFileBudget(t, contractRoot, 3)
 	assertDirectoryGoFileBudget(t, storeRoot, 16)
 	assertDirectoryGoFileBudget(t, transportRoot, 6)
+	assertProductionImportsAbsent(t, applicationRoot, moduleImportPath+"/internal/models")
+	assertProductionImportsAbsent(t, contractRoot, moduleImportPath+"/internal/models")
+	assertProductionImportsAbsent(t, transportRoot, moduleImportPath+"/internal/models")
 }
 
 func TestDashboardLegacyFlatFilesStayRemoved(t *testing.T) {

@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/modules/dashboard"
+	dashboardapp "github.com/dujiao-next/internal/modules/dashboard/application"
+	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
+	reportinghttp "github.com/dujiao-next/internal/modules/reporting/transport/http"
 	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -15,11 +16,11 @@ import (
 
 // Reader is the minimal dashboard use-case surface consumed by HTTP.
 type Reader interface {
-	GetOverview(ctx context.Context, input dashboard.QueryInput) (*dashboard.OverviewResponse, error)
-	GetTrends(ctx context.Context, input dashboard.QueryInput) (*dashboard.TrendResponse, error)
-	GetRankings(ctx context.Context, input dashboard.QueryInput) (*dashboard.RankingsResponse, error)
+	GetOverview(ctx context.Context, input dashboardapp.QueryInput) (*dashboardapp.OverviewResponse, error)
+	GetTrends(ctx context.Context, input dashboardapp.QueryInput) (*dashboardapp.TrendResponse, error)
+	GetRankings(ctx context.Context, input dashboardapp.QueryInput) (*dashboardapp.RankingsResponse, error)
 	LoadDashboardAlertSetting() settingsstorefront.DashboardAlertSetting
-	GetInventoryAlertItems(ctx context.Context, lowStockThreshold int64) ([]dashboard.InventoryAlertRow, error)
+	GetInventoryAlertItems(ctx context.Context, lowStockThreshold int64) ([]dashboardcontract.InventoryAlertRow, error)
 }
 
 type AdminHandler struct {
@@ -95,17 +96,17 @@ func (h *AdminHandler) GetInventoryAlerts(c *gin.Context) {
 	response.Success(c, mapInventoryAlerts(items))
 }
 
-func parseQuery(c *gin.Context) (dashboard.QueryInput, bool) {
-	input, err := shared.ParseReportingQuery(c)
+func parseQuery(c *gin.Context) (dashboardapp.QueryInput, bool) {
+	input, err := reportinghttp.ParseQuery(c)
 	if err != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
-		return dashboard.QueryInput{}, false
+		return dashboardapp.QueryInput{}, false
 	}
 	return input, true
 }
 
 func respondFetchError(c *gin.Context, err error) {
-	if errors.Is(err, dashboard.ErrRangeInvalid) {
+	if errors.Is(err, dashboardcontract.ErrRangeInvalid) {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
 		return
 	}

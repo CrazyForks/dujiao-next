@@ -22,7 +22,7 @@ import (
 	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
 	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
 	contentgormstore "github.com/dujiao-next/internal/modules/content/infrastructure/gormstore"
-	dashboardgormstore "github.com/dujiao-next/internal/modules/dashboard/store/gormstore"
+	dashboardgormstore "github.com/dujiao-next/internal/modules/dashboard/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 

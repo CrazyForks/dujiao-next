@@ -1,4 +1,4 @@
-package shared
+package reportinghttp
 
 import (
 	"strings"
@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ParseReportingQuery parses the common range contract used by operational reports.
-func ParseReportingQuery(c *gin.Context) (reporting.Query, error) {
+// ParseQuery parses the common range contract used by operational reports.
+func ParseQuery(c *gin.Context) (reporting.Query, error) {
 	from, err := ginutil.ParseTimeNullable(strings.TrimSpace(c.Query("from")))
 	if err != nil {
 		return reporting.Query{}, err

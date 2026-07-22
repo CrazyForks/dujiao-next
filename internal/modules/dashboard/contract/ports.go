@@ -1,4 +1,4 @@
-package dashboard
+package contract
 
 import (
 	"time"

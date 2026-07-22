@@ -1,6 +1,6 @@
 package dashboardhttp
 
-import "github.com/dujiao-next/internal/modules/dashboard"
+import dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
 
 type inventoryAlertResponse struct {
 	ProductID       uint                   `json:"product_id"`
@@ -13,7 +13,7 @@ type inventoryAlertResponse struct {
 	AvailableStock  int64                  `json:"available_stock"`
 }
 
-func mapInventoryAlerts(items []dashboard.InventoryAlertRow) []inventoryAlertResponse {
+func mapInventoryAlerts(items []dashboardcontract.InventoryAlertRow) []inventoryAlertResponse {
 	result := make([]inventoryAlertResponse, 0, len(items))
 	for _, item := range items {
 		row := inventoryAlertResponse{

@@ -121,14 +121,14 @@ func TestValidateImportRules(t *testing.T) {
 			wantViolation: true,
 		},
 		{
-			name:          "dashboard core cannot import legacy service",
-			file:          "internal/modules/dashboard/service.go",
+			name:          "dashboard application cannot import legacy service",
+			file:          "internal/modules/dashboard/application/service.go",
 			importPath:    moduleImportPath + "/internal/service",
 			wantViolation: true,
 		},
 		{
 			name:          "dashboard gorm store can import gorm",
-			file:          "internal/modules/dashboard/store/gormstore/store.go",
+			file:          "internal/modules/dashboard/infrastructure/gormstore/store.go",
 			importPath:    "gorm.io/gorm",
 			wantViolation: false,
 		},
@@ -194,7 +194,7 @@ func TestValidateImportRules(t *testing.T) {
 		},
 		{
 			name:          "dashboard transport cannot import legacy repository",
-			file:          "internal/transport/http/dashboard/admin_handler.go",
+			file:          "internal/modules/dashboard/transport/http/admin_handler.go",
 			importPath:    moduleImportPath + "/internal/repository",
 			wantViolation: true,
 		},

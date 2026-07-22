@@ -1,4 +1,4 @@
-package dashboard
+package application
 
 import (
 	"github.com/dujiao-next/internal/modules/reporting"

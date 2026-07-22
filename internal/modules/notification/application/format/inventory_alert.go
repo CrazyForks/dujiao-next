@@ -8,7 +8,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/dashboard"
+	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
 	"github.com/dujiao-next/internal/modules/notification/contract"
 	"github.com/dujiao-next/internal/queue"
 )

@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/modules/reporting"
+	reportinghttp "github.com/dujiao-next/internal/modules/reporting/transport/http"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -33,7 +33,7 @@ func NewAdminOperationsHandler(service AdminOperationsService) *AdminOperationsH
 
 // GetOverview 管理端分销运营总览。
 func (h *AdminOperationsHandler) GetOverview(c *gin.Context) {
-	input, err := shared.ParseReportingQuery(c)
+	input, err := reportinghttp.ParseQuery(c)
 	if err != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
@@ -52,7 +52,7 @@ func (h *AdminOperationsHandler) GetOverview(c *gin.Context) {
 
 // GetFinance 管理端分销运营财务聚合。
 func (h *AdminOperationsHandler) GetFinance(c *gin.Context) {
-	input, err := shared.ParseReportingQuery(c)
+	input, err := reportinghttp.ParseQuery(c)
 	if err != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return

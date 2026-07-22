@@ -1,4 +1,4 @@
-package shared
+package reportinghttp
 
 import (
 	"net/http/httptest"
@@ -7,13 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestParseReportingQuery(t *testing.T) {
+func TestParseQuery(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	request := httptest.NewRequest("GET", "/?range=custom&from=2026-07-01T00:00:00Z&to=2026-07-02T00:00:00Z&tz=UTC&force_refresh=true", nil)
 	context, _ := gin.CreateTestContext(httptest.NewRecorder())
 	context.Request = request
 
-	query, err := ParseReportingQuery(context)
+	query, err := ParseQuery(context)
 	if err != nil {
 		t.Fatalf("parse reporting query: %v", err)
 	}

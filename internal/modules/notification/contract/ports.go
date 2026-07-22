@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/dujiao-next/internal/modules/dashboard"
+	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
 	"github.com/dujiao-next/internal/modules/notification/domain"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
@@ -31,8 +31,8 @@ type DispatchQueue interface {
 
 type DashboardAlertReader interface {
 	LoadDashboardAlertSetting() settingsstorefront.DashboardAlertSetting
-	GetInventoryAlertItems(ctx context.Context, lowStockThreshold int64) ([]dashboard.InventoryAlertRow, error)
-	GetPaymentOrderAlertCounts(ctx context.Context, startAt, endAt time.Time) (dashboard.PaymentOrderAlertCountsRow, error)
+	GetInventoryAlertItems(ctx context.Context, lowStockThreshold int64) ([]dashboardcontract.InventoryAlertRow, error)
+	GetPaymentOrderAlertCounts(ctx context.Context, startAt, endAt time.Time) (dashboardcontract.PaymentOrderAlertCountsRow, error)
 }
 
 type TelegramSender interface {

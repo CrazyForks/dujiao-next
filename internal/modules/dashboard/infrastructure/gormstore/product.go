@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/dashboard"
+	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
 )
 
 // GetTopProducts 获取商品排行榜

@@ -11,7 +11,7 @@ import (
 	contentapp "github.com/dujiao-next/internal/modules/content/application"
 	localfilestore "github.com/dujiao-next/internal/modules/content/infrastructure/filestore/local"
 	contentgormstore "github.com/dujiao-next/internal/modules/content/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/modules/dashboard"
+	dashboardapp "github.com/dujiao-next/internal/modules/dashboard/application"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	notificationapp "github.com/dujiao-next/internal/modules/notification/application"
 	notificationasyncqueue "github.com/dujiao-next/internal/modules/notification/infrastructure/asyncqueue"
@@ -29,7 +29,7 @@ func (c *Container) initIntegrationServices() {
 	c.AuthzAuditService = auditlogapp.NewAuthzService(c.AuthzAuditLogRepo)
 	c.AdminLoginLogService = auditlogapp.NewAdminLoginService(c.AdminLoginLogRepo)
 	c.NotificationLogService = notificationapp.NewLogService(c.NotificationLogRepo)
-	c.DashboardService = dashboard.NewService(c.DashboardRepo, c.SettingService)
+	c.DashboardService = dashboardapp.NewService(c.DashboardRepo, c.SettingService)
 	c.NotificationService = notificationapp.NewService(
 		c.SettingService,
 		c.EmailService,

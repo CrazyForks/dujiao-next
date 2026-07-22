@@ -10,7 +10,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/dashboard"
+	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
 )
 
 // GetOverview 获取总览统计
