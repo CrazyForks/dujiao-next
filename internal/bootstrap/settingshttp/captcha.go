@@ -2,7 +2,7 @@ package settingsbootstrap
 
 import (
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/modules/captcha"
+	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 )
@@ -10,7 +10,7 @@ import (
 type settingsCaptchaAdapter struct {
 	settings *settingsapp.Service
 	cfg      *config.Config
-	captcha  *captcha.Service
+	captcha  *captchaapp.Service
 }
 
 func (a settingsCaptchaAdapter) GetCaptchaSetting() (settingssecurity.CaptchaSetting, error) {

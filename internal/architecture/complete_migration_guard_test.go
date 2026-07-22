@@ -331,6 +331,9 @@ var completedMigrationPaths = []string{
 	"internal/modules/upload/service_test.go",
 	"internal/transport/http/upload",
 	"internal/wiring/upload",
+	"internal/modules/captcha/service.go",
+	"internal/modules/captcha/errors.go",
+	"internal/bootstrap/captchahttp",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

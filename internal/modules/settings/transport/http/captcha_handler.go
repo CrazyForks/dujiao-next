@@ -6,7 +6,7 @@ import (
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 
 	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/modules/captcha"
+	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 	"github.com/dujiao-next/internal/platform/http/response"
 

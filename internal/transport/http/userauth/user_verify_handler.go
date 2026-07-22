@@ -6,7 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/modules/captcha"
+	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -55,8 +55,8 @@ func NewUserVerifyHandler(settings UserVerifySettings, captcha CaptchaVerifier, 
 
 // UserSendVerifyCodeRequest 发送验证码请求。
 type UserSendVerifyCodeRequest struct {
-	Email          string                       `json:"email" binding:"required"`
-	Purpose        string                       `json:"purpose" binding:"required"`
+	Email          string                            `json:"email" binding:"required"`
+	Purpose        string                            `json:"purpose" binding:"required"`
 	CaptchaPayload captchahttp.CaptchaPayloadRequest `json:"captcha_payload"`
 }
 

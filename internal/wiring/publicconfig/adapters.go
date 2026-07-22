@@ -10,7 +10,7 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/captcha"
+	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/service"
@@ -110,7 +110,7 @@ func (a publicConfigPaymentAdapter) GetOrderPaymentChannels() ([]map[string]inte
 }
 
 type publicConfigCaptchaAdapter struct {
-	svc *captcha.Service
+	svc *captchaapp.Service
 }
 
 func (a publicConfigCaptchaAdapter) GetPublicSetting() (jsonmap.JSON, error) {

@@ -5,7 +5,7 @@ import (
 
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 
-	"github.com/dujiao-next/internal/modules/captcha"
+	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"

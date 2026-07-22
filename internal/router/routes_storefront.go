@@ -2,7 +2,6 @@ package router
 
 import (
 	affiliatebootstrap "github.com/dujiao-next/internal/bootstrap/affiliate"
-	captchabootstrap "github.com/dujiao-next/internal/bootstrap/captchahttp"
 	"github.com/dujiao-next/internal/config"
 	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	apicredentialtransport "github.com/dujiao-next/internal/modules/apicredential/transport/http"
@@ -73,7 +72,7 @@ func registerStorefrontRoutes(
 		producthttp.RegisterPublicRoutes(public, publicCatalogHandler)
 		categoryhttp.RegisterPublicRoutes(public, publicCategoryHandler)
 		contenttransport.RegisterPublicRoutes(public, publicContentHandler)
-		captchatransport.RegisterPublicRoutes(public, captchabootstrap.NewPublicHandler(c))
+		captchatransport.RegisterPublicRoutes(public, captchatransport.NewPublicHandler(c.CaptchaService))
 		affiliatetransport.RegisterPublicRoutes(public, affiliateHandler)
 		memberleveltransport.RegisterPublicRoutes(public, publicMemberLevelHandler)
 	}

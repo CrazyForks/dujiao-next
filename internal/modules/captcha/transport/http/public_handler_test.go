@@ -7,24 +7,24 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dujiao-next/internal/modules/captcha"
+	captchacontract "github.com/dujiao-next/internal/modules/captcha/contract"
 	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
 
 type fakeGenerator struct {
-	challenge *captcha.ImageChallenge
+	challenge *captchacontract.ImageChallenge
 	err       error
 }
 
-func (f fakeGenerator) GenerateImageChallenge() (*captcha.ImageChallenge, error) {
+func (f fakeGenerator) GenerateImageChallenge() (*captchacontract.ImageChallenge, error) {
 	return f.challenge, f.err
 }
 
 func TestGetImageCaptchaSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := NewPublicHandler(fakeGenerator{challenge: &captcha.ImageChallenge{
+	handler := NewPublicHandler(fakeGenerator{challenge: &captchacontract.ImageChallenge{
 		CaptchaID:   "id-1",
 		ImageBase64: "data:image/png;base64,abc",
 	}})
@@ -50,7 +50,7 @@ func TestGetImageCaptchaSuccess(t *testing.T) {
 
 func TestGetImageCaptchaUnavailableWhenConfigInvalid(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	handler := NewPublicHandler(fakeGenerator{err: captcha.ErrConfigInvalid})
+	handler := NewPublicHandler(fakeGenerator{err: captchacontract.ErrConfigInvalid})
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)

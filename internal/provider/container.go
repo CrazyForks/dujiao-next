@@ -11,7 +11,7 @@ import (
 	apicredentialcontract "github.com/dujiao-next/internal/modules/apicredential/contract"
 	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	auditlogcontract "github.com/dujiao-next/internal/modules/auditlog/contract"
-	"github.com/dujiao-next/internal/modules/captcha"
+	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
 	"github.com/dujiao-next/internal/modules/cardsecret"
 	cartapp "github.com/dujiao-next/internal/modules/cart/application"
 	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
@@ -126,7 +126,7 @@ type Container struct {
 	UserAuthService               *userauthapp.Service
 	TelegramAuthService           *telegramauthapp.Service
 	EmailService                  *service.EmailService
-	CaptchaService                *captcha.Service
+	CaptchaService                *captchaapp.Service
 	UploadService                 *uploadapp.Service
 	ProductReadService            *productapplication.Service
 	ProductAdminService           *productadmin.AdminService

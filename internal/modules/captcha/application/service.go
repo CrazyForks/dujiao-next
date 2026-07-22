@@ -1,45 +1,18 @@
-package captcha
+package application
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
+	"github.com/dujiao-next/internal/modules/captcha/contract"
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/mojocn/base64Captcha"
 )
-
-// VerifyPayload 验证码校验请求载荷。
-type VerifyPayload struct {
-	CaptchaID      string `json:"captcha_id"`
-	CaptchaCode    string `json:"captcha_code"`
-	TurnstileToken string `json:"turnstile_token"`
-}
-
-// ImageChallenge 图片验证码挑战。
-type ImageChallenge struct {
-	CaptchaID   string `json:"captcha_id"`
-	ImageBase64 string `json:"image_base64"`
-}
-
-type turnstileVerifyResponse struct {
-	Success    bool     `json:"success"`
-	ErrorCodes []string `json:"error-codes"`
-}
-
-// SettingReader 是验证码运行时读取动态配置所需的最小端口。
-type SettingReader interface {
-	GetCaptchaSetting(defaultCfg config.CaptchaConfig) (settingssecurity.CaptchaSetting, error)
-}
 
 // Service 验证码服务
 // 负责统一读取配置、生成挑战与执行校验
@@ -50,11 +23,10 @@ type SettingReader interface {
 //
 //nolint:govet
 type Service struct {
-	settingService SettingReader
+	settingService contract.SettingReader
 	defaultConfig  config.CaptchaConfig
-
-	httpClient *http.Client
-	cacheTTL   time.Duration
+	turnstile      contract.TurnstileVerifier
+	cacheTTL       time.Duration
 
 	mu            sync.RWMutex
 	cachedSetting settingssecurity.CaptchaSetting
@@ -66,14 +38,12 @@ type Service struct {
 }
 
 // NewService 创建验证码服务。
-func NewService(settingService SettingReader, defaultConfig config.CaptchaConfig) *Service {
+func NewService(settingService contract.SettingReader, defaultConfig config.CaptchaConfig, turnstile contract.TurnstileVerifier) *Service {
 	return &Service{
 		settingService: settingService,
 		defaultConfig:  defaultConfig,
-		httpClient: &http.Client{
-			Timeout: 2 * time.Second,
-		},
-		cacheTTL: 30 * time.Second,
+		turnstile:      turnstile,
+		cacheTTL:       30 * time.Second,
 	}
 }
 
@@ -108,13 +78,13 @@ func (s *Service) GetPublicSetting() (jsonmap.JSON, error) {
 }
 
 // GenerateImageChallenge 生成图片验证码
-func (s *Service) GenerateImageChallenge() (*ImageChallenge, error) {
+func (s *Service) GenerateImageChallenge() (*contract.ImageChallenge, error) {
 	setting, err := s.getSetting()
 	if err != nil {
 		return nil, err
 	}
 	if setting.Provider != constants.CaptchaProviderImage {
-		return nil, ErrConfigInvalid
+		return nil, contract.ErrConfigInvalid
 	}
 
 	store := s.ensureImageStore(setting)
@@ -135,14 +105,14 @@ func (s *Service) GenerateImageChallenge() (*ImageChallenge, error) {
 		return nil, genErr
 	}
 
-	return &ImageChallenge{
+	return &contract.ImageChallenge{
 		CaptchaID:   strings.TrimSpace(id),
 		ImageBase64: strings.TrimSpace(b64s),
 	}, nil
 }
 
 // Verify 按场景校验验证码
-func (s *Service) Verify(scene string, payload VerifyPayload, clientIP string) error {
+func (s *Service) Verify(scene string, payload contract.VerifyPayload, clientIP string) error {
 	setting, err := s.getSetting()
 	if err != nil {
 		return err
@@ -157,70 +127,27 @@ func (s *Service) Verify(scene string, payload VerifyPayload, clientIP string) e
 		captchaID := strings.TrimSpace(payload.CaptchaID)
 		captchaCode := strings.TrimSpace(payload.CaptchaCode)
 		if captchaID == "" || captchaCode == "" {
-			return ErrRequired
+			return contract.ErrRequired
 		}
 		store := s.ensureImageStore(setting)
 		if !store.Verify(captchaID, captchaCode, true) {
-			return ErrInvalid
+			return contract.ErrInvalid
 		}
 		return nil
 	case constants.CaptchaProviderTurnstile:
 		token := strings.TrimSpace(payload.TurnstileToken)
 		if token == "" {
-			return ErrRequired
+			return contract.ErrRequired
 		}
-		return s.verifyTurnstile(setting.Turnstile, token, strings.TrimSpace(clientIP))
+		if s.turnstile == nil {
+			return contract.ErrVerifyFailed
+		}
+		return s.turnstile.Verify(setting.Turnstile, token, strings.TrimSpace(clientIP))
 	case constants.CaptchaProviderNone:
-		return ErrConfigInvalid
+		return contract.ErrConfigInvalid
 	default:
-		return ErrConfigInvalid
+		return contract.ErrConfigInvalid
 	}
-}
-
-func (s *Service) verifyTurnstile(cfg settingssecurity.CaptchaTurnstileSetting, token, clientIP string) error {
-	secret := strings.TrimSpace(cfg.SecretKey)
-	verifyURL := strings.TrimSpace(cfg.VerifyURL)
-	if secret == "" || verifyURL == "" {
-		return ErrConfigInvalid
-	}
-
-	timeout := cfg.TimeoutMS
-	if timeout < 500 || timeout > 10000 {
-		timeout = 2000
-	}
-
-	client := s.httpClient
-	if client == nil || client.Timeout != time.Duration(timeout)*time.Millisecond {
-		client = &http.Client{Timeout: time.Duration(timeout) * time.Millisecond}
-	}
-
-	form := url.Values{}
-	form.Set("secret", secret)
-	form.Set("response", token)
-	if clientIP != "" {
-		form.Set("remoteip", clientIP)
-	}
-
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, verifyURL, strings.NewReader(form.Encode()))
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrVerifyFailed, err)
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrVerifyFailed, err)
-	}
-	defer resp.Body.Close()
-
-	var result turnstileVerifyResponse
-	if decodeErr := json.NewDecoder(resp.Body).Decode(&result); decodeErr != nil {
-		return fmt.Errorf("%w: %v", ErrVerifyFailed, decodeErr)
-	}
-	if !result.Success {
-		return ErrInvalid
-	}
-	return nil
 }
 
 func (s *Service) ensureImageStore(setting settingssecurity.CaptchaSetting) base64Captcha.Store {

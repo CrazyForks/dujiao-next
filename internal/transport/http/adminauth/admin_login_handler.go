@@ -7,7 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/modules/captcha"
+	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -81,8 +81,8 @@ func (h *AdminLoginHandler) writeLoginLog(c *gin.Context, adminID uint, username
 
 // LoginRequest 登录请求。
 type LoginRequest struct {
-	Username       string                       `json:"username" binding:"required"`
-	Password       string                       `json:"password" binding:"required"`
+	Username       string                            `json:"username" binding:"required"`
+	Password       string                            `json:"password" binding:"required"`
 	CaptchaPayload captchahttp.CaptchaPayloadRequest `json:"captcha_payload"`
 }
 

@@ -14,7 +14,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/captcha"
+	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
 	"github.com/dujiao-next/internal/modules/orderrisk"
@@ -335,7 +335,7 @@ func (a orderCreateAdapter) CreateGuestOrder(input ordertransport.CreateGuestOrd
 }
 
 type orderGuestCreateCaptchaAdapter struct {
-	captcha *captcha.Service
+	captcha *captchaapp.Service
 }
 
 func (a orderGuestCreateCaptchaAdapter) VerifyGuestCreateOrder(payload captchahttp.CaptchaPayloadRequest, clientIP string) error {

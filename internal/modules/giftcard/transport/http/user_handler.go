@@ -1,17 +1,17 @@
 package giftcardhttp
 
 import (
-	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	"errors"
+	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	giftcardpresenter "github.com/dujiao-next/internal/modules/giftcard/transport/presenter"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/captcha"
+	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
 	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
+	giftcardpresenter "github.com/dujiao-next/internal/modules/giftcard/transport/presenter"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 

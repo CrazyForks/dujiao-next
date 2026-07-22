@@ -9,7 +9,8 @@ import (
 	"github.com/dujiao-next/internal/models"
 	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/modules/captcha"
+	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
+	captchaturnstile "github.com/dujiao-next/internal/modules/captcha/infrastructure/turnstile"
 	complianceapp "github.com/dujiao-next/internal/modules/compliance/application"
 	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
 	admintotpapp "github.com/dujiao-next/internal/modules/identity/adminauth/totp/application"
@@ -83,7 +84,7 @@ func (c *Container) loadRuntimeSettings() {
 // initIdentityAndCatalogServices 装配身份认证、上传、推广与商品读取能力。
 func (c *Container) initIdentityAndCatalogServices() {
 	c.EmailService = service.NewEmailService(&c.Config.Email)
-	c.CaptchaService = captcha.NewService(c.SettingService, c.Config.Captcha)
+	c.CaptchaService = captchaapp.NewService(c.SettingService, c.Config.Captcha, captchaturnstile.New())
 	c.AuthService = adminauthapp.NewService(c.Config, c.AdminStore)
 	c.TOTPService = admintotpapp.NewService(c.Config, c.AdminStore, cache.Client())
 	c.UserTOTPService = usertotpapp.NewService(c.Config, c.UserStore, cache.Client())
