@@ -2,6 +2,7 @@ package provider
 
 import (
 	"github.com/dujiao-next/internal/authz"
+	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
 	telegramauthcache "github.com/dujiao-next/internal/bootstrap/telegramauthcache"
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/logger"
@@ -90,5 +91,19 @@ func (c *Container) initIdentityAndCatalogServices() {
 	c.UploadService = upload.NewService(c.Config)
 	c.AffiliateService = affiliateapp.NewService(c.AffiliateRepo, c.UserStore, c.OrderRepo, c.ProductRepo, c.SettingService)
 	c.AffiliateRefundHandler = affiliategormstore.NewRefundHandler(c.AffiliateService)
-	c.ProductService = service.NewProductService(c.ProductRepo, c.ProductSKURepo, c.CardSecretRepo, c.CardSecretBatchRepo, c.CategoryRepo, c.MemberLevelPriceRepo, c.CartRepo, c.ProductMappingRepo, c.OrderRepo, c.PaymentChannelRepo)
+	productServices := catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
+		Products:          c.ProductRepo,
+		SKUs:              c.ProductSKURepo,
+		CardSecrets:       c.CardSecretRepo,
+		CardSecretBatches: c.CardSecretBatchRepo,
+		Categories:        c.CategoryRepo,
+		MemberLevelPrices: c.MemberLevelPriceRepo,
+		Carts:             c.CartRepo,
+		ProductMappings:   c.ProductMappingRepo,
+		Orders:            c.OrderRepo,
+		PaymentChannels:   c.PaymentChannelRepo,
+	})
+	c.ProductReadService = productServices.Read
+	c.ProductAdminService = productServices.Admin
+	c.ProductWriteService = productServices.Write
 }

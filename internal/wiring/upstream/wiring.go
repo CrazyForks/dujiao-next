@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -17,7 +18,7 @@ import (
 func NewHandler(c *provider.Container) *upstreamtransport.Handler {
 	return upstreamtransport.New(upstreamtransport.Dependencies{
 		Categories:        c.CategoryRepo,
-		Products:          productServiceAdapter{products: c.ProductService},
+		Products:          productServiceAdapter{products: c.ProductReadService},
 		Users:             c.UserStore,
 		ProductRepository: c.ProductRepo,
 		SKUs:              c.ProductSKURepo,
@@ -36,7 +37,7 @@ func NewHandler(c *provider.Container) *upstreamtransport.Handler {
 }
 
 type productServiceAdapter struct {
-	products *service.ProductService
+	products *productapplication.Service
 }
 
 func (a productServiceAdapter) ListForUpstreamSync(updatedAfter *time.Time, includeInactive bool, page, pageSize int) ([]models.Product, int64, error) {

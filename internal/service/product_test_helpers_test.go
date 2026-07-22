@@ -5,13 +5,60 @@ import (
 	"testing"
 	"time"
 
+	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/modules/catalog"
+	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
+	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
+	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
+	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
+
+type ProductService struct {
+	*productapplication.Service
+	*productadmin.AdminService
+	*productwrite.WriteService
+}
+
+type CreateProductInput = productwrite.CreateProductInput
+type WholesalePriceInput = productwrite.WholesalePriceInput
+type ProductSKUInput = productwrite.ProductSKUInput
+
+type memberLevelPriceCleaner interface {
+	DeleteByProductInTx(tx *gorm.DB, productID uint) error
+}
+
+func NewProductService(
+	products repository.ProductRepository,
+	skus repository.ProductSKURepository,
+	cardSecrets repository.CardSecretRepository,
+	cardSecretBatches repository.CardSecretBatchRepository,
+	categories catalog.CategoryRepository,
+	memberLevelPrices memberLevelPriceCleaner,
+	carts repository.CartRepository,
+	productMappings catalogmapping.MappingRepository,
+	orders repository.OrderRepository,
+	paymentChannels repository.PaymentChannelRepository,
+) *ProductService {
+	services := catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
+		Products:          products,
+		SKUs:              skus,
+		CardSecrets:       cardSecrets,
+		CardSecretBatches: cardSecretBatches,
+		Categories:        categories,
+		MemberLevelPrices: memberLevelPrices,
+		Carts:             carts,
+		ProductMappings:   productMappings,
+		Orders:            orders,
+		PaymentChannels:   paymentChannels,
+	})
+	return &ProductService{Service: services.Read, AdminService: services.Admin, WriteService: services.Write}
+}
 
 func newAutoStockProductService(t *testing.T) (*ProductService, *gorm.DB) {
 	t.Helper()

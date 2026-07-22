@@ -4,44 +4,24 @@ import (
 	"go/ast"
 	"os"
 	"path/filepath"
-	"sort"
-	"strings"
 	"testing"
 )
 
-func TestProductServiceImplementationIsSplitByResponsibility(t *testing.T) {
+func TestProductApplicationServicesAreExplicitlyComposed(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	serviceDirectory := filepath.Join(repositoryRoot, "internal", "service")
-	expected := map[string][]string{
-		"product_service.go": {"NewProductService"},
-		"product_application_compat.go": {
-			"newProductWriteUnitOfWork", "WithinTransaction",
-			"newProductAdminUnitOfWork", "WithinTransaction", "DeleteByProduct",
-			"bindMappingDeleteTx",
-		},
-		"product_mapping_service.go": {
-			"NewProductMappingService", "SetCategoryService", "SetSettingService",
-			"newProductMappingUnitOfWork", "WithinTransaction",
-			"bindMappingImportTx", "bindSKUMappingImportTx",
-		},
-	}
+	bootstrapFile := filepath.Join(repositoryRoot, "internal", "bootstrap", "catalogproduct", "services.go")
+	assertFileDeclaresTypes(t, bootstrapFile, []string{"Dependencies", "Services"})
+	assertFileDeclaresFunctions(t, bootstrapFile, []string{"New"})
 
-	for file, want := range expected {
-		path := filepath.Join(serviceDirectory, file)
-		parsed := parseProductionGoFile(t, path)
-		got := declaredFunctionNames(parsed)
-		sort.Strings(want)
-		sort.Strings(got)
-		if strings.Join(got, "\n") != strings.Join(want, "\n") {
-			t.Errorf("%s function ownership mismatch\nwant: %v\ngot:  %v", file, want, got)
-		}
-	}
-
-	base := parseProductionGoFile(t, filepath.Join(serviceDirectory, "product_service.go"))
-	for _, declaration := range base.Decls {
-		function, ok := declaration.(*ast.FuncDecl)
-		if ok && function.Recv != nil {
-			t.Errorf("product_service.go must only declare ProductService dependencies and DTOs; method %s belongs in a responsibility file", function.Name.Name)
+	for _, relativePath := range []string{
+		"internal/service/product_service.go",
+		"internal/service/product_application_compat.go",
+	} {
+		path := filepath.Join(repositoryRoot, filepath.FromSlash(relativePath))
+		if _, err := os.Stat(path); err == nil {
+			t.Errorf("deleted Product facade path was recreated: %s", relativePath)
+		} else if !os.IsNotExist(err) {
+			t.Fatalf("stat %s: %v", relativePath, err)
 		}
 	}
 }

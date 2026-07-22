@@ -12,7 +12,7 @@ func NewPublicHandler(c *provider.Container) *catalogtransport.PublicHandler {
 		promotions = promotionmodule.NewService(c.PromotionRepo)
 	}
 	return catalogtransport.NewPublicHandler(
-		catalogPublicProductAdapter{products: c.ProductService, hidden: c.ResellerRepo},
+		catalogPublicProductAdapter{products: c.ProductReadService, hidden: c.ResellerRepo},
 		c.CategoryService,
 		c.ResellerPricingResolver,
 		promotions,

@@ -100,7 +100,7 @@ func TestCatalogCategoryImplementationLivesInBoundedContextDirectories(t *testin
 		"RelatedPostReader", "PublicHandler",
 	})
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "admin_product_handler.go"), []string{
-		"ProductQueries", "ProductCommands", "LowStockThresholdProvider",
+		"ProductQueries", "ProductWriter", "ProductAdminCommands", "LowStockThresholdProvider",
 		"ProductMappingLookup", "SKUMappingLookup", "AdminProductHandler",
 	})
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "admin_product_mapping_handler.go"), []string{

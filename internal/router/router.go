@@ -120,8 +120,9 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 	adminCardSecretHandler := cardsecrettransport.NewAdminHandler(c.CardSecretService)
 	adminCatalogCategoryHandler := catalogtransport.NewAdminCategoryHandler(c.CategoryService)
 	adminCatalogProductHandler := catalogtransport.NewAdminProductHandler(
-		c.ProductService,
-		c.ProductService,
+		c.ProductReadService,
+		c.ProductWriteService,
+		c.ProductAdminService,
 		c.SettingService,
 		c.ProductMappingRepo,
 		c.SKUMappingRepo,

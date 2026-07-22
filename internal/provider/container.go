@@ -14,6 +14,9 @@ import (
 	"github.com/dujiao-next/internal/modules/cart"
 	"github.com/dujiao-next/internal/modules/catalog"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
+	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
+	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
+	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
 	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
 	channelclientcontract "github.com/dujiao-next/internal/modules/channelclient/contract"
 	"github.com/dujiao-next/internal/modules/compliance"
@@ -115,7 +118,9 @@ type Container struct {
 	EmailService                  *service.EmailService
 	CaptchaService                *captcha.Service
 	UploadService                 *upload.Service
-	ProductService                *service.ProductService
+	ProductReadService            *productapplication.Service
+	ProductAdminService           *productadmin.AdminService
+	ProductWriteService           *productwrite.WriteService
 	ContentPostService            *content.PostService
 	ContentPostCategoryService    *content.PostCategoryService
 	ContentBannerService          *content.BannerService

@@ -22,7 +22,7 @@ import (
 func NewHandler(c *provider.Container) *channeltransport.Handler {
 	return channeltransport.New(channeltransport.Dependencies{
 		CategoryService: c.CategoryService, CategoryRepo: c.CategoryRepo,
-		ProductService: c.ProductService, ProductRepo: c.ProductRepo,
+		ProductService: c.ProductReadService, ProductRepo: c.ProductRepo,
 		ProductMappingRepo: c.ProductMappingRepo, SKUMappingRepo: c.SKUMappingRepo,
 		UserAuthService: identityAdapter{auth: c.UserAuthService}, MemberLevelService: c.MemberLevelService,
 		SettingService: c.SettingService, OrderService: orderAdapter{orders: c.OrderService},

@@ -26,10 +26,14 @@ type ProductQueries interface {
 	ApplyAutoStockCounts(products []models.Product) error
 }
 
-// ProductCommands 是后台商品写入与批量操作所需的最小用例接口。
-type ProductCommands interface {
+// ProductWriter 是商品创建与完整更新用例。
+type ProductWriter interface {
 	Create(input productwrite.CreateProductInput) (*models.Product, error)
 	Update(id string, input productwrite.CreateProductInput) (*models.Product, error)
+}
+
+// ProductAdminCommands 是商品管理与删除用例。
+type ProductAdminCommands interface {
 	UpdateWholesalePrices(id string, prices []productwrite.WholesalePriceInput) (*models.Product, error)
 	QuickUpdate(id string, fields map[string]interface{}) (*models.Product, error)
 	Delete(id string) error
@@ -53,7 +57,8 @@ type SKUMappingLookup interface {
 // AdminProductHandler 处理后台商品管理请求。
 type AdminProductHandler struct {
 	products    ProductQueries
-	commands    ProductCommands
+	writer      ProductWriter
+	admin       ProductAdminCommands
 	settings    LowStockThresholdProvider
 	mappings    ProductMappingLookup
 	skuMappings SKUMappingLookup
@@ -62,17 +67,19 @@ type AdminProductHandler struct {
 // NewAdminProductHandler 创建后台商品 Handler。
 func NewAdminProductHandler(
 	products ProductQueries,
-	commands ProductCommands,
+	writer ProductWriter,
+	admin ProductAdminCommands,
 	settings LowStockThresholdProvider,
 	mappings ProductMappingLookup,
 	skuMappings SKUMappingLookup,
 ) *AdminProductHandler {
-	if products == nil || commands == nil {
+	if products == nil || writer == nil || admin == nil {
 		panic("catalog admin product handler: product use cases are nil")
 	}
 	return &AdminProductHandler{
 		products:    products,
-		commands:    commands,
+		writer:      writer,
+		admin:       admin,
 		settings:    settings,
 		mappings:    mappings,
 		skuMappings: skuMappings,
@@ -268,7 +275,7 @@ func (h *AdminProductHandler) CreateProduct(c *gin.Context) {
 		return
 	}
 
-	product, err := h.commands.Create(productwrite.CreateProductInput{
+	product, err := h.writer.Create(productwrite.CreateProductInput{
 		CategoryID:           req.CategoryID,
 		Slug:                 req.Slug,
 		SeoMetaJSON:          req.SeoMetaJSON,
@@ -360,7 +367,7 @@ func (h *AdminProductHandler) UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	product, err := h.commands.Update(id, productwrite.CreateProductInput{
+	product, err := h.writer.Update(id, productwrite.CreateProductInput{
 		CategoryID:           req.CategoryID,
 		Slug:                 req.Slug,
 		SeoMetaJSON:          req.SeoMetaJSON,
@@ -472,7 +479,7 @@ func (h *AdminProductHandler) UpdateProductWholesalePrices(c *gin.Context) {
 		return
 	}
 
-	product, err := h.commands.UpdateWholesalePrices(id, *inputs)
+	product, err := h.admin.UpdateWholesalePrices(id, *inputs)
 	if err != nil {
 		if errors.Is(err, catalogproduct.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
@@ -514,7 +521,7 @@ func (h *AdminProductHandler) QuickUpdateProduct(c *gin.Context) {
 		return
 	}
 
-	product, err := h.commands.QuickUpdate(id, fields)
+	product, err := h.admin.QuickUpdate(id, fields)
 	if err != nil {
 		if errors.Is(err, catalogproduct.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
@@ -667,7 +674,7 @@ func (h *AdminProductHandler) BatchUpdateProductStatus(c *gin.Context) {
 	successCount := 0
 	failedItems := make([]batchProductFailureItem, 0)
 	for _, id := range req.IDs {
-		_, err := h.commands.QuickUpdate(strconv.FormatUint(uint64(id), 10), map[string]interface{}{"is_active": req.IsActive})
+		_, err := h.admin.QuickUpdate(strconv.FormatUint(uint64(id), 10), map[string]interface{}{"is_active": req.IsActive})
 		if err == nil {
 			successCount++
 		} else {
@@ -686,7 +693,7 @@ func (h *AdminProductHandler) BatchUpdateProductCategory(c *gin.Context) {
 	}
 	successCount := 0
 	for _, id := range req.IDs {
-		_, err := h.commands.QuickUpdate(strconv.FormatUint(uint64(id), 10), map[string]interface{}{"category_id": req.CategoryID})
+		_, err := h.admin.QuickUpdate(strconv.FormatUint(uint64(id), 10), map[string]interface{}{"category_id": req.CategoryID})
 		if err == nil {
 			successCount++
 		}
@@ -704,7 +711,7 @@ func (h *AdminProductHandler) BatchDeleteProducts(c *gin.Context) {
 	successCount := 0
 	var failedIDs []uint
 	for _, id := range req.IDs {
-		if err := h.commands.Delete(strconv.FormatUint(uint64(id), 10)); err == nil {
+		if err := h.admin.Delete(strconv.FormatUint(uint64(id), 10)); err == nil {
 			successCount++
 		} else {
 			failedIDs = append(failedIDs, id)
@@ -717,7 +724,7 @@ func (h *AdminProductHandler) BatchDeleteProducts(c *gin.Context) {
 func (h *AdminProductHandler) DeleteProduct(c *gin.Context) {
 	id := c.Param("id")
 
-	if err := h.commands.Delete(id); err != nil {
+	if err := h.admin.Delete(id); err != nil {
 		if errors.Is(err, catalogproduct.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.product_not_found", nil)
 			return

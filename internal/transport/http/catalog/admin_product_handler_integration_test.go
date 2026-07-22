@@ -201,7 +201,7 @@ func setupAdminProductHandlerTest(t *testing.T) (*cataloghttp.AdminProductHandle
 		}),
 	}
 
-	h := cataloghttp.NewAdminProductHandler(facade, facade, nil, mappingStore, skuMappingStore)
+	h := cataloghttp.NewAdminProductHandler(facade, facade, facade, nil, mappingStore, skuMappingStore)
 	return h, db
 }
 

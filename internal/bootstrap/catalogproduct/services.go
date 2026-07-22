@@ -1,10 +1,13 @@
-package service
+package catalogproductbootstrap
 
 import (
 	"errors"
 
+	"github.com/dujiao-next/internal/modules/catalog"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
+	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
+	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
 	"github.com/dujiao-next/internal/repository"
@@ -12,12 +15,32 @@ import (
 	"gorm.io/gorm"
 )
 
-type MemberLevelPriceCleaner interface {
+type memberLevelPriceCleaner interface {
 	DeleteByProductInTx(tx *gorm.DB, productID uint) error
 }
 
-// productWriteUnitOfWork 是旧 Repository 事务 API 到 Product Application 的临时适配器。
-// Application 只看到绑定后的窄端口，不接触 *gorm.DB。
+// Dependencies 是 Product 三组应用用例的装配依赖。
+type Dependencies struct {
+	Products          repository.ProductRepository
+	SKUs              repository.ProductSKURepository
+	CardSecrets       repository.CardSecretRepository
+	CardSecretBatches repository.CardSecretBatchRepository
+	Categories        catalog.CategoryRepository
+	MemberLevelPrices memberLevelPriceCleaner
+	Carts             repository.CartRepository
+	ProductMappings   catalogmapping.MappingRepository
+	Orders            repository.OrderRepository
+	PaymentChannels   repository.PaymentChannelRepository
+}
+
+// Services 是 Product 查询、管理和写入用例的显式集合。
+type Services struct {
+	Read  *productapplication.Service
+	Admin *productadmin.AdminService
+	Write *productwrite.WriteService
+}
+
+// productWriteUnitOfWork 将 Product Application 所需端口绑定到同一事务。
 type productWriteUnitOfWork struct {
 	products    repository.ProductRepository
 	skus        repository.ProductSKURepository
@@ -60,14 +83,13 @@ func (unit *productWriteUnitOfWork) WithinTransaction(fn func(repositories produ
 	})
 }
 
-// productAdminUnitOfWork 把旧仓储的 GORM 事务绑定收口在兼容边界内。
-// Product Admin Application 只依赖各关联资源的删除端口。
+// productAdminUnitOfWork 将商品级联删除涉及的端口绑定到同一事务。
 type productAdminUnitOfWork struct {
 	products          repository.ProductRepository
 	productSKUs       repository.ProductSKURepository
 	cardSecrets       repository.CardSecretRepository
 	cardSecretBatches repository.CardSecretBatchRepository
-	memberLevelPrices MemberLevelPriceCleaner
+	memberLevelPrices memberLevelPriceCleaner
 	carts             repository.CartRepository
 	productMappings   catalogmapping.MappingRepository
 }
@@ -77,7 +99,7 @@ func newProductAdminUnitOfWork(
 	productSKUs repository.ProductSKURepository,
 	cardSecrets repository.CardSecretRepository,
 	cardSecretBatches repository.CardSecretBatchRepository,
-	memberLevelPrices MemberLevelPriceCleaner,
+	memberLevelPrices memberLevelPriceCleaner,
 	carts repository.CartRepository,
 	productMappings catalogmapping.MappingRepository,
 ) productadmin.UnitOfWork {
@@ -129,9 +151,54 @@ func bindMappingDeleteTx(repo catalogmapping.MappingRepository, tx *gorm.DB) pro
 
 type memberLevelPriceDeleteAdapter struct {
 	tx      *gorm.DB
-	cleaner MemberLevelPriceCleaner
+	cleaner memberLevelPriceCleaner
 }
 
 func (adapter memberLevelPriceDeleteAdapter) DeleteByProduct(productID uint) error {
 	return adapter.cleaner.DeleteByProductInTx(adapter.tx, productID)
+}
+
+// New 显式装配 Product 查询、管理和写入用例。
+func New(dependencies Dependencies) Services {
+	read := productapplication.NewService(productapplication.Options{
+		Products:                      dependencies.Products,
+		Categories:                    dependencies.Categories,
+		Stock:                         dependencies.CardSecrets,
+		NotFoundError:                 catalogproduct.ErrNotFound,
+		ResellerProductNotListedError: catalogproduct.ErrResellerProductNotListed,
+	})
+	admin := productadmin.NewAdminService(productadmin.Options{
+		Products:     dependencies.Products,
+		Categories:   dependencies.Categories,
+		CardSecrets:  dependencies.CardSecrets,
+		Orders:       dependencies.Orders,
+		Transactions: newProductAdminUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.CardSecrets, dependencies.CardSecretBatches, dependencies.MemberLevelPrices, dependencies.Carts, dependencies.ProductMappings),
+		Errors: productadmin.ErrorSet{
+			NotFound:               catalogproduct.ErrNotFound,
+			ProductCategoryInvalid: catalogproduct.ErrProductCategoryInvalid,
+			ProductHasStock:        catalogproduct.ErrProductHasStock,
+			ProductHasOrderRecord:  catalogproduct.ErrProductHasOrderRecord,
+		},
+	})
+	write := productwrite.NewWriteService(productwrite.Options{
+		Products:        dependencies.Products,
+		SKUs:            dependencies.SKUs,
+		Categories:      dependencies.Categories,
+		PaymentChannels: dependencies.PaymentChannels,
+		Transactions:    newProductWriteUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.CardSecrets),
+		Errors: productwrite.ErrorSet{
+			NotFound:                     catalogproduct.ErrNotFound,
+			SlugExists:                   catalogproduct.ErrSlugExists,
+			ProductCategoryInvalid:       catalogproduct.ErrProductCategoryInvalid,
+			ProductPurchaseInvalid:       catalogproduct.ErrProductPurchaseInvalid,
+			FulfillmentInvalid:           catalogproduct.ErrFulfillmentInvalid,
+			ProductPriceInvalid:          catalogproduct.ErrProductPriceInvalid,
+			ManualStockInvalid:           catalogproduct.ErrManualStockInvalid,
+			ProductPurchaseLimitInvalid:  catalogproduct.ErrProductPurchaseLimitInvalid,
+			ProductStockDisplayInvalid:   catalogproduct.ErrProductStockDisplayInvalid,
+			ProductSKUInvalid:            catalogproduct.ErrProductSKUInvalid,
+			ProductSKUHasCardSecretStock: catalogproduct.ErrProductSKUHasCardSecretStock,
+		},
+	})
+	return Services{Read: read, Admin: admin, Write: write}
 }

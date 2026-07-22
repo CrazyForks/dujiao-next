@@ -4,12 +4,11 @@ import (
 	"github.com/dujiao-next/internal/models"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	"github.com/dujiao-next/internal/modules/reseller"
-	"github.com/dujiao-next/internal/service"
 )
 
 // catalogPublicProductAdapter 将商品服务与分销隐藏商品端口适配为公开查询接口。
 type catalogPublicProductAdapter struct {
-	products *service.ProductService
+	products *productapplication.Service
 	hidden   productapplication.HiddenProductRepository
 }
 

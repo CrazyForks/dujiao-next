@@ -13,9 +13,9 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/modules/catalog"
+	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
@@ -194,10 +194,9 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 	}
 
 	productRepo := repository.NewProductRepository(db)
-	productSKURepo := repository.NewProductSKURepository(db)
 	handler := &channeltransport.Handler{Dependencies: channeltransport.Dependencies{
 		ProductRepo:    productRepo,
-		ProductService: service.NewProductService(productRepo, productSKURepo, nil, nil, nil, nil, nil, nil, nil, nil),
+		ProductService: productapplication.NewService(productapplication.Options{Products: productRepo}),
 		SettingService: settingsapp.NewService(settingsstore.New(db)),
 	}}
 
