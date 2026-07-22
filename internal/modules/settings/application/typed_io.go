@@ -1,10 +1,11 @@
-package settings
+package settingsapp
 
 import (
 	"time"
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
+	. "github.com/dujiao-next/internal/modules/settings"
 )
 
 // GetDashboardSetting 获取仪表盘设置（优先 settings，空时回退默认）。
@@ -273,7 +274,7 @@ func (s *Service) GetTelegramBotConfig() (TelegramBotConfigSetting, error) {
 		return fallback, nil
 	}
 	parsed := DecodeTelegramBotConfig(value, fallback)
-	parsed.Menu.Items = ensureBuiltinMenuItems(parsed.Menu.Items)
+	parsed.Menu.Items = EnsureBuiltinMenuItems(parsed.Menu.Items)
 	return parsed, nil
 }
 
@@ -285,13 +286,13 @@ func (s *Service) UpdateTelegramBotConfig(cfg TelegramBotConfigSetting) (Telegra
 	}
 
 	cfg.ConfigVersion = current.ConfigVersion + 1
-	cfg.Basic.Description = normalizeLocalizedText(cfg.Basic.Description)
-	cfg.Welcome.Message = normalizeLocalizedText(cfg.Welcome.Message)
-	cfg.Help.Title = normalizeLocalizedText(cfg.Help.Title)
-	cfg.Help.Intro = normalizeLocalizedText(cfg.Help.Intro)
-	cfg.Help.CenterHint = normalizeLocalizedText(cfg.Help.CenterHint)
-	cfg.Help.SupportHint = normalizeLocalizedText(cfg.Help.SupportHint)
-	cfg.Help.Items = normalizeHelpItems(cfg.Help.Items)
+	cfg.Basic.Description = NormalizeLocalizedText(cfg.Basic.Description)
+	cfg.Welcome.Message = NormalizeLocalizedText(cfg.Welcome.Message)
+	cfg.Help.Title = NormalizeLocalizedText(cfg.Help.Title)
+	cfg.Help.Intro = NormalizeLocalizedText(cfg.Help.Intro)
+	cfg.Help.CenterHint = NormalizeLocalizedText(cfg.Help.CenterHint)
+	cfg.Help.SupportHint = NormalizeLocalizedText(cfg.Help.SupportHint)
+	cfg.Help.Items = NormalizeHelpItems(cfg.Help.Items)
 	cfg.Menu.Items = NormalizeTelegramBotMenuItems(cfg.Menu.Items)
 
 	if _, err := s.Update(constants.SettingKeyTelegramBotConfig, EncodeTelegramBotConfig(cfg)); err != nil {

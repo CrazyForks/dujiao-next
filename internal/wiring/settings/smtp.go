@@ -3,6 +3,8 @@ package settingswiring
 import (
 	"errors"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/config"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/service"
@@ -10,7 +12,7 @@ import (
 )
 
 type settingsSMTPAdapter struct {
-	settings *service.SettingService
+	settings *settingsapp.Service
 	cfg      *config.Config
 	email    *service.EmailService
 }

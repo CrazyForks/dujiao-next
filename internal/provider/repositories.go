@@ -15,6 +15,7 @@ import (
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/store/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
 	reconciliationgormstore "github.com/dujiao-next/internal/modules/reconciliation/store/gormstore"
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 )
 
@@ -40,7 +41,7 @@ func (c *Container) initRepositories() {
 	c.WalletRepo = repository.NewWalletRepository(db)
 	c.OrderRefundRecordRepo = repository.NewOrderRefundRecordRepository(db)
 	c.CategoryRepo = cataloggormstore.NewCategoryStore(db)
-	c.SettingRepo = repository.NewSettingRepository(db)
+	c.SettingRepo = settingsstore.New(db)
 	c.UserLoginLogRepo = auditloggormstore.NewUserLoginStore(db)
 	c.AuthzAuditLogRepo = auditloggormstore.NewAuthzStore(db)
 	c.NotificationLogRepo = notificationgormstore.NewLogStore(db)

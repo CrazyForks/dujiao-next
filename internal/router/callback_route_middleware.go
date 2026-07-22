@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strings"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/service"
 	paymenttransport "github.com/dujiao-next/internal/transport/http/payment"
 	paymentcallbacktransport "github.com/dujiao-next/internal/transport/http/payment/callback"
 	upstreamtransport "github.com/dujiao-next/internal/transport/http/upstream"
@@ -28,7 +29,7 @@ var defaultCallbackPaths = map[string]bool{
 //   - 匹配默认回调路径 → 返回 404（隐藏默认路径）
 //   - 未配置自定义路由 → 放行，默认路由正常工作
 func CallbackRouteMiddleware(
-	settingService *service.SettingService,
+	settingService *settingsapp.Service,
 	callbackHandler *paymentcallbacktransport.Handler,
 	webhookHandler *paymenttransport.WebhookHandler,
 	upstreamHandler *upstreamtransport.Handler,

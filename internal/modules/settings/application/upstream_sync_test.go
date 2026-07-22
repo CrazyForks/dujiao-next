@@ -1,4 +1,4 @@
-package service
+package settingsapp
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 
 func TestGetUpstreamSyncConfigFallbackToYaml(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	cfg, err := svc.GetUpstreamSyncConfig("30m")
 	if err != nil {
@@ -25,7 +25,7 @@ func TestGetUpstreamSyncConfigFallbackToYaml(t *testing.T) {
 
 func TestGetUpstreamSyncConfigReadsFromDB(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	_, err := svc.Update(constants.SettingKeyUpstreamSyncConfig, map[string]interface{}{
 		"interval_minutes":              360,
@@ -49,7 +49,7 @@ func TestGetUpstreamSyncConfigReadsFromDB(t *testing.T) {
 
 func TestUpdateUpstreamSyncConfigNormalizesBelowMinimum(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	result, err := svc.Update(constants.SettingKeyUpstreamSyncConfig, map[string]interface{}{
 		"interval_minutes": 1, // < 5
@@ -62,7 +62,7 @@ func TestUpdateUpstreamSyncConfigNormalizesBelowMinimum(t *testing.T) {
 
 func TestUpdateUpstreamSyncConfigClampsAboveMaximum(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	result, err := svc.Update(constants.SettingKeyUpstreamSyncConfig, map[string]interface{}{
 		"interval_minutes": 99999,

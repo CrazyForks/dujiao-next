@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 
@@ -81,7 +83,7 @@ func (s *WalletService) AdminRefundToWallet(input AdminRefundToWalletInput) (*mo
 	var txnResult *models.WalletTransaction
 	var refundRecordResult *models.OrderRefundRecord
 
-	cfg := DefaultOrderRefundConfig()
+	cfg := settingsapp.DefaultOrderRefundConfig()
 	if s.settingService != nil {
 		cfgLoaded, cfgErr := s.settingService.GetOrderRefundConfig()
 		if cfgErr != nil {
@@ -105,7 +107,7 @@ func (s *WalletService) AdminRefundToWallet(input AdminRefundToWalletInput) (*mo
 		if order.PaidAt == nil {
 			return ErrOrderStatusInvalid
 		}
-		if isOrderRefundWindowExpired(&order, cfg.MaxRefundDays, time.Now()) {
+		if settingsapp.IsOrderRefundWindowExpired(order.CreatedAt, order.PaidAt, cfg.MaxRefundDays, time.Now()) {
 			return ErrOrderRefundExpired
 		}
 		if order.TotalAmount.Decimal.LessThanOrEqual(decimal.Zero) {

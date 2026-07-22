@@ -4,6 +4,10 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/dujiao-next/internal/testkit/memorysettings"
+
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/queue"
@@ -130,15 +134,15 @@ func TestEnqueueOrderStatusEmailTaskIfEligibleSkipWhenSMTPDisabled(t *testing.T)
 		_ = queueClient.Close()
 	})
 
-	repo := newMockSettingRepo()
-	repo.store[constants.SettingKeySMTPConfig] = jsonmap.JSON{
+	repo := memorysettings.New()
+	repo.Values[constants.SettingKeySMTPConfig] = jsonmap.JSON{
 		"enabled": false,
 	}
 
 	skipped, err := enqueueOrderStatusEmailTaskIfEligible(
 		orderStatusEmailOrderRepoStub{receiver: "buyer@example.com"},
 		queueClient,
-		NewSettingService(repo),
+		settingsapp.NewService(repo),
 		config.EmailConfig{Enabled: true},
 		105,
 		"paid",

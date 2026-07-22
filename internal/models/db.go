@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/glebarez/sqlite" // 纯 Go SQLite 驱动（基于 modernc.org/sqlite）
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -167,7 +168,7 @@ func AutoMigrate() error {
 		&PostProduct{},
 		&PostCategory{},
 		&Banner{},
-		&Setting{},
+		&settingsstore.SettingRecord{},
 		&ApiCredential{},
 		&SiteConnection{},
 		&ProductMapping{},

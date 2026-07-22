@@ -3,6 +3,8 @@ package service
 import (
 	"strings"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
@@ -20,7 +22,7 @@ type orderStatusEmailQueue interface {
 func enqueueOrderStatusEmailTaskIfEligible(
 	orderRepo repository.OrderRepository,
 	queueClient orderStatusEmailQueue,
-	settingService *SettingService,
+	settingService *settingsapp.Service,
 	defaultEmailConfig config.EmailConfig,
 	orderID uint,
 	status string,

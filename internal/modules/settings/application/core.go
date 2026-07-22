@@ -1,11 +1,17 @@
-package settings
+package settingsapp
 
-import "github.com/dujiao-next/internal/shared/jsonmap"
+import (
+	"github.com/dujiao-next/internal/config"
+	settingscontract "github.com/dujiao-next/internal/modules/settings/contract"
+	"github.com/dujiao-next/internal/shared/jsonmap"
+)
 
 // Service 是站点设置的核心用例入口：读写、Registry 归一化与声明式副作用。
 type Service struct {
-	repo     Repository
-	registry Registry
+	repo                  settingscontract.Store
+	registry              Registry
+	defaultOrderConfig    config.OrderConfig
+	hasDefaultOrderConfig bool
 }
 
 // UpdateResult 包含持久化后的设置值及其声明式外部影响。
@@ -24,12 +30,17 @@ func (result UpdateResult) HasEffect(effect Effect) bool {
 	return false
 }
 
-// NewService 创建设置服务。registry 由装配层注入完整定义集合。
-func NewService(repo Repository, registry Registry) *Service {
-	return &Service{
+// NewService 创建设置服务。可选的订单配置仅在数据库尚未覆盖设置时使用。
+func NewService(repo settingscontract.Store, defaultOrderConfig ...config.OrderConfig) *Service {
+	service := &Service{
 		repo:     repo,
-		registry: registry,
+		registry: defaultSettingRegistry,
 	}
+	if len(defaultOrderConfig) > 0 {
+		service.defaultOrderConfig = defaultOrderConfig[0]
+		service.hasDefaultOrderConfig = true
+	}
+	return service
 }
 
 // GetByKey 获取设置原始 JSON；不存在时返回 nil。
@@ -37,14 +48,14 @@ func (s *Service) GetByKey(key string) (jsonmap.JSON, error) {
 	if s == nil || s.repo == nil {
 		return nil, nil
 	}
-	setting, err := s.repo.GetByKey(key)
+	value, found, err := s.repo.GetByKey(key)
 	if err != nil {
 		return nil, err
 	}
-	if setting == nil {
+	if !found {
 		return nil, nil
 	}
-	return setting.ValueJSON, nil
+	return value, nil
 }
 
 // Update 设置值。
@@ -63,12 +74,12 @@ func (s *Service) UpdateWithEffects(key string, value map[string]interface{}) (U
 	}
 	normalized := s.registry.Normalize(key, jsonmap.JSON(value))
 
-	setting, err := s.repo.Upsert(key, normalized)
+	stored, err := s.repo.Upsert(key, normalized)
 	if err != nil {
 		return UpdateResult{}, err
 	}
 	return UpdateResult{
-		Value:   setting.ValueJSON,
+		Value:   stored,
 		Effects: s.registry.Effects(key),
 	}, nil
 }

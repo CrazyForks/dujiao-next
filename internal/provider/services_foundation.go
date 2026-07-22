@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/modules/compliance"
 	"github.com/dujiao-next/internal/modules/reseller"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	"github.com/dujiao-next/internal/modules/upload"
 	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
 	"github.com/dujiao-next/internal/service"
@@ -27,7 +28,7 @@ func (c *Container) initPolicyAndSettingServices() {
 		panic(err)
 	}
 
-	c.SettingService = service.NewSettingService(c.SettingRepo, c.Config.Order)
+	c.SettingService = settingsapp.NewService(c.SettingRepo, c.Config.Order)
 	c.ResellerDomainResolver = reseller.NewDomainResolver(c.ResellerRepo, c.Config.Reseller)
 	c.ResellerPricingResolver = service.NewResellerPricingResolver(c.ResellerRepo)
 	c.ResellerManagementService = reseller.NewManagementService(resellerpersistence.NewManagementStore(c.ResellerRepo), c.Config.Reseller)

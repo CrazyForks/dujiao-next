@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -64,7 +67,7 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 		&models.Fulfillment{},
 		&models.WalletAccount{},
 		&models.WalletTransaction{},
-		&models.Setting{},
+		&settingsstore.SettingRecord{},
 		&models.GiftCardBatch{},
 		&models.GiftCard{},
 	); err != nil {
@@ -77,10 +80,10 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 	emailVerifyRepo := repository.NewEmailVerifyCodeRepository(db)
 	orderRepo := repository.NewOrderRepository(db)
 	walletRepo := repository.NewWalletRepository(db)
-	settingRepo := repository.NewSettingRepository(db)
+	settingRepo := settingsstore.New(db)
 	giftCardRepo := giftcardgormstore.New(db)
 
-	settingSvc := service.NewSettingService(settingRepo)
+	settingSvc := settingsapp.NewService(settingRepo)
 	refundRecordRepo := repository.NewOrderRefundRecordRepository(db)
 	walletSvc := service.NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, nil, settingSvc)
 	giftCardSvc := service.NewGiftCardService(giftCardRepo, userRepo, walletSvc, settingSvc)

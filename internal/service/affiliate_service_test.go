@@ -5,6 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dujiao-next/internal/testkit/memorysettings"
+
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
@@ -136,8 +140,8 @@ func setupAffiliateServiceTest(t *testing.T) (*AffiliateService, *gorm.DB) {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	settingRepo := newMockSettingRepo()
-	settingSvc := NewSettingService(settingRepo)
+	settingRepo := memorysettings.New()
+	settingSvc := settingsapp.NewService(settingRepo)
 	if _, err := settingSvc.UpdateAffiliateSetting(settingsmodule.AffiliateSetting{
 		Enabled:        true,
 		CommissionRate: 20,

@@ -29,6 +29,8 @@ import (
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
 	"github.com/dujiao-next/internal/modules/reconciliation"
 	"github.com/dujiao-next/internal/modules/reseller"
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingscontract "github.com/dujiao-next/internal/modules/settings/contract"
 	"github.com/dujiao-next/internal/modules/siteconnection"
 	"github.com/dujiao-next/internal/modules/sitemap"
 	"github.com/dujiao-next/internal/modules/upload"
@@ -64,7 +66,7 @@ type Container struct {
 	WalletRepo                 repository.WalletRepository
 	OrderRefundRecordRepo      repository.OrderRefundRecordRepository
 	CategoryRepo               catalog.CategoryRepository
-	SettingRepo                repository.SettingRepository
+	SettingRepo                settingscontract.Store
 	UserLoginLogRepo           auditlog.UserLoginRepository
 	AuthzAuditLogRepo          auditlog.AuthzRepository
 	NotificationLogRepo        *notificationgormstore.LogStore
@@ -104,7 +106,7 @@ type Container struct {
 	ContentBannerService          *content.BannerService
 	ContentMediaService           *content.MediaService
 	CategoryService               *catalog.CategoryService
-	SettingService                *service.SettingService
+	SettingService                *settingsapp.Service
 	SitemapService                *sitemap.Service
 	CartService                   *cart.Service
 	WalletService                 *service.WalletService

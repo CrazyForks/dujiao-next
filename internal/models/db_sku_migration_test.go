@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -34,7 +35,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		&CartItem{},
 		&CardSecret{},
 		&CardSecretBatch{},
-		&Setting{},
+		&settingsstore.SettingRecord{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}

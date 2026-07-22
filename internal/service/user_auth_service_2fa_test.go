@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -23,7 +25,7 @@ func newUser2FATestServices(t *testing.T) (*UserAuthService, *UserTOTPService, r
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &models.EmailVerifyCode{}, &models.Setting{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &models.EmailVerifyCode{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	cfg := &config.Config{

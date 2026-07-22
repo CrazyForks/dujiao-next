@@ -1,4 +1,4 @@
-package service
+package settingsapp
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 
 func TestHomeAnnouncementActiveDisabled(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 	repo.store[constants.SettingKeyHomeAnnouncement] = jsonmap.JSON{
 		"enabled": false,
 		"type":    "info",
@@ -22,7 +22,7 @@ func TestHomeAnnouncementActiveDisabled(t *testing.T) {
 
 func TestHomeAnnouncementActiveEmptyContent(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 	repo.store[constants.SettingKeyHomeAnnouncement] = jsonmap.JSON{
 		"enabled": true,
 		"type":    "info",
@@ -35,7 +35,7 @@ func TestHomeAnnouncementActiveEmptyContent(t *testing.T) {
 
 func TestHomeAnnouncementActiveOK(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 	repo.store[constants.SettingKeyHomeAnnouncement] = jsonmap.JSON{
 		"enabled": true,
 		"type":    "warning",

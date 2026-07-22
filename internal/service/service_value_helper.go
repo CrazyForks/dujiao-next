@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
@@ -12,7 +14,7 @@ import (
 )
 
 // resolveServiceSiteCurrency 统一解析服务层使用的站点币种配置。
-func resolveServiceSiteCurrency(settingService *SettingService) string {
+func resolveServiceSiteCurrency(settingService *settingsapp.Service) string {
 	if settingService == nil {
 		return constants.SiteCurrencyDefault
 	}
@@ -24,7 +26,7 @@ func resolveServiceSiteCurrency(settingService *SettingService) string {
 }
 
 // resolveOrderPaymentExpireMinutes 统一解析订单支付超时分钟配置。
-func resolveOrderPaymentExpireMinutes(settingService *SettingService, defaultMinutes int) int {
+func resolveOrderPaymentExpireMinutes(settingService *settingsapp.Service, defaultMinutes int) int {
 	if defaultMinutes <= 0 {
 		defaultMinutes = 15
 	}

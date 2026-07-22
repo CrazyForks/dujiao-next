@@ -5,6 +5,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/shopspring/decimal"
@@ -59,7 +60,7 @@ func validatePaymentAmountForChannel(amount decimal.Decimal, channel *models.Pay
 
 func validatePaymentCurrencyForChannel(currency string, channel *models.PaymentChannel) error {
 	normalized := strings.ToUpper(strings.TrimSpace(currency))
-	if !settingCurrencyCodePattern.MatchString(normalized) {
+	if !settingsapp.IsCurrencyCode(normalized) {
 		return ErrPaymentCurrencyMismatch
 	}
 	if shouldUseCNYPaymentCurrency(channel) && normalized != constants.SiteCurrencyDefault {

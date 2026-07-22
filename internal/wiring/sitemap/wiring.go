@@ -1,9 +1,9 @@
 package sitemapwiring
 
-import "github.com/dujiao-next/internal/service"
+import settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 
 type sitemapSiteBrandAdapter struct {
-	settings *service.SettingService
+	settings *settingsapp.Service
 }
 
 func (a sitemapSiteBrandAdapter) GetSiteURL() (string, error) {

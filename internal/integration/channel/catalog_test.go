@@ -8,6 +8,9 @@ import (
 	"testing"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/modules/catalog"
 	cataloggormstore "github.com/dujiao-next/internal/modules/catalog/store/gormstore"
@@ -194,7 +197,7 @@ func TestGetProductDetailIncludesStockDisplayMetadataAndKeepsRealStockCount(t *t
 	handler := &channeltransport.Handler{Dependencies: channeltransport.Dependencies{
 		ProductRepo:    productRepo,
 		ProductService: service.NewProductService(productRepo, productSKURepo, nil, nil, nil, nil, nil, nil, nil, nil),
-		SettingService: service.NewSettingService(repository.NewSettingRepository(db)),
+		SettingService: settingsapp.NewService(settingsstore.New(db)),
 	}}
 
 	gin.SetMode(gin.TestMode)

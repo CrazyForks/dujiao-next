@@ -3,6 +3,8 @@ package service
 import (
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -20,7 +22,7 @@ type procurementOrderLifecycleAdapter struct {
 	orders             repository.OrderRepository
 	fulfillments       repository.FulfillmentRepository
 	queue              *queue.Client
-	settings           *SettingService
+	settings           *settingsapp.Service
 	defaultEmailConfig config.EmailConfig
 }
 
@@ -28,7 +30,7 @@ func NewProcurementOrderLifecycle(
 	orders repository.OrderRepository,
 	fulfillments repository.FulfillmentRepository,
 	queueClient *queue.Client,
-	settings *SettingService,
+	settings *settingsapp.Service,
 	defaultEmailConfig config.EmailConfig,
 ) procurement.OrderLifecycle {
 	return &procurementOrderLifecycleAdapter{

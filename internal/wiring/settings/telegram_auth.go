@@ -3,11 +3,12 @@ package settingswiring
 import (
 	"github.com/dujiao-next/internal/config"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	"github.com/dujiao-next/internal/service"
 )
 
 type settingsTelegramAuthAdapter struct {
-	settings     *service.SettingService
+	settings     *settingsapp.Service
 	cfg          *config.Config
 	telegramAuth *service.TelegramAuthService
 }

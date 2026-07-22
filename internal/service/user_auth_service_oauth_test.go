@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -28,7 +31,7 @@ func setupTelegramOAuthTestService(t *testing.T) (*UserAuthService, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &models.EmailVerifyCode{}, &models.Setting{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &models.EmailVerifyCode{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -38,7 +41,7 @@ func setupTelegramOAuthTestService(t *testing.T) (*UserAuthService, *gorm.DB) {
 			ExpireHours: 24,
 		},
 	}
-	settingSvc := NewSettingService(repository.NewSettingRepository(db))
+	settingSvc := settingsapp.NewService(settingsstore.New(db))
 	svc := NewUserAuthService(
 		cfg,
 		repository.NewUserRepository(db),

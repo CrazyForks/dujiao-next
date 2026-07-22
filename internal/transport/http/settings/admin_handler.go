@@ -5,7 +5,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/http/handlers/shared"
 	"github.com/dujiao-next/internal/http/response"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -14,7 +14,7 @@ import (
 // AdminService 是后台通用设置端口。
 type AdminService interface {
 	GetByKey(key string) (jsonmap.JSON, error)
-	UpdateWithEffects(key string, value map[string]interface{}) (settingsmodule.UpdateResult, error)
+	UpdateWithEffects(key string, value map[string]interface{}) (settingsapp.UpdateResult, error)
 	InvalidateCallbackRoutesCache()
 }
 
@@ -66,10 +66,10 @@ func (h *AdminHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if result.HasEffect(settingsmodule.EffectInvalidatePublicConfigCache) {
+	if result.HasEffect(settingsapp.EffectInvalidatePublicConfigCache) {
 		_ = cache.DelAllPublicConfig(c.Request.Context())
 	}
-	if result.HasEffect(settingsmodule.EffectInvalidateCallbackRoutesCache) {
+	if result.HasEffect(settingsapp.EffectInvalidateCallbackRoutesCache) {
 		h.settings.InvalidateCallbackRoutesCache()
 	}
 	response.Success(c, result.Value)

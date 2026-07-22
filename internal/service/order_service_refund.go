@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
@@ -51,7 +53,7 @@ type OrderRefundService struct {
 	userRepo              repository.UserRepository
 	orderRefundRecordRepo repository.OrderRefundRecordRepository
 	affiliateSvc          *AffiliateService
-	settingService        *SettingService
+	settingService        *settingsapp.Service
 	resellerAccountingSvc *ResellerAccountingService
 }
 
@@ -91,7 +93,7 @@ func NewOrderRefundService(
 	userRepo repository.UserRepository,
 	orderRefundRecordRepo repository.OrderRefundRecordRepository,
 	affiliateSvc *AffiliateService,
-	settingService *SettingService,
+	settingService *settingsapp.Service,
 ) *OrderRefundService {
 	return &OrderRefundService{
 		orderRepo:             orderRepo,
@@ -228,7 +230,7 @@ func (s *OrderRefundService) AdminManualRefund(input AdminManualRefundInput) (*m
 	recordRemark := strings.TrimSpace(input.Remark)
 	var createdRecord *models.OrderRefundRecord
 
-	cfg := DefaultOrderRefundConfig()
+	cfg := settingsapp.DefaultOrderRefundConfig()
 	if s.settingService != nil {
 		cfgLoaded, cfgErr := s.settingService.GetOrderRefundConfig()
 		if cfgErr != nil {
@@ -249,7 +251,7 @@ func (s *OrderRefundService) AdminManualRefund(input AdminManualRefundInput) (*m
 		if order.PaidAt == nil {
 			return ErrOrderStatusInvalid
 		}
-		if isOrderRefundWindowExpired(&order, cfg.MaxRefundDays, time.Now()) {
+		if settingsapp.IsOrderRefundWindowExpired(order.CreatedAt, order.PaidAt, cfg.MaxRefundDays, time.Now()) {
 			return ErrOrderRefundExpired
 		}
 		if order.TotalAmount.Decimal.LessThanOrEqual(decimal.Zero) {

@@ -1,11 +1,10 @@
-package service
+package settingsapp
 
 import (
 	"reflect"
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -37,32 +36,32 @@ func TestSettingServiceUpdateWithEffectsDescribesCacheImpact(t *testing.T) {
 		name       string
 		key        string
 		value      map[string]interface{}
-		wantEffect settingsmodule.Effect
+		wantEffect Effect
 	}{
 		{
 			name:       "site config invalidates public cache",
 			key:        constants.SettingKeySiteConfig,
 			value:      map[string]interface{}{},
-			wantEffect: settingsmodule.EffectInvalidatePublicConfigCache,
+			wantEffect: EffectInvalidatePublicConfigCache,
 		},
 		{
 			name:       "wallet config is effect only",
 			key:        constants.SettingKeyWalletConfig,
 			value:      map[string]interface{}{constants.SettingFieldWalletOnlyPayment: true},
-			wantEffect: settingsmodule.EffectInvalidatePublicConfigCache,
+			wantEffect: EffectInvalidatePublicConfigCache,
 		},
 		{
 			name:       "callback routes invalidate route cache",
 			key:        constants.SettingKeyCallbackRoutesConfig,
 			value:      map[string]interface{}{constants.SettingFieldPaymentCallback: "/api/custom/callback"},
-			wantEffect: settingsmodule.EffectInvalidateCallbackRoutesCache,
+			wantEffect: EffectInvalidateCallbackRoutesCache,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			repo := newMockSettingRepo()
-			service := NewSettingService(repo)
+			service := NewService(repo)
 			result, err := service.UpdateWithEffects(test.key, test.value)
 			if err != nil {
 				t.Fatalf("update setting: %v", err)
@@ -74,7 +73,7 @@ func TestSettingServiceUpdateWithEffectsDescribesCacheImpact(t *testing.T) {
 	}
 
 	repo := newMockSettingRepo()
-	service := NewSettingService(repo)
+	service := NewService(repo)
 	result, err := service.UpdateWithEffects("custom_extension_config", map[string]interface{}{"enabled": true})
 	if err != nil {
 		t.Fatalf("update unknown setting: %v", err)
@@ -86,7 +85,7 @@ func TestSettingServiceUpdateWithEffectsDescribesCacheImpact(t *testing.T) {
 
 func TestSettingServiceUpdateKeepsUnknownKeyPassThroughBehavior(t *testing.T) {
 	repo := newMockSettingRepo()
-	service := NewSettingService(repo)
+	service := NewService(repo)
 	input := map[string]interface{}{
 		"nested": map[string]interface{}{"enabled": true},
 		"count":  float64(3),

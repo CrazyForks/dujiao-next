@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -22,7 +25,7 @@ func newRegistrationDomainPolicyAuthService(t *testing.T) (*UserAuthService, *go
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &models.EmailVerifyCode{}, &models.Setting{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.UserOAuthIdentity{}, &models.EmailVerifyCode{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 	cfg := &config.Config{
@@ -30,7 +33,7 @@ func newRegistrationDomainPolicyAuthService(t *testing.T) (*UserAuthService, *go
 		UserJWT: config.JWTConfig{SecretKey: "user-jwt-domain-policy-secret", ExpireHours: 24},
 		Email:   config.EmailConfig{Enabled: false},
 	}
-	settingSvc := NewSettingService(repository.NewSettingRepository(db))
+	settingSvc := settingsapp.NewService(settingsstore.New(db))
 	return NewUserAuthService(
 		cfg,
 		repository.NewUserRepository(db),
@@ -52,7 +55,7 @@ func TestRegisterRejectsEmailDomainNotAllowed(t *testing.T) {
 	}
 
 	user, token, _, err := svc.Register("buyer@example.com", "secret123", "", true, false)
-	if !errors.Is(err, ErrEmailDomainNotAllowed) {
+	if !errors.Is(err, settingsapp.ErrEmailDomainNotAllowed) {
 		t.Fatalf("expected ErrEmailDomainNotAllowed, got user=%+v token=%q err=%v", user, token, err)
 	}
 }
@@ -85,7 +88,7 @@ func TestSendVerifyCodeRejectsEmailDomainBeforeEmailSend(t *testing.T) {
 	}
 
 	err := svc.SendVerifyCode("buyer@example.com", constants.VerifyPurposeRegister, constants.LocaleZhCN)
-	if !errors.Is(err, ErrEmailDomainNotAllowed) {
+	if !errors.Is(err, settingsapp.ErrEmailDomainNotAllowed) {
 		t.Fatalf("expected ErrEmailDomainNotAllowed, got %v", err)
 	}
 }

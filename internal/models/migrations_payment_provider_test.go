@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -20,7 +21,7 @@ func setupPaymentProviderRenameTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	DB = db
-	if err := db.AutoMigrate(&PaymentChannel{}, &Setting{}); err != nil {
+	if err := db.AutoMigrate(&PaymentChannel{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 	return db
@@ -75,7 +76,7 @@ func TestEnsurePaymentProviderBepusdtRenameMigration_RenamesAndIsIdempotent(t *t
 	}
 
 	// Marker should be written
-	var marker Setting
+	var marker settingsstore.SettingRecord
 	if err := db.First(&marker, "key = ?", "migration/payment_provider_bepusdt_rename_v1").Error; err != nil {
 		t.Fatalf("expected marker after migration: %v", err)
 	}
@@ -191,7 +192,7 @@ func TestEnsurePaymentChannelBepusdtConfigMigration_NormalizesLegacyChannels(t *
 	if err := ensurePaymentChannelBepusdtConfigMigration(); err != nil {
 		t.Fatalf("second migration should be idempotent: %v", err)
 	}
-	var marker Setting
+	var marker settingsstore.SettingRecord
 	if err := db.First(&marker, "key = ?", paymentChannelBepusdtConfigMigrationSettingKey).Error; err != nil {
 		t.Fatalf("load marker failed: %v", err)
 	}

@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	settingscontract "github.com/dujiao-next/internal/modules/settings/contract"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -22,20 +22,15 @@ const (
 	expectedFullText = "我已阅读并理解上述合规声明提醒，知悉相关法律风险，并确认自行承担部署、运营和收费行为产生的法律责任"
 )
 
-type SettingRepository interface {
-	GetByKey(key string) (*models.Setting, error)
-	Upsert(key string, value jsonmap.JSON) (*models.Setting, error)
-}
-
 // Service 合规声明确认服务。
 type Service struct {
-	settingRepo SettingRepository
+	settingRepo settingscontract.Store
 	acked       atomic.Bool
 	writeMu     sync.Mutex // 保护 Acknowledge 的 check-then-act
 }
 
 // NewComplianceService 启动时装载一次 DB
-func NewService(repo SettingRepository) *Service {
+func NewService(repo settingscontract.Store) *Service {
 	s := &Service{settingRepo: repo}
 	if status, err := s.Status(); err == nil && status.Acknowledged {
 		s.acked.Store(true)
@@ -50,14 +45,14 @@ func (s *Service) IsAcknowledged() bool {
 
 // Status 读取当前状态（管理面 UI 展示用）
 func (s *Service) Status() (*Status, error) {
-	setting, err := s.settingRepo.GetByKey(complianceSettingKey)
+	value, found, err := s.settingRepo.GetByKey(complianceSettingKey)
 	if err != nil {
 		return nil, fmt.Errorf("compliance: read setting: %w", err)
 	}
-	if setting == nil {
+	if !found {
 		return &Status{Acknowledged: false}, nil
 	}
-	v := setting.ValueJSON
+	v := value
 	status := &Status{
 		Acknowledged: complianceJSONBool(v, "acknowledged"),
 		Version:      complianceJSONString(v, "version"),

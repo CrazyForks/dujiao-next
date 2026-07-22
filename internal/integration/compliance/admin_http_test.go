@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+
 	"github.com/dujiao-next/internal/modules/compliance"
-	"github.com/dujiao-next/internal/repository"
 	compliancetransport "github.com/dujiao-next/internal/transport/http/compliance"
 
 	"github.com/gin-gonic/gin"
@@ -37,9 +37,9 @@ func setupComplianceHandler(t *testing.T) (*gin.Engine, *compliance.Service) {
 	gin.SetMode(gin.TestMode)
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&models.Setting{}))
+	require.NoError(t, db.AutoMigrate(&settingsstore.SettingRecord{}))
 
-	cs := compliance.NewService(repository.NewSettingRepository(db))
+	cs := compliance.NewService(settingsstore.New(db))
 	h := compliancetransport.NewAdminHandler(complianceAdminAdapter{svc: cs})
 
 	r := gin.New()

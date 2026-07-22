@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
@@ -36,7 +39,7 @@ func setupOrderRefundServiceTest(t *testing.T) (*OrderRefundService, *gorm.DB) {
 		&models.WalletAccount{},
 		&models.WalletTransaction{},
 		&models.OrderRefundRecord{},
-		&models.Setting{},
+		&settingsstore.SettingRecord{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -46,7 +49,7 @@ func setupOrderRefundServiceTest(t *testing.T) (*OrderRefundService, *gorm.DB) {
 	orderRefundRecordRepo := repository.NewOrderRefundRecordRepository(db)
 	affiliateSvc := NewAffiliateService(repository.NewAffiliateRepository(db), nil, nil, nil, nil)
 	userRepo := repository.NewUserRepository(db)
-	settingSvc := NewSettingService(repository.NewSettingRepository(db))
+	settingSvc := settingsapp.NewService(settingsstore.New(db))
 	return NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateSvc, settingSvc), db
 }
 
@@ -211,7 +214,7 @@ func TestOrderRefundServiceAdminManualRefundNoLimitWhenZero(t *testing.T) {
 	}
 
 	if _, err := svc.settingService.Update(constants.SettingKeyOrderConfig, map[string]interface{}{
-		orderConfigFieldMaxRefundDays: 0,
+		settingsapp.OrderConfigFieldMaxRefundDays: 0,
 	}); err != nil {
 		t.Fatalf("update order refund config failed: %v", err)
 	}

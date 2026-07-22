@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
@@ -29,7 +31,7 @@ func (publicConfigCacheAdapter) SetJSON(ctx context.Context, key string, value i
 }
 
 type publicConfigSettingsAdapter struct {
-	settings *service.SettingService
+	settings *settingsapp.Service
 	cfg      *config.Config
 }
 

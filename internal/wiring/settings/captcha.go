@@ -4,11 +4,11 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/modules/captcha"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
-	"github.com/dujiao-next/internal/service"
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 )
 
 type settingsCaptchaAdapter struct {
-	settings *service.SettingService
+	settings *settingsapp.Service
 	cfg      *config.Config
 	captcha  *captcha.Service
 }

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
@@ -67,7 +69,7 @@ func (a userEmailTransportAdapter) ResolvePasswordChangeMode(user *models.User) 
 // userPasswordTransportAdapter 将用户认证/设置服务适配为密码 transport 端口。
 type userPasswordTransportAdapter struct {
 	auth     *service.UserAuthService
-	settings *service.SettingService
+	settings *settingsapp.Service
 }
 
 func (a userPasswordTransportAdapter) GetEmailVerificationEnabled(defaultValue bool) (bool, error) {
@@ -85,7 +87,7 @@ func (a userPasswordTransportAdapter) ChangePassword(userID uint, oldPassword, n
 // userVerifyTransportAdapter 将用户认证/设置服务适配为验证码发送端口。
 type userVerifyTransportAdapter struct {
 	auth     *service.UserAuthService
-	settings *service.SettingService
+	settings *settingsapp.Service
 }
 
 func (a userVerifyTransportAdapter) GetEmailVerificationEnabled(defaultValue bool) (bool, error) {
@@ -229,7 +231,7 @@ func (a userTelegramOIDCTransportAdapter) BindTelegramOIDC(ctx context.Context, 
 // userLoginTransportAdapter 将设置/认证服务适配为注册登录 transport 端口。
 type userLoginTransportAdapter struct {
 	auth     *service.UserAuthService
-	settings *service.SettingService
+	settings *settingsapp.Service
 }
 
 func (a userLoginTransportAdapter) GetRegistrationEnabled(defaultValue bool) (bool, error) {
@@ -472,7 +474,7 @@ func mapUserAuthTransportError(err error) error {
 		{service.ErrInvalidPassword, userauthtransport.ErrInvalidPassword},
 		{service.ErrInvalidVerifyPurpose, userauthtransport.ErrInvalidVerifyPurpose},
 		{service.ErrEmailExists, userauthtransport.ErrEmailExists},
-		{service.ErrEmailDomainNotAllowed, userauthtransport.ErrEmailDomainNotAllowed},
+		{settingsapp.ErrEmailDomainNotAllowed, userauthtransport.ErrEmailDomainNotAllowed},
 		{service.ErrTelegramAuthDisabled, userauthtransport.ErrTelegramAuthDisabled},
 		{service.ErrTelegramAuthConfigInvalid, userauthtransport.ErrTelegramAuthConfigInvalid},
 		{service.ErrTelegramOIDCStateInvalid, userauthtransport.ErrTelegramOIDCStateInvalid},

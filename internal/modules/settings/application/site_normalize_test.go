@@ -1,4 +1,4 @@
-package service
+package settingsapp
 
 import (
 	"errors"
@@ -11,7 +11,7 @@ import (
 
 func TestUpdateOrderSettingNormalized(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	result, err := svc.Update(constants.SettingKeyOrderConfig, map[string]interface{}{
 		constants.SettingFieldPaymentExpireMinutes: "20000",
@@ -35,7 +35,7 @@ func TestUpdateOrderSettingNormalized(t *testing.T) {
 
 func TestUpdateCallbackRoutesSettingIncludesDujiaoPayWebhook(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	result, err := svc.Update(constants.SettingKeyCallbackRoutesConfig, map[string]interface{}{
 		constants.SettingFieldPaymentCallback:  " /api/custom/payment ",
@@ -68,7 +68,7 @@ func TestUpdateCallbackRoutesSettingIncludesDujiaoPayWebhook(t *testing.T) {
 
 func TestGetSiteBrand(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	repo.store[constants.SettingKeySiteConfig] = map[string]interface{}{
 		"brand": map[string]interface{}{
@@ -101,7 +101,7 @@ func TestGetSiteBrand(t *testing.T) {
 
 func TestUpdateSiteSettingNormalized(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	result, err := svc.Update(constants.SettingKeySiteConfig, map[string]interface{}{
 		"brand": map[string]interface{}{
@@ -352,7 +352,7 @@ func TestUpdateSiteSettingNormalized(t *testing.T) {
 
 func TestUpdateSiteSettingNormalizedDefaultAbout(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	result, err := svc.Update(constants.SettingKeySiteConfig, map[string]interface{}{})
 	if err != nil {
@@ -415,7 +415,7 @@ func TestUpdateSiteSettingNormalizedDefaultAbout(t *testing.T) {
 
 func TestUpdateSiteSettingNormalizedCurrency(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	result, err := svc.Update(constants.SettingKeySiteConfig, map[string]interface{}{
 		"currency": " usd ",
@@ -430,54 +430,54 @@ func TestUpdateSiteSettingNormalizedCurrency(t *testing.T) {
 
 func TestUpdateOrderRefundSettingNormalized(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	result, err := svc.Update(constants.SettingKeyOrderConfig, map[string]interface{}{
-		orderConfigFieldMaxRefundDays: "0",
+		OrderConfigFieldMaxRefundDays: "0",
 	})
 	if err != nil {
 		t.Fatalf("update order refund config failed: %v", err)
 	}
-	maxDays, err := parseSettingInt(result[orderConfigFieldMaxRefundDays])
+	maxDays, err := parseSettingInt(result[OrderConfigFieldMaxRefundDays])
 	if err != nil {
 		t.Fatalf("parse normalized max_refund_days failed: %v", err)
 	}
 	if maxDays != 0 {
-		t.Fatalf("unexpected normalized max_refund_days: %v", result[orderConfigFieldMaxRefundDays])
+		t.Fatalf("unexpected normalized max_refund_days: %v", result[OrderConfigFieldMaxRefundDays])
 	}
 
 	result, err = svc.Update(constants.SettingKeyOrderConfig, map[string]interface{}{
-		orderConfigFieldMaxRefundDays: "-1",
+		OrderConfigFieldMaxRefundDays: "-1",
 	})
 	if err != nil {
 		t.Fatalf("update order refund config failed: %v", err)
 	}
-	maxDays, err = parseSettingInt(result[orderConfigFieldMaxRefundDays])
+	maxDays, err = parseSettingInt(result[OrderConfigFieldMaxRefundDays])
 	if err != nil {
 		t.Fatalf("parse normalized max_refund_days failed: %v", err)
 	}
 	if maxDays != DefaultOrderRefundConfig().MaxRefundDays {
-		t.Fatalf("unexpected normalized max_refund_days for negative value: %v", result[orderConfigFieldMaxRefundDays])
+		t.Fatalf("unexpected normalized max_refund_days for negative value: %v", result[OrderConfigFieldMaxRefundDays])
 	}
 
 	result, err = svc.Update(constants.SettingKeyOrderConfig, map[string]interface{}{
-		orderConfigFieldMaxRefundDays: "5000",
+		OrderConfigFieldMaxRefundDays: "5000",
 	})
 	if err != nil {
 		t.Fatalf("update order refund config failed: %v", err)
 	}
-	maxDays, err = parseSettingInt(result[orderConfigFieldMaxRefundDays])
+	maxDays, err = parseSettingInt(result[OrderConfigFieldMaxRefundDays])
 	if err != nil {
 		t.Fatalf("parse normalized max_refund_days failed: %v", err)
 	}
 	if maxDays != NormalizeOrderRefundConfig(OrderRefundConfig{MaxRefundDays: 5000}).MaxRefundDays {
-		t.Fatalf("unexpected clamped max_refund_days: %v", result[orderConfigFieldMaxRefundDays])
+		t.Fatalf("unexpected clamped max_refund_days: %v", result[OrderConfigFieldMaxRefundDays])
 	}
 }
 
 func TestGetOrderRefundConfig(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	cfg, err := svc.GetOrderRefundConfig()
 	if err != nil {
@@ -488,7 +488,7 @@ func TestGetOrderRefundConfig(t *testing.T) {
 	}
 
 	repo.store[constants.SettingKeyOrderConfig] = map[string]interface{}{
-		orderConfigFieldMaxRefundDays: 45,
+		OrderConfigFieldMaxRefundDays: 45,
 	}
 	cfg, err = svc.GetOrderRefundConfig()
 	if err != nil {
@@ -501,7 +501,7 @@ func TestGetOrderRefundConfig(t *testing.T) {
 
 func TestGetOrderRefundConfigFallsBackToConfigOrder(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo, config.OrderConfig{
+	svc := NewService(repo, config.OrderConfig{
 		MaxRefundDays: 7,
 	})
 
@@ -516,7 +516,7 @@ func TestGetOrderRefundConfigFallsBackToConfigOrder(t *testing.T) {
 
 func TestGetOrderRefundConfigFallsBackToConfigOrderUnlimited(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo, config.OrderConfig{
+	svc := NewService(repo, config.OrderConfig{
 		MaxRefundDays: 0,
 	})
 
@@ -531,7 +531,7 @@ func TestGetOrderRefundConfigFallsBackToConfigOrderUnlimited(t *testing.T) {
 
 func TestGetOrderConfigFallsBackToConfigWhenMissing(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	cfg, err := svc.GetOrderConfig(config.OrderConfig{
 		PaymentExpireMinutes: 19,
@@ -549,7 +549,7 @@ func TestGetOrderConfigFallsBackToConfigWhenMissing(t *testing.T) {
 
 func TestRegistrationSettingNormalizesEmailDomainAllowlist(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	result, err := svc.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
 		constants.SettingFieldRegistrationEnabled:         true,
@@ -581,7 +581,7 @@ func TestRegistrationSettingNormalizesEmailDomainAllowlist(t *testing.T) {
 
 func TestRegistrationEmailDomainPolicyAndChecker(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 	if _, err := svc.Update(constants.SettingKeyRegistrationConfig, map[string]interface{}{
 		constants.SettingFieldEmailDomainAllowlistEnabled: true,
 		constants.SettingFieldAllowedEmailDomains:         "QQ.COM\ngmail.com, 163.com",
@@ -633,7 +633,7 @@ func TestRegistrationEmailDomainPolicyAndChecker(t *testing.T) {
 
 func TestUpdateSiteSettingNormalizedScriptsLimit(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	scripts := make([]interface{}, 0, 25)
 	for i := 0; i < 25; i++ {
@@ -663,7 +663,7 @@ func TestUpdateSiteSettingNormalizedScriptsLimit(t *testing.T) {
 
 func TestUpdateTelegramAuthSettingNormalized(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	result, err := svc.Update(constants.SettingKeyTelegramAuthConfig, map[string]interface{}{
 		"enabled":              true,

@@ -5,6 +5,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	"github.com/dujiao-next/internal/modules/notification"
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	"github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
@@ -25,7 +26,7 @@ type PaymentService struct {
 	userOAuthIdentityRepo   repository.UserOAuthIdentityRepository
 	queueClient             *queue.Client
 	walletSvc               *WalletService
-	settingService          *SettingService
+	settingService          *settingsapp.Service
 	defaultEmailConfig      config.EmailConfig
 	expireMinutes           int
 	affiliateSvc            *AffiliateService
@@ -73,7 +74,7 @@ type PaymentServiceOptions struct {
 	UserOAuthIdentityRepo     repository.UserOAuthIdentityRepository
 	QueueClient               *queue.Client
 	WalletService             *WalletService
-	SettingService            *SettingService
+	SettingService            *settingsapp.Service
 	DefaultEmailConfig        config.EmailConfig
 	ExpireMinutes             int
 	AffiliateService          *AffiliateService

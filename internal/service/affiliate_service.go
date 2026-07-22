@@ -3,6 +3,8 @@ package service
 import (
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	catalogproduct "github.com/dujiao-next/internal/modules/catalog/product"
 	"github.com/dujiao-next/internal/repository"
 )
@@ -20,7 +22,7 @@ type AffiliateService struct {
 	userRepo       repository.UserRepository
 	orderRepo      repository.OrderRepository
 	productRepo    catalogproduct.Repository
-	settingService *SettingService
+	settingService *settingsapp.Service
 }
 
 // NewAffiliateService 创建推广返利服务
@@ -29,7 +31,7 @@ func NewAffiliateService(
 	userRepo repository.UserRepository,
 	orderRepo repository.OrderRepository,
 	productRepo catalogproduct.Repository,
-	settingService *SettingService,
+	settingService *settingsapp.Service,
 ) *AffiliateService {
 	return &AffiliateService{
 		repo:           repo,

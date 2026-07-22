@@ -3,23 +3,22 @@ package compliance_test
 import (
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+
 	"github.com/dujiao-next/internal/modules/compliance"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-
-	"github.com/dujiao-next/internal/repository"
 )
 
 func newTestComplianceService(t *testing.T) (*compliance.Service, *gorm.DB) {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&models.Setting{}))
-	repo := repository.NewSettingRepository(db)
+	require.NoError(t, db.AutoMigrate(&settingsstore.SettingRecord{}))
+	repo := settingsstore.New(db)
 	return compliance.NewService(repo), db
 }
 
@@ -127,7 +126,7 @@ func TestComplianceService_LoadFromExistingSetting(t *testing.T) {
 	require.False(t, svc.IsAcknowledged())
 
 	// 通过仓库写入已确认状态，模拟既有部署
-	repo := repository.NewSettingRepository(db)
+	repo := settingsstore.New(db)
 	_, err := repo.Upsert("compliance.acknowledgement.v1", jsonmap.JSON{
 		"acknowledged":             true,
 		"acknowledged_at":          "2026-01-01T00:00:00Z",

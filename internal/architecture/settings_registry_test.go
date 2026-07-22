@@ -4,70 +4,22 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
 )
 
 func TestSettingServiceRoutesWritesThroughRegistry(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 
-	// Core Update/UpdateWithEffects now live in modules/settings; the service facade must embed that module.
-	facadePath := filepath.Join(repositoryRoot, "internal", "service", "setting_service.go")
-	facadeParsed, err := parser.ParseFile(token.NewFileSet(), facadePath, nil, 0)
-	if err != nil {
-		t.Fatalf("parse setting service facade: %v", err)
+	legacyFacadePath := filepath.Join(repositoryRoot, "internal", "service", "setting_service.go")
+	if _, err := os.Stat(legacyFacadePath); err == nil {
+		t.Fatalf("legacy setting service facade must stay removed: %s", legacyFacadePath)
+	} else if !os.IsNotExist(err) {
+		t.Fatalf("stat legacy setting service facade: %v", err)
 	}
 
-	importsModule := false
-	for _, imported := range facadeParsed.Imports {
-		importPath, err := strconv.Unquote(imported.Path.Value)
-		if err != nil {
-			t.Fatalf("unquote setting service import: %v", err)
-		}
-		if importPath == moduleImportPath+"/internal/modules/settings" {
-			importsModule = true
-		}
-	}
-	if !importsModule {
-		t.Fatal("SettingService must import modules/settings")
-	}
-
-	embedsModuleService := false
-	for _, declaration := range facadeParsed.Decls {
-		generic, ok := declaration.(*ast.GenDecl)
-		if !ok || generic.Tok != token.TYPE {
-			continue
-		}
-		for _, specification := range generic.Specs {
-			typeSpec, ok := specification.(*ast.TypeSpec)
-			if !ok || typeSpec.Name.Name != "SettingService" {
-				continue
-			}
-			structType, ok := typeSpec.Type.(*ast.StructType)
-			if !ok {
-				continue
-			}
-			for _, field := range structType.Fields.List {
-				if len(field.Names) != 0 {
-					continue
-				}
-				star, ok := field.Type.(*ast.StarExpr)
-				if !ok {
-					continue
-				}
-				selector, ok := star.X.(*ast.SelectorExpr)
-				if ok && selector.Sel.Name == "Service" {
-					embedsModuleService = true
-				}
-			}
-		}
-	}
-	if !embedsModuleService {
-		t.Fatal("SettingService must embed *modules/settings.Service")
-	}
-
-	modulePath := filepath.Join(repositoryRoot, "internal", "modules", "settings", "service.go")
+	modulePath := filepath.Join(repositoryRoot, "internal", "modules", "settings", "application", "core.go")
 	moduleParsed, err := parser.ParseFile(token.NewFileSet(), modulePath, nil, 0)
 	if err != nil {
 		t.Fatalf("parse settings module service: %v", err)
@@ -109,7 +61,7 @@ func TestSettingServiceRoutesWritesThroughRegistry(t *testing.T) {
 		t.Fatal("settings.Service.Update not found")
 	}
 	if !updateDelegates {
-		t.Fatal("settings.Service.Update must preserve compatibility by delegating to UpdateWithEffects")
+		t.Fatal("settings.Service.Update must delegate to UpdateWithEffects")
 	}
 	if !updateWithEffectsFound || !usesRegistry {
 		t.Fatal("settings.Service.UpdateWithEffects must normalize writes through Registry")
@@ -181,7 +133,7 @@ func TestAdminSettingHandlerDispatchesRegistryEffectsWithoutKeyComparisons(t *te
 
 func TestSettingRegistryUsesModuleOwnedTypedJSONNormalizers(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	path := filepath.Join(repositoryRoot, "internal", "service", "setting_registry.go")
+	path := filepath.Join(repositoryRoot, "internal", "modules", "settings", "application", "default_registry.go")
 	parsed, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
 	if err != nil {
 		t.Fatalf("parse setting registry: %v", err)

@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -92,7 +95,7 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 		&models.User{},
 		&models.UserOAuthIdentity{},
 		&models.EmailVerifyCode{},
-		&models.Setting{},
+		&settingsstore.SettingRecord{},
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
@@ -108,11 +111,11 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 	userRepo := repository.NewUserRepository(db)
 	identityRepo := repository.NewUserOAuthIdentityRepository(db)
 	emailVerifyRepo := repository.NewEmailVerifyCodeRepository(db)
-	settingRepo := repository.NewSettingRepository(db)
+	settingRepo := settingsstore.New(db)
 	orderRepo := repository.NewOrderRepository(db)
 	affiliateRepo := repository.NewAffiliateRepository(db)
 
-	settingSvc := service.NewSettingService(settingRepo)
+	settingSvc := settingsapp.NewService(settingRepo)
 	if _, err := settingSvc.UpdateAffiliateSetting(settingsmodule.AffiliateSetting{
 		Enabled:           true,
 		CommissionRate:    10,

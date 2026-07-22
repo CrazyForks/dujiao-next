@@ -29,7 +29,6 @@ var (
 	ErrEmailNotVerified                    = errors.New("email not verified")
 	ErrUserDisabled                        = affiliatemodule.ErrUserDisabled
 	ErrInvalidEmail                        = errors.New("invalid email")
-	ErrEmailDomainNotAllowed               = errors.New("email domain not allowed")
 	ErrInvalidVerifyPurpose                = errors.New("invalid verify purpose")
 	ErrAgreementRequired                   = errors.New("agreement required")
 	ErrVerifyCodeInvalid                   = errors.New("verify code invalid")

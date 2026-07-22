@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
@@ -30,7 +33,7 @@ func setupGiftCardServiceTest(t *testing.T) (*GiftCardService, *WalletService, *
 		&models.Fulfillment{},
 		&models.WalletAccount{},
 		&models.WalletTransaction{},
-		&models.Setting{},
+		&settingsstore.SettingRecord{},
 		&models.GiftCardBatch{},
 		&models.GiftCard{},
 	); err != nil {
@@ -39,8 +42,8 @@ func setupGiftCardServiceTest(t *testing.T) (*GiftCardService, *WalletService, *
 	models.DB = db
 
 	userRepo := repository.NewUserRepository(db)
-	settingRepo := repository.NewSettingRepository(db)
-	settingSvc := NewSettingService(settingRepo)
+	settingRepo := settingsstore.New(db)
+	settingSvc := settingsapp.NewService(settingRepo)
 	walletSvc := NewWalletService(repository.NewWalletRepository(db), repository.NewOrderRepository(db), repository.NewOrderRefundRecordRepository(db), userRepo, nil, settingSvc)
 	giftSvc := NewGiftCardService(giftcardgormstore.New(db), userRepo, walletSvc, settingSvc)
 	return giftSvc, walletSvc, db
@@ -91,8 +94,8 @@ func TestGiftCardServiceGenerateGiftCards(t *testing.T) {
 
 func TestGiftCardServiceGenerateGiftCardsUsesSiteCurrency(t *testing.T) {
 	svc, _, db := setupGiftCardServiceTest(t)
-	settingRepo := repository.NewSettingRepository(db)
-	settingSvc := NewSettingService(settingRepo)
+	settingRepo := settingsstore.New(db)
+	settingSvc := settingsapp.NewService(settingRepo)
 	_, err := settingSvc.Update(constants.SettingKeySiteConfig, map[string]interface{}{
 		constants.SettingFieldSiteCurrency: "USD",
 	})

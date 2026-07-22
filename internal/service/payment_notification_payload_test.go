@@ -6,6 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dujiao-next/internal/testkit/memorysettings"
+
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/dashboard"
@@ -40,14 +44,14 @@ func TestBuildOrderNotificationPayloadIncludesCustomerAndItemSummary(t *testing.
 		t.Fatalf("create user failed: %v", err)
 	}
 
-	repo := newMockSettingRepo()
-	repo.store[constants.SettingKeyNotificationCenterConfig] = jsonmap.JSON{
+	repo := memorysettings.New()
+	repo.Values[constants.SettingKeyNotificationCenterConfig] = jsonmap.JSON{
 		"default_locale": "en-US",
 	}
 
 	svc := &PaymentService{
 		userRepo:       repository.NewUserRepository(db),
-		settingService: NewSettingService(repo),
+		settingService: settingsapp.NewService(repo),
 	}
 	order := &models.Order{
 		ID:          1001,
@@ -210,13 +214,13 @@ func TestMergeProviderPayloadPreservesDisplayChannelType(t *testing.T) {
 }
 
 func TestBuildOrderNotificationPayloadFallsBackToChildrenItems(t *testing.T) {
-	repo := newMockSettingRepo()
-	repo.store[constants.SettingKeyNotificationCenterConfig] = jsonmap.JSON{
+	repo := memorysettings.New()
+	repo.Values[constants.SettingKeyNotificationCenterConfig] = jsonmap.JSON{
 		"default_locale": "en-US",
 	}
 
 	svc := &PaymentService{
-		settingService: NewSettingService(repo),
+		settingService: settingsapp.NewService(repo),
 	}
 	order := &models.Order{
 		ID:          2001,
@@ -366,8 +370,8 @@ func TestNotificationCenterDefaultSettingIncludesRichOrderVariables(t *testing.T
 }
 
 func TestPatchNotificationCenterSettingPersistsInventoryAlertConfig(t *testing.T) {
-	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	repo := memorysettings.New()
+	svc := settingsapp.NewService(repo)
 	interval := 600
 	ignored := []uint{9, 2, 9, 0}
 
@@ -399,8 +403,8 @@ func TestPatchNotificationCenterSettingPersistsInventoryAlertConfig(t *testing.T
 }
 
 func TestPatchNotificationCenterSettingPersistsPaymentOrderAlertConfig(t *testing.T) {
-	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	repo := memorysettings.New()
+	svc := settingsapp.NewService(repo)
 	interval := 900
 	checkInterval := 7200
 

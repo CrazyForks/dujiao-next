@@ -2,8 +2,6 @@ package settings
 
 import (
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -117,65 +115,4 @@ func deduplicateCallbackRoutes(s *CallbackRoutesSetting) {
 			seen[*f] = true
 		}
 	}
-}
-
-// --- 回调路由内存缓存 ---
-
-var callbackRoutesCache struct {
-	mu      sync.RWMutex
-	routes  *CallbackRoutesSetting
-	loaded  bool
-	expires time.Time
-}
-
-const callbackRoutesCacheTTL = 5 * time.Minute
-
-// InvalidateCallbackRoutesCache 清除回调路由内存缓存（管理员更新设置时调用）
-func (s *Service) InvalidateCallbackRoutesCache() {
-	callbackRoutesCache.mu.Lock()
-	callbackRoutesCache.loaded = false
-	callbackRoutesCache.routes = nil
-	callbackRoutesCache.expires = time.Time{}
-	callbackRoutesCache.mu.Unlock()
-}
-
-// GetCallbackRoutesCached 从内存缓存获取自定义回调路由配置，缓存未命中时从 DB 加载。
-func (s *Service) GetCallbackRoutesCached() *CallbackRoutesSetting {
-	callbackRoutesCache.mu.RLock()
-	if callbackRoutesCache.loaded && time.Now().Before(callbackRoutesCache.expires) {
-		routes := callbackRoutesCache.routes
-		callbackRoutesCache.mu.RUnlock()
-		return routes
-	}
-	callbackRoutesCache.mu.RUnlock()
-
-	callbackRoutesCache.mu.Lock()
-	defer callbackRoutesCache.mu.Unlock()
-
-	// 双重检查
-	if callbackRoutesCache.loaded && time.Now().Before(callbackRoutesCache.expires) {
-		return callbackRoutesCache.routes
-	}
-
-	routes := s.GetCallbackRoutes()
-	callbackRoutesCache.routes = routes
-	callbackRoutesCache.loaded = true
-	callbackRoutesCache.expires = time.Now().Add(callbackRoutesCacheTTL)
-	return routes
-}
-
-// GetCallbackRoutes 获取自定义回调路由配置。未配置时返回 nil。
-func (s *Service) GetCallbackRoutes() *CallbackRoutesSetting {
-	if s == nil {
-		return nil
-	}
-	value, err := s.GetByKey(constants.SettingKeyCallbackRoutesConfig)
-	if err != nil || value == nil {
-		return nil
-	}
-	setting := DecodeCallbackRoutesSetting(value)
-	if !setting.HasCustomRoutes() {
-		return nil
-	}
-	return &setting
 }

@@ -1,4 +1,4 @@
-package service
+package settingsapp
 
 import (
 	"encoding/json"
@@ -48,4 +48,10 @@ func normalizeSiteCurrency(raw interface{}) string {
 		return constants.SiteCurrencyDefault
 	}
 	return currency
+}
+
+// IsCurrencyCode reports whether value is a normalized three-letter currency
+// code accepted by settings and payment validation.
+func IsCurrencyCode(value string) bool {
+	return settingCurrencyCodePattern.MatchString(strings.ToUpper(strings.TrimSpace(value)))
 }

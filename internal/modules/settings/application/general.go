@@ -1,22 +1,25 @@
-package service
+package settingsapp
 
 import (
 	"encoding/json"
+	"errors"
 	"net/mail"
 	"strings"
 	"time"
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	settingsmodule "github.com/dujiao-next/internal/modules/settings"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+)
+
+var (
+	ErrInvalidEmail          = errors.New("invalid email")
+	ErrEmailDomainNotAllowed = errors.New("email domain not allowed")
 )
 
 const (
 	orderConfigFieldPaymentExpireMinutes = "payment_expire_minutes"
-	orderConfigFieldMaxRefundDays        = "max_refund_days"
+	OrderConfigFieldMaxRefundDays        = "max_refund_days"
 
 	orderPaymentExpireMinutesDefault = 15
 	orderPaymentExpireMinutesMin     = 1
@@ -38,17 +41,6 @@ type OrderRefundConfig struct {
 	MaxRefundDays int `json:"max_refund_days"`
 }
 
-// SettingService 设置业务服务兼容门面。
-// 核心读写与已迁移 typed I/O 由 modules/settings.Service 拥有；本类型仅保留尚未下沉的领域 API。
-type SettingService struct {
-	*settingsmodule.Service
-	defaultOrderConfig    config.OrderConfig
-	hasDefaultOrderConfig bool
-}
-
-// SettingUpdateResult 是 modules/settings.UpdateResult 的兼容别名。
-type SettingUpdateResult = settingsmodule.UpdateResult
-
 // SiteBrand 站点品牌信息
 type SiteBrand struct {
 	SiteName string
@@ -61,21 +53,8 @@ type RegistrationEmailDomainPolicy struct {
 	AllowedDomains []string
 }
 
-// NewSettingService 创建设置服务。
-// 可选传入 order 默认配置，用于在 settings 未配置时回落到 config 的 order 配置。
-func NewSettingService(repo repository.SettingRepository, defaultOrderCfg ...config.OrderConfig) *SettingService {
-	svc := &SettingService{
-		Service: settingsmodule.NewService(repo, defaultSettingRegistry),
-	}
-	if len(defaultOrderCfg) > 0 {
-		svc.defaultOrderConfig = defaultOrderCfg[0]
-		svc.hasDefaultOrderConfig = true
-	}
-	return svc
-}
-
 // GetConfig 获取站点配置（合并默认值）
-func (s *SettingService) GetConfig(defaults map[string]interface{}) (map[string]interface{}, error) {
+func (s *Service) GetConfig(defaults map[string]interface{}) (map[string]interface{}, error) {
 	data := make(map[string]interface{})
 	for k, v := range defaults {
 		data[k] = v
@@ -148,7 +127,7 @@ func orderConfigFromJSON(raw jsonmap.JSON, fallback OrderConfig) OrderConfig {
 	if parsed, err := parseSettingInt(raw[orderConfigFieldPaymentExpireMinutes]); err == nil {
 		result.PaymentExpireMinutes = parsed
 	}
-	if parsed, err := parseSettingInt(raw[orderConfigFieldMaxRefundDays]); err == nil {
+	if parsed, err := parseSettingInt(raw[OrderConfigFieldMaxRefundDays]); err == nil {
 		result.MaxRefundDays = parsed
 	}
 	return NormalizeOrderConfig(result)
@@ -187,7 +166,7 @@ func defaultOrderConfigWithFallback(defaultCfg config.OrderConfig, serviceDefaul
 }
 
 // GetOrderConfig 获取订单配置。
-func (s *SettingService) GetOrderConfig(defaultCfg config.OrderConfig) (OrderConfig, error) {
+func (s *Service) GetOrderConfig(defaultCfg config.OrderConfig) (OrderConfig, error) {
 	var serviceDefault config.OrderConfig
 	useServiceDefault := false
 	if s != nil {
@@ -206,7 +185,7 @@ func (s *SettingService) GetOrderConfig(defaultCfg config.OrderConfig) (OrderCon
 }
 
 // GetOrderRefundConfig 获取订单退款配置。
-func (s *SettingService) GetOrderRefundConfig() (OrderRefundConfig, error) {
+func (s *Service) GetOrderRefundConfig() (OrderRefundConfig, error) {
 	fallback := DefaultOrderRefundConfig()
 	cfg, err := s.GetOrderConfig(config.OrderConfig{})
 	if err != nil {
@@ -215,17 +194,17 @@ func (s *SettingService) GetOrderRefundConfig() (OrderRefundConfig, error) {
 	return OrderRefundConfig{MaxRefundDays: cfg.MaxRefundDays}, nil
 }
 
-// isOrderRefundWindowExpired 判断订单是否已超过可退款时间窗口（优先 paid_at，其次 created_at）。
-func isOrderRefundWindowExpired(order *models.Order, maxRefundDays int, now time.Time) bool {
+// IsOrderRefundWindowExpired 判断订单是否已超过可退款时间窗口（优先 paidAt，其次 createdAt）。
+func IsOrderRefundWindowExpired(createdAt time.Time, paidAt *time.Time, maxRefundDays int, now time.Time) bool {
 	normalizedDays := NormalizeOrderRefundConfig(OrderRefundConfig{
 		MaxRefundDays: maxRefundDays,
 	}).MaxRefundDays
-	if order == nil || normalizedDays == 0 {
+	if normalizedDays == 0 {
 		return false
 	}
-	baseAt := order.CreatedAt
-	if order.PaidAt != nil && !order.PaidAt.IsZero() {
-		baseAt = *order.PaidAt
+	baseAt := createdAt
+	if paidAt != nil && !paidAt.IsZero() {
+		baseAt = *paidAt
 	}
 	if baseAt.IsZero() {
 		return false
@@ -235,7 +214,7 @@ func isOrderRefundWindowExpired(order *models.Order, maxRefundDays int, now time
 }
 
 // GetOrderPaymentExpireMinutes 获取订单超时分钟配置
-func (s *SettingService) GetOrderPaymentExpireMinutes(defaultValue int) (int, error) {
+func (s *Service) GetOrderPaymentExpireMinutes(defaultValue int) (int, error) {
 	fallback := defaultValue
 	if fallback < orderPaymentExpireMinutesMin {
 		fallback = orderPaymentExpireMinutesDefault
@@ -256,7 +235,7 @@ func (s *SettingService) GetOrderPaymentExpireMinutes(defaultValue int) (int, er
 }
 
 // GetRegistrationEnabled 获取注册开关
-func (s *SettingService) GetRegistrationEnabled(defaultValue bool) (bool, error) {
+func (s *Service) GetRegistrationEnabled(defaultValue bool) (bool, error) {
 	if s == nil {
 		return defaultValue, nil
 	}
@@ -275,7 +254,7 @@ func (s *SettingService) GetRegistrationEnabled(defaultValue bool) (bool, error)
 }
 
 // GetEmailVerificationEnabled 获取邮箱验证开关
-func (s *SettingService) GetEmailVerificationEnabled(defaultValue bool) (bool, error) {
+func (s *Service) GetEmailVerificationEnabled(defaultValue bool) (bool, error) {
 	if s == nil {
 		return defaultValue, nil
 	}
@@ -294,7 +273,7 @@ func (s *SettingService) GetEmailVerificationEnabled(defaultValue bool) (bool, e
 }
 
 // GetRegistrationEmailDomainPolicy 获取注册邮箱域名白名单策略。
-func (s *SettingService) GetRegistrationEmailDomainPolicy() (RegistrationEmailDomainPolicy, error) {
+func (s *Service) GetRegistrationEmailDomainPolicy() (RegistrationEmailDomainPolicy, error) {
 	policy := RegistrationEmailDomainPolicy{Enabled: false, AllowedDomains: []string{}}
 	if s == nil {
 		return policy, nil
@@ -315,9 +294,9 @@ func (s *SettingService) GetRegistrationEmailDomainPolicy() (RegistrationEmailDo
 
 // CheckRegistrationEmailDomainAllowed 校验邮箱格式与注册域名白名单策略。
 func CheckRegistrationEmailDomainAllowed(email string, policy RegistrationEmailDomainPolicy) error {
-	normalized, err := normalizeEmail(email)
-	if err != nil {
-		return err
+	normalized := strings.ToLower(strings.TrimSpace(email))
+	if normalized == "" {
+		return ErrInvalidEmail
 	}
 	parsed, err := mail.ParseAddress(normalized)
 	if err != nil || parsed.Address != normalized {
@@ -340,7 +319,7 @@ func CheckRegistrationEmailDomainAllowed(email string, policy RegistrationEmailD
 }
 
 // GetSiteCurrency 获取站点币种配置
-func (s *SettingService) GetSiteCurrency(defaultValue string) (string, error) {
+func (s *Service) GetSiteCurrency(defaultValue string) (string, error) {
 	fallback := normalizeSiteCurrency(defaultValue)
 	if s == nil {
 		return fallback, nil
@@ -360,7 +339,7 @@ func (s *SettingService) GetSiteCurrency(defaultValue string) (string, error) {
 }
 
 // GetSiteBrand 获取站点品牌配置（brand.site_name / brand.site_url）
-func (s *SettingService) GetSiteBrand() (SiteBrand, error) {
+func (s *Service) GetSiteBrand() (SiteBrand, error) {
 	if s == nil {
 		return SiteBrand{}, nil
 	}
@@ -386,7 +365,7 @@ func (s *SettingService) GetSiteBrand() (SiteBrand, error) {
 }
 
 // GetWalletOnlyPayment 获取是否仅允许钱包余额支付
-func (s *SettingService) GetWalletOnlyPayment() bool {
+func (s *Service) GetWalletOnlyPayment() bool {
 	if s == nil {
 		return false
 	}
@@ -402,7 +381,7 @@ func (s *SettingService) GetWalletOnlyPayment() bool {
 }
 
 // GetWalletRechargeChannelIDs 获取钱包充值允许的支付渠道ID列表
-func (s *SettingService) GetWalletRechargeChannelIDs() []uint {
+func (s *Service) GetWalletRechargeChannelIDs() []uint {
 	if s == nil {
 		return nil
 	}

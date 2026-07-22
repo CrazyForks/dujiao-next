@@ -123,23 +123,15 @@ func hasHomeAnnouncementContent(content map[string]interface{}) bool {
 	return false
 }
 
-// GetActiveHomeAnnouncement 返回当前应展示的首页公告及其展示标记。
-// 当公告未启用、不在排期内或内容为空时返回 (nil, false)。
-func (s *Service) GetActiveHomeAnnouncement() (jsonmap.JSON, bool) {
-	if s == nil {
-		return nil, false
-	}
-	value, err := s.GetByKey(constants.SettingKeyHomeAnnouncement)
-	if err != nil || value == nil {
-		return nil, false
-	}
+// ActiveHomeAnnouncement 返回给定设置在指定时间是否应展示。
+func ActiveHomeAnnouncement(value jsonmap.JSON, now time.Time) (jsonmap.JSON, bool) {
 	announcement := normalizeHomeAnnouncement(value)
 	if !parseBool(announcement["enabled"]) {
 		return nil, false
 	}
 	startAt, _ := announcement["start_at"].(string)
 	endAt, _ := announcement["end_at"].(string)
-	if !isHomeAnnouncementInSchedule(startAt, endAt, time.Now()) {
+	if !isHomeAnnouncementInSchedule(startAt, endAt, now) {
 		return nil, false
 	}
 	content, _ := announcement["content"].(map[string]interface{})

@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/giftcard"
@@ -28,7 +30,7 @@ type UpdateGiftCardInput = giftcard.UpdateInput
 type GiftCardRedeemInput = giftcard.RedeemInput
 
 // NewGiftCardService 创建礼品卡服务
-func NewGiftCardService(store *giftcardgormstore.Store, userRepo repository.UserRepository, walletService *WalletService, settingSvc *SettingService) *GiftCardService {
+func NewGiftCardService(store *giftcardgormstore.Store, userRepo repository.UserRepository, walletService *WalletService, settingSvc *settingsapp.Service) *GiftCardService {
 	return &GiftCardService{
 		admin:         newGiftCardAdminService(store, userRepo, settingSvc),
 		store:         store,

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
@@ -16,7 +17,7 @@ func ensureManualStockRemainingMigration() error {
 		return errors.New("database is not initialized")
 	}
 
-	var marker Setting
+	var marker settingsstore.SettingRecord
 	if err := DB.First(&marker, "key = ?", manualStockRemainingMigrationSettingKey).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -42,7 +43,7 @@ func ensureManualStockRemainingMigration() error {
 			return err
 		}
 
-		marker := Setting{
+		marker := settingsstore.SettingRecord{
 			Key: manualStockRemainingMigrationSettingKey,
 			ValueJSON: jsonmap.JSON{
 				"done":        true,
@@ -72,7 +73,7 @@ func ensureOrderItemOriginalPriceMigration() error {
 		return errors.New("database is not initialized")
 	}
 
-	var marker Setting
+	var marker settingsstore.SettingRecord
 	if err := DB.First(&marker, "key = ?", orderItemOriginalPriceMigrationKey).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -95,7 +96,7 @@ func ensureOrderItemOriginalPriceMigration() error {
 			return err
 		}
 
-		marker := Setting{
+		marker := settingsstore.SettingRecord{
 			Key: orderItemOriginalPriceMigrationKey,
 			ValueJSON: jsonmap.JSON{
 				"done":        true,
@@ -133,7 +134,7 @@ func ensureProductSKUMigration() error {
 	}
 
 	// 检查迁移标记，已完成则跳过
-	var marker Setting
+	var marker settingsstore.SettingRecord
 	if err := DB.First(&marker, "key = ?", skuMigrationSettingKey).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -160,7 +161,7 @@ func ensureProductSKUMigration() error {
 	}
 
 	// 迁移完成，写入标记
-	doneMarker := Setting{
+	doneMarker := settingsstore.SettingRecord{
 		Key: skuMigrationSettingKey,
 		ValueJSON: jsonmap.JSON{
 			"done":        true,
@@ -374,7 +375,7 @@ func ensurePaymentProviderBepusdtRenameMigration() error {
 		return errors.New("database is not initialized")
 	}
 
-	var marker Setting
+	var marker settingsstore.SettingRecord
 	if err := DB.First(&marker, "key = ?", paymentProviderBepusdtRenameMigrationSettingKey).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -391,7 +392,7 @@ func ensurePaymentProviderBepusdtRenameMigration() error {
 			return err
 		}
 
-		marker := Setting{
+		marker := settingsstore.SettingRecord{
 			Key: paymentProviderBepusdtRenameMigrationSettingKey,
 			ValueJSON: jsonmap.JSON{
 				"done":        true,
@@ -410,7 +411,7 @@ func ensurePaymentChannelBepusdtConfigMigration() error {
 		return errors.New("database is not initialized")
 	}
 
-	var marker Setting
+	var marker settingsstore.SettingRecord
 	if err := DB.First(&marker, "key = ?", paymentChannelBepusdtConfigMigrationSettingKey).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -469,7 +470,7 @@ func ensurePaymentChannelBepusdtConfigMigration() error {
 			migratedCount++
 		}
 
-		marker := Setting{
+		marker := settingsstore.SettingRecord{
 			Key: paymentChannelBepusdtConfigMigrationSettingKey,
 			ValueJSON: jsonmap.JSON{
 				"done":                true,
@@ -488,7 +489,7 @@ func ensureCategoryParentMigration() error {
 		return errors.New("database is not initialized")
 	}
 
-	var marker Setting
+	var marker settingsstore.SettingRecord
 	if err := DB.First(&marker, "key = ?", categoryParentMigrationSettingKey).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -504,7 +505,7 @@ func ensureCategoryParentMigration() error {
 		return err
 	}
 
-	doneMarker := Setting{
+	doneMarker := settingsstore.SettingRecord{
 		Key: categoryParentMigrationSettingKey,
 		ValueJSON: jsonmap.JSON{
 			"done":        true,

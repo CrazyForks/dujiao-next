@@ -14,7 +14,7 @@ func TestComplianceHTTPLivesInTransport(t *testing.T) {
 	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "types.go"), []string{
 		"AcknowledgeRequest", "Status",
 	})
-	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "service.go"), []string{"Service", "SettingRepository"})
+	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "service.go"), []string{"Service"})
 	assertFileDeclaresFunctions(t, filepath.Join(moduleRoot, "service.go"), []string{"NewService"})
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{"RegisterAdminRoutes"})
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "admin_handler.go"), []string{

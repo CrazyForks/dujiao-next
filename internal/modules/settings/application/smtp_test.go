@@ -1,11 +1,10 @@
-package service
+package settingsapp
 
 import (
 	"testing"
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
@@ -18,17 +17,17 @@ func newMockSettingRepo() *mockSettingRepo {
 	return &mockSettingRepo{store: map[string]jsonmap.JSON{}}
 }
 
-func (m *mockSettingRepo) GetByKey(key string) (*models.Setting, error) {
+func (m *mockSettingRepo) GetByKey(key string) (jsonmap.JSON, bool, error) {
 	value, ok := m.store[key]
 	if !ok {
-		return nil, nil
+		return nil, false, nil
 	}
-	return &models.Setting{Key: key, ValueJSON: value}, nil
+	return value, true, nil
 }
 
-func (m *mockSettingRepo) Upsert(key string, value jsonmap.JSON) (*models.Setting, error) {
+func (m *mockSettingRepo) Upsert(key string, value jsonmap.JSON) (jsonmap.JSON, error) {
 	m.store[key] = value
-	return &models.Setting{Key: key, ValueJSON: value}, nil
+	return value, nil
 }
 
 func TestNormalizeSMTPSetting(t *testing.T) {
@@ -78,7 +77,7 @@ func TestValidateSMTPSetting(t *testing.T) {
 
 func TestPatchSMTPSettingKeepsPasswordWhenEmpty(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	defaultCfg := config.EmailConfig{
 		Enabled:  true,

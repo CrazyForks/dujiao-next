@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
@@ -25,7 +27,7 @@ type FulfillmentService struct {
 	fulfillmentRepo       repository.FulfillmentRepository
 	secretRepo            repository.CardSecretRepository
 	queueClient           *queue.Client
-	settingService        *SettingService
+	settingService        *settingsapp.Service
 	defaultEmailConfig    config.EmailConfig
 	downstreamCallbackSvc *downstreamcallback.Service
 	userOAuthIdentityRepo repository.UserOAuthIdentityRepository
@@ -42,7 +44,7 @@ func NewFulfillmentService(
 	fulfillmentRepo repository.FulfillmentRepository,
 	secretRepo repository.CardSecretRepository,
 	queueClient *queue.Client,
-	settingService *SettingService,
+	settingService *settingsapp.Service,
 	defaultEmailConfig config.EmailConfig,
 	userOAuthIdentityRepo repository.UserOAuthIdentityRepository,
 ) *FulfillmentService {

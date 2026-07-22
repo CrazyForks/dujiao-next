@@ -1,4 +1,4 @@
-package service
+package settingsapp
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 
 func TestGetAffiliateSettingFallback(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	setting, err := svc.GetAffiliateSetting()
 	if err != nil {
@@ -34,7 +34,7 @@ func TestGetAffiliateSettingFallback(t *testing.T) {
 
 func TestUpdateAffiliateSettingNormalize(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	setting, err := svc.UpdateAffiliateSetting(settingsmodule.AffiliateSetting{
 		Enabled:           true,

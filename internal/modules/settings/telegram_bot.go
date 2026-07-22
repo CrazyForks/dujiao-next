@@ -400,13 +400,13 @@ func DecodeTelegramBotRuntimeStatus(raw jsonmap.JSON, fallback TelegramBotRuntim
 func normalizeTelegramBotConfigMap(raw jsonmap.JSON) map[string]interface{} {
 	setting := DecodeTelegramBotConfig(raw, DefaultTelegramBotConfig())
 	// 归一化多语言字段：确保所有支持的语言键都存在
-	setting.Basic.Description = normalizeLocalizedText(setting.Basic.Description)
-	setting.Welcome.Message = normalizeLocalizedText(setting.Welcome.Message)
-	setting.Help.Title = normalizeLocalizedText(setting.Help.Title)
-	setting.Help.Intro = normalizeLocalizedText(setting.Help.Intro)
-	setting.Help.CenterHint = normalizeLocalizedText(setting.Help.CenterHint)
-	setting.Help.SupportHint = normalizeLocalizedText(setting.Help.SupportHint)
-	setting.Help.Items = normalizeHelpItems(setting.Help.Items)
+	setting.Basic.Description = NormalizeLocalizedText(setting.Basic.Description)
+	setting.Welcome.Message = NormalizeLocalizedText(setting.Welcome.Message)
+	setting.Help.Title = NormalizeLocalizedText(setting.Help.Title)
+	setting.Help.Intro = NormalizeLocalizedText(setting.Help.Intro)
+	setting.Help.CenterHint = NormalizeLocalizedText(setting.Help.CenterHint)
+	setting.Help.SupportHint = NormalizeLocalizedText(setting.Help.SupportHint)
+	setting.Help.Items = NormalizeHelpItems(setting.Help.Items)
 	setting.Menu.Items = NormalizeTelegramBotMenuItems(setting.Menu.Items)
 	return EncodeTelegramBotConfig(setting)
 }
@@ -512,17 +512,17 @@ func menuItemsToSlice(items []TelegramBotMenuItem) []interface{} {
 	return result
 }
 
-// normalizeHelpItems 归一化帮助中心条目：trim、多语言归一化、上限 12 项
-func normalizeHelpItems(items []TelegramBotHelpItem) []TelegramBotHelpItem {
+// NormalizeHelpItems 归一化帮助中心条目：trim、多语言归一化、上限 12 项
+func NormalizeHelpItems(items []TelegramBotHelpItem) []TelegramBotHelpItem {
 	if len(items) > helpItemsMaxCount {
 		items = items[:helpItemsMaxCount]
 	}
 	result := make([]TelegramBotHelpItem, 0, len(items))
 	for _, item := range items {
 		item.Key = strings.TrimSpace(item.Key)
-		item.Summary = normalizeLocalizedText(item.Summary)
-		item.Title = normalizeLocalizedText(item.Title)
-		item.Content = normalizeLocalizedText(item.Content)
+		item.Summary = NormalizeLocalizedText(item.Summary)
+		item.Title = NormalizeLocalizedText(item.Title)
+		item.Content = NormalizeLocalizedText(item.Content)
 		result = append(result, item)
 	}
 	return result
@@ -571,9 +571,9 @@ func defaultBuiltinMenuItems() []TelegramBotMenuItem {
 	return items
 }
 
-// ensureBuiltinMenuItems 补齐缺失的内置菜单 key（保留已有项的 enabled/label/order）。
+// EnsureBuiltinMenuItems 补齐缺失的内置菜单 key（保留已有项的 enabled/label/order）。
 // 这样后台 UI 总能看到 7 个内置菜单的开关，避免老库数据缺项导致管理员误以为某些菜单"无法配置"。
-func ensureBuiltinMenuItems(items []TelegramBotMenuItem) []TelegramBotMenuItem {
+func EnsureBuiltinMenuItems(items []TelegramBotMenuItem) []TelegramBotMenuItem {
 	seen := make(map[string]bool, len(items))
 	maxOrder := 0
 	for _, it := range items {
@@ -611,7 +611,7 @@ func NormalizeTelegramBotMenuItems(items []TelegramBotMenuItem) []TelegramBotMen
 	result := make([]TelegramBotMenuItem, 0, len(items)+len(BuiltinTelegramBotMenuKeysOrder))
 	for _, item := range items {
 		item.Key = strings.TrimSpace(item.Key)
-		item.Label = normalizeLocalizedText(item.Label)
+		item.Label = NormalizeLocalizedText(item.Label)
 		item.Action.Type = strings.TrimSpace(item.Action.Type)
 		item.Action.Value = strings.TrimSpace(item.Action.Value)
 		if !validMenuActionTypes[item.Action.Type] {
@@ -619,7 +619,7 @@ func NormalizeTelegramBotMenuItems(items []TelegramBotMenuItem) []TelegramBotMen
 		}
 		result = append(result, item)
 	}
-	return ensureBuiltinMenuItems(result)
+	return EnsureBuiltinMenuItems(result)
 }
 
 // readLocalizedText 从 JSON map 读取 LocalizedText 字段
@@ -653,8 +653,8 @@ func localizedTextToMap(lt LocalizedText) map[string]interface{} {
 	return result
 }
 
-// normalizeLocalizedText 确保所有支持的语言键都存在并 trim
-func normalizeLocalizedText(lt LocalizedText) LocalizedText {
+// NormalizeLocalizedText 确保所有支持的语言键都存在并 trim
+func NormalizeLocalizedText(lt LocalizedText) LocalizedText {
 	result := make(LocalizedText, len(constants.SupportedLocales))
 	for _, lang := range constants.SupportedLocales {
 		result[lang] = ""

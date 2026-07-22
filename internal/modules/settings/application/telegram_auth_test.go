@@ -1,4 +1,4 @@
-package service
+package settingsapp
 
 import (
 	"testing"
@@ -32,7 +32,7 @@ func TestNormalizeTelegramAuthSetting(t *testing.T) {
 
 func TestPatchTelegramAuthSettingKeepsTokenWhenEmpty(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	defaultCfg := config.TelegramAuthConfig{
 		Enabled:            true,

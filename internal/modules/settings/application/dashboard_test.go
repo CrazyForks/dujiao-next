@@ -1,4 +1,4 @@
-package service
+package settingsapp
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 
 func TestUpdateDashboardSettingNormalized(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	input := map[string]interface{}{
 		"alert": map[string]interface{}{
@@ -47,7 +47,7 @@ func TestUpdateDashboardSettingNormalized(t *testing.T) {
 
 func TestUpdateDashboardSettingFallbackWhenMissing(t *testing.T) {
 	repo := newMockSettingRepo()
-	svc := NewSettingService(repo)
+	svc := NewService(repo)
 
 	result, err := svc.Update(constants.SettingKeyDashboardConfig, map[string]interface{}{})
 	if err != nil {

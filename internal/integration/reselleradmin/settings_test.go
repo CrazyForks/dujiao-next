@@ -7,8 +7,7 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/service"
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	settingstransport "github.com/dujiao-next/internal/transport/http/settings"
 
@@ -23,23 +22,23 @@ func newAdminSettingRepository() *adminSettingRepository {
 	return &adminSettingRepository{store: make(map[string]jsonmap.JSON)}
 }
 
-func (repository *adminSettingRepository) GetByKey(key string) (*models.Setting, error) {
+func (repository *adminSettingRepository) GetByKey(key string) (jsonmap.JSON, bool, error) {
 	value, exists := repository.store[key]
 	if !exists {
-		return nil, nil
+		return nil, false, nil
 	}
-	return &models.Setting{Key: key, ValueJSON: value}, nil
+	return value, true, nil
 }
 
-func (repository *adminSettingRepository) Upsert(key string, value jsonmap.JSON) (*models.Setting, error) {
+func (repository *adminSettingRepository) Upsert(key string, value jsonmap.JSON) (jsonmap.JSON, error) {
 	repository.store[key] = value
-	return &models.Setting{Key: key, ValueJSON: value}, nil
+	return value, nil
 }
 
 func TestUpdateSettingsInvalidatesCallbackRoutesFromRegistryEffect(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repository := newAdminSettingRepository()
-	settingService := service.NewSettingService(repository)
+	settingService := settingsapp.NewService(repository)
 	settingService.InvalidateCallbackRoutesCache()
 	t.Cleanup(settingService.InvalidateCallbackRoutesCache)
 

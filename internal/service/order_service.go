@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
@@ -36,7 +38,7 @@ type OrderService struct {
 	couponUsageRepo         orderCouponUsageRepository
 	promotionRepo           promotion.Repository
 	queueClient             orderQueueClient
-	settingService          *SettingService
+	settingService          *settingsapp.Service
 	defaultEmailConfig      config.EmailConfig
 	walletService           *WalletService
 	affiliateSvc            *AffiliateService
@@ -83,7 +85,7 @@ type OrderServiceOptions struct {
 	CouponUsageRepo           orderCouponUsageRepository
 	PromotionRepo             promotion.Repository
 	QueueClient               *queue.Client
-	SettingService            *SettingService
+	SettingService            *settingsapp.Service
 	DefaultEmailConfig        config.EmailConfig
 	WalletService             *WalletService
 	AffiliateService          *AffiliateService

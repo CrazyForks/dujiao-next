@@ -5,7 +5,6 @@ import (
 	"net"
 	"strings"
 
-	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -132,17 +131,4 @@ func EncodeOrderRiskControlConfig(cfg OrderRiskControlConfig) jsonmap.JSON {
 // NormalizeOrderRiskControlConfigJSON 是 Registry 使用的原始 JSON 写入策略。
 func NormalizeOrderRiskControlConfigJSON(value jsonmap.JSON) jsonmap.JSON {
 	return EncodeOrderRiskControlConfig(DecodeOrderRiskControlConfig(value, DefaultOrderRiskControlConfig()))
-}
-
-// GetOrderRiskControlConfig 获取风控配置
-func (s *Service) GetOrderRiskControlConfig() (OrderRiskControlConfig, error) {
-	fallback := DefaultOrderRiskControlConfig()
-	if s == nil {
-		return fallback, nil
-	}
-	value, err := s.GetByKey(constants.SettingKeyOrderRiskControlConfig)
-	if err != nil {
-		return fallback, err
-	}
-	return DecodeOrderRiskControlConfig(value, fallback), nil
 }

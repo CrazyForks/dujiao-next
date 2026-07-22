@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
@@ -27,7 +29,7 @@ type UserAuthService struct {
 	userRepo              repository.UserRepository
 	userOAuthIdentityRepo repository.UserOAuthIdentityRepository
 	codeRepo              repository.EmailVerifyCodeRepository
-	settingService        *SettingService
+	settingService        *settingsapp.Service
 	emailService          *EmailService
 	telegramAuthService   *TelegramAuthService
 	memberLevelSvc        MemberLevelAssigner
@@ -48,7 +50,7 @@ func NewUserAuthService(
 	userRepo repository.UserRepository,
 	userOAuthIdentityRepo repository.UserOAuthIdentityRepository,
 	codeRepo repository.EmailVerifyCodeRepository,
-	settingService *SettingService,
+	settingService *settingsapp.Service,
 	emailService *EmailService,
 	telegramAuthService *TelegramAuthService,
 ) *UserAuthService {
@@ -214,7 +216,7 @@ func (s *UserAuthService) checkRegistrationEmailDomain(email string) error {
 	if err != nil {
 		return err
 	}
-	return CheckRegistrationEmailDomainAllowed(email, policy)
+	return settingsapp.CheckRegistrationEmailDomainAllowed(email, policy)
 }
 
 // Register 用户注册

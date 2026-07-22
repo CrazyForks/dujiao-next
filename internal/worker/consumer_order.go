@@ -12,6 +12,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	settingsmodule "github.com/dujiao-next/internal/modules/settings"
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -118,7 +119,7 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 		status = order.Status
 	}
 	payloadText := buildOrderFulfillmentEmailPayload(order)
-	siteBrand := service.SiteBrand{}
+	siteBrand := settingsapp.SiteBrand{}
 	if c.SettingService != nil {
 		resolvedSiteBrand, siteErr := c.SettingService.GetSiteBrand()
 		if siteErr != nil {

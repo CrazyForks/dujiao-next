@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 
+	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+
 	"github.com/dujiao-next/internal/modules/catalog"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
@@ -75,7 +77,7 @@ func (s *ProductMappingService) SetCategoryService(cs *catalog.CategoryService) 
 }
 
 // SetSettingService 注入设置服务（用于读取上游同步动态配置）
-func (s *ProductMappingService) SetSettingService(ss *SettingService) {
+func (s *ProductMappingService) SetSettingService(ss *settingsapp.Service) {
 	if ss == nil {
 		return
 	}

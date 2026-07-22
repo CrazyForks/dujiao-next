@@ -5,9 +5,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+
 	"github.com/dujiao-next/internal/modules/compliance"
-	"github.com/dujiao-next/internal/repository"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -21,8 +21,8 @@ func setupComplianceMW(t *testing.T) (*gin.Engine, *compliance.Service) {
 	gin.SetMode(gin.TestMode)
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&models.Setting{}))
-	cs := compliance.NewService(repository.NewSettingRepository(db))
+	require.NoError(t, db.AutoMigrate(&settingsstore.SettingRecord{}))
+	cs := compliance.NewService(settingsstore.New(db))
 
 	r := gin.New()
 	r.GET("/proto",
