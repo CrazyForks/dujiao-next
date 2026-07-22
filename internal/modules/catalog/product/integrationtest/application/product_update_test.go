@@ -1,10 +1,12 @@
-package service
+package integrationtest
 
 import (
 	"errors"
 	"strconv"
 	"testing"
 
+	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -52,7 +54,7 @@ func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T)
 		t.Fatalf("create mapped product sku failed: %v", err)
 	}
 
-	updated, err := svc.Update(strconv.FormatUint(uint64(product.ID), 10), CreateProductInput{
+	updated, err := svc.Write.Update(strconv.FormatUint(uint64(product.ID), 10), productwrite.CreateProductInput{
 		CategoryID:      category.ID,
 		Slug:            "mapped-product-updated",
 		TitleJSON:       map[string]interface{}{"zh-CN": "mapped-product-updated"},
@@ -75,7 +77,7 @@ func TestProductServiceUpdateKeepsMappedProductFulfillmentUpstream(t *testing.T)
 		t.Fatalf("expected mapped product fulfillment type to remain upstream, got %s", updated.FulfillmentType)
 	}
 
-	reloaded, err := svc.GetAdminByID(strconv.FormatUint(uint64(product.ID), 10))
+	reloaded, err := svc.Read.GetAdminByID(strconv.FormatUint(uint64(product.ID), 10))
 	if err != nil {
 		t.Fatalf("reload mapped product failed: %v", err)
 	}
@@ -103,14 +105,14 @@ func TestProductServiceUpdateFiltersUnavailablePaymentChannels(t *testing.T) {
 		PriceAmount:       money.FromDecimal(decimal.NewFromInt(10)),
 		PurchaseType:      constants.ProductPurchaseMember,
 		FulfillmentType:   constants.FulfillmentTypeAuto,
-		PaymentChannelIDs: EncodeChannelIDs([]uint{deletedChannel.ID}),
+		PaymentChannelIDs: productdomain.EncodePaymentChannelIDs([]uint{deletedChannel.ID}),
 		IsActive:          true,
 	}
 	if err := db.Create(&product).Error; err != nil {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	updated, err := svc.Update(strconv.FormatUint(uint64(product.ID), 10), CreateProductInput{
+	updated, err := svc.Write.Update(strconv.FormatUint(uint64(product.ID), 10), productwrite.CreateProductInput{
 		CategoryID:        category.ID,
 		Slug:              product.Slug,
 		TitleJSON:         map[string]interface{}{"zh-CN": "payment-channel-update"},
@@ -126,7 +128,7 @@ func TestProductServiceUpdateFiltersUnavailablePaymentChannels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("update product failed: %v", err)
 	}
-	if got := DecodeChannelIDs(updated.PaymentChannelIDs); len(got) != 0 {
+	if got := productdomain.DecodePaymentChannelIDs(updated.PaymentChannelIDs); len(got) != 0 {
 		t.Fatalf("expected stale-only payment channels to be cleared, got %v", got)
 	}
 }
@@ -141,7 +143,7 @@ func TestProductServiceUpdateRejectsInvalidPurchaseLimits(t *testing.T) {
 
 	intPtr := func(v int) *int { return &v }
 
-	created, err := svc.Create(CreateProductInput{
+	created, err := svc.Write.Create(productwrite.CreateProductInput{
 		CategoryID:          cat.ID,
 		Slug:                "valid-limit-product",
 		TitleJSON:           map[string]interface{}{"zh-CN": "valid"},
@@ -156,7 +158,7 @@ func TestProductServiceUpdateRejectsInvalidPurchaseLimits(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	_, err = svc.Update(strconv.FormatUint(uint64(created.ID), 10), CreateProductInput{
+	_, err = svc.Write.Update(strconv.FormatUint(uint64(created.ID), 10), productwrite.CreateProductInput{
 		CategoryID:          cat.ID,
 		Slug:                "valid-limit-product",
 		TitleJSON:           map[string]interface{}{"zh-CN": "valid"},
@@ -166,7 +168,7 @@ func TestProductServiceUpdateRejectsInvalidPurchaseLimits(t *testing.T) {
 		ManualStockTotal:    intPtr(1),
 		MaxPurchaseQuantity: intPtr(1), // 已存在 min=2，新设 max=1 应触发校验
 	})
-	if !errors.Is(err, ErrProductPurchaseLimitInvalid) {
-		t.Fatalf("expected ErrProductPurchaseLimitInvalid on update, got %v", err)
+	if !errors.Is(err, productcontract.ErrProductPurchaseLimitInvalid) {
+		t.Fatalf("expected productcontract.ErrProductPurchaseLimitInvalid on update, got %v", err)
 	}
 }

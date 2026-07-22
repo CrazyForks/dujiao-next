@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/models"
+	memberlevelpresenter "github.com/dujiao-next/internal/modules/memberlevel/transport/presenter"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -39,9 +39,9 @@ func (h *PublicHandler) List(c *gin.Context) {
 		return
 	}
 
-	views := make([]dto.MemberLevelResp, 0, len(levels))
+	views := make([]memberlevelpresenter.MemberLevel, 0, len(levels))
 	for _, l := range levels {
-		views = append(views, dto.MemberLevelResp{
+		views = append(views, memberlevelpresenter.MemberLevel{
 			ID:                l.ID,
 			Name:              l.NameJSON,
 			Slug:              l.Slug,

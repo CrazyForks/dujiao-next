@@ -1,4 +1,4 @@
-package cataloghttp_test
+package integrationtest
 
 import (
 	"context"
@@ -21,9 +21,9 @@ import (
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	catalogmapping "github.com/dujiao-next/internal/modules/catalog/mapping"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
+	mappinghttp "github.com/dujiao-next/internal/modules/catalog/mapping/transport/http"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
-	cataloghttp "github.com/dujiao-next/internal/transport/http/catalog"
 	"github.com/dujiao-next/internal/upstream"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -72,7 +72,7 @@ func (unit *mappingImportUoW) WithinTransaction(fn func(catalogmapping.ImportRep
 	})
 }
 
-func setupAdminProductMappingHandlerTest(t *testing.T, upstreamHandler http.HandlerFunc) (*cataloghttp.AdminProductMappingHandler, *gorm.DB, uint, func()) {
+func setupAdminHandlerTest(t *testing.T, upstreamHandler http.HandlerFunc) (*mappinghttp.AdminHandler, *gorm.DB, uint, func()) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 
@@ -142,12 +142,12 @@ func setupAdminProductMappingHandlerTest(t *testing.T, upstreamHandler http.Hand
 	}
 	mappingService.SetCategoryCreator(categoryService)
 
-	h := cataloghttp.NewAdminProductMappingHandler(mappingService)
+	h := mappinghttp.NewAdminHandler(mappingService)
 	return h, db, conn.ID, server.Close
 }
 
 func TestBatchImportUpstreamProductsAutoCreatesCategory(t *testing.T) {
-	h, db, connID, cleanup := setupAdminProductMappingHandlerTest(t, func(w http.ResponseWriter, r *http.Request) {
+	h, db, connID, cleanup := setupAdminHandlerTest(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/api/v1/upstream/categories":
@@ -214,7 +214,7 @@ func TestBatchImportUpstreamProductsAutoCreatesCategory(t *testing.T) {
 }
 
 func TestBatchImportUpstreamProductsRestoresSoftDeletedAutoCategory(t *testing.T) {
-	h, db, connID, cleanup := setupAdminProductMappingHandlerTest(t, func(w http.ResponseWriter, r *http.Request) {
+	h, db, connID, cleanup := setupAdminHandlerTest(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
 		case "/api/v1/upstream/categories":

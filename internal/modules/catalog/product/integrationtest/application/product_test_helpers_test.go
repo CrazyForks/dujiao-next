@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"fmt"
@@ -7,7 +7,6 @@ import (
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
-	categorycontract "github.com/dujiao-next/internal/modules/catalog/category/contract"
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
@@ -16,57 +15,13 @@ import (
 	"github.com/dujiao-next/internal/models"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
-	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
-	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
-	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
-type ProductService struct {
-	*productapplication.Service
-	*productadmin.AdminService
-	*productwrite.WriteService
-}
-
-type CreateProductInput = productwrite.CreateProductInput
-type WholesalePriceInput = productwrite.WholesalePriceInput
-type ProductSKUInput = productwrite.ProductSKUInput
-
-type memberLevelPriceCleaner interface {
-	DeleteByProductInTx(tx *gorm.DB, productID uint) error
-}
-
-func NewProductService(
-	products catalogproductbootstrap.ProductStore,
-	skus catalogproductbootstrap.SKUStore,
-	cardSecrets repository.CardSecretRepository,
-	cardSecretBatches repository.CardSecretBatchRepository,
-	categories categorycontract.Repository,
-	memberLevelPrices memberLevelPriceCleaner,
-	carts repository.CartRepository,
-	productMappings catalogproductbootstrap.MappingStore,
-	orders repository.OrderRepository,
-	paymentChannels repository.PaymentChannelRepository,
-) *ProductService {
-	services := catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
-		Products:          products,
-		SKUs:              skus,
-		CardSecrets:       cardSecrets,
-		CardSecretBatches: cardSecretBatches,
-		Categories:        categories,
-		MemberLevelPrices: memberLevelPrices,
-		Carts:             carts,
-		ProductMappings:   productMappings,
-		Orders:            orders,
-		PaymentChannels:   paymentChannels,
-	})
-	return &ProductService{Service: services.Read, AdminService: services.Admin, WriteService: services.Write}
-}
-
-func newAutoStockProductService(t *testing.T) (*ProductService, *gorm.DB) {
+func newAutoStockProductService(t *testing.T) (catalogproductbootstrap.Services, *gorm.DB) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:product_auto_stock_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -78,7 +33,7 @@ func newAutoStockProductService(t *testing.T) (*ProductService, *gorm.DB) {
 		t.Fatalf("auto migrate card secret failed: %v", err)
 	}
 	secretRepo := repository.NewCardSecretRepository(db)
-	return NewProductService(nil, nil, secretRepo, nil, nil, nil, nil, nil, nil, nil), db
+	return catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{CardSecrets: secretRepo}), db
 }
 
 func insertCardSecrets(t *testing.T, db *gorm.DB, productID, skuID uint, status string, count int) {
@@ -96,7 +51,7 @@ func insertCardSecrets(t *testing.T, db *gorm.DB, productID, skuID uint, status 
 	}
 }
 
-func newProductServiceForTest(t *testing.T) (*ProductService, *gorm.DB) {
+func newProductServiceForTest(t *testing.T) (catalogproductbootstrap.Services, *gorm.DB) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:product_service_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -108,18 +63,18 @@ func newProductServiceForTest(t *testing.T) (*ProductService, *gorm.DB) {
 		t.Fatalf("auto migrate product service tables failed: %v", err)
 	}
 
-	return NewProductService(
-		productgormstore.NewProductStore(db),
-		productgormstore.NewSKUStore(db),
-		repository.NewCardSecretRepository(db),
-		repository.NewCardSecretBatchRepository(db),
-		categorygormstore.NewCategoryStore(db),
-		memberlevelgormstore.NewPriceStore(db),
-		repository.NewCartRepository(db),
-		mappinggormstore.NewMappingStore(db),
-		repository.NewOrderRepository(db),
-		repository.NewPaymentChannelRepository(db),
-	), db
+	return catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
+		Products:          productgormstore.NewProductStore(db),
+		SKUs:              productgormstore.NewSKUStore(db),
+		CardSecrets:       repository.NewCardSecretRepository(db),
+		CardSecretBatches: repository.NewCardSecretBatchRepository(db),
+		Categories:        categorygormstore.NewCategoryStore(db),
+		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
+		Carts:             repository.NewCartRepository(db),
+		ProductMappings:   mappinggormstore.NewMappingStore(db),
+		Orders:            repository.NewOrderRepository(db),
+		PaymentChannels:   repository.NewPaymentChannelRepository(db),
+	}), db
 }
 
 func createProductTestPaymentChannel(t *testing.T, db *gorm.DB, name string, active bool, deleted bool) models.PaymentChannel {

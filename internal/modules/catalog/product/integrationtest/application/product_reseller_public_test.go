@@ -1,10 +1,12 @@
-package service
+package integrationtest
 
 import (
 	"fmt"
 	"testing"
 	"time"
 
+	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -18,6 +20,7 @@ import (
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/store/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
+	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -26,7 +29,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func newProductServiceForResellerPublicTest(t *testing.T) (*ProductService, repository.ResellerRepository, *gorm.DB) {
+func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstrap.Services, repository.ResellerRepository, *gorm.DB) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:product_reseller_public_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -54,18 +57,18 @@ func newProductServiceForResellerPublicTest(t *testing.T) (*ProductService, repo
 		t.Fatalf("auto migrate product reseller public tables failed: %v", err)
 	}
 
-	svc := NewProductService(
-		productgormstore.NewProductStore(db),
-		productgormstore.NewSKUStore(db),
-		repository.NewCardSecretRepository(db),
-		repository.NewCardSecretBatchRepository(db),
-		categorygormstore.NewCategoryStore(db),
-		memberlevelgormstore.NewPriceStore(db),
-		repository.NewCartRepository(db),
-		mappinggormstore.NewMappingStore(db),
-		repository.NewOrderRepository(db),
-		repository.NewPaymentChannelRepository(db),
-	)
+	svc := catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
+		Products:          productgormstore.NewProductStore(db),
+		SKUs:              productgormstore.NewSKUStore(db),
+		CardSecrets:       repository.NewCardSecretRepository(db),
+		CardSecretBatches: repository.NewCardSecretBatchRepository(db),
+		Categories:        categorygormstore.NewCategoryStore(db),
+		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
+		Carts:             repository.NewCartRepository(db),
+		ProductMappings:   mappinggormstore.NewMappingStore(db),
+		Orders:            repository.NewOrderRepository(db),
+		PaymentChannels:   repository.NewPaymentChannelRepository(db),
+	})
 	return svc, repository.NewResellerRepository(db), db
 }
 
@@ -150,8 +153,8 @@ func TestProductServiceListPublicForTenantExcludesResellerHiddenProductsBeforePa
 	}
 	createResellerPublicSetting(t, db, models.ResellerProductSetting{ResellerID: profile.ID, ProductID: partialSKUHidden.ID, SKUID: partialHiddenSKUs[0].ID, IsListed: false, PricingMode: models.ResellerPricingModeInherit})
 
-	tenant := ResellerTenantContext("shop.example.test", profile.ID, owner.ID, "shop.example.test")
-	rows, total, err := svc.ListPublicForTenant(tenant, resellerRepo, "", "", 1, 20)
+	tenant := reseller.ResellerTenantContext("shop.example.test", profile.ID, owner.ID, "shop.example.test")
+	rows, total, err := svc.Read.ListPublicForTenant(tenant, resellerRepo, "", "", 1, 20)
 	if err != nil {
 		t.Fatalf("ListPublicForTenant failed: %v", err)
 	}
@@ -184,9 +187,9 @@ func TestProductServiceGetPublicBySlugForTenantRejectsHiddenProduct(t *testing.T
 	hidden, _ := seedResellerPublicProduct(t, db, category.ID, "hidden-detail", 1)
 	createResellerPublicSetting(t, db, models.ResellerProductSetting{ResellerID: profile.ID, ProductID: hidden.ID, SKUID: 0, IsListed: false, PricingMode: models.ResellerPricingModeInherit})
 
-	tenant := ResellerTenantContext("shop.example.test", profile.ID, owner.ID, "shop.example.test")
-	_, err := svc.GetPublicBySlugForTenant(tenant, resellerRepo, hidden.Slug)
-	if err != ErrNotFound {
-		t.Fatalf("expected ErrNotFound for hidden detail, got %v", err)
+	tenant := reseller.ResellerTenantContext("shop.example.test", profile.ID, owner.ID, "shop.example.test")
+	_, err := svc.Read.GetPublicBySlugForTenant(tenant, resellerRepo, hidden.Slug)
+	if err != productcontract.ErrNotFound {
+		t.Fatalf("expected productcontract.ErrNotFound for hidden detail, got %v", err)
 	}
 }

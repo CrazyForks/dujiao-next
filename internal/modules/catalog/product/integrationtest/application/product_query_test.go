@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"strconv"
@@ -54,7 +54,7 @@ func TestProductServiceListPublicIncludesChildProductsForParentCategory(t *testi
 		t.Fatalf("create child product failed: %v", err)
 	}
 
-	products, total, err := svc.ListPublic(strconv.FormatUint(uint64(parent.ID), 10), "", 1, 20)
+	products, total, err := svc.Read.ListPublic(strconv.FormatUint(uint64(parent.ID), 10), "", 1, 20)
 	if err != nil {
 		t.Fatalf("list public products failed: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestProductServiceListPublicSortOrderDescending(t *testing.T) {
 		t.Fatalf("create low sort product failed: %v", err)
 	}
 
-	rows, total, err := svc.ListPublic("", "", 1, 20)
+	rows, total, err := svc.Read.ListPublic("", "", 1, 20)
 	if err != nil {
 		t.Fatalf("list public products failed: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestProductServiceListPublicSortsSKUsDescending(t *testing.T) {
 		t.Fatalf("create low sort sku failed: %v", err)
 	}
 
-	rows, total, err := svc.ListPublic("", "", 1, 20)
+	rows, total, err := svc.Read.ListPublic("", "", 1, 20)
 	if err != nil {
 		t.Fatalf("list public products failed: %v", err)
 	}
@@ -219,7 +219,7 @@ func TestProductServiceGetAdminByIDIncludesInactiveSKUs(t *testing.T) {
 		t.Fatalf("persist inactive sku failed: %v", err)
 	}
 
-	got, err := svc.GetAdminByID(strconv.FormatUint(uint64(product.ID), 10))
+	got, err := svc.Read.GetAdminByID(strconv.FormatUint(uint64(product.ID), 10))
 	if err != nil {
 		t.Fatalf("get admin product failed: %v", err)
 	}

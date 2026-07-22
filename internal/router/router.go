@@ -8,18 +8,20 @@ import (
 
 	"github.com/dujiao-next/internal/authz"
 	affiliatebootstrap "github.com/dujiao-next/internal/bootstrap/affiliate"
+	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	categoryhttp "github.com/dujiao-next/internal/modules/catalog/category/transport/http"
+	mappinghttp "github.com/dujiao-next/internal/modules/catalog/mapping/transport/http"
+	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	apicredentialtransport "github.com/dujiao-next/internal/transport/http/apicredential"
 	auditlogtransport "github.com/dujiao-next/internal/transport/http/auditlog"
 	cardsecrettransport "github.com/dujiao-next/internal/transport/http/cardsecret"
-	catalogtransport "github.com/dujiao-next/internal/transport/http/catalog"
 	contenttransport "github.com/dujiao-next/internal/transport/http/content"
 	coupontransport "github.com/dujiao-next/internal/transport/http/coupon"
 	dashboardtransport "github.com/dujiao-next/internal/transport/http/dashboard"
@@ -34,7 +36,6 @@ import (
 	adminauthzwiring "github.com/dujiao-next/internal/wiring/adminauthz"
 	adminuserwiring "github.com/dujiao-next/internal/wiring/adminuser"
 	cartwiring "github.com/dujiao-next/internal/wiring/cart"
-	catalogwiring "github.com/dujiao-next/internal/wiring/catalog"
 	channelwiring "github.com/dujiao-next/internal/wiring/channel"
 	channeluserwiring "github.com/dujiao-next/internal/wiring/channeluser"
 	fulfillmentwiring "github.com/dujiao-next/internal/wiring/fulfillment"
@@ -91,7 +92,16 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 		c.ContentPostCategoryService,
 		c.ContentBannerService,
 	)
-	publicCatalogHandler := catalogwiring.NewPublicHandler(c)
+	publicCatalogHandler := catalogproductbootstrap.NewPublicHTTP(catalogproductbootstrap.PublicHTTPDependencies{
+		Products:     c.ProductReadService,
+		Hidden:       c.ResellerRepo,
+		Pricer:       c.ResellerPricingResolver,
+		Promotions:   c.PromotionRepo,
+		MemberLevels: c.MemberLevelService,
+		Mappings:     c.ProductMappingRepo,
+		SKUMappings:  c.SKUMappingRepo,
+		RelatedPosts: c.ContentPostService,
+	})
 	publicCategoryHandler := categoryhttp.NewPublicHandler(c.CategoryService)
 	adminContentHandler := contenttransport.NewAdminHandler(
 		c.ContentPostService,
@@ -121,7 +131,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 	adminAuditLogHandler := auditlogtransport.NewAdminHandler(c.AuthzAuditService, c.UserLoginLogService)
 	adminCardSecretHandler := cardsecrettransport.NewAdminHandler(c.CardSecretService)
 	adminCatalogCategoryHandler := categoryhttp.NewAdminCategoryHandler(c.CategoryService)
-	adminCatalogProductHandler := catalogtransport.NewAdminProductHandler(
+	adminCatalogProductHandler := producthttp.NewAdminProductHandler(
 		c.ProductReadService,
 		c.ProductWriteService,
 		c.ProductAdminService,
@@ -129,7 +139,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 		c.ProductMappingRepo,
 		c.SKUMappingRepo,
 	)
-	adminCatalogProductMappingHandler := catalogtransport.NewAdminProductMappingHandler(c.ProductMappingService)
+	adminCatalogProductMappingHandler := mappinghttp.NewAdminHandler(c.ProductMappingService)
 	userAuditLogHandler := auditlogtransport.NewUserHandler(c.UserLoginLogService)
 	adminCouponHandler := coupontransport.NewAdminHandler(c.CouponAdminService)
 	adminGiftCardHandler := giftcardtransport.NewAdminHandler(c.GiftCardService)

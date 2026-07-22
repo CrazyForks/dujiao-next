@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"errors"
@@ -8,6 +8,8 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
+	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -16,7 +18,7 @@ import (
 )
 
 func TestNormalizeWholesalePriceInputsSortsTiers(t *testing.T) {
-	tiers, err := productdomain.NormalizeWholesalePrices([]WholesalePriceInput{
+	tiers, err := productdomain.NormalizeWholesalePrices([]productwrite.WholesalePriceInput{
 		{MinQuantity: 10, UnitPrice: decimal.NewFromInt(70)},
 		{MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
 	})
@@ -37,33 +39,33 @@ func TestNormalizeWholesalePriceInputsSortsTiers(t *testing.T) {
 func TestNormalizeWholesalePriceInputsRejectsInvalidTiers(t *testing.T) {
 	tests := []struct {
 		name   string
-		inputs []WholesalePriceInput
+		inputs []productwrite.WholesalePriceInput
 	}{
 		{
 			name:   "zero quantity",
-			inputs: []WholesalePriceInput{{MinQuantity: 0, UnitPrice: decimal.NewFromInt(80)}},
+			inputs: []productwrite.WholesalePriceInput{{MinQuantity: 0, UnitPrice: decimal.NewFromInt(80)}},
 		},
 		{
 			name:   "zero price",
-			inputs: []WholesalePriceInput{{MinQuantity: 5, UnitPrice: decimal.Zero}},
+			inputs: []productwrite.WholesalePriceInput{{MinQuantity: 5, UnitPrice: decimal.Zero}},
 		},
 		{
 			name: "duplicate quantity",
-			inputs: []WholesalePriceInput{
+			inputs: []productwrite.WholesalePriceInput{
 				{MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
 				{MinQuantity: 5, UnitPrice: decimal.NewFromInt(70)},
 			},
 		},
 		{
 			name: "higher tier more expensive",
-			inputs: []WholesalePriceInput{
+			inputs: []productwrite.WholesalePriceInput{
 				{MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
 				{MinQuantity: 10, UnitPrice: decimal.NewFromInt(90)},
 			},
 		},
 		{
 			name: "higher tier equal price",
-			inputs: []WholesalePriceInput{
+			inputs: []productwrite.WholesalePriceInput{
 				{MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
 				{MinQuantity: 10, UnitPrice: decimal.NewFromInt(80)},
 			},
@@ -73,35 +75,35 @@ func TestNormalizeWholesalePriceInputsRejectsInvalidTiers(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := productdomain.NormalizeWholesalePrices(tc.inputs)
-			if !errors.Is(err, ErrWholesalePriceInvalid) {
-				t.Fatalf("expected ErrWholesalePriceInvalid, got %v", err)
+			if !errors.Is(err, productdomain.ErrWholesalePriceInvalid) {
+				t.Fatalf("expected productdomain.ErrWholesalePriceInvalid, got %v", err)
 			}
 		})
 	}
 }
 
 func TestNormalizeWholesalePriceInputsRejectsDuplicateCanonicalSKUScope(t *testing.T) {
-	_, err := productdomain.NormalizeWholesalePrices([]WholesalePriceInput{
+	_, err := productdomain.NormalizeWholesalePrices([]productwrite.WholesalePriceInput{
 		{SKUID: 5, SKUCode: "SKU-A", MinQuantity: 10, UnitPrice: decimal.NewFromInt(80)},
 		{SKUCode: "SKU-A", MinQuantity: 10, UnitPrice: decimal.NewFromInt(70)},
 	})
-	if !errors.Is(err, ErrWholesalePriceInvalid) {
-		t.Fatalf("expected ErrWholesalePriceInvalid, got %v", err)
+	if !errors.Is(err, productdomain.ErrWholesalePriceInvalid) {
+		t.Fatalf("expected productdomain.ErrWholesalePriceInvalid, got %v", err)
 	}
 }
 
 func TestNormalizeWholesalePriceInputsRejectsNonDecreasingCanonicalSKUScope(t *testing.T) {
-	_, err := productdomain.NormalizeWholesalePrices([]WholesalePriceInput{
+	_, err := productdomain.NormalizeWholesalePrices([]productwrite.WholesalePriceInput{
 		{SKUID: 5, SKUCode: "SKU-A", MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
 		{SKUCode: "SKU-A", MinQuantity: 10, UnitPrice: decimal.NewFromInt(90)},
 	})
-	if !errors.Is(err, ErrWholesalePriceInvalid) {
-		t.Fatalf("expected ErrWholesalePriceInvalid, got %v", err)
+	if !errors.Is(err, productdomain.ErrWholesalePriceInvalid) {
+		t.Fatalf("expected productdomain.ErrWholesalePriceInvalid, got %v", err)
 	}
 }
 
 func TestNormalizeWholesalePriceInputsAllowsSameQuantityForDifferentSKUs(t *testing.T) {
-	tiers, err := productdomain.NormalizeWholesalePrices([]WholesalePriceInput{
+	tiers, err := productdomain.NormalizeWholesalePrices([]productwrite.WholesalePriceInput{
 		{SKUID: 2, SKUCode: "SKU-B", MinQuantity: 5, UnitPrice: decimal.NewFromInt(70)},
 		{SKUID: 1, SKUCode: "SKU-A", MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
 		{MinQuantity: 5, UnitPrice: decimal.NewFromInt(90)},
@@ -283,14 +285,14 @@ func TestProductServiceUpdateWholesalePricesOptionalSemantics(t *testing.T) {
 		t.Fatalf("create category failed: %v", err)
 	}
 
-	created, err := svc.Create(CreateProductInput{
+	created, err := svc.Write.Create(productwrite.CreateProductInput{
 		CategoryID:      category.ID,
 		Slug:            "wholesale-update",
 		TitleJSON:       map[string]interface{}{"zh-CN": "wholesale-update"},
 		PriceAmount:     decimal.NewFromInt(100),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
-		WholesalePrices: &[]WholesalePriceInput{
+		WholesalePrices: &[]productwrite.WholesalePriceInput{
 			{MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
 		},
 		IsActive: boolPtr(true),
@@ -303,8 +305,8 @@ func TestProductServiceUpdateWholesalePricesOptionalSemantics(t *testing.T) {
 	}
 
 	idStr := strconv.FormatUint(uint64(created.ID), 10)
-	baseUpdate := func() CreateProductInput {
-		return CreateProductInput{
+	baseUpdate := func() productwrite.CreateProductInput {
+		return productwrite.CreateProductInput{
 			CategoryID:      category.ID,
 			Slug:            created.Slug,
 			TitleJSON:       map[string]interface{}{"zh-CN": "wholesale-update"},
@@ -318,7 +320,7 @@ func TestProductServiceUpdateWholesalePricesOptionalSemantics(t *testing.T) {
 	// 省略字段（nil）：应保留原批发价。
 	keep := baseUpdate()
 	keep.WholesalePrices = nil
-	updated, err := svc.Update(idStr, keep)
+	updated, err := svc.Write.Update(idStr, keep)
 	if err != nil {
 		t.Fatalf("update without wholesale prices failed: %v", err)
 	}
@@ -328,8 +330,8 @@ func TestProductServiceUpdateWholesalePricesOptionalSemantics(t *testing.T) {
 
 	// 传入空切片：显式清空。
 	clear := baseUpdate()
-	clear.WholesalePrices = &[]WholesalePriceInput{}
-	cleared, err := svc.Update(idStr, clear)
+	clear.WholesalePrices = &[]productwrite.WholesalePriceInput{}
+	cleared, err := svc.Write.Update(idStr, clear)
 	if err != nil {
 		t.Fatalf("update with empty wholesale prices failed: %v", err)
 	}
@@ -366,7 +368,7 @@ func TestProductServiceUpdateWholesalePricesOnlyTouchesWholesaleField(t *testing
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	updated, err := svc.UpdateWholesalePrices(strconv.FormatUint(uint64(product.ID), 10), []WholesalePriceInput{
+	updated, err := svc.Admin.UpdateWholesalePrices(strconv.FormatUint(uint64(product.ID), 10), []productwrite.WholesalePriceInput{
 		{MinQuantity: 10, UnitPrice: decimal.RequireFromString("70.00")},
 		{MinQuantity: 5, UnitPrice: decimal.RequireFromString("80.00")},
 	})
@@ -412,7 +414,7 @@ func TestProductServiceUpdateWholesalePricesClearsTiers(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	updated, err := svc.UpdateWholesalePrices(strconv.FormatUint(uint64(product.ID), 10), []WholesalePriceInput{})
+	updated, err := svc.Admin.UpdateWholesalePrices(strconv.FormatUint(uint64(product.ID), 10), []productwrite.WholesalePriceInput{})
 	if err != nil {
 		t.Fatalf("clear wholesale prices failed: %v", err)
 	}
@@ -440,11 +442,11 @@ func TestProductServiceUpdateWholesalePricesRejectsInvalidInputs(t *testing.T) {
 
 	cases := []struct {
 		name   string
-		inputs []WholesalePriceInput
+		inputs []productwrite.WholesalePriceInput
 	}{
-		{name: "zero quantity", inputs: []WholesalePriceInput{{MinQuantity: 0, UnitPrice: decimal.NewFromInt(80)}}},
-		{name: "zero price", inputs: []WholesalePriceInput{{MinQuantity: 5, UnitPrice: decimal.Zero}}},
-		{name: "duplicate quantity", inputs: []WholesalePriceInput{
+		{name: "zero quantity", inputs: []productwrite.WholesalePriceInput{{MinQuantity: 0, UnitPrice: decimal.NewFromInt(80)}}},
+		{name: "zero price", inputs: []productwrite.WholesalePriceInput{{MinQuantity: 5, UnitPrice: decimal.Zero}}},
+		{name: "duplicate quantity", inputs: []productwrite.WholesalePriceInput{
 			{MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
 			{MinQuantity: 5, UnitPrice: decimal.NewFromInt(70)},
 		}},
@@ -453,9 +455,9 @@ func TestProductServiceUpdateWholesalePricesRejectsInvalidInputs(t *testing.T) {
 	idStr := strconv.FormatUint(uint64(product.ID), 10)
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := svc.UpdateWholesalePrices(idStr, tc.inputs)
-			if !errors.Is(err, ErrWholesalePriceInvalid) {
-				t.Fatalf("expected ErrWholesalePriceInvalid, got %v", err)
+			_, err := svc.Admin.UpdateWholesalePrices(idStr, tc.inputs)
+			if !errors.Is(err, productdomain.ErrWholesalePriceInvalid) {
+				t.Fatalf("expected productdomain.ErrWholesalePriceInvalid, got %v", err)
 			}
 			var got productdomain.Product
 			if err := db.First(&got, product.ID).Error; err != nil {
@@ -514,18 +516,18 @@ func TestProductServiceUpdateWholesalePricesValidatesSKUBelonging(t *testing.T) 
 	}
 
 	idStr := strconv.FormatUint(uint64(product.ID), 10)
-	if _, err := svc.UpdateWholesalePrices(idStr, []WholesalePriceInput{
+	if _, err := svc.Admin.UpdateWholesalePrices(idStr, []productwrite.WholesalePriceInput{
 		{SKUID: foreignSKU.ID, MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
-	}); !errors.Is(err, ErrWholesalePriceInvalid) {
+	}); !errors.Is(err, productdomain.ErrWholesalePriceInvalid) {
 		t.Fatalf("expected foreign sku_id to be rejected, got %v", err)
 	}
-	if _, err := svc.UpdateWholesalePrices(idStr, []WholesalePriceInput{
+	if _, err := svc.Admin.UpdateWholesalePrices(idStr, []productwrite.WholesalePriceInput{
 		{SKUID: skuA.ID, SKUCode: "SKU-X", MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
-	}); !errors.Is(err, ErrWholesalePriceInvalid) {
+	}); !errors.Is(err, productdomain.ErrWholesalePriceInvalid) {
 		t.Fatalf("expected sku_id/sku_code mismatch to be rejected, got %v", err)
 	}
 
-	updated, err := svc.UpdateWholesalePrices(idStr, []WholesalePriceInput{
+	updated, err := svc.Admin.UpdateWholesalePrices(idStr, []productwrite.WholesalePriceInput{
 		{SKUCode: "SKU-A", MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
 	})
 	if err != nil {
@@ -542,10 +544,10 @@ func TestProductServiceUpdateWholesalePricesValidatesSKUBelonging(t *testing.T) 
 func TestProductServiceUpdateWholesalePricesReturnsNotFound(t *testing.T) {
 	svc, _ := newProductServiceForTest(t)
 
-	_, err := svc.UpdateWholesalePrices("999999", []WholesalePriceInput{
+	_, err := svc.Admin.UpdateWholesalePrices("999999", []productwrite.WholesalePriceInput{
 		{MinQuantity: 5, UnitPrice: decimal.NewFromInt(80)},
 	})
-	if !errors.Is(err, ErrNotFound) {
-		t.Fatalf("expected ErrNotFound, got %v", err)
+	if !errors.Is(err, productcontract.ErrNotFound) {
+		t.Fatalf("expected productcontract.ErrNotFound, got %v", err)
 	}
 }

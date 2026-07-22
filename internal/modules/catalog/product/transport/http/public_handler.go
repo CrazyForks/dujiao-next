@@ -1,4 +1,4 @@
-package cataloghttp
+package producthttp
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productpresenter "github.com/dujiao-next/internal/modules/catalog/product/transport/presenter"
 
-	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
@@ -135,7 +135,7 @@ func (h *PublicHandler) GetProducts(c *gin.Context) {
 		}
 	}
 
-	decorated := make([]dto.ProductResp, 0, len(products))
+	decorated := make([]productpresenter.Product, 0, len(products))
 	for i := range products {
 		item, derr := h.decoratePublicProductForTenant(&products[i], h.promotions, tenant, resellerBatch)
 		if derr != nil {
@@ -204,10 +204,23 @@ func (h *PublicHandler) GetProductBySlug(c *gin.Context) {
 	response.Success(c, decorated)
 }
 
-func (h *PublicHandler) loadRelatedPostCards(ctx context.Context, productID uint) ([]dto.RelatedPostCard, error) {
+func (h *PublicHandler) loadRelatedPostCards(ctx context.Context, productID uint) ([]productpresenter.RelatedPost, error) {
 	posts, err := h.relatedPosts.ListPostsForProduct(ctx, productID, publicRelatedPostsLimit)
 	if err != nil {
 		return nil, err
 	}
-	return dto.NewRelatedPostCardList(posts), nil
+	result := make([]productpresenter.RelatedPost, 0, len(posts))
+	for i := range posts {
+		post := &posts[i]
+		result = append(result, productpresenter.RelatedPost{
+			ID:          post.ID,
+			Slug:        post.Slug,
+			Type:        post.Type,
+			Title:       post.TitleJSON,
+			Summary:     post.SummaryJSON,
+			Thumbnail:   post.Thumbnail,
+			PublishedAt: post.PublishedAt,
+		})
+	}
+	return result, nil
 }

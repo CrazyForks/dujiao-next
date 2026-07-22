@@ -1,4 +1,4 @@
-package cataloghttp
+package producthttp
 
 import (
 	"context"

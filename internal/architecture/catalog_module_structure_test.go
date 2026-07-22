@@ -13,8 +13,8 @@ import (
 func TestCatalogStockConsumersUseSharedPolicy(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	consumers := []string{
-		"internal/transport/http/catalog/public_view.go",
-		"internal/transport/http/catalog/public_stock.go",
+		"internal/modules/catalog/product/transport/http/public_view.go",
+		"internal/modules/catalog/product/transport/http/public_stock.go",
 		"internal/transport/http/channel/channel_catalog.go",
 		"internal/transport/http/upstream/upstream_catalog.go",
 	}
@@ -155,6 +155,11 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 	domainRoot := filepath.Join(productRoot, "domain")
 	manualFormRoot := filepath.Join(productRoot, "manualform")
 	storeRoot := filepath.Join(productRoot, "store", "gormstore")
+	transportRoot := filepath.Join(productRoot, "transport", "http")
+	presenterRoot := filepath.Join(productRoot, "transport", "presenter")
+	integrationRoot := filepath.Join(productRoot, "integrationtest")
+	integrationApplicationRoot := filepath.Join(integrationRoot, "application")
+	integrationTransportRoot := filepath.Join(integrationRoot, "transport")
 	sharedGORMRoot := filepath.Join(repositoryRoot, "internal", "persistence", "gormutil")
 
 	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "repository.go"), []string{
@@ -224,6 +229,9 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 	assertFileDeclaresFunctions(t, filepath.Join(domainRoot, "inventory_policy.go"), []string{
 		"ManualSKUAvailable", "ShouldEnforceManualSKUStock",
 	})
+	assertFileDeclaresFunctions(t, filepath.Join(domainRoot, "payment_channels.go"), []string{
+		"DecodePaymentChannelIDs", "EncodePaymentChannelIDs",
+	})
 	assertFileDeclaresFunctions(t, filepath.Join(manualFormRoot, "schema.go"), []string{
 		"ValidateAndNormalize", "NormalizeSchema",
 	})
@@ -231,21 +239,41 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 	assertFileDeclaresFunctions(t, filepath.Join(storeRoot, "product_store.go"), []string{"NewProductStore"})
 	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "sku_store.go"), []string{"SKUStore"})
 	assertFileDeclaresFunctions(t, filepath.Join(storeRoot, "sku_store.go"), []string{"NewSKUStore"})
+	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "admin_handler.go"), []string{
+		"ProductQueries", "ProductWriter", "ProductAdminCommands", "AdminProductHandler",
+	})
+	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "public_handler.go"), []string{
+		"PublicProductQueries", "PublicHandler",
+	})
+	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{
+		"RegisterPublicRoutes", "RegisterAdminRoutes",
+	})
+	assertFileDeclaresTypes(t, filepath.Join(presenterRoot, "product.go"), []string{
+		"Product", "RelatedPost", "WholesalePrice", "SKU", "PromotionRule", "MemberLevelPrice",
+	})
+	assertFileDeclaresFunctions(t, filepath.Join(presenterRoot, "product.go"), []string{"WholesalePrices"})
 
 	assertDirectoryGoFileBudget(t, productRoot, 0)
 	assertDirectoryGoFileBudget(t, contractRoot, 2)
 	assertDirectoryGoFileBudget(t, applicationRoot, 4)
 	assertDirectoryGoFileBudget(t, adminRoot, 4)
 	assertDirectoryGoFileBudget(t, writeRoot, 6)
-	assertDirectoryGoFileBudget(t, domainRoot, 7)
+	assertDirectoryGoFileBudget(t, domainRoot, 9)
 	assertDirectoryGoFileBudget(t, manualFormRoot, 2)
 	assertDirectoryGoFileBudget(t, storeRoot, 4)
+	assertDirectoryGoFileBudget(t, transportRoot, 8)
+	assertDirectoryGoFileBudget(t, presenterRoot, 1)
+	assertDirectoryGoFileBudget(t, integrationRoot, 0)
+	assertDirectoryGoFileBudget(t, integrationApplicationRoot, 9)
+	assertDirectoryGoFileBudget(t, integrationTransportRoot, 2)
 	assertDirectoryGoFileBudget(t, sharedGORMRoot, 2)
 }
 
 func TestCatalogMappingImplementationLivesInBoundedContext(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	mappingRoot := filepath.Join(repositoryRoot, "internal", "modules", "catalog", "mapping")
+	transportRoot := filepath.Join(mappingRoot, "transport", "http")
+	integrationRoot := filepath.Join(mappingRoot, "integrationtest")
 
 	assertFileDeclaresTypes(t, filepath.Join(mappingRoot, "service.go"), []string{
 		"ListFilter", "MappingRepository", "SKUMappingRepository", "ProductRepository", "SKURepository",
@@ -284,9 +312,14 @@ func TestCatalogMappingImplementationLivesInBoundedContext(t *testing.T) {
 	assertFileDeclaresFunctions(t, filepath.Join(storeRoot, "mapping_store.go"), []string{"NewMappingStore"})
 	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "sku_mapping_store.go"), []string{"SKUMappingStore"})
 	assertFileDeclaresFunctions(t, filepath.Join(storeRoot, "sku_mapping_store.go"), []string{"NewSKUMappingStore"})
+	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "admin_handler.go"), []string{"ProductMappingService", "AdminHandler"})
+	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "admin_handler.go"), []string{"NewAdminHandler"})
+	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{"RegisterAdminRoutes"})
 
 	assertDirectoryGoFileBudget(t, mappingRoot, 12)
 	assertDirectoryGoFileBudget(t, storeRoot, 4)
+	assertDirectoryGoFileBudget(t, transportRoot, 2)
+	assertDirectoryGoFileBudget(t, integrationRoot, 1)
 }
 
 func TestCatalogMappingLegacyRepositoryFilesStayRemoved(t *testing.T) {
@@ -350,6 +383,16 @@ func TestCatalogProductLegacyFlatFilesStayRemoved(t *testing.T) {
 		"internal/models/wholesale_price.go",
 		"internal/modules/catalog/product/errors.go",
 		"internal/modules/catalog/product/ports.go",
+		"internal/dto/product.go",
+		"internal/transport/http/catalog/admin_product_handler.go",
+		"internal/transport/http/catalog/admin_product_handler_integration_test.go",
+		"internal/transport/http/catalog/public_handler.go",
+		"internal/transport/http/catalog/public_view.go",
+		"internal/transport/http/catalog/public_stock.go",
+		"internal/transport/http/catalog/public_price_integration_test.go",
+		"internal/transport/http/catalog/public_price_test.go",
+		"internal/transport/http/catalog/public_related_posts_test.go",
+		"internal/transport/http/catalog/public_stock_test.go",
 		"internal/service/product_create.go",
 		"internal/service/product_admin.go",
 		"internal/service/product_query.go",
@@ -366,6 +409,9 @@ func TestCatalogProductLegacyFlatFilesStayRemoved(t *testing.T) {
 		"internal/http/handlers/admin/admin_product_test.go",
 		"internal/http/handlers/admin/admin_product_mapping.go",
 		"internal/http/handlers/admin/admin_product_mapping_test.go",
+		"internal/transport/http/catalog/admin_product_mapping_handler.go",
+		"internal/transport/http/catalog/admin_product_mapping_handler_integration_test.go",
+		"internal/transport/http/catalog/routes.go",
 	}
 	for _, relativePath := range legacyFiles {
 		if matches, err := filepath.Glob(filepath.Join(repositoryRoot, relativePath)); err != nil {

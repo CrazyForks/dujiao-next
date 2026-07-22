@@ -1,15 +1,14 @@
-package cataloghttp
+package producthttp
 
 import (
-	"encoding/json"
 	"errors"
 	"strings"
 
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	productpresenter "github.com/dujiao-next/internal/modules/catalog/product/transport/presenter"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/models"
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
 	categorypresenter "github.com/dujiao-next/internal/modules/catalog/category/transport/presenter"
@@ -25,15 +24,15 @@ type publicSKUView struct {
 	MemberPriceAmount    *money.Amount
 }
 
-// publicProductView 内部商品计算结构，装饰完成后转换为 dto.ProductResp
+// publicProductView 内部商品计算结构，装饰完成后转换为 productpresenter.Product
 type publicProductView struct {
 	productdomain.Product
 	PromotionID          *uint
 	PromotionName        string
 	PromotionType        string
 	PromotionPriceAmount *money.Amount
-	PromotionRules       []dto.PromotionRuleResp
-	MemberPrices         []dto.MemberLevelPrice
+	PromotionRules       []productpresenter.PromotionRule
+	MemberPrices         []productpresenter.MemberLevelPrice
 	PublicSKUs           []publicSKUView
 	ManualStockAvailable int
 	AutoStockAvailable   int64
@@ -41,38 +40,17 @@ type publicProductView struct {
 	IsSoldOut            bool
 }
 
-func decodeChannelIDs(raw string) []uint {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" || trimmed == "[]" {
-		return nil
-	}
-	var ids []uint
-	if err := json.Unmarshal([]byte(trimmed), &ids); err != nil {
-		return nil
-	}
-	result := make([]uint, 0, len(ids))
-	for _, id := range ids {
-		if id > 0 {
-			result = append(result, id)
-		}
-	}
-	if len(result) == 0 {
-		return nil
-	}
-	return result
-}
-
 // toProductResp 将内部计算结构转换为公共 DTO
-func (v *publicProductView) toProductResp() dto.ProductResp {
+func (v *publicProductView) toProductResp() productpresenter.Product {
 	mode := domaincatalog.NormalizeStockDisplayMode(v.Product.StockDisplayMode)
 	productQuantity := v.productStockQuantity()
 	productDisplay := domaincatalog.StorefrontStockPolicy().Display(mode, v.StockStatus, productQuantity)
 
-	skus := make([]dto.SKUResp, 0, len(v.PublicSKUs))
+	skus := make([]productpresenter.SKU, 0, len(v.PublicSKUs))
 	for _, sv := range v.PublicSKUs {
 		skuStatus, skuQuantity := v.skuStockState(sv)
 		skuDisplay := domaincatalog.StorefrontStockPolicy().Display(mode, skuStatus, skuQuantity)
-		skus = append(skus, dto.SKUResp{
+		skus = append(skus, productpresenter.SKU{
 			ID:                   sv.ID,
 			SKUCode:              sv.SKUCode,
 			SpecValues:           sv.SpecValuesJSON,
@@ -94,7 +72,7 @@ func (v *publicProductView) toProductResp() dto.ProductResp {
 		})
 	}
 
-	resp := dto.ProductResp{
+	resp := productpresenter.Product{
 		ID:                   v.Product.ID,
 		CategoryID:           v.Product.CategoryID,
 		Slug:                 v.Product.Slug,
@@ -103,7 +81,7 @@ func (v *publicProductView) toProductResp() dto.ProductResp {
 		Description:          v.Product.DescriptionJSON,
 		Content:              v.Product.ContentJSON,
 		PriceAmount:          v.Product.PriceAmount,
-		WholesalePrices:      dto.NewWholesalePriceRespList(v.Product.WholesalePrices),
+		WholesalePrices:      productpresenter.WholesalePrices(v.Product.WholesalePrices),
 		Images:               v.Product.Images,
 		Tags:                 v.Product.Tags,
 		PurchaseType:         v.Product.PurchaseType,
@@ -120,7 +98,7 @@ func (v *publicProductView) toProductResp() dto.ProductResp {
 		AutoStockAvailable:   domaincatalog.MaskStockInt64(mode, v.AutoStockAvailable),
 		StockStatus:          v.StockStatus,
 		IsSoldOut:            v.IsSoldOut,
-		PaymentChannelIDs:    decodeChannelIDs(v.Product.PaymentChannelIDs),
+		PaymentChannelIDs:    productdomain.DecodePaymentChannelIDs(v.Product.PaymentChannelIDs),
 		Category:             categorypresenter.New(&v.Product.Category),
 		SKUs:                 skus,
 		PromotionID:          v.PromotionID,
@@ -157,9 +135,9 @@ func isResellerDisplayHiddenError(err error) bool {
 		errors.Is(err, reseller.ErrPricingModeInvalid)
 }
 
-func (h *PublicHandler) decoratePublicProduct(product *productdomain.Product, promotions ProductPromotionDecorator, userMemberLevelID ...uint) (dto.ProductResp, error) {
+func (h *PublicHandler) decoratePublicProduct(product *productdomain.Product, promotions ProductPromotionDecorator, userMemberLevelID ...uint) (productpresenter.Product, error) {
 	if product == nil {
-		return dto.ProductResp{}, nil
+		return productpresenter.Product{}, nil
 	}
 
 	item := publicProductView{Product: *product}
@@ -172,9 +150,9 @@ func (h *PublicHandler) decoratePublicProduct(product *productdomain.Product, pr
 	if promotions != nil {
 		allRules, err := promotions.GetProductPromotions(product.ID)
 		if err == nil && len(allRules) > 0 {
-			rules := make([]dto.PromotionRuleResp, 0, len(allRules))
+			rules := make([]productpresenter.PromotionRule, 0, len(allRules))
 			for _, r := range allRules {
-				rules = append(rules, dto.PromotionRuleResp{
+				rules = append(rules, productpresenter.PromotionRule{
 					ID:        r.ID,
 					Name:      strings.TrimSpace(r.Name),
 					Type:      strings.TrimSpace(r.Type),
@@ -194,9 +172,9 @@ func (h *PublicHandler) decoratePublicProduct(product *productdomain.Product, pr
 	if h.memberLevels != nil {
 		levelPrices, _ := h.memberLevels.GetLevelPricesByProduct(product.ID)
 		if len(levelPrices) > 0 {
-			views := make([]dto.MemberLevelPrice, 0, len(levelPrices))
+			views := make([]productpresenter.MemberLevelPrice, 0, len(levelPrices))
 			for _, lp := range levelPrices {
-				views = append(views, dto.MemberLevelPrice{
+				views = append(views, productpresenter.MemberLevelPrice{
 					MemberLevelID: lp.MemberLevelID,
 					SKUID:         lp.SKUID,
 					PriceAmount:   lp.PriceAmount,
@@ -228,7 +206,7 @@ func (h *PublicHandler) decoratePublicProduct(product *productdomain.Product, pr
 			priceCarrier.PriceAmount = sku.PriceAmount
 			promotion, discountedPrice, err := promotions.ApplyPromotion(&priceCarrier, 1)
 			if err != nil && !errors.Is(err, promotionmodule.ErrInvalid) {
-				return dto.ProductResp{}, err
+				return productpresenter.Product{}, err
 			}
 			if promotion != nil && discountedPrice.Decimal.LessThan(sku.PriceAmount.Decimal) {
 				sv.PromotionPriceAmount = &discountedPrice
@@ -262,25 +240,25 @@ func (h *PublicHandler) decoratePublicProductForTenant(
 	tenant reseller.TenantContext,
 	resellerBatch *reseller.DisplayPricingBatch,
 	userMemberLevelID ...uint,
-) (dto.ProductResp, error) {
+) (productpresenter.Product, error) {
 	if !isResellerTenant(tenant) {
 		return h.decoratePublicProduct(product, promotions, userMemberLevelID...)
 	}
 	if product == nil {
-		return dto.ProductResp{}, nil
+		return productpresenter.Product{}, nil
 	}
 	if h == nil || h.pricer == nil {
-		return dto.ProductResp{}, productcontract.ErrResellerProductNotListed
+		return productpresenter.Product{}, productcontract.ErrResellerProductNotListed
 	}
 	display, err := h.pricer.ResolveDisplayPrices(tenant, product, resellerBatch)
 	if err != nil {
 		if isResellerDisplayHiddenError(err) {
-			return dto.ProductResp{}, productcontract.ErrResellerProductNotListed
+			return productpresenter.Product{}, productcontract.ErrResellerProductNotListed
 		}
-		return dto.ProductResp{}, err
+		return productpresenter.Product{}, err
 	}
 	if display == nil || !display.Visible {
-		return dto.ProductResp{}, productcontract.ErrResellerProductNotListed
+		return productpresenter.Product{}, productcontract.ErrResellerProductNotListed
 	}
 
 	productCopy := *product
@@ -297,7 +275,7 @@ func (h *PublicHandler) decoratePublicProductForTenant(
 		filteredSKUs = append(filteredSKUs, sku)
 	}
 	if len(product.SKUs) > 0 && len(filteredSKUs) == 0 {
-		return dto.ProductResp{}, productcontract.ErrResellerProductNotListed
+		return productpresenter.Product{}, productcontract.ErrResellerProductNotListed
 	}
 	productCopy.SKUs = filteredSKUs
 

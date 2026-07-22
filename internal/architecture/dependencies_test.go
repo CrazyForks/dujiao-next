@@ -210,6 +210,18 @@ func TestValidateImportRules(t *testing.T) {
 			importPath:    "gorm.io/gorm",
 			wantViolation: false,
 		},
+		{
+			name:          "module integration test can assemble legacy repository during migration",
+			file:          "internal/modules/catalog/product/integrationtest/application/product_test_helpers_test.go",
+			importPath:    moduleImportPath + "/internal/repository",
+			wantViolation: false,
+		},
+		{
+			name:          "module integration test can assemble infrastructure adapters",
+			file:          "internal/modules/catalog/product/integrationtest/transport/admin_http_test.go",
+			importPath:    moduleImportPath + "/internal/modules/catalog/product/store/gormstore",
+			wantViolation: false,
+		},
 	}
 
 	for _, test := range tests {
@@ -318,7 +330,8 @@ func validateImport(file, importPath string) string {
 	file = filepath.ToSlash(file)
 
 	if pathWithin(file, "internal/modules") {
-		if forbiddenLegacyImport(importPath) {
+		integrationTest := isModuleIntegrationTest(file)
+		if forbiddenLegacyImport(importPath) && !integrationTest {
 			return "domain modules must not depend on legacy service, repository, HTTP, router, or provider packages"
 		}
 		if importMatches(importPath, "github.com/gin-gonic/gin") && !isHTTPTransport(file) && !isModuleIntegrationTest(file) {
@@ -327,10 +340,10 @@ func validateImport(file, importPath string) string {
 		if strings.HasPrefix(importPath, "gorm.io/") && !isGormStore(file) && !isModuleIntegrationTest(file) {
 			return "only a module's store/gormstore adapter may import GORM"
 		}
-		if isLayer(file, "domain") && importsAnyLayer(importPath, "application", "infrastructure", "store", "transport") {
+		if !integrationTest && isLayer(file, "domain") && importsAnyLayer(importPath, "application", "infrastructure", "store", "transport") {
 			return "domain code must not depend on application, infrastructure, store, or transport packages"
 		}
-		if isLayer(file, "application") {
+		if !integrationTest && isLayer(file, "application") {
 			if importMatches(importPath, "github.com/gin-gonic/gin") || strings.HasPrefix(importPath, "github.com/hibiken/asynq") {
 				return "application code must not depend on HTTP or job transport libraries"
 			}
@@ -338,10 +351,10 @@ func validateImport(file, importPath string) string {
 				return "application code must depend on ports, not infrastructure, transport, or bootstrap packages"
 			}
 		}
-		if isLayer(file, "transport") && importsAnyLayer(importPath, "infrastructure", "store") {
+		if !integrationTest && isLayer(file, "transport") && importsAnyLayer(importPath, "infrastructure", "store") {
 			return "transport code must depend on application contracts, not concrete stores or infrastructure"
 		}
-		if isLayer(file, "infrastructure") && (importsAnyLayer(importPath, "transport") || importMatches(importPath, moduleImportPath+"/internal/bootstrap")) {
+		if !integrationTest && isLayer(file, "infrastructure") && (importsAnyLayer(importPath, "transport") || importMatches(importPath, moduleImportPath+"/internal/bootstrap")) {
 			return "infrastructure code must not depend on transport or bootstrap packages"
 		}
 	}

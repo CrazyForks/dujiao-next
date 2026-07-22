@@ -1,10 +1,11 @@
-package service
+package integrationtest
 
 import (
 	"errors"
 	"strconv"
 	"testing"
 
+	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
@@ -40,9 +41,9 @@ func TestProductServiceQuickUpdateRejectsActivationWithoutCategory(t *testing.T)
 		t.Fatalf("create uncategorized product failed: %v", err)
 	}
 
-	_, err := svc.QuickUpdate(strconv.FormatUint(uint64(product.ID), 10), map[string]interface{}{"is_active": true})
-	if err != ErrProductCategoryInvalid {
-		t.Fatalf("expected ErrProductCategoryInvalid, got %v", err)
+	_, err := svc.Admin.QuickUpdate(strconv.FormatUint(uint64(product.ID), 10), map[string]interface{}{"is_active": true})
+	if err != productcontract.ErrProductCategoryInvalid {
+		t.Fatalf("expected productcontract.ErrProductCategoryInvalid, got %v", err)
 	}
 
 	var got productdomain.Product
@@ -132,7 +133,7 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	}
 
 	// 执行删除
-	if err := svc.Delete(productID); err != nil {
+	if err := svc.Admin.Delete(productID); err != nil {
 		t.Fatalf("delete product: %v", err)
 	}
 
@@ -189,18 +190,18 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 		binder:      baseProductStore.BindTx,
 		err:         deleteFailure,
 	}
-	service := NewProductService(
-		productRepo,
-		productgormstore.NewSKUStore(db),
-		repository.NewCardSecretRepository(db),
-		repository.NewCardSecretBatchRepository(db),
-		categorygormstore.NewCategoryStore(db),
-		memberlevelgormstore.NewPriceStore(db),
-		repository.NewCartRepository(db),
-		mappinggormstore.NewMappingStore(db),
-		repository.NewOrderRepository(db),
-		repository.NewPaymentChannelRepository(db),
-	)
+	service := catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
+		Products:          productRepo,
+		SKUs:              productgormstore.NewSKUStore(db),
+		CardSecrets:       repository.NewCardSecretRepository(db),
+		CardSecretBatches: repository.NewCardSecretBatchRepository(db),
+		Categories:        categorygormstore.NewCategoryStore(db),
+		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
+		Carts:             repository.NewCartRepository(db),
+		ProductMappings:   mappinggormstore.NewMappingStore(db),
+		Orders:            repository.NewOrderRepository(db),
+		PaymentChannels:   repository.NewPaymentChannelRepository(db),
+	})
 
 	product := productdomain.Product{
 		CategoryID:      1,
@@ -241,7 +242,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 		t.Fatalf("create product mapping failed: %v", err)
 	}
 
-	err := service.Delete(strconv.FormatUint(uint64(product.ID), 10))
+	err := service.Admin.Delete(strconv.FormatUint(uint64(product.ID), 10))
 	if !errors.Is(err, deleteFailure) {
 		t.Fatalf("expected injected delete failure, got %v", err)
 	}

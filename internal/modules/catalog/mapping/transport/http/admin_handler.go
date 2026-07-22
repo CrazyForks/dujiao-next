@@ -1,4 +1,4 @@
-package cataloghttp
+package mappinghttp
 
 import (
 	"errors"
@@ -30,21 +30,21 @@ type ProductMappingService interface {
 	BatchImportByCategory(connectionID, upstreamCategoryID uint, autoCreateCategory bool, localCategoryID uint) (*catalogmapping.BatchImportByCategoryResult, error)
 }
 
-// AdminProductMappingHandler 处理后台商品映射管理请求。
-type AdminProductMappingHandler struct {
+// AdminHandler 处理后台商品映射管理请求。
+type AdminHandler struct {
 	service ProductMappingService
 }
 
-// NewAdminProductMappingHandler 创建后台商品映射 Handler。
-func NewAdminProductMappingHandler(service ProductMappingService) *AdminProductMappingHandler {
+// NewAdminHandler 创建后台商品映射 Handler。
+func NewAdminHandler(service ProductMappingService) *AdminHandler {
 	if service == nil {
 		panic("catalog admin product mapping handler: service is nil")
 	}
-	return &AdminProductMappingHandler{service: service}
+	return &AdminHandler{service: service}
 }
 
 // GetProductMappings 获取商品映射列表
-func (h *AdminProductMappingHandler) GetProductMappings(c *gin.Context) {
+func (h *AdminHandler) GetProductMappings(c *gin.Context) {
 	page, pageSize := ginutil.ParsePagination(c)
 
 	connectionID, _ := ginutil.ParseQueryUint(c.Query("connection_id"), false)
@@ -85,7 +85,7 @@ func (h *AdminProductMappingHandler) GetProductMappings(c *gin.Context) {
 }
 
 // GetProductMapping 获取商品映射详情
-func (h *AdminProductMappingHandler) GetProductMapping(c *gin.Context) {
+func (h *AdminHandler) GetProductMapping(c *gin.Context) {
 	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
@@ -125,7 +125,7 @@ type ImportUpstreamProductRequest struct {
 }
 
 // ImportUpstreamProduct 导入上游商品
-func (h *AdminProductMappingHandler) ImportUpstreamProduct(c *gin.Context) {
+func (h *AdminHandler) ImportUpstreamProduct(c *gin.Context) {
 	var req ImportUpstreamProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		ginutil.RespondBindError(c, err)
@@ -183,7 +183,7 @@ type BatchImportUpstreamProductResult struct {
 }
 
 // BatchImportUpstreamProducts 批量导入上游商品
-func (h *AdminProductMappingHandler) BatchImportUpstreamProducts(c *gin.Context) {
+func (h *AdminHandler) BatchImportUpstreamProducts(c *gin.Context) {
 	var req BatchImportUpstreamProductRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		ginutil.RespondBindError(c, err)
@@ -231,7 +231,7 @@ type BatchMappingActionRequest struct {
 }
 
 // BatchSyncProductMappings 批量同步
-func (h *AdminProductMappingHandler) BatchSyncProductMappings(c *gin.Context) {
+func (h *AdminHandler) BatchSyncProductMappings(c *gin.Context) {
 	var req BatchMappingActionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		ginutil.RespondBindError(c, err)
@@ -255,7 +255,7 @@ type BatchUpdateMappingStatusRequest struct {
 }
 
 // BatchUpdateProductMappingStatus 批量启用/禁用
-func (h *AdminProductMappingHandler) BatchUpdateProductMappingStatus(c *gin.Context) {
+func (h *AdminHandler) BatchUpdateProductMappingStatus(c *gin.Context) {
 	var req BatchUpdateMappingStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		ginutil.RespondBindError(c, err)
@@ -273,7 +273,7 @@ func (h *AdminProductMappingHandler) BatchUpdateProductMappingStatus(c *gin.Cont
 }
 
 // BatchDeleteProductMappings 批量删除
-func (h *AdminProductMappingHandler) BatchDeleteProductMappings(c *gin.Context) {
+func (h *AdminHandler) BatchDeleteProductMappings(c *gin.Context) {
 	var req BatchMappingActionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		ginutil.RespondBindError(c, err)
@@ -291,7 +291,7 @@ func (h *AdminProductMappingHandler) BatchDeleteProductMappings(c *gin.Context) 
 }
 
 // SyncProductMapping 同步商品映射
-func (h *AdminProductMappingHandler) SyncProductMapping(c *gin.Context) {
+func (h *AdminHandler) SyncProductMapping(c *gin.Context) {
 	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
@@ -316,7 +316,7 @@ type UpdateProductMappingStatusRequest struct {
 }
 
 // UpdateProductMappingStatus 启用/禁用映射
-func (h *AdminProductMappingHandler) UpdateProductMappingStatus(c *gin.Context) {
+func (h *AdminHandler) UpdateProductMappingStatus(c *gin.Context) {
 	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
@@ -342,7 +342,7 @@ func (h *AdminProductMappingHandler) UpdateProductMappingStatus(c *gin.Context) 
 }
 
 // DeleteProductMapping 删除映射
-func (h *AdminProductMappingHandler) DeleteProductMapping(c *gin.Context) {
+func (h *AdminHandler) DeleteProductMapping(c *gin.Context) {
 	id, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
@@ -362,7 +362,7 @@ func (h *AdminProductMappingHandler) DeleteProductMapping(c *gin.Context) {
 }
 
 // ListUpstreamProducts 代理拉取上游商品列表
-func (h *AdminProductMappingHandler) ListUpstreamProducts(c *gin.Context) {
+func (h *AdminHandler) ListUpstreamProducts(c *gin.Context) {
 	connectionID, err := ginutil.ParseQueryUint(c.Query("connection_id"), true)
 	if err != nil || connectionID == 0 {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
@@ -395,7 +395,7 @@ func (h *AdminProductMappingHandler) ListUpstreamProducts(c *gin.Context) {
 }
 
 // ListUpstreamCategories 获取上游分类列表
-func (h *AdminProductMappingHandler) ListUpstreamCategories(c *gin.Context) {
+func (h *AdminHandler) ListUpstreamCategories(c *gin.Context) {
 	connectionID, err := ginutil.ParseQueryUint(c.Query("connection_id"), true)
 	if err != nil || connectionID == 0 {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
@@ -427,7 +427,7 @@ type BatchImportByCategoryRequest struct {
 }
 
 // BatchImportByCategory 按上游分类批量导入
-func (h *AdminProductMappingHandler) BatchImportByCategory(c *gin.Context) {
+func (h *AdminHandler) BatchImportByCategory(c *gin.Context) {
 	var req BatchImportByCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		ginutil.RespondBindError(c, err)

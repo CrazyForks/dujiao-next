@@ -1,9 +1,6 @@
 package service
 
 import (
-	"encoding/json"
-	"strings"
-
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
@@ -13,40 +10,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// DecodeChannelIDs 解码 JSON 数组字符串 → []uint
-func DecodeChannelIDs(raw string) []uint {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" || trimmed == "[]" {
-		return nil
-	}
-	var ids []uint
-	if err := json.Unmarshal([]byte(trimmed), &ids); err != nil {
-		return nil
-	}
-	result := make([]uint, 0, len(ids))
-	for _, id := range ids {
-		if id > 0 {
-			result = append(result, id)
-		}
-	}
-	if len(result) == 0 {
-		return nil
-	}
-	return result
-}
-
-// EncodeChannelIDs 编码 []uint → JSON 数组字符串
-func EncodeChannelIDs(ids []uint) string {
-	if len(ids) == 0 {
-		return ""
-	}
-	payload, err := json.Marshal(ids)
-	if err != nil {
-		return ""
-	}
-	return string(payload)
-}
-
 // computeProductChannelIntersection 计算多个商品允许支付渠道的交集
 // 空列表表示不限制（全部允许），不参与交集计算
 // 返回 nil 表示无限制，返回空切片表示交集为空（无可用渠道）
@@ -55,7 +18,7 @@ func computeProductChannelIntersection(products []productdomain.Product) []uint 
 	hasRestriction := false
 
 	for _, p := range products {
-		allowed := DecodeChannelIDs(p.PaymentChannelIDs)
+		allowed := productdomain.DecodePaymentChannelIDs(p.PaymentChannelIDs)
 		if len(allowed) == 0 {
 			continue // 该商品不限制
 		}

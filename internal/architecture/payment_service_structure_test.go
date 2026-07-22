@@ -30,7 +30,7 @@ func TestPaymentServiceImplementationIsSplitByResponsibility(t *testing.T) {
 			"buildOrderSubject", "pickOrderItemTitle",
 		},
 		"payment_service_channel_rules.go": {
-			"DecodeChannelIDs", "EncodeChannelIDs", "computeProductChannelIntersection",
+			"computeProductChannelIntersection",
 			"validateProductPaymentChannel", "validateWalletRechargeChannel",
 			"GetAllowedChannelsForProducts", "GetWalletRechargeChannels", "GetAllowedChannelIDsForOrder",
 		},

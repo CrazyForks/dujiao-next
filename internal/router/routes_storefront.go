@@ -7,11 +7,11 @@ import (
 	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	captchatransport "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	categoryhttp "github.com/dujiao-next/internal/modules/catalog/category/transport/http"
+	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	apicredentialtransport "github.com/dujiao-next/internal/transport/http/apicredential"
 	auditlogtransport "github.com/dujiao-next/internal/transport/http/auditlog"
 	carttransport "github.com/dujiao-next/internal/transport/http/cart"
-	catalogtransport "github.com/dujiao-next/internal/transport/http/catalog"
 	contenttransport "github.com/dujiao-next/internal/transport/http/content"
 	giftcardtransport "github.com/dujiao-next/internal/transport/http/giftcard"
 	memberleveltransport "github.com/dujiao-next/internal/transport/http/memberlevel"
@@ -32,7 +32,7 @@ func registerStorefrontRoutes(
 	cfg *config.Config,
 	c *provider.Container,
 	publicContentHandler *contenttransport.PublicHandler,
-	publicCatalogHandler *catalogtransport.PublicHandler,
+	publicCatalogHandler *producthttp.PublicHandler,
 	publicCategoryHandler *categoryhttp.PublicHandler,
 	userResellerHandler *resellertransport.UserHandler,
 	userResellerProductSettingHandler *resellertransport.UserProductSettingHandler,
@@ -70,7 +70,7 @@ func registerStorefrontRoutes(
 	public := storefront.Group("/public")
 	{
 		publicconfigtransport.RegisterPublicRoutes(public, publicConfigHandler)
-		catalogtransport.RegisterPublicRoutes(public, publicCatalogHandler)
+		producthttp.RegisterPublicRoutes(public, publicCatalogHandler)
 		categoryhttp.RegisterPublicRoutes(public, publicCategoryHandler)
 		contenttransport.RegisterPublicRoutes(public, publicContentHandler)
 		captchatransport.RegisterPublicRoutes(public, captchabootstrap.NewPublicHandler(c))

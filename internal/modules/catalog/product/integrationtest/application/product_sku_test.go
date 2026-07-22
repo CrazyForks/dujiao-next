@@ -1,9 +1,11 @@
-package service
+package integrationtest
 
 import (
 	"strconv"
 	"testing"
 
+	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -64,14 +66,14 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 
 	insertCardSecrets(t, db, product.ID, stockSKU.ID, models.CardSecretStatusAvailable, 1)
 
-	_, err := svc.Update(strconv.FormatUint(uint64(product.ID), 10), CreateProductInput{
+	_, err := svc.Write.Update(strconv.FormatUint(uint64(product.ID), 10), productwrite.CreateProductInput{
 		CategoryID:      category.ID,
 		Slug:            product.Slug,
 		TitleJSON:       map[string]interface{}{"zh-CN": "auto-card-secret-product"},
 		PriceAmount:     decimal.NewFromInt(10),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
-		SKUs: []ProductSKUInput{
+		SKUs: []productwrite.ProductSKUInput{
 			{
 				ID:             stockSKU.ID,
 				SKUCode:        stockSKU.SKUCode,
@@ -100,7 +102,7 @@ func TestProductServiceUpdateRejectsDisablingAutoSKUWithCardSecretStock(t *testi
 			return &value
 		}(),
 	})
-	if err != ErrProductSKUHasCardSecretStock {
-		t.Fatalf("update product error want %v got %v", ErrProductSKUHasCardSecretStock, err)
+	if err != productcontract.ErrProductSKUHasCardSecretStock {
+		t.Fatalf("update product error want %v got %v", productcontract.ErrProductSKUHasCardSecretStock, err)
 	}
 }

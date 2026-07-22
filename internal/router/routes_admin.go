@@ -6,6 +6,8 @@ import (
 	"github.com/dujiao-next/internal/config"
 	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	categoryhttp "github.com/dujiao-next/internal/modules/catalog/category/transport/http"
+	mappinghttp "github.com/dujiao-next/internal/modules/catalog/mapping/transport/http"
+	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
 	channelclienthttp "github.com/dujiao-next/internal/modules/channelclient/transport/http"
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	broadcasthttp "github.com/dujiao-next/internal/modules/telegram/broadcast/transport/http"
@@ -18,7 +20,6 @@ import (
 	apicredentialtransport "github.com/dujiao-next/internal/transport/http/apicredential"
 	auditlogtransport "github.com/dujiao-next/internal/transport/http/auditlog"
 	cardsecrettransport "github.com/dujiao-next/internal/transport/http/cardsecret"
-	catalogtransport "github.com/dujiao-next/internal/transport/http/catalog"
 	compliancetransport "github.com/dujiao-next/internal/transport/http/compliance"
 	contenttransport "github.com/dujiao-next/internal/transport/http/content"
 	coupontransport "github.com/dujiao-next/internal/transport/http/coupon"
@@ -66,8 +67,8 @@ func registerAdminRoutes(
 	adminAuditLogHandler *auditlogtransport.AdminHandler,
 	adminCardSecretHandler *cardsecrettransport.AdminHandler,
 	adminCatalogCategoryHandler *categoryhttp.AdminCategoryHandler,
-	adminCatalogProductHandler *catalogtransport.AdminProductHandler,
-	adminCatalogProductMappingHandler *catalogtransport.AdminProductMappingHandler,
+	adminCatalogProductHandler *producthttp.AdminProductHandler,
+	adminCatalogProductMappingHandler *mappinghttp.AdminHandler,
 	adminCouponHandler *coupontransport.AdminHandler,
 	adminGiftCardHandler *giftcardtransport.AdminHandler,
 	adminPromotionHandler *promotiontransport.AdminHandler,
@@ -108,7 +109,7 @@ func registerAdminRoutes(
 	adproxytransport.RegisterAdminRoutes(authorized, adproxywiring.NewAdminHandler(c))
 
 	// 商品 / 分类管理
-	catalogtransport.RegisterAdminProductRoutes(authorized, adminCatalogProductHandler)
+	producthttp.RegisterAdminRoutes(authorized, adminCatalogProductHandler)
 	contenttransport.RegisterAdminRoutes(authorized, adminContentHandler)
 	categoryhttp.RegisterAdminRoutes(authorized, adminCatalogCategoryHandler)
 
@@ -181,7 +182,7 @@ func registerAdminRoutes(
 	siteconnectiontransport.RegisterAdminRoutes(authorized, siteconnectionwiring.NewAdminHandler(c))
 
 	// 商品映射管理
-	catalogtransport.RegisterAdminProductMappingRoutes(authorized, adminCatalogProductMappingHandler)
+	mappinghttp.RegisterAdminRoutes(authorized, adminCatalogProductMappingHandler)
 
 	// 采购单管理
 	procurementtransport.RegisterAdminRoutes(authorized, adminProcurementHandler)

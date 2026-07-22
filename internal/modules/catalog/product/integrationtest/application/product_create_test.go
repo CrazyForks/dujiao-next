@@ -1,9 +1,11 @@
-package service
+package integrationtest
 
 import (
 	"errors"
 	"testing"
 
+	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -32,7 +34,7 @@ func TestProductServiceCreateRejectsParentCategoryWithChildren(t *testing.T) {
 		t.Fatalf("create child category failed: %v", err)
 	}
 
-	_, err := svc.Create(CreateProductInput{
+	_, err := svc.Write.Create(productwrite.CreateProductInput{
 		CategoryID:      parent.ID,
 		Slug:            "invalid-parent-product",
 		TitleJSON:       map[string]interface{}{"zh-CN": "invalid-parent-product"},
@@ -44,8 +46,8 @@ func TestProductServiceCreateRejectsParentCategoryWithChildren(t *testing.T) {
 			return &value
 		}(),
 	})
-	if err != ErrProductCategoryInvalid {
-		t.Fatalf("expected ErrProductCategoryInvalid, got %v", err)
+	if err != productcontract.ErrProductCategoryInvalid {
+		t.Fatalf("expected productcontract.ErrProductCategoryInvalid, got %v", err)
 	}
 }
 
@@ -64,7 +66,7 @@ func TestProductServiceCreateFiltersUnavailablePaymentChannels(t *testing.T) {
 	inactiveChannel := createProductTestPaymentChannel(t, db, "Inactive", false, false)
 	deletedChannel := createProductTestPaymentChannel(t, db, "Deleted", true, true)
 
-	product, err := svc.Create(CreateProductInput{
+	product, err := svc.Write.Create(productwrite.CreateProductInput{
 		CategoryID:        category.ID,
 		Slug:              "payment-channel-create",
 		TitleJSON:         map[string]interface{}{"zh-CN": "payment-channel-create"},
@@ -81,7 +83,7 @@ func TestProductServiceCreateFiltersUnavailablePaymentChannels(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	got := DecodeChannelIDs(product.PaymentChannelIDs)
+	got := productdomain.DecodePaymentChannelIDs(product.PaymentChannelIDs)
 	if len(got) != 1 || got[0] != activeChannel.ID {
 		t.Fatalf("expected only active payment channel %d, got %v", activeChannel.ID, got)
 	}
@@ -97,7 +99,7 @@ func TestProductServiceCreateRejectsInvalidPurchaseLimits(t *testing.T) {
 
 	intPtr := func(v int) *int { return &v }
 
-	_, err := svc.Create(CreateProductInput{
+	_, err := svc.Write.Create(productwrite.CreateProductInput{
 		CategoryID:          cat.ID,
 		Slug:                "invalid-limit-product",
 		TitleJSON:           map[string]interface{}{"zh-CN": "invalid-limit-product"},
@@ -108,8 +110,8 @@ func TestProductServiceCreateRejectsInvalidPurchaseLimits(t *testing.T) {
 		MinPurchaseQuantity: intPtr(10),
 		MaxPurchaseQuantity: intPtr(5),
 	})
-	if !errors.Is(err, ErrProductPurchaseLimitInvalid) {
-		t.Fatalf("expected ErrProductPurchaseLimitInvalid, got %v", err)
+	if !errors.Is(err, productcontract.ErrProductPurchaseLimitInvalid) {
+		t.Fatalf("expected productcontract.ErrProductPurchaseLimitInvalid, got %v", err)
 	}
 }
 
@@ -123,20 +125,20 @@ func TestProductServiceCreateRollsBackProductAndSKUWhenWholesaleValidationFails(
 		t.Fatalf("create category: %v", err)
 	}
 
-	_, err := svc.Create(CreateProductInput{
+	_, err := svc.Write.Create(productwrite.CreateProductInput{
 		CategoryID:      category.ID,
 		Slug:            "write-rollback-product",
 		TitleJSON:       map[string]interface{}{"zh-CN": "write-rollback-product"},
 		PriceAmount:     decimal.NewFromInt(10),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
-		WholesalePrices: &[]WholesalePriceInput{{
+		WholesalePrices: &[]productwrite.WholesalePriceInput{{
 			MinQuantity: 0,
 			UnitPrice:   decimal.NewFromInt(8),
 		}},
 	})
-	if !errors.Is(err, ErrWholesalePriceInvalid) {
-		t.Fatalf("expected ErrWholesalePriceInvalid, got %v", err)
+	if !errors.Is(err, productdomain.ErrWholesalePriceInvalid) {
+		t.Fatalf("expected productdomain.ErrWholesalePriceInvalid, got %v", err)
 	}
 
 	var productCount int64

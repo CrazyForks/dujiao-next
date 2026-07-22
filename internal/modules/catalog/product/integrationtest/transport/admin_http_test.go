@@ -1,4 +1,4 @@
-package cataloghttp_test
+package integrationtest
 
 import (
 	"encoding/json"
@@ -23,10 +23,10 @@ import (
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
+	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
-	cataloghttp "github.com/dujiao-next/internal/transport/http/catalog"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -114,7 +114,7 @@ func (s *paymentChannelStore) ListByIDs(ids []uint) ([]models.PaymentChannel, er
 	return rows, err
 }
 
-func setupAdminProductHandlerTest(t *testing.T) (*cataloghttp.AdminProductHandler, *gorm.DB) {
+func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandler, *gorm.DB) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 
@@ -205,7 +205,7 @@ func setupAdminProductHandlerTest(t *testing.T) (*cataloghttp.AdminProductHandle
 		}),
 	}
 
-	h := cataloghttp.NewAdminProductHandler(facade, facade, facade, nil, mappingStore, skuMappingStore)
+	h := producthttp.NewAdminProductHandler(facade, facade, facade, nil, mappingStore, skuMappingStore)
 	return h, db
 }
 

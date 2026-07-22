@@ -1,7 +1,6 @@
 package productwrite
 
 import (
-	"encoding/json"
 	"errors"
 
 	"github.com/dujiao-next/internal/models"
@@ -216,15 +215,4 @@ func (s *WriteService) filterAvailablePaymentChannelIDs(ids []uint) ([]uint, err
 		return nil, nil
 	}
 	return filtered, nil
-}
-
-func encodeChannelIDs(ids []uint) string {
-	if len(ids) == 0 {
-		return ""
-	}
-	payload, err := json.Marshal(ids)
-	if err != nil {
-		return ""
-	}
-	return string(payload)
 }

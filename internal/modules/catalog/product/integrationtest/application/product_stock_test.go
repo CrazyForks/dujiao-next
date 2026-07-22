@@ -1,4 +1,4 @@
-package service
+package integrationtest
 
 import (
 	"testing"
@@ -66,7 +66,7 @@ func TestApplyAutoStockCounts_LegacyStockPrefersDefaultSKU(t *testing.T) {
 		},
 	}
 
-	if err := svc.ApplyAutoStockCounts(products); err != nil {
+	if err := svc.Read.ApplyAutoStockCounts(products); err != nil {
 		t.Fatalf("apply auto stock counts failed: %v", err)
 	}
 

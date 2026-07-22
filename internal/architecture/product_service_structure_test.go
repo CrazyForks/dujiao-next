@@ -12,6 +12,9 @@ func TestProductApplicationServicesAreExplicitlyComposed(t *testing.T) {
 	bootstrapFile := filepath.Join(repositoryRoot, "internal", "bootstrap", "catalogproduct", "services.go")
 	assertFileDeclaresTypes(t, bootstrapFile, []string{"Dependencies", "Services"})
 	assertFileDeclaresFunctions(t, bootstrapFile, []string{"New"})
+	publicHTTPFile := filepath.Join(repositoryRoot, "internal", "bootstrap", "catalogproduct", "public_http.go")
+	assertFileDeclaresTypes(t, publicHTTPFile, []string{"PublicHTTPDependencies"})
+	assertFileDeclaresFunctions(t, publicHTTPFile, []string{"NewPublicHTTP"})
 
 	for _, relativePath := range []string{
 		"internal/service/product_service.go",
@@ -24,12 +27,27 @@ func TestProductApplicationServicesAreExplicitlyComposed(t *testing.T) {
 			t.Fatalf("stat %s: %v", relativePath, err)
 		}
 	}
+
+	testHelper := parseProductionGoFile(t, filepath.Join(
+		repositoryRoot,
+		"internal", "modules", "catalog", "product", "integrationtest", "application", "product_test_helpers_test.go",
+	))
+	for _, typeName := range declaredTypeNames(testHelper) {
+		if typeName == "ProductService" {
+			t.Fatal("Product integration tests must use explicit Read/Admin/Write services, not a ProductService facade")
+		}
+	}
+	for _, functionName := range declaredFunctionNames(testHelper) {
+		if functionName == "NewProductService" {
+			t.Fatal("Product integration tests must not recreate the deleted ProductService constructor")
+		}
+	}
 }
 
 func TestProductServiceTestsAreSplitByResponsibility(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	serviceDirectory := filepath.Join(repositoryRoot, "internal", "service")
-	legacyPath := filepath.Join(serviceDirectory, "product_service_test.go")
+	testDirectory := filepath.Join(repositoryRoot, "internal", "modules", "catalog", "product", "integrationtest", "application")
+	legacyPath := filepath.Join(repositoryRoot, "internal", "service", "product_service_test.go")
 	if _, err := os.Stat(legacyPath); err == nil {
 		t.Fatalf("product_service_test.go must be replaced by responsibility-focused test files")
 	} else if !os.IsNotExist(err) {
@@ -70,7 +88,7 @@ func TestProductServiceTestsAreSplitByResponsibility(t *testing.T) {
 		"product_admin_test.go",
 		"product_wholesale_test.go",
 	} {
-		parsed := parseProductionGoFile(t, filepath.Join(serviceDirectory, file))
+		parsed := parseProductionGoFile(t, filepath.Join(testDirectory, file))
 		for _, function := range declaredFunctionNames(parsed) {
 			if _, tracked := expectedOwner[function]; tracked {
 				actualOwners[function] = append(actualOwners[function], file)

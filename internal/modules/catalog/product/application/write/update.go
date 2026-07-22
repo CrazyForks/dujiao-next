@@ -57,7 +57,7 @@ func (s *WriteService) Update(id string, input CreateProductInput) (*productdoma
 	if err != nil {
 		return nil, err
 	}
-	product.PaymentChannelIDs = encodeChannelIDs(paymentChannelIDs)
+	product.PaymentChannelIDs = productdomain.EncodePaymentChannelIDs(paymentChannelIDs)
 	if input.IsActive != nil {
 		product.IsActive = *input.IsActive
 	}
