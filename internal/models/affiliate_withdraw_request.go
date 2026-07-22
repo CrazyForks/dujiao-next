@@ -3,6 +3,8 @@ package models
 import (
 	"time"
 
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
+
 	"gorm.io/gorm"
 )
 
@@ -21,8 +23,8 @@ type AffiliateWithdrawRequest struct {
 	UpdatedAt          time.Time      `gorm:"index" json:"updated_at"`                             // 更新时间
 	DeletedAt          gorm.DeletedAt `gorm:"index" json:"-"`                                      // 软删除时间
 
-	AffiliateProfile AffiliateProfile `gorm:"foreignKey:AffiliateProfileID" json:"affiliate_profile,omitempty"` // 推广用户
-	Processor        *Admin           `gorm:"foreignKey:ProcessedBy" json:"processor,omitempty"`                // 审核管理员
+	AffiliateProfile AffiliateProfile   `gorm:"foreignKey:AffiliateProfileID" json:"affiliate_profile,omitempty"` // 推广用户
+	Processor        *admindomain.Admin `gorm:"foreignKey:ProcessedBy" json:"processor,omitempty"`                // 审核管理员
 }
 
 // TableName 指定表名

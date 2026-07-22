@@ -8,7 +8,7 @@ import (
 func NewHandler(c *provider.Container) *adminauthztransport.AdminHandler {
 	return adminauthztransport.NewAdminHandler(
 		adminAuthzRolePolicyAdapter{svc: c.AuthzService},
-		adminAuthzDirectoryAdapter{admins: c.AdminRepo},
+		adminAuthzDirectoryAdapter{admins: c.AdminStore},
 		adminAuthzPasswordAdapter{auth: c.AuthService},
 		adminAuthzAuthStateAdapter{},
 		adminAuthzAuditAdapter{svc: c.AuthzAuditService},

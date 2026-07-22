@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/models"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 )
 
 const authStateCacheTTL = 10 * time.Minute
@@ -58,7 +59,7 @@ func BuildUserAuthState(user *models.User) *UserAuthState {
 }
 
 // BuildAdminAuthState 从管理员模型构建鉴权快照
-func BuildAdminAuthState(admin *models.Admin) *AdminAuthState {
+func BuildAdminAuthState(admin *admindomain.Admin) *AdminAuthState {
 	if admin == nil {
 		return nil
 	}

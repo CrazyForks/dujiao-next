@@ -11,9 +11,10 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/logger"
+	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 
@@ -146,7 +147,7 @@ func getRequestID(c *gin.Context) string {
 }
 
 // JWTAuthMiddleware JWT 鉴权中间件
-func JWTAuthMiddleware(secretKey string, adminRepo repository.AdminRepository) gin.HandlerFunc {
+func JWTAuthMiddleware(secretKey string, adminRepo admincontract.Store) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if secretKey == "" {
 			msg := i18n.T(i18n.ResolveLocale(c), "error.jwt_secret_missing")

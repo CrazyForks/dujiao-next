@@ -8,7 +8,7 @@ import (
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
@@ -59,7 +59,7 @@ type ChallengeClaims struct {
 // AuthLoginResult 是 transport 层管理员登录结果视图。
 type AuthLoginResult struct {
 	RequiresTOTP       bool
-	Admin              *models.Admin
+	Admin              *admindomain.Admin
 	Token              string
 	ExpiresAt          time.Time
 	ChallengeToken     string

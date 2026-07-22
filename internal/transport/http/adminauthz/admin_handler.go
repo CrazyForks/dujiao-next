@@ -8,8 +8,8 @@ import (
 
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -62,11 +62,11 @@ type RolePolicyService interface {
 
 // AdminDirectory 管理员目录端口。
 type AdminDirectory interface {
-	List() ([]models.Admin, error)
-	GetByID(id uint) (*models.Admin, error)
-	GetByUsername(username string) (*models.Admin, error)
-	Create(admin *models.Admin) error
-	Update(admin *models.Admin) error
+	List() ([]admindomain.Admin, error)
+	GetByID(id uint) (*admindomain.Admin, error)
+	GetByUsername(username string) (*admindomain.Admin, error)
+	Create(admin *admindomain.Admin) error
+	Update(admin *admindomain.Admin) error
 	Delete(id uint) error
 	Count() (int64, error)
 }
@@ -79,7 +79,7 @@ type PasswordService interface {
 
 // AuthStateCache 管理员鉴权状态缓存端口。
 type AuthStateCache interface {
-	SetAdminAuthState(ctx context.Context, admin *models.Admin) error
+	SetAdminAuthState(ctx context.Context, admin *admindomain.Admin) error
 	DelAdminAuthState(ctx context.Context, adminID uint) error
 }
 

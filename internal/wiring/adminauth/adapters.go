@@ -146,7 +146,7 @@ func (a admin2FAAuthTransportAdapter) CompleteLoginAfter2FA(adminID uint) (*admi
 }
 
 func (a admin2FAAuthTransportAdapter) GetAdminUsername(adminID uint) (string, error) {
-	admin, err := a.auth.AdminRepo().GetByID(adminID)
+	admin, err := a.auth.AdminStore().GetByID(adminID)
 	if err != nil {
 		return "", mapAdminAuthTransportError(err)
 	}

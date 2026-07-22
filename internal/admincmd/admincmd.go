@@ -18,7 +18,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/store/gormstore"
-	"github.com/dujiao-next/internal/repository"
+	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -94,7 +94,7 @@ func parseStringFlag(args []string, name string) string {
 }
 
 func listAdmins() {
-	repo := repository.NewAdminRepository(models.DB)
+	repo := adminstore.New(models.DB)
 	admins, err := repo.List()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "list: %v\n", err)
@@ -117,7 +117,7 @@ func listAdmins() {
 }
 
 func resetTOTP(username string) {
-	repo := repository.NewAdminRepository(models.DB)
+	repo := adminstore.New(models.DB)
 	logRepo := auditloggormstore.NewAdminLoginStore(models.DB)
 
 	admin, err := repo.GetByUsername(username)
@@ -147,7 +147,7 @@ func resetTOTP(username string) {
 }
 
 func resetPassword(username, providedPassword string) {
-	repo := repository.NewAdminRepository(models.DB)
+	repo := adminstore.New(models.DB)
 	logRepo := auditloggormstore.NewAdminLoginStore(models.DB)
 
 	admin, err := repo.GetByUsername(username)

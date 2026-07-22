@@ -58,3 +58,22 @@ func TestAdminAuthHTTPLivesInTransport(t *testing.T) {
 	}
 	assertDirectoryGoFileBudget(t, filepath.Join(repositoryRoot, "internal", "wiring", "adminauth"), 4)
 }
+
+func TestAdminIdentityPersistenceLivesInVerticalModule(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "identity", "admin")
+
+	production, total := countDirectGoFiles(t, moduleRoot)
+	if production != 0 || total != 0 {
+		t.Fatalf("admin identity module root must remain structural only, got production=%d total=%d", production, total)
+	}
+	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "domain", "admin.go"), []string{"Admin"})
+	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "contract", "store.go"), []string{"Store"})
+	assertFileDeclaresTypes(t, filepath.Join(moduleRoot, "infrastructure", "gormstore", "store.go"), []string{"Store"})
+	assertFileDeclaresFunctions(t, filepath.Join(moduleRoot, "infrastructure", "gormstore", "store.go"), []string{"New"})
+	assertFileDeclaresFunctions(t, filepath.Join(moduleRoot, "application", "bootstrap.go"), []string{"InitDefaultAdmin"})
+	assertDirectoryGoFileBudget(t, filepath.Join(moduleRoot, "application"), 2)
+	assertDirectoryGoFileBudget(t, filepath.Join(moduleRoot, "domain"), 1)
+	assertDirectoryGoFileBudget(t, filepath.Join(moduleRoot, "contract"), 1)
+	assertDirectoryGoFileBudget(t, filepath.Join(moduleRoot, "infrastructure", "gormstore"), 2)
+}

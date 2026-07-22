@@ -7,31 +7,33 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
+	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
+	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
 
 	"github.com/glebarez/sqlite"
 	"github.com/pquerna/otp/totp"
 	"gorm.io/gorm"
 )
 
-func newTOTPTestService(t *testing.T) (*TOTPService, repository.AdminRepository, *gorm.DB) {
+func newTOTPTestService(t *testing.T) (*TOTPService, admincontract.Store, *gorm.DB) {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Admin{}, &models.AdminLoginLog{}); err != nil {
+	if err := db.AutoMigrate(&admindomain.Admin{}, &models.AdminLoginLog{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	cfg := &config.Config{App: config.AppConfig{SecretKey: "test-secret-key-for-totp"}}
-	adminRepo := repository.NewAdminRepository(db)
+	adminRepo := adminstore.New(db)
 	svc := NewTOTPService(cfg, adminRepo, nil)
 	return svc, adminRepo, db
 }
 
-func createTOTPTestAdmin(t *testing.T, repo repository.AdminRepository, username string) *models.Admin {
+func createTOTPTestAdmin(t *testing.T, repo admincontract.Store, username string) *admindomain.Admin {
 	t.Helper()
-	admin := &models.Admin{Username: username, PasswordHash: "x", IsSuper: false}
+	admin := &admindomain.Admin{Username: username, PasswordHash: "x", IsSuper: false}
 	if err := repo.Create(admin); err != nil {
 		t.Fatalf("create admin: %v", err)
 	}
@@ -92,7 +94,7 @@ func TestEnableExpiredPending(t *testing.T) {
 		t.Fatalf("setup: %v", err)
 	}
 	past := time.Now().Add(-1 * time.Hour)
-	if err := db.Model(&models.Admin{}).Where("id = ?", admin.ID).Update("totp_pending_expires_at", past).Error; err != nil {
+	if err := db.Model(&admindomain.Admin{}).Where("id = ?", admin.ID).Update("totp_pending_expires_at", past).Error; err != nil {
 		t.Fatalf("force expire: %v", err)
 	}
 	_, err := svc.Enable(admin.ID, "123456")

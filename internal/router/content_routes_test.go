@@ -15,9 +15,10 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/authz"
+	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
+	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	contenttransport "github.com/dujiao-next/internal/transport/http/content"
 	"github.com/gin-gonic/gin"
@@ -198,7 +199,7 @@ func assertRouteSetsEqual(t *testing.T, want, got []adminRoute) {
 	}
 }
 
-func setupContentRouteAccessTest(t *testing.T) (repository.AdminRepository, *authz.Service, string, string) {
+func setupContentRouteAccessTest(t *testing.T) (admincontract.Store, *authz.Service, string, string) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 
@@ -207,13 +208,13 @@ func setupContentRouteAccessTest(t *testing.T) (repository.AdminRepository, *aut
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Admin{}); err != nil {
+	if err := db.AutoMigrate(&admindomain.Admin{}); err != nil {
 		t.Fatalf("auto migrate admins: %v", err)
 	}
 
-	adminRepo := repository.NewAdminRepository(db)
-	noPermission := &models.Admin{Username: "content-none", PasswordHash: "hash"}
-	operations := &models.Admin{Username: "content-operations", PasswordHash: "hash"}
+	adminRepo := adminstore.New(db)
+	noPermission := &admindomain.Admin{Username: "content-none", PasswordHash: "hash"}
+	operations := &admindomain.Admin{Username: "content-operations", PasswordHash: "hash"}
 	if err := adminRepo.Create(noPermission); err != nil {
 		t.Fatalf("create no-permission admin: %v", err)
 	}
@@ -237,7 +238,7 @@ func setupContentRouteAccessTest(t *testing.T) (repository.AdminRepository, *aut
 		signContentAdminToken(t, operations)
 }
 
-func signContentAdminToken(t *testing.T, admin *models.Admin) string {
+func signContentAdminToken(t *testing.T, admin *admindomain.Admin) string {
 	t.Helper()
 	now := time.Now()
 	claims := service.JWTClaims{
@@ -259,7 +260,7 @@ func signContentAdminToken(t *testing.T, admin *models.Admin) string {
 	return signed
 }
 
-func newContentRouteAccessRouter(adminRepo repository.AdminRepository, authzService *authz.Service) *gin.Engine {
+func newContentRouteAccessRouter(adminRepo admincontract.Store, authzService *authz.Service) *gin.Engine {
 	router := gin.New()
 	admin := router.Group("/api/v1/admin")
 	admin.Use(JWTAuthMiddleware(contentAdminJWTSecret, adminRepo), AdminRBACMiddleware(authzService))

@@ -90,6 +90,11 @@ var completedMigrationPaths = []string{
 	"internal/models/user_oauth_identity.go",
 	"internal/repository/user_oauth_identity_repository.go",
 	"internal/repository/user_oauth_identity_repository_test.go",
+	"internal/models/admin.go",
+	"internal/models/init.go",
+	"internal/models/init_test.go",
+	"internal/repository/admin_repository.go",
+	"internal/repository/admin_repository_test.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

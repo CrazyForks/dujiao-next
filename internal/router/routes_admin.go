@@ -92,7 +92,7 @@ func registerAdminRoutes(
 	adminauthtransport.RegisterAdmin2FAAuthRoutes(admin, admin2FAHandler, RateLimitMiddleware(redisClient, adminLoginRule, KeyByIP))
 
 	// 需要鉴权的接口
-	authorized := admin.Use(JWTAuthMiddleware(cfg.JWT.SecretKey, c.AdminRepo), AdminRBACMiddleware(c.AuthzService))
+	authorized := admin.Use(JWTAuthMiddleware(cfg.JWT.SecretKey, c.AdminStore), AdminRBACMiddleware(c.AuthzService))
 	// 支付/财务相关受保护子组：未确认合规声明时拦截
 	// 注：admin.Use(...) 已 mutate admin 自身，新 Group 继承 JWT + RBAC 中间件
 	paymentProtected := admin.Group("", PaymentComplianceRequired(c.ComplianceService))

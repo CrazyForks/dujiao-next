@@ -9,6 +9,7 @@ import (
 	"time"
 
 	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
@@ -127,7 +128,7 @@ func applyDBPool(sqlDB *sql.DB, pool DBPoolConfig) {
 // AutoMigrate 自动迁移所有数据库表
 func AutoMigrate() error {
 	if err := DB.AutoMigrate(
-		&Admin{},
+		&admindomain.Admin{},
 		&User{},
 		&externalidentitydomain.Identity{},
 		&AffiliateProfile{},

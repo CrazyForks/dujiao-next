@@ -85,7 +85,7 @@ func (r *GormResellerRepository) ListAdminResellerWithdrawRequests(filter Resell
 	query := r.db.Model(&models.ResellerWithdrawRequest{}).
 		Preload("Profile").
 		Preload("Profile.User").
-		Preload("Processor")
+		Preload("Processor", "deleted_at IS NULL")
 
 	query = r.applyAdminResellerProfileFilters(query, "reseller_withdraw_requests", filter.ResellerID, filter.UserID, filter.Keyword, "reseller_withdraw_requests.account")
 	if currency := strings.TrimSpace(filter.Currency); currency != "" {

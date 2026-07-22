@@ -9,6 +9,7 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/models"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -21,7 +22,7 @@ func openResellerManagementServiceTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open db failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.User{}, &models.Admin{}, &models.ResellerProfile{}, &models.ResellerDomain{}, &models.ResellerSiteConfig{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &admindomain.Admin{}, &models.ResellerProfile{}, &models.ResellerDomain{}, &models.ResellerSiteConfig{}); err != nil {
 		t.Fatalf("migrate failed: %v", err)
 	}
 	return db

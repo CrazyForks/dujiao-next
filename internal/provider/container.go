@@ -20,6 +20,7 @@ import (
 	"github.com/dujiao-next/internal/modules/dashboard"
 	"github.com/dujiao-next/internal/modules/downstreamcallback"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
+	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	emailverificationcontract "github.com/dujiao-next/internal/modules/identity/emailverification/contract"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
@@ -52,7 +53,7 @@ type Container struct {
 	QueueClient *queue.Client
 
 	// Repositories
-	AdminRepo                  repository.AdminRepository
+	AdminStore                 admincontract.Store
 	UserRepo                   repository.UserRepository
 	ExternalIdentityStore      externalidentitycontract.Store
 	EmailVerificationStore     emailverificationcontract.Store

@@ -464,7 +464,7 @@ func (r *GormAffiliateRepository) GetWithdrawByID(id uint) (*models.AffiliateWit
 		return nil, nil
 	}
 	var row models.AffiliateWithdrawRequest
-	if err := r.db.Preload("AffiliateProfile").Preload("AffiliateProfile.User").Preload("Processor").First(&row, id).Error; err != nil {
+	if err := r.db.Preload("AffiliateProfile").Preload("AffiliateProfile.User").Preload("Processor", "deleted_at IS NULL").First(&row, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -493,7 +493,7 @@ func (r *GormAffiliateRepository) ListWithdraws(filter AffiliateWithdrawListFilt
 	query := r.db.Model(&models.AffiliateWithdrawRequest{}).
 		Preload("AffiliateProfile").
 		Preload("AffiliateProfile.User").
-		Preload("Processor")
+		Preload("Processor", "deleted_at IS NULL")
 
 	if filter.AffiliateProfileID != 0 {
 		query = query.Where("affiliate_withdraw_requests.affiliate_profile_id = ?", filter.AffiliateProfileID)

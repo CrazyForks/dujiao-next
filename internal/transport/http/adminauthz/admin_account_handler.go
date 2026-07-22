@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -80,7 +80,7 @@ func (h *AdminHandler) CreateAuthzAdmin(c *gin.Context) {
 		isSuper = true
 	}
 
-	admin := &models.Admin{
+	admin := &admindomain.Admin{
 		Username:     username,
 		PasswordHash: hash,
 		IsSuper:      isSuper,

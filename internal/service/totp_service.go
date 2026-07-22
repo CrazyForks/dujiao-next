@@ -10,8 +10,8 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/crypto"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
+	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
@@ -44,13 +44,13 @@ const (
 type TOTPService struct {
 	cfg       *config.Config
 	encKey    []byte
-	adminRepo repository.AdminRepository
+	adminRepo admincontract.Store
 	redis     *redis.Client
 	now       func() time.Time
 }
 
 // NewTOTPService 创建实例
-func NewTOTPService(cfg *config.Config, adminRepo repository.AdminRepository, rds *redis.Client) *TOTPService {
+func NewTOTPService(cfg *config.Config, adminRepo admincontract.Store, rds *redis.Client) *TOTPService {
 	return &TOTPService{
 		cfg:       cfg,
 		encKey:    crypto.DeriveKey(cfg.App.SecretKey),
@@ -302,7 +302,7 @@ func (s *TOTPService) generateRecoveryCodes(n int) (plaintext []string, codesJSO
 	return generateRecoveryCodesPair(n)
 }
 
-func (s *TOTPService) consumeRecoveryCode(admin *models.Admin, code string) error {
+func (s *TOTPService) consumeRecoveryCode(admin *admindomain.Admin, code string) error {
 	js, err := matchAndConsumeRecoveryCode(admin.RecoveryCodes, code, s.now())
 	if err != nil {
 		return err

@@ -6,7 +6,9 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
+	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
+	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
 
 	"github.com/glebarez/sqlite"
 	"github.com/pquerna/otp/totp"
@@ -14,27 +16,27 @@ import (
 	"gorm.io/gorm"
 )
 
-func newAuthTestService(t *testing.T) (*AuthService, *TOTPService, repository.AdminRepository) {
+func newAuthTestService(t *testing.T) (*AuthService, *TOTPService, admincontract.Store) {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Admin{}, &models.AdminLoginLog{}); err != nil {
+	if err := db.AutoMigrate(&admindomain.Admin{}, &models.AdminLoginLog{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	cfg := &config.Config{
 		App: config.AppConfig{SecretKey: "auth-test-key"},
 		JWT: config.JWTConfig{SecretKey: "jwt-secret-for-test", ExpireHours: 24},
 	}
-	adminRepo := repository.NewAdminRepository(db)
+	adminRepo := adminstore.New(db)
 	return NewAuthService(cfg, adminRepo), NewTOTPService(cfg, adminRepo, nil), adminRepo
 }
 
-func createAuthTestAdmin(t *testing.T, repo repository.AdminRepository, username, password string) *models.Admin {
+func createAuthTestAdmin(t *testing.T, repo admincontract.Store, username, password string) *admindomain.Admin {
 	t.Helper()
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	admin := &models.Admin{Username: username, PasswordHash: string(hash)}
+	admin := &admindomain.Admin{Username: username, PasswordHash: string(hash)}
 	if err := repo.Create(admin); err != nil {
 		t.Fatalf("create: %v", err)
 	}

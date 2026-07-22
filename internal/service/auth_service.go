@@ -7,8 +7,8 @@ import (
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
+	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -18,11 +18,11 @@ import (
 // AuthService 认证服务
 type AuthService struct {
 	cfg       *config.Config
-	adminRepo repository.AdminRepository
+	adminRepo admincontract.Store
 }
 
 // NewAuthService 创建认证服务实例
-func NewAuthService(cfg *config.Config, adminRepo repository.AdminRepository) *AuthService {
+func NewAuthService(cfg *config.Config, adminRepo admincontract.Store) *AuthService {
 	return &AuthService{
 		cfg:       cfg,
 		adminRepo: adminRepo,
@@ -86,7 +86,7 @@ type ChallengeClaims struct {
 // LoginResult 登录第一步结果
 type LoginResult struct {
 	RequiresTOTP       bool
-	Admin              *models.Admin
+	Admin              *admindomain.Admin
 	Token              string
 	ExpiresAt          time.Time
 	ChallengeToken     string
@@ -101,7 +101,7 @@ const ChallengePurpose2FA = "2fa_challenge"
 const ChallengeTokenTTL = 5 * time.Minute
 
 // GenerateJWT 生成 JWT Token
-func (s *AuthService) GenerateJWT(admin *models.Admin) (string, time.Time, error) {
+func (s *AuthService) GenerateJWT(admin *admindomain.Admin) (string, time.Time, error) {
 	expiresAt := time.Now().Add(time.Duration(s.cfg.JWT.ExpireHours) * time.Hour)
 
 	claims := JWTClaims{
@@ -256,8 +256,8 @@ func (s *AuthService) CompleteLoginAfter2FA(adminID uint) (*LoginResult, error) 
 	return &LoginResult{RequiresTOTP: false, Admin: admin, Token: token, ExpiresAt: expiresAt}, nil
 }
 
-// AdminRepo 暴露给 handler 用（例如 2FA reset 后查 username）
-func (s *AuthService) AdminRepo() repository.AdminRepository {
+// AdminStore 暴露管理员存储给需要按 ID 读取用户名的鉴权适配器。
+func (s *AuthService) AdminStore() admincontract.Store {
 	return s.adminRepo
 }
 

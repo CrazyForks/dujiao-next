@@ -76,8 +76,8 @@ func (c *Container) loadRuntimeSettings() {
 func (c *Container) initIdentityAndCatalogServices() {
 	c.EmailService = service.NewEmailService(&c.Config.Email)
 	c.CaptchaService = captcha.NewService(c.SettingService, c.Config.Captcha)
-	c.AuthService = service.NewAuthService(c.Config, c.AdminRepo)
-	c.TOTPService = service.NewTOTPService(c.Config, c.AdminRepo, cache.Client())
+	c.AuthService = service.NewAuthService(c.Config, c.AdminStore)
+	c.TOTPService = service.NewTOTPService(c.Config, c.AdminStore, cache.Client())
 	c.UserTOTPService = service.NewUserTOTPService(c.Config, c.UserRepo, cache.Client())
 	c.TelegramAuthService = telegramauthapp.NewService(c.Config.TelegramAuth, telegramauthcache.Options()...)
 	c.UserAuthService = service.NewUserAuthService(c.Config, c.UserRepo, c.ExternalIdentityStore, c.EmailVerificationStore, c.SettingService, c.EmailService, c.TelegramAuthService)

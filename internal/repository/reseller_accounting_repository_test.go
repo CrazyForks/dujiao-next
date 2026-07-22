@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -20,7 +21,7 @@ func openResellerAccountingRepoTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Admin{},
+		&admindomain.Admin{},
 		&models.User{},
 		&models.Order{},
 		&models.Payment{},
@@ -328,7 +329,7 @@ func TestResellerAccountingRepositoryListAdminWithdrawRequestsFiltersAndPreloads
 	db := openResellerAccountingRepoTestDB(t)
 	repo := NewResellerRepository(db)
 	profile := seedResellerAccountingProfileWithEmail(t, db, "withdraw-admin@example.com")
-	admin := models.Admin{Username: "reviewer", PasswordHash: "hash"}
+	admin := admindomain.Admin{Username: "reviewer", PasswordHash: "hash"}
 	if err := db.Create(&admin).Error; err != nil {
 		t.Fatalf("create admin failed: %v", err)
 	}

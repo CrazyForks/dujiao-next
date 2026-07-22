@@ -7,9 +7,9 @@ import (
 
 	"github.com/dujiao-next/internal/authz"
 	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
-	"github.com/dujiao-next/internal/repository"
+	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/service"
 	adminauthztransport "github.com/dujiao-next/internal/transport/http/adminauthz"
 )
@@ -63,26 +63,26 @@ func (a adminAuthzRolePolicyAdapter) SetAdminRoles(adminID uint, roles []string)
 }
 
 type adminAuthzDirectoryAdapter struct {
-	admins repository.AdminRepository
+	admins admincontract.Store
 }
 
-func (a adminAuthzDirectoryAdapter) List() ([]models.Admin, error) {
+func (a adminAuthzDirectoryAdapter) List() ([]admindomain.Admin, error) {
 	return a.admins.List()
 }
 
-func (a adminAuthzDirectoryAdapter) GetByID(id uint) (*models.Admin, error) {
+func (a adminAuthzDirectoryAdapter) GetByID(id uint) (*admindomain.Admin, error) {
 	return a.admins.GetByID(id)
 }
 
-func (a adminAuthzDirectoryAdapter) GetByUsername(username string) (*models.Admin, error) {
+func (a adminAuthzDirectoryAdapter) GetByUsername(username string) (*admindomain.Admin, error) {
 	return a.admins.GetByUsername(username)
 }
 
-func (a adminAuthzDirectoryAdapter) Create(admin *models.Admin) error {
+func (a adminAuthzDirectoryAdapter) Create(admin *admindomain.Admin) error {
 	return a.admins.Create(admin)
 }
 
-func (a adminAuthzDirectoryAdapter) Update(admin *models.Admin) error {
+func (a adminAuthzDirectoryAdapter) Update(admin *admindomain.Admin) error {
 	return a.admins.Update(admin)
 }
 
@@ -112,7 +112,7 @@ func (a adminAuthzPasswordAdapter) HashPassword(password string) (string, error)
 
 type adminAuthzAuthStateAdapter struct{}
 
-func (adminAuthzAuthStateAdapter) SetAdminAuthState(ctx context.Context, admin *models.Admin) error {
+func (adminAuthzAuthStateAdapter) SetAdminAuthState(ctx context.Context, admin *admindomain.Admin) error {
 	return cache.SetAdminAuthState(ctx, cache.BuildAdminAuthState(admin))
 }
 

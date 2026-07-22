@@ -11,6 +11,7 @@ import (
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
 	dashboardgormstore "github.com/dujiao-next/internal/modules/dashboard/store/gormstore"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/store/gormstore"
+	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/store/gormstore"
@@ -25,7 +26,7 @@ import (
 
 func (c *Container) initRepositories() {
 	db := models.DB
-	c.AdminRepo = repository.NewAdminRepository(db)
+	c.AdminStore = adminstore.New(db)
 	c.UserRepo = repository.NewUserRepository(db)
 	c.ExternalIdentityStore = externalidentitystore.New(db)
 	c.EmailVerificationStore = emailverificationstore.New(db)

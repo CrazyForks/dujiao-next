@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
@@ -207,8 +208,8 @@ type ResellerWithdrawRequest struct {
 	UpdatedAt    time.Time      `gorm:"index" json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 
-	Profile   *ResellerProfile `gorm:"foreignKey:ResellerID" json:"profile,omitempty"`
-	Processor *Admin           `gorm:"foreignKey:ProcessedBy" json:"processor,omitempty"`
+	Profile   *ResellerProfile   `gorm:"foreignKey:ResellerID" json:"profile,omitempty"`
+	Processor *admindomain.Admin `gorm:"foreignKey:ProcessedBy" json:"processor,omitempty"`
 }
 
 func (ResellerWithdrawRequest) TableName() string { return "reseller_withdraw_requests" }

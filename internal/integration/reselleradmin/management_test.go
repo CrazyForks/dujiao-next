@@ -11,12 +11,13 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/auditlog"
 	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/store/gormstore"
+	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
@@ -44,7 +45,7 @@ func setupAdminResellerManagementHandlerTest(t *testing.T) (*adminResellerFixtur
 	}
 	if err := db.AutoMigrate(
 		&models.User{},
-		&models.Admin{},
+		&admindomain.Admin{},
 		&models.AuthzAuditLog{},
 		&models.Category{},
 		&models.Product{},
