@@ -1,4 +1,4 @@
-package compliance
+package application
 
 import (
 	"fmt"
@@ -7,7 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	settingscontract "github.com/dujiao-next/internal/modules/settings/contract"
+	"github.com/dujiao-next/internal/modules/compliance/contract"
+	"github.com/dujiao-next/internal/modules/compliance/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -24,13 +25,13 @@ const (
 
 // Service 合规声明确认服务。
 type Service struct {
-	settingRepo settingscontract.Store
+	settingRepo contract.SettingsStore
 	acked       atomic.Bool
 	writeMu     sync.Mutex // 保护 Acknowledge 的 check-then-act
 }
 
-// NewComplianceService 启动时装载一次 DB
-func NewService(repo settingscontract.Store) *Service {
+// NewService 创建服务并从持久化状态恢复确认标记。
+func NewService(repo contract.SettingsStore) *Service {
 	s := &Service{settingRepo: repo}
 	if status, err := s.Status(); err == nil && status.Acknowledged {
 		s.acked.Store(true)
@@ -44,16 +45,16 @@ func (s *Service) IsAcknowledged() bool {
 }
 
 // Status 读取当前状态（管理面 UI 展示用）
-func (s *Service) Status() (*Status, error) {
+func (s *Service) Status() (*domain.Status, error) {
 	value, found, err := s.settingRepo.GetByKey(complianceSettingKey)
 	if err != nil {
 		return nil, fmt.Errorf("compliance: read setting: %w", err)
 	}
 	if !found {
-		return &Status{Acknowledged: false}, nil
+		return &domain.Status{Acknowledged: false}, nil
 	}
 	v := value
-	status := &Status{
+	status := &domain.Status{
 		Acknowledged: complianceJSONBool(v, "acknowledged"),
 		Version:      complianceJSONString(v, "version"),
 	}
@@ -66,27 +67,27 @@ func (s *Service) Status() (*Status, error) {
 }
 
 // Acknowledge 写入确认；幂等保护：已确认返回 ErrAlreadyAcknowledged
-func (s *Service) Acknowledge(req AcknowledgeRequest) error {
+func (s *Service) Acknowledge(req AcknowledgeCommand) error {
 	if req.Segment1 != expectedSegment1 ||
 		req.Segment2 != expectedSegment2 ||
 		req.Segment3 != expectedSegment3 {
-		return ErrTextMismatch
+		return contract.ErrTextMismatch
 	}
 	// 拼接二次校验：从调用方实际传入的 segments 重建完整文本（防御深度）
 	// segment3 不含 、，故拆出 "部署"/"运营" 边界后插入
 	const seg3SplitPrefix = "并确认自行承担部署"
 	if !strings.HasPrefix(req.Segment3, seg3SplitPrefix) {
-		return ErrTextMismatch
+		return contract.ErrTextMismatch
 	}
 	full := req.Segment1 + "，" + req.Segment2 + "，" + seg3SplitPrefix + "、" + req.Segment3[len(seg3SplitPrefix):]
 	if full != expectedFullText {
-		return ErrTextMismatch
+		return contract.ErrTextMismatch
 	}
 
 	s.writeMu.Lock()
 	defer s.writeMu.Unlock()
 	if s.acked.Load() {
-		return ErrAlreadyAcknowledged
+		return contract.ErrAlreadyAcknowledged
 	}
 
 	value := jsonmap.JSON{

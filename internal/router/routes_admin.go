@@ -12,6 +12,7 @@ import (
 	mappinghttp "github.com/dujiao-next/internal/modules/catalog/mapping/transport/http"
 	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
 	channelclienthttp "github.com/dujiao-next/internal/modules/channelclient/transport/http"
+	compliancetransport "github.com/dujiao-next/internal/modules/compliance/transport/http"
 	contenttransport "github.com/dujiao-next/internal/modules/content/transport/http"
 	coupontransport "github.com/dujiao-next/internal/modules/coupon/transport/http"
 	dashboardtransport "github.com/dujiao-next/internal/modules/dashboard/transport/http"
@@ -28,7 +29,6 @@ import (
 	adminauthztransport "github.com/dujiao-next/internal/transport/http/adminauthz"
 	adminusertransport "github.com/dujiao-next/internal/transport/http/adminuser"
 	cardsecrettransport "github.com/dujiao-next/internal/transport/http/cardsecret"
-	compliancetransport "github.com/dujiao-next/internal/transport/http/compliance"
 	fulfillmenttransport "github.com/dujiao-next/internal/transport/http/fulfillment"
 	ordertransport "github.com/dujiao-next/internal/transport/http/order"
 	paymenttransport "github.com/dujiao-next/internal/transport/http/payment"
@@ -38,7 +38,6 @@ import (
 	systemtransport "github.com/dujiao-next/internal/transport/http/system"
 	uploadtransport "github.com/dujiao-next/internal/transport/http/upload"
 	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
-	compliancewiring "github.com/dujiao-next/internal/wiring/compliance"
 	uploadwiring "github.com/dujiao-next/internal/wiring/upload"
 
 	"github.com/gin-gonic/gin"
@@ -98,7 +97,7 @@ func registerAdminRoutes(
 	paymentProtected := admin.Group("", PaymentComplianceRequired(c.ComplianceService))
 
 	// 合规声明
-	compliancetransport.RegisterAdminRoutes(authorized, compliancewiring.NewAdminHandler(c))
+	compliancetransport.RegisterAdminRoutes(authorized, compliancetransport.NewAdminHandler(c.ComplianceService))
 
 	// 仪表盘
 	dashboardtransport.RegisterAdminRoutes(authorized, adminDashboardHandler)

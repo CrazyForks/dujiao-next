@@ -1,7 +1,7 @@
 package router
 
 import (
-	"github.com/dujiao-next/internal/modules/compliance"
+	complianceapp "github.com/dujiao-next/internal/modules/compliance/application"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -12,7 +12,7 @@ import (
 // - 已确认 → 放行
 // - 未确认 + 超管 → 业务码 403 + msg "compliance_required"（前端据此弹窗）
 // - 未确认 + 非超管 → 业务码 403 + msg "compliance_required_by_super_admin"（前端跳转提示页）
-func PaymentComplianceRequired(cs *compliance.Service) gin.HandlerFunc {
+func PaymentComplianceRequired(cs *complianceapp.Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if cs != nil && cs.IsAcknowledged() {
 			c.Next()

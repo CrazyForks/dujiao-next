@@ -5,7 +5,8 @@ import (
 
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 
-	"github.com/dujiao-next/internal/modules/compliance"
+	complianceapp "github.com/dujiao-next/internal/modules/compliance/application"
+	compliancecontract "github.com/dujiao-next/internal/modules/compliance/contract"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,13 +14,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func newTestComplianceService(t *testing.T) (*compliance.Service, *gorm.DB) {
+func newTestComplianceService(t *testing.T) (*complianceapp.Service, *gorm.DB) {
 	t.Helper()
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(&settingsstore.SettingRecord{}))
 	repo := settingsstore.New(db)
-	return compliance.NewService(repo), db
+	return complianceapp.NewService(repo), db
 }
 
 func TestComplianceService_InitialNotAcknowledged(t *testing.T) {
@@ -35,7 +36,7 @@ func TestComplianceService_InitialNotAcknowledged(t *testing.T) {
 func TestComplianceService_AcknowledgeSuccess(t *testing.T) {
 	svc, _ := newTestComplianceService(t)
 
-	err := svc.Acknowledge(compliance.AcknowledgeRequest{
+	err := svc.Acknowledge(complianceapp.AcknowledgeCommand{
 		Segment1:  "我已阅读并理解上述合规声明提醒",
 		Segment2:  "知悉相关法律风险",
 		Segment3:  "并确认自行承担部署运营和收费行为产生的法律责任",
@@ -61,11 +62,11 @@ func TestComplianceService_AcknowledgeWrongSegment(t *testing.T) {
 
 	cases := []struct {
 		name string
-		req  compliance.AcknowledgeRequest
+		req  complianceapp.AcknowledgeCommand
 	}{
 		{
 			"段 1 缺字",
-			compliance.AcknowledgeRequest{
+			complianceapp.AcknowledgeCommand{
 				Segment1: "我已阅读并理解上述合规声明",
 				Segment2: "知悉相关法律风险",
 				Segment3: "并确认自行承担部署运营和收费行为产生的法律责任",
@@ -73,7 +74,7 @@ func TestComplianceService_AcknowledgeWrongSegment(t *testing.T) {
 		},
 		{
 			"段 2 多字",
-			compliance.AcknowledgeRequest{
+			complianceapp.AcknowledgeCommand{
 				Segment1: "我已阅读并理解上述合规声明提醒",
 				Segment2: "知悉相关法律风险啊",
 				Segment3: "并确认自行承担部署运营和收费行为产生的法律责任",
@@ -81,7 +82,7 @@ func TestComplianceService_AcknowledgeWrongSegment(t *testing.T) {
 		},
 		{
 			"段 3 错字",
-			compliance.AcknowledgeRequest{
+			complianceapp.AcknowledgeCommand{
 				Segment1: "我已阅读并理解上述合规声明提醒",
 				Segment2: "知悉相关法律风险",
 				Segment3: "并确认自行承担部署运营和收费行為产生的法律责任",
@@ -89,7 +90,7 @@ func TestComplianceService_AcknowledgeWrongSegment(t *testing.T) {
 		},
 		{
 			"段 3 含标点（应拒）",
-			compliance.AcknowledgeRequest{
+			complianceapp.AcknowledgeCommand{
 				Segment1: "我已阅读并理解上述合规声明提醒",
 				Segment2: "知悉相关法律风险",
 				Segment3: "并确认自行承担部署、运营和收费行为产生的法律责任",
@@ -101,7 +102,7 @@ func TestComplianceService_AcknowledgeWrongSegment(t *testing.T) {
 			tc.req.AdminID = 1
 			tc.req.Username = "admin"
 			err := svc.Acknowledge(tc.req)
-			assert.ErrorIs(t, err, compliance.ErrTextMismatch)
+			assert.ErrorIs(t, err, compliancecontract.ErrTextMismatch)
 			assert.False(t, svc.IsAcknowledged())
 		})
 	}
@@ -109,7 +110,7 @@ func TestComplianceService_AcknowledgeWrongSegment(t *testing.T) {
 
 func TestComplianceService_AcknowledgeIdempotent(t *testing.T) {
 	svc, _ := newTestComplianceService(t)
-	req := compliance.AcknowledgeRequest{
+	req := complianceapp.AcknowledgeCommand{
 		Segment1: "我已阅读并理解上述合规声明提醒",
 		Segment2: "知悉相关法律风险",
 		Segment3: "并确认自行承担部署运营和收费行为产生的法律责任",
@@ -117,7 +118,7 @@ func TestComplianceService_AcknowledgeIdempotent(t *testing.T) {
 	}
 	require.NoError(t, svc.Acknowledge(req))
 	err := svc.Acknowledge(req)
-	assert.ErrorIs(t, err, compliance.ErrAlreadyAcknowledged)
+	assert.ErrorIs(t, err, compliancecontract.ErrAlreadyAcknowledged)
 	assert.True(t, svc.IsAcknowledged())
 }
 
@@ -137,7 +138,7 @@ func TestComplianceService_LoadFromExistingSetting(t *testing.T) {
 	require.NoError(t, err)
 
 	// 模拟重启：重新建 service
-	svc2 := compliance.NewService(repo)
+	svc2 := complianceapp.NewService(repo)
 	assert.True(t, svc2.IsAcknowledged())
 	status, _ := svc2.Status()
 	assert.Equal(t, "root", status.AcknowledgedByUsername)

@@ -10,8 +10,8 @@ import (
 
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 
-	"github.com/dujiao-next/internal/modules/compliance"
-	compliancetransport "github.com/dujiao-next/internal/transport/http/compliance"
+	complianceapp "github.com/dujiao-next/internal/modules/compliance/application"
+	compliancetransport "github.com/dujiao-next/internal/modules/compliance/transport/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -20,27 +20,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type complianceAdminAdapter struct {
-	svc *compliance.Service
-}
-
-func (a complianceAdminAdapter) Status() (*compliance.Status, error) {
-	return a.svc.Status()
-}
-
-func (a complianceAdminAdapter) Acknowledge(req compliance.AcknowledgeRequest) error {
-	return a.svc.Acknowledge(req)
-}
-
-func setupComplianceHandler(t *testing.T) (*gin.Engine, *compliance.Service) {
+func setupComplianceHandler(t *testing.T) (*gin.Engine, *complianceapp.Service) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(&settingsstore.SettingRecord{}))
 
-	cs := compliance.NewService(settingsstore.New(db))
-	h := compliancetransport.NewAdminHandler(complianceAdminAdapter{svc: cs})
+	cs := complianceapp.NewService(settingsstore.New(db))
+	h := compliancetransport.NewAdminHandler(cs)
 
 	r := gin.New()
 	r.GET("/compliance/status", h.GetComplianceStatus)
@@ -116,7 +104,7 @@ func TestAcknowledgeCompliance_BadText(t *testing.T) {
 
 func TestAcknowledgeCompliance_AlreadyAcked(t *testing.T) {
 	r, cs := setupComplianceHandler(t)
-	require.NoError(t, cs.Acknowledge(compliance.AcknowledgeRequest{
+	require.NoError(t, cs.Acknowledge(complianceapp.AcknowledgeCommand{
 		Segment1: "我已阅读并理解上述合规声明提醒",
 		Segment2: "知悉相关法律风险",
 		Segment3: "并确认自行承担部署运营和收费行为产生的法律责任",
@@ -149,7 +137,7 @@ func TestGetComplianceStatus(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "\"acknowledged\":false")
 
 	// 确认
-	require.NoError(t, cs.Acknowledge(compliance.AcknowledgeRequest{
+	require.NoError(t, cs.Acknowledge(complianceapp.AcknowledgeCommand{
 		Segment1: "我已阅读并理解上述合规声明提醒",
 		Segment2: "知悉相关法律风险",
 		Segment3: "并确认自行承担部署运营和收费行为产生的法律责任",

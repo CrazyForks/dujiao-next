@@ -3,7 +3,9 @@ package compliancehttp
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/modules/compliance"
+	complianceapp "github.com/dujiao-next/internal/modules/compliance/application"
+	compliancecontract "github.com/dujiao-next/internal/modules/compliance/contract"
+	compliancedomain "github.com/dujiao-next/internal/modules/compliance/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -12,14 +14,22 @@ import (
 
 // AdminService 是后台合规声明端口。
 type AdminService interface {
-	Status() (*compliance.Status, error)
-	Acknowledge(req compliance.AcknowledgeRequest) error
+	Status() (*compliancedomain.Status, error)
+	Acknowledge(command complianceapp.AcknowledgeCommand) error
 }
 
 type acknowledgeRequest struct {
 	Segment1 string `json:"segment1" binding:"required"`
 	Segment2 string `json:"segment2" binding:"required"`
 	Segment3 string `json:"segment3" binding:"required"`
+}
+
+type statusResponse struct {
+	Acknowledged           bool   `json:"acknowledged"`
+	AcknowledgedAt         string `json:"acknowledged_at,omitempty"`
+	AcknowledgedByAdminID  uint   `json:"acknowledged_by_admin_id,omitempty"`
+	AcknowledgedByUsername string `json:"acknowledged_by_username,omitempty"`
+	Version                string `json:"version,omitempty"`
 }
 
 // AdminHandler 处理后台合规声明确认请求。
@@ -41,7 +51,13 @@ func (h *AdminHandler) GetComplianceStatus(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeInternal, "error.internal", err)
 		return
 	}
-	response.Success(c, status)
+	response.Success(c, statusResponse{
+		Acknowledged:           status.Acknowledged,
+		AcknowledgedAt:         status.AcknowledgedAt,
+		AcknowledgedByAdminID:  status.AcknowledgedByAdminID,
+		AcknowledgedByUsername: status.AcknowledgedByUsername,
+		Version:                status.Version,
+	})
 }
 
 // AcknowledgeCompliance POST /admin/compliance/acknowledge —— 仅超管
@@ -65,7 +81,7 @@ func (h *AdminHandler) AcknowledgeCompliance(c *gin.Context) {
 		return
 	}
 
-	err := h.svc.Acknowledge(compliance.AcknowledgeRequest{
+	err := h.svc.Acknowledge(complianceapp.AcknowledgeCommand{
 		Segment1:  req.Segment1,
 		Segment2:  req.Segment2,
 		Segment3:  req.Segment3,
@@ -76,10 +92,10 @@ func (h *AdminHandler) AcknowledgeCompliance(c *gin.Context) {
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, compliance.ErrTextMismatch):
+		case errors.Is(err, compliancecontract.ErrTextMismatch):
 			ginutil.RespondError(c, response.CodeBadRequest, "compliance.error.text_mismatch", nil)
 			return
-		case errors.Is(err, compliance.ErrAlreadyAcknowledged):
+		case errors.Is(err, compliancecontract.ErrAlreadyAcknowledged):
 			response.Success(c, gin.H{"already_acknowledged": true})
 			return
 		default:

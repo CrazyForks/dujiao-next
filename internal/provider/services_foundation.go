@@ -10,7 +10,7 @@ import (
 	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/captcha"
-	"github.com/dujiao-next/internal/modules/compliance"
+	complianceapp "github.com/dujiao-next/internal/modules/compliance/application"
 	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
 	admintotpapp "github.com/dujiao-next/internal/modules/identity/adminauth/totp/application"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
@@ -52,7 +52,7 @@ func (c *Container) initPolicyAndSettingServices() {
 	})
 	c.ResellerOrderService = reseller.NewOrderQueryService(c.ResellerRepo)
 	c.ResellerOperationsService = reseller.NewOperationsService(c.ResellerOperationsRepo)
-	c.ComplianceService = compliance.NewService(c.SettingRepo)
+	c.ComplianceService = complianceapp.NewService(c.SettingRepo)
 }
 
 // loadRuntimeSettings 用数据库设置覆盖启动配置中的可动态配置项。

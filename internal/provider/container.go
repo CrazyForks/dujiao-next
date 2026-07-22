@@ -25,7 +25,7 @@ import (
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
 	channelclientcontract "github.com/dujiao-next/internal/modules/channelclient/contract"
-	"github.com/dujiao-next/internal/modules/compliance"
+	complianceapp "github.com/dujiao-next/internal/modules/compliance/application"
 	contentapp "github.com/dujiao-next/internal/modules/content/application"
 	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
@@ -175,7 +175,7 @@ type Container struct {
 	MemberLevelService            *memberlevelapp.Service
 	AdProxyService                *adproxyapp.Service
 	OrderRiskControlService       *orderrisk.Service
-	ComplianceService             *compliance.Service
+	ComplianceService             *complianceapp.Service
 
 	PaymentProviderRegistry *paymentprovider.Registry
 }

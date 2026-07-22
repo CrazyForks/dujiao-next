@@ -317,6 +317,12 @@ var completedMigrationPaths = []string{
 	"internal/modules/adproxy/types.go",
 	"internal/transport/http/adproxy",
 	"internal/wiring/adproxy",
+	"internal/modules/compliance/service.go",
+	"internal/modules/compliance/types.go",
+	"internal/modules/compliance/errors.go",
+	"internal/integration/compliance",
+	"internal/transport/http/compliance",
+	"internal/wiring/compliance",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {
