@@ -213,6 +213,13 @@ var completedMigrationPaths = []string{
 	"internal/modules/memberlevel/service.go",
 	"internal/modules/memberlevel/store",
 	"internal/transport/http/memberlevel",
+	"internal/models/promotion.go",
+	"internal/modules/promotion/admin_service.go",
+	"internal/modules/promotion/errors.go",
+	"internal/modules/promotion/ports.go",
+	"internal/modules/promotion/service.go",
+	"internal/modules/promotion/store",
+	"internal/transport/http/promotion",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

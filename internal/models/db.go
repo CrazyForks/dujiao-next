@@ -14,6 +14,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	channelclientdomain "github.com/dujiao-next/internal/modules/channelclient/domain"
@@ -173,7 +174,7 @@ func AutoMigrate() error {
 		&Fulfillment{},
 		&Coupon{},
 		&CouponUsage{},
-		&Promotion{},
+		&promotiondomain.Promotion{},
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},

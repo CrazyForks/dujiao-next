@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/promotion"
+	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 
 	"gorm.io/gorm"
 )
@@ -31,9 +31,9 @@ func (r *Store) WithTx(tx *gorm.DB) *Store {
 }
 
 // GetByID 根据ID获取活动价
-func (r *Store) GetByID(id uint) (*models.Promotion, error) {
-	var promotion models.Promotion
-	if err := r.db.First(&promotion, id).Error; err != nil {
+func (r *Store) GetByID(id uint) (*promotiondomain.Promotion, error) {
+	var promotion promotiondomain.Promotion
+	if err := r.db.Where("deleted_at IS NULL").First(&promotion, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -43,9 +43,9 @@ func (r *Store) GetByID(id uint) (*models.Promotion, error) {
 }
 
 // GetActiveByProduct 获取商品有效活动价
-func (r *Store) GetActiveByProduct(productID uint, now time.Time) (*models.Promotion, error) {
-	var promotion models.Promotion
-	query := r.db.Where("scope_type = ? AND scope_ref_id = ? AND is_active = ?", constants.ScopeTypeProduct, productID, true)
+func (r *Store) GetActiveByProduct(productID uint, now time.Time) (*promotiondomain.Promotion, error) {
+	var promotion promotiondomain.Promotion
+	query := r.db.Where("deleted_at IS NULL AND scope_type = ? AND scope_ref_id = ? AND is_active = ?", constants.ScopeTypeProduct, productID, true)
 	query = query.Where("(starts_at IS NULL OR starts_at <= ?)", now)
 	query = query.Where("(ends_at IS NULL OR ends_at >= ?)", now)
 	if err := query.Order("id desc").First(&promotion).Error; err != nil {
@@ -58,9 +58,9 @@ func (r *Store) GetActiveByProduct(productID uint, now time.Time) (*models.Promo
 }
 
 // GetAllActiveByProduct 获取商品所有有效活动价（按 MinAmount 升序）
-func (r *Store) GetAllActiveByProduct(productID uint, now time.Time) ([]models.Promotion, error) {
-	var promotions []models.Promotion
-	query := r.db.Where("scope_type = ? AND scope_ref_id = ? AND is_active = ?", constants.ScopeTypeProduct, productID, true)
+func (r *Store) GetAllActiveByProduct(productID uint, now time.Time) ([]promotiondomain.Promotion, error) {
+	var promotions []promotiondomain.Promotion
+	query := r.db.Where("deleted_at IS NULL AND scope_type = ? AND scope_ref_id = ? AND is_active = ?", constants.ScopeTypeProduct, productID, true)
 	query = query.Where("(starts_at IS NULL OR starts_at <= ?)", now)
 	query = query.Where("(ends_at IS NULL OR ends_at >= ?)", now)
 	if err := query.Order("min_amount asc").Find(&promotions).Error; err != nil {
@@ -70,24 +70,26 @@ func (r *Store) GetAllActiveByProduct(productID uint, now time.Time) ([]models.P
 }
 
 // Create 创建活动价
-func (r *Store) Create(promotion *models.Promotion) error {
+func (r *Store) Create(promotion *promotiondomain.Promotion) error {
 	return r.db.Create(promotion).Error
 }
 
 // Update 更新活动价
-func (r *Store) Update(promotion *models.Promotion) error {
+func (r *Store) Update(promotion *promotiondomain.Promotion) error {
 	return r.db.Save(promotion).Error
 }
 
 // Delete 删除活动价
 func (r *Store) Delete(id uint) error {
-	return r.db.Delete(&models.Promotion{}, id).Error
+	return r.db.Model(&promotiondomain.Promotion{}).
+		Where("id = ? AND deleted_at IS NULL", id).
+		Update("deleted_at", time.Now()).Error
 }
 
 // List 获取活动价列表
-func (r *Store) List(filter promotion.ListFilter) ([]models.Promotion, int64, error) {
-	var promotions []models.Promotion
-	query := r.db.Model(&models.Promotion{})
+func (r *Store) List(filter promotioncontract.ListFilter) ([]promotiondomain.Promotion, int64, error) {
+	var promotions []promotiondomain.Promotion
+	query := r.db.Model(&promotiondomain.Promotion{}).Where("deleted_at IS NULL")
 
 	if filter.ID != 0 {
 		query = query.Where("id = ?", filter.ID)
@@ -116,4 +118,4 @@ func (r *Store) List(filter promotion.ListFilter) ([]models.Promotion, int64, er
 	return promotions, total, nil
 }
 
-var _ promotion.Repository = (*Store)(nil)
+var _ promotioncontract.Repository = (*Store)(nil)

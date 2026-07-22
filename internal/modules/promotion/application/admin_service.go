@@ -1,11 +1,12 @@
-package promotion
+package application
 
 import (
 	"strings"
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -13,11 +14,11 @@ import (
 
 // AdminService 活动价管理服务。
 type AdminService struct {
-	repo Repository
+	repo promotioncontract.Repository
 }
 
 // NewAdminService 创建活动价管理服务。
-func NewAdminService(repo Repository) *AdminService {
+func NewAdminService(repo promotioncontract.Repository) *AdminService {
 	return &AdminService{repo: repo}
 }
 
@@ -46,26 +47,26 @@ type UpdatePromotionInput struct {
 }
 
 // Create 创建活动价
-func (s *AdminService) Create(input CreatePromotionInput) (*models.Promotion, error) {
+func (s *AdminService) Create(input CreatePromotionInput) (*promotiondomain.Promotion, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 	if input.ScopeRefID == 0 {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 	promotionType := strings.ToLower(strings.TrimSpace(input.Type))
 	if promotionType != constants.PromotionTypeFixed && promotionType != constants.PromotionTypePercent && promotionType != constants.PromotionTypeSpecialPrice {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 	if input.Value.Decimal.LessThanOrEqual(decimal.Zero) {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 	if promotionType == constants.PromotionTypePercent && input.Value.Decimal.GreaterThan(decimal.NewFromInt(100)) {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 	if input.StartsAt != nil && input.EndsAt != nil && input.EndsAt.Before(*input.StartsAt) {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 
 	isActive := true
@@ -73,7 +74,7 @@ func (s *AdminService) Create(input CreatePromotionInput) (*models.Promotion, er
 		isActive = *input.IsActive
 	}
 
-	promotion := &models.Promotion{
+	promotion := &promotiondomain.Promotion{
 		Name:       name,
 		ScopeType:  constants.ScopeTypeProduct,
 		ScopeRefID: input.ScopeRefID,
@@ -92,36 +93,36 @@ func (s *AdminService) Create(input CreatePromotionInput) (*models.Promotion, er
 }
 
 // Update 更新活动价
-func (s *AdminService) Update(id uint, input UpdatePromotionInput) (*models.Promotion, error) {
+func (s *AdminService) Update(id uint, input UpdatePromotionInput) (*promotiondomain.Promotion, error) {
 	if id == 0 {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 	existing, err := s.repo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	if existing == nil {
-		return nil, ErrNotFound
+		return nil, promotioncontract.ErrNotFound
 	}
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 	if input.ScopeRefID == 0 {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 	promotionType := strings.ToLower(strings.TrimSpace(input.Type))
 	if promotionType != constants.PromotionTypeFixed && promotionType != constants.PromotionTypePercent && promotionType != constants.PromotionTypeSpecialPrice {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 	if input.Value.Decimal.LessThanOrEqual(decimal.Zero) {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 	if promotionType == constants.PromotionTypePercent && input.Value.Decimal.GreaterThan(decimal.NewFromInt(100)) {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 	if input.StartsAt != nil && input.EndsAt != nil && input.EndsAt.Before(*input.StartsAt) {
-		return nil, ErrInvalid
+		return nil, promotioncontract.ErrInvalid
 	}
 
 	isActive := existing.IsActive
@@ -140,7 +141,7 @@ func (s *AdminService) Update(id uint, input UpdatePromotionInput) (*models.Prom
 	existing.IsActive = isActive
 
 	if err := s.repo.Update(existing); err != nil {
-		return nil, ErrUpdateFailed
+		return nil, promotioncontract.ErrUpdateFailed
 	}
 	return existing, nil
 }
@@ -148,22 +149,22 @@ func (s *AdminService) Update(id uint, input UpdatePromotionInput) (*models.Prom
 // Delete 删除活动价
 func (s *AdminService) Delete(id uint) error {
 	if id == 0 {
-		return ErrInvalid
+		return promotioncontract.ErrInvalid
 	}
 	existing, err := s.repo.GetByID(id)
 	if err != nil {
 		return err
 	}
 	if existing == nil {
-		return ErrNotFound
+		return promotioncontract.ErrNotFound
 	}
 	if err := s.repo.Delete(id); err != nil {
-		return ErrDeleteFailed
+		return promotioncontract.ErrDeleteFailed
 	}
 	return nil
 }
 
 // List 获取活动价列表
-func (s *AdminService) List(filter ListFilter) ([]models.Promotion, int64, error) {
+func (s *AdminService) List(filter promotioncontract.ListFilter) ([]promotiondomain.Promotion, int64, error) {
 	return s.repo.List(filter)
 }

@@ -4,15 +4,16 @@ import (
 	"errors"
 	"strings"
 
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	productpresenter "github.com/dujiao-next/internal/modules/catalog/product/transport/presenter"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	domaincatalog "github.com/dujiao-next/internal/modules/catalog"
 	categorypresenter "github.com/dujiao-next/internal/modules/catalog/category/transport/presenter"
-	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
+	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/shared/money"
 )
@@ -186,7 +187,7 @@ func (h *PublicHandler) decoratePublicProduct(product *productdomain.Product, pr
 
 	// 构建 SKU 列表并为每个 active SKU 计算促销价
 	skuViews := make([]publicSKUView, 0, len(item.Product.SKUs))
-	var displayPromotion *models.Promotion
+	var displayPromotion *promotiondomain.Promotion
 	var displayPromotionPrice *money.Amount
 
 	for _, sku := range item.Product.SKUs {
@@ -205,7 +206,7 @@ func (h *PublicHandler) decoratePublicProduct(product *productdomain.Product, pr
 			priceCarrier := *product
 			priceCarrier.PriceAmount = sku.PriceAmount
 			promotion, discountedPrice, err := promotions.ApplyPromotion(&priceCarrier, 1)
-			if err != nil && !errors.Is(err, promotionmodule.ErrInvalid) {
+			if err != nil && !errors.Is(err, promotioncontract.ErrInvalid) {
 				return productpresenter.Product{}, err
 			}
 			if promotion != nil && discountedPrice.Decimal.LessThan(sku.PriceAmount.Decimal) {

@@ -9,7 +9,8 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	"github.com/dujiao-next/internal/modules/promotion"
+	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
+	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	"github.com/dujiao-next/internal/shared/money"
 )
 
@@ -72,12 +73,12 @@ type Service struct {
 	cartRepo       Repository
 	productRepo    ProductReader
 	productSKURepo SKUReader
-	promotionRepo  promotion.Repository
+	promotionRepo  promotioncontract.Repository
 	currencyReader CurrencyReader
 }
 
 // NewService 创建购物车服务。
-func NewService(cartRepo Repository, productRepo ProductReader, productSKURepo SKUReader, promotionRepo promotion.Repository, currencyReader CurrencyReader) *Service {
+func NewService(cartRepo Repository, productRepo ProductReader, productSKURepo SKUReader, promotionRepo promotioncontract.Repository, currencyReader CurrencyReader) *Service {
 	return &Service{
 		cartRepo:       cartRepo,
 		productRepo:    productRepo,
@@ -98,7 +99,7 @@ func (s *Service) ListByUser(userID uint) ([]ItemDetail, error) {
 	}
 	currency := s.siteCurrency()
 	details := make([]ItemDetail, 0, len(items))
-	promotionService := promotion.NewService(s.promotionRepo)
+	promotionService := promotionapp.NewService(s.promotionRepo)
 	for _, item := range items {
 		product := item.Product
 		if product == nil || product.ID == 0 {

@@ -7,7 +7,7 @@ import (
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/modules/cart"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	"github.com/dujiao-next/internal/modules/promotion"
+	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -57,7 +57,7 @@ func (h *UserHandler) GetCart(c *gin.Context) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.product_not_available", nil)
 		case errors.Is(err, cart.ErrFulfillmentInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.fulfillment_invalid", nil)
-		case errors.Is(err, promotion.ErrInvalid):
+		case errors.Is(err, promotioncontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.promotion_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.order_fetch_failed", err)

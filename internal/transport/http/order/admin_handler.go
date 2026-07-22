@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/models"
@@ -58,7 +60,7 @@ type CouponLookup interface {
 
 // PromotionLookup 活动价查询端口。
 type PromotionLookup interface {
-	GetByID(id uint) (*models.Promotion, error)
+	GetByID(id uint) (*promotiondomain.Promotion, error)
 }
 
 // PaymentDirectory 支付记录查询端口。

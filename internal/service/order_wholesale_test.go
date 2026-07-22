@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -26,7 +28,7 @@ import (
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
 	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
-	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
+	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -55,7 +57,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices produ
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.Promotion{},
+		&promotiondomain.Promotion{},
 		&models.Coupon{},
 		&models.CouponUsage{},
 		&userdomain.User{},
@@ -130,7 +132,7 @@ func setupWholesaleOrderFixture(t *testing.T, name string, wholesalePrices produ
 	}
 
 	if promotionPercent != nil {
-		promotion := models.Promotion{
+		promotion := promotiondomain.Promotion{
 			Name:       name + "-promotion",
 			ScopeType:  constants.ScopeTypeProduct,
 			ScopeRefID: product.ID,

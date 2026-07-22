@@ -6,9 +6,9 @@ import (
 	"strconv"
 
 	"github.com/dujiao-next/internal/http/handlers/shared"
-	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/modules/coupon"
-	"github.com/dujiao-next/internal/modules/promotion"
+	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
+	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -56,7 +56,7 @@ var channelOrderCreateErrorRules = []mappedChannelError{
 	channelErrorRule(coupon.ErrPaymentRoleMemberOnly, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_payment_role_member_only"),
 	channelErrorRule(coupon.ErrMemberLevelNotAllowed, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_member_level_not_allowed"),
 	channelErrorRule(coupon.ErrWholesaleDisabled, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.coupon_wholesale_disabled"),
-	channelErrorRule(promotion.ErrInvalid, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.promotion_invalid"),
+	channelErrorRule(promotioncontract.ErrInvalid, http.StatusBadRequest, response.CodeBadRequest, "coupon_invalid", "error.promotion_invalid"),
 	channelErrorRule(ErrManualFormSchemaInvalid, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.manual_form_schema_invalid"),
 	channelErrorRule(ErrManualFormRequiredMissing, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.manual_form_required_missing"),
 	channelErrorRule(ErrManualFormFieldInvalid, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.manual_form_field_invalid"),

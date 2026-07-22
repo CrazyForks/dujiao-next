@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -21,7 +23,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
-	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
+	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
 	"github.com/dujiao-next/internal/queue"
@@ -82,7 +84,7 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		&models.Fulfillment{},
 		&models.Coupon{},
 		&models.CouponUsage{},
-		&models.Promotion{},
+		&promotiondomain.Promotion{},
 		&models.Payment{},
 		&models.ResellerProfile{},
 		&models.ResellerProductSetting{},
@@ -154,7 +156,7 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	}
 	startsAt := time.Now().Add(-time.Hour)
 	endsAt := time.Now().Add(time.Hour)
-	promotion := models.Promotion{
+	promotion := promotiondomain.Promotion{
 		Name:       "main-promotion",
 		ScopeType:  constants.ScopeTypeProduct,
 		ScopeRefID: product.ID,

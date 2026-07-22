@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -23,7 +25,7 @@ import (
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/store/gormstore"
 	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
-	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
+	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -49,7 +51,7 @@ func assertBuildOrderResultRejectsPurchaseQuantity(t *testing.T, fixture orderPu
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &promotiondomain.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -124,7 +126,7 @@ func TestBuildOrderResultRejectsZeroPromotionPrice(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &promotiondomain.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -169,7 +171,7 @@ func TestBuildOrderResultRejectsZeroPromotionPrice(t *testing.T) {
 		t.Fatalf("create sku failed: %v", err)
 	}
 
-	promotion := models.Promotion{
+	promotion := promotiondomain.Promotion{
 		Name:       "test-100-percent",
 		ScopeType:  constants.ScopeTypeProduct,
 		ScopeRefID: product.ID,
@@ -216,7 +218,7 @@ func TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted(t 
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.Promotion{},
+		&promotiondomain.Promotion{},
 		&userdomain.User{},
 		&memberleveldomain.MemberLevel{},
 		&memberleveldomain.MemberLevelPrice{},
@@ -347,7 +349,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.Promotion{},
+		&promotiondomain.Promotion{},
 		&userdomain.User{},
 		&memberleveldomain.MemberLevel{},
 		&memberleveldomain.MemberLevelPrice{},
@@ -413,7 +415,7 @@ func TestBuildOrderResultStacksPromotionAndMemberDiscount(t *testing.T) {
 	if err := db.Create(&sku).Error; err != nil {
 		t.Fatalf("create sku failed: %v", err)
 	}
-	promotion := models.Promotion{
+	promotion := promotiondomain.Promotion{
 		Name:       "test-10-percent",
 		ScopeType:  constants.ScopeTypeProduct,
 		ScopeRefID: product.ID,
@@ -516,7 +518,7 @@ func TestBuildOrderResultOriginalAmountBeforePromotion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &promotiondomain.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
@@ -561,7 +563,7 @@ func TestBuildOrderResultOriginalAmountBeforePromotion(t *testing.T) {
 		t.Fatalf("create sku failed: %v", err)
 	}
 
-	promotion := models.Promotion{
+	promotion := promotiondomain.Promotion{
 		Name:       "test-20-percent",
 		ScopeType:  constants.ScopeTypeProduct,
 		ScopeRefID: product.ID,
@@ -621,7 +623,7 @@ func TestBuildOrderResultRejectsZeroTotalAmountAfterCoupon(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.Coupon{}, &models.CouponUsage{}, &models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &models.Coupon{}, &models.CouponUsage{}, &promotiondomain.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 

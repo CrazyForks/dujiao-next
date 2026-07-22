@@ -19,7 +19,7 @@ import (
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	notificationgormstore "github.com/dujiao-next/internal/modules/notification/store/gormstore"
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/store/gormstore"
-	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
+	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	reconciliationgormstore "github.com/dujiao-next/internal/modules/reconciliation/store/gormstore"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"

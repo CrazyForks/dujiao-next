@@ -1,13 +1,14 @@
-package promotion
+package application
 
 import (
 	"strings"
 	"time"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -15,25 +16,25 @@ import (
 
 // Service 活动价服务。
 type Service struct {
-	promotionRepo Repository
+	promotionRepo promotioncontract.Repository
 }
 
 // NewService 创建活动价服务。
-func NewService(promotionRepo Repository) *Service {
+func NewService(promotionRepo promotioncontract.Repository) *Service {
 	return &Service{
 		promotionRepo: promotionRepo,
 	}
 }
 
 // GetProductPromotions 获取商品所有有效活动规则（用于前端展示）
-func (s *Service) GetProductPromotions(productID uint) ([]models.Promotion, error) {
+func (s *Service) GetProductPromotions(productID uint) ([]promotiondomain.Promotion, error) {
 	return s.promotionRepo.GetAllActiveByProduct(productID, time.Now())
 }
 
 // ApplyPromotion 应用活动价规则（支持阶梯匹配）
-func (s *Service) ApplyPromotion(product *productdomain.Product, quantity int) (*models.Promotion, money.Amount, error) {
+func (s *Service) ApplyPromotion(product *productdomain.Product, quantity int) (*promotiondomain.Promotion, money.Amount, error) {
 	if product == nil || quantity <= 0 {
-		return nil, money.Amount{}, ErrInvalid
+		return nil, money.Amount{}, promotioncontract.ErrInvalid
 	}
 
 	now := time.Now()
@@ -48,7 +49,7 @@ func (s *Service) ApplyPromotion(product *productdomain.Product, quantity int) (
 	subtotal := product.PriceAmount.Decimal.Mul(decimal.NewFromInt(int64(quantity)))
 
 	// 从高到低遍历 MinAmount，取第一个满足 MinAmount <= subtotal 的规则
-	var matched *models.Promotion
+	var matched *promotiondomain.Promotion
 	for i := len(promotions) - 1; i >= 0; i-- {
 		p := &promotions[i]
 		if strings.ToLower(strings.TrimSpace(p.ScopeType)) != constants.ScopeTypeProduct {
@@ -72,10 +73,10 @@ func (s *Service) ApplyPromotion(product *productdomain.Product, quantity int) (
 	return matched, unitPrice, nil
 }
 
-func (s *Service) calculateUnitPrice(base money.Amount, promotion *models.Promotion) (money.Amount, error) {
+func (s *Service) calculateUnitPrice(base money.Amount, promotion *promotiondomain.Promotion) (money.Amount, error) {
 	value := promotion.Value.Decimal
 	if value.LessThanOrEqual(decimal.Zero) {
-		return money.Amount{}, ErrInvalid
+		return money.Amount{}, promotioncontract.ErrInvalid
 	}
 
 	switch strings.ToLower(strings.TrimSpace(promotion.Type)) {
@@ -95,6 +96,6 @@ func (s *Service) calculateUnitPrice(base money.Amount, promotion *models.Promot
 	case constants.PromotionTypeSpecialPrice:
 		return money.FromDecimal(value), nil
 	default:
-		return money.Amount{}, ErrInvalid
+		return money.Amount{}, promotioncontract.ErrInvalid
 	}
 }

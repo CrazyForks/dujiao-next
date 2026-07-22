@@ -149,7 +149,9 @@ func TestProductServiceDeleteCascade(t *testing.T) {
 	}
 
 	var mlpCount int64
-	db.Model(&memberleveldomain.MemberLevelPrice{}).Where("product_id = ?", product.ID).Count(&mlpCount)
+	db.Model(&memberleveldomain.MemberLevelPrice{}).
+		Where("product_id = ? AND deleted_at IS NULL", product.ID).
+		Count(&mlpCount)
 	if mlpCount != 0 {
 		t.Errorf("expected 0 member level prices after delete, got %d", mlpCount)
 	}

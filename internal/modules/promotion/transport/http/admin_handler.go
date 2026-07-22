@@ -3,12 +3,12 @@ package promotionhttp
 import (
 	"errors"
 
+	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
+	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
-	"github.com/dujiao-next/internal/shared/money"
-
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/promotion"
 	"github.com/dujiao-next/internal/platform/http/response"
+	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -16,10 +16,10 @@ import (
 
 // AdminService 是管理端 HTTP 层所需的最小活动价服务接口。
 type AdminService interface {
-	Create(input promotion.CreatePromotionInput) (*models.Promotion, error)
-	Update(id uint, input promotion.UpdatePromotionInput) (*models.Promotion, error)
+	Create(input promotionapp.CreatePromotionInput) (*promotiondomain.Promotion, error)
+	Update(id uint, input promotionapp.UpdatePromotionInput) (*promotiondomain.Promotion, error)
 	Delete(id uint) error
-	List(filter promotion.ListFilter) ([]models.Promotion, int64, error)
+	List(filter promotioncontract.ListFilter) ([]promotiondomain.Promotion, int64, error)
 }
 
 // AdminHandler 处理活动价管理端请求。
@@ -46,16 +46,16 @@ type CreatePromotionRequest struct {
 	IsActive   *bool   `json:"is_active"`
 }
 
-func buildCreatePromotionInputFromRequest(req CreatePromotionRequest) (promotion.CreatePromotionInput, error) {
+func buildCreatePromotionInputFromRequest(req CreatePromotionRequest) (promotionapp.CreatePromotionInput, error) {
 	startsAt, err := ginutil.ParseTimeNullable(req.StartsAt)
 	if err != nil {
-		return promotion.CreatePromotionInput{}, err
+		return promotionapp.CreatePromotionInput{}, err
 	}
 	endsAt, err := ginutil.ParseTimeNullable(req.EndsAt)
 	if err != nil {
-		return promotion.CreatePromotionInput{}, err
+		return promotionapp.CreatePromotionInput{}, err
 	}
-	return promotion.CreatePromotionInput{
+	return promotionapp.CreatePromotionInput{
 		Name:       req.Name,
 		Type:       req.Type,
 		ScopeRefID: req.ScopeRefID,
@@ -67,12 +67,12 @@ func buildCreatePromotionInputFromRequest(req CreatePromotionRequest) (promotion
 	}, nil
 }
 
-func buildUpdatePromotionInputFromRequest(req CreatePromotionRequest) (promotion.UpdatePromotionInput, error) {
+func buildUpdatePromotionInputFromRequest(req CreatePromotionRequest) (promotionapp.UpdatePromotionInput, error) {
 	input, err := buildCreatePromotionInputFromRequest(req)
 	if err != nil {
-		return promotion.UpdatePromotionInput{}, err
+		return promotionapp.UpdatePromotionInput{}, err
 	}
-	return promotion.UpdatePromotionInput(input), nil
+	return promotionapp.UpdatePromotionInput(input), nil
 }
 
 // CreatePromotion 创建活动价
@@ -92,7 +92,7 @@ func (h *AdminHandler) CreatePromotion(c *gin.Context) {
 	created, err := h.service.Create(input)
 	if err != nil {
 		switch {
-		case errors.Is(err, promotion.ErrInvalid):
+		case errors.Is(err, promotioncontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.promotion_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.promotion_create_failed", err)
@@ -125,9 +125,9 @@ func (h *AdminHandler) UpdatePromotion(c *gin.Context) {
 	updated, err := h.service.Update(promotionID, input)
 	if err != nil {
 		switch {
-		case errors.Is(err, promotion.ErrNotFound):
+		case errors.Is(err, promotioncontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.promotion_not_found", nil)
-		case errors.Is(err, promotion.ErrInvalid):
+		case errors.Is(err, promotioncontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.promotion_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.promotion_update_failed", err)
@@ -147,9 +147,9 @@ func (h *AdminHandler) DeletePromotion(c *gin.Context) {
 	}
 	if err := h.service.Delete(promotionID); err != nil {
 		switch {
-		case errors.Is(err, promotion.ErrNotFound):
+		case errors.Is(err, promotioncontract.ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.promotion_not_found", nil)
-		case errors.Is(err, promotion.ErrInvalid):
+		case errors.Is(err, promotioncontract.ErrInvalid):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.promotion_invalid", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.promotion_delete_failed", err)
@@ -179,7 +179,7 @@ func (h *AdminHandler) GetAdminPromotions(c *gin.Context) {
 		return
 	}
 
-	promotions, total, err := h.service.List(promotion.ListFilter{
+	promotions, total, err := h.service.List(promotioncontract.ListFilter{
 		ID:         id,
 		Name:       c.Query("name"),
 		ScopeRefID: scopeRefID,

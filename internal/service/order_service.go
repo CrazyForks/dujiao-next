@@ -19,7 +19,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/coupon"
 	"github.com/dujiao-next/internal/modules/orderrisk"
-	"github.com/dujiao-next/internal/modules/promotion"
+	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -43,7 +43,7 @@ type OrderService struct {
 	resellerRepo            repository.ResellerRepository
 	couponRepo              orderCouponRepository
 	couponUsageRepo         orderCouponUsageRepository
-	promotionRepo           promotion.Repository
+	promotionRepo           promotioncontract.Repository
 	queueClient             orderQueueClient
 	settingService          *settingsapp.Service
 	defaultEmailConfig      config.EmailConfig
@@ -112,7 +112,7 @@ type OrderServiceOptions struct {
 	ResellerRepo              repository.ResellerRepository
 	CouponRepo                orderCouponRepository
 	CouponUsageRepo           orderCouponUsageRepository
-	PromotionRepo             promotion.Repository
+	PromotionRepo             promotioncontract.Repository
 	QueueClient               *queue.Client
 	SettingService            *settingsapp.Service
 	DefaultEmailConfig        config.EmailConfig

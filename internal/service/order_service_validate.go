@@ -12,7 +12,8 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	couponmodule "github.com/dujiao-next/internal/modules/coupon"
-	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
+	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/jsonslice"
 	"github.com/dujiao-next/internal/shared/money"
@@ -75,9 +76,9 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 		}
 	}
 
-	var promotionService *promotionmodule.Service
+	var promotionService *promotionapp.Service
 	if !resellerOrder {
-		promotionService = promotionmodule.NewService(s.promotionRepo)
+		promotionService = promotionapp.NewService(s.promotionRepo)
 	}
 	manualFormData := input.ManualFormData
 	if manualFormData == nil {
@@ -115,7 +116,7 @@ func (s *OrderService) buildOrderResult(input orderCreateParams) (*orderBuildRes
 		// 1. 计算活动价
 		priceCarrier := *product
 		priceCarrier.PriceAmount = sku.PriceAmount
-		var promotion *models.Promotion
+		var promotion *promotiondomain.Promotion
 		promoUnitPriceAmount := basePrice
 		if promotionService != nil {
 			var promoUnitPrice money.Amount

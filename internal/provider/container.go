@@ -45,8 +45,8 @@ import (
 	notificationgormstore "github.com/dujiao-next/internal/modules/notification/store/gormstore"
 	"github.com/dujiao-next/internal/modules/orderrisk"
 	"github.com/dujiao-next/internal/modules/procurement"
-	"github.com/dujiao-next/internal/modules/promotion"
-	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
+	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
+	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/reconciliation"
 	"github.com/dujiao-next/internal/modules/reseller"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
@@ -139,7 +139,7 @@ type Container struct {
 	OrderService                  *service.OrderService
 	FulfillmentService            *service.FulfillmentService
 	CouponAdminService            *coupon.AdminService
-	PromotionAdminService         *promotion.AdminService
+	PromotionAdminService         *promotionapp.AdminService
 	PaymentService                *service.PaymentService
 	CardSecretService             *cardsecret.Service
 	GiftCardService               *service.GiftCardService

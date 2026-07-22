@@ -9,13 +9,15 @@ import (
 	"testing"
 	"time"
 
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
 	productpresenter "github.com/dujiao-next/internal/modules/catalog/product/transport/presenter"
-	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
-	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/store/gormstore"
+	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
+	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -55,11 +57,11 @@ func TestPublicProductHTTPPromotionUsesDisplayPrice(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.Promotion{}); err != nil {
+	if err := db.AutoMigrate(&promotiondomain.Promotion{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	promotion := models.Promotion{
+	promotion := promotiondomain.Promotion{
 		Name:       "fixed-10",
 		ScopeType:  constants.ScopeTypeProduct,
 		ScopeRefID: 1,
@@ -91,7 +93,7 @@ func TestPublicProductHTTPPromotionUsesDisplayPrice(t *testing.T) {
 			},
 		},
 	}}
-	promotions := promotionmodule.NewService(promotiongormstore.New(db))
+	promotions := promotionapp.NewService(promotiongormstore.New(db))
 	handler := producthttp.NewPublicHandler(queries, nil, promotions, nil, nil, nil, emptyRelatedPostReader{})
 
 	router := gin.New()

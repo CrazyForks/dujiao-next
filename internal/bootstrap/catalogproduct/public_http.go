@@ -4,7 +4,8 @@ import (
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
-	promotionmodule "github.com/dujiao-next/internal/modules/promotion"
+	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
+	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	"github.com/dujiao-next/internal/modules/reseller"
 )
 
@@ -13,7 +14,7 @@ type PublicHTTPDependencies struct {
 	Products     *productapplication.Service
 	Hidden       productapplication.HiddenProductRepository
 	Pricer       producthttp.ResellerDisplayPricer
-	Promotions   promotionmodule.Repository
+	Promotions   promotioncontract.Repository
 	MemberLevels producthttp.MemberLevelPricing
 	Mappings     producthttp.LocalProductMappingReader
 	SKUMappings  producthttp.SKUMappingLookup
@@ -49,7 +50,7 @@ func (adapter publicProductAdapter) ApplyAutoStockCounts(products []productdomai
 func NewPublicHTTP(dependencies PublicHTTPDependencies) *producthttp.PublicHandler {
 	var promotions producthttp.ProductPromotionDecorator
 	if dependencies.Promotions != nil {
-		promotions = promotionmodule.NewService(dependencies.Promotions)
+		promotions = promotionapp.NewService(dependencies.Promotions)
 	}
 	return producthttp.NewPublicHandler(
 		publicProductAdapter{products: dependencies.Products, hidden: dependencies.Hidden},

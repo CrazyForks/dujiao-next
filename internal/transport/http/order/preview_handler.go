@@ -13,7 +13,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	"github.com/dujiao-next/internal/modules/coupon"
-	"github.com/dujiao-next/internal/modules/promotion"
+	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
@@ -352,7 +352,7 @@ var userOrderCommonErrorRules = []mappedError{
 	{target: coupon.ErrPaymentRoleMemberOnly, code: response.CodeBadRequest, key: "error.coupon_payment_role_member_only"},
 	{target: coupon.ErrMemberLevelNotAllowed, code: response.CodeBadRequest, key: "error.coupon_member_level_not_allowed"},
 	{target: coupon.ErrWholesaleDisabled, code: response.CodeBadRequest, key: "error.coupon_wholesale_disabled"},
-	{target: promotion.ErrInvalid, code: response.CodeBadRequest, key: "error.promotion_invalid"},
+	{target: promotioncontract.ErrInvalid, code: response.CodeBadRequest, key: "error.promotion_invalid"},
 	{target: manualform.ErrSchemaInvalid, code: response.CodeBadRequest, key: "error.manual_form_schema_invalid"},
 	{target: manualform.ErrRequiredMissing, code: response.CodeBadRequest, key: "error.manual_form_required_missing"},
 	{target: manualform.ErrFieldInvalid, code: response.CodeBadRequest, key: "error.manual_form_field_invalid"},
@@ -409,5 +409,5 @@ var guestOrderPreviewExtraErrorRules = []mappedError{
 	{target: coupon.ErrPaymentRoleMemberOnly, code: response.CodeBadRequest, key: "error.coupon_payment_role_member_only"},
 	{target: coupon.ErrMemberLevelNotAllowed, code: response.CodeBadRequest, key: "error.coupon_member_level_not_allowed"},
 	{target: coupon.ErrWholesaleDisabled, code: response.CodeBadRequest, key: "error.coupon_wholesale_disabled"},
-	{target: promotion.ErrInvalid, code: response.CodeBadRequest, key: "error.promotion_invalid"},
+	{target: promotioncontract.ErrInvalid, code: response.CodeBadRequest, key: "error.promotion_invalid"},
 }

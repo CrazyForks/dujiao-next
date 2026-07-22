@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
+
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
@@ -40,8 +42,8 @@ type ResellerDisplayPricer interface {
 
 // ProductPromotionDecorator 是公开商品促销装饰端口。
 type ProductPromotionDecorator interface {
-	GetProductPromotions(productID uint) ([]models.Promotion, error)
-	ApplyPromotion(product *productdomain.Product, quantity int) (*models.Promotion, money.Amount, error)
+	GetProductPromotions(productID uint) ([]promotiondomain.Promotion, error)
+	ApplyPromotion(product *productdomain.Product, quantity int) (*promotiondomain.Promotion, money.Amount, error)
 }
 
 // MemberLevelPricing 是公开商品会员价装饰端口。
