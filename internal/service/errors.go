@@ -16,7 +16,6 @@ import (
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
-	"github.com/dujiao-next/internal/modules/telegram"
 	walletmodule "github.com/dujiao-next/internal/modules/wallet"
 )
 
@@ -180,10 +179,6 @@ var (
 	ErrNotificationConfigInvalid           = notification.ErrConfigInvalid
 	ErrNotificationSendFailed              = notification.ErrSendFailed
 	ErrNotificationEventInvalid            = notification.ErrEventInvalid
-	ErrTelegramBroadcastInvalid            = telegram.ErrBroadcastInvalid
-	ErrTelegramBroadcastNotFound           = telegram.ErrBroadcastNotFound
-	ErrTelegramBroadcastNoRecipients       = telegram.ErrBroadcastNoRecipients
-	ErrTelegramBotTokenUnavailable         = telegram.ErrBotTokenUnavailable
 	ErrRegistrationDisabled                = errors.New("registration disabled")
 	ErrOrderEmailTemplateConfigInvalid     = settingsmessaging.ErrOrderEmailTemplateConfigInvalid
 	ErrPaymentChannelNotAllowedForProduct  = errors.New("payment channel not allowed for product")

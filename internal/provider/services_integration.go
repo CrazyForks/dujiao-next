@@ -1,6 +1,7 @@
 package provider
 
 import (
+	telegrambroadcast "github.com/dujiao-next/internal/bootstrap/telegrambroadcast"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/apicredential"
@@ -16,6 +17,7 @@ import (
 	"github.com/dujiao-next/internal/modules/reconciliation"
 	"github.com/dujiao-next/internal/modules/siteconnection"
 	telegrammodule "github.com/dujiao-next/internal/modules/telegram"
+	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
 	"github.com/dujiao-next/internal/service"
 )
 
@@ -97,12 +99,11 @@ func (c *Container) initIntegrationServices() {
 		Queue: c.QueueClient, Notifications: c.NotificationService,
 	})
 	c.ChannelClientService = channelclient.NewService(c.ChannelClientRepo, c.Config.App.SecretKey)
-	c.TelegramBroadcastService = service.NewTelegramBroadcastService(
+	c.TelegramBroadcastService = broadcastapp.NewService(
 		c.TelegramBroadcastRepo,
-		c.UserOAuthIdentityRepo,
-		c.ChannelClientRepo,
-		c.ChannelClientService,
-		c.QueueClient,
+		telegrambroadcast.NewUserDirectory(c.UserOAuthIdentityRepo),
+		telegrambroadcast.NewBotTokenResolver(c.ChannelClientRepo, c.ChannelClientService),
+		telegrambroadcast.NewDispatcher(c.QueueClient),
 		telegrammodule.NewNotifyService(c.SettingService, c.Config.TelegramAuth),
 	)
 }

@@ -33,6 +33,8 @@ import (
 	settingscontract "github.com/dujiao-next/internal/modules/settings/contract"
 	"github.com/dujiao-next/internal/modules/siteconnection"
 	"github.com/dujiao-next/internal/modules/sitemap"
+	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
+	broadcastcontract "github.com/dujiao-next/internal/modules/telegram/broadcast/contract"
 	"github.com/dujiao-next/internal/modules/upload"
 	paymentprovider "github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/queue"
@@ -85,7 +87,7 @@ type Container struct {
 	ReconciliationJobRepo      reconciliation.JobRepository
 	ReconciliationItemRepo     reconciliation.ItemRepository
 	ChannelClientRepo          repository.ChannelClientRepository
-	TelegramBroadcastRepo      repository.TelegramBroadcastRepository
+	TelegramBroadcastRepo      broadcastcontract.Store
 	MemberLevelRepo            memberlevel.LevelRepository
 	MemberLevelPriceRepo       *memberlevelgormstore.PriceStore
 	MemberLevelUserRepo        memberlevel.UserRepository
@@ -139,7 +141,7 @@ type Container struct {
 	DownstreamCallbackService     *downstreamcallback.Service
 	ReconciliationService         *reconciliation.Service
 	ChannelClientService          *channelclient.Service
-	TelegramBroadcastService      *service.TelegramBroadcastService
+	TelegramBroadcastService      *broadcastapp.Service
 	MemberLevelService            *memberlevel.Service
 	AdProxyService                *adproxy.Service
 	OrderRiskControlService       *orderrisk.Service

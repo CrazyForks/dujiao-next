@@ -1,4 +1,4 @@
-package repository
+package broadcaststore
 
 import (
 	"fmt"
@@ -6,28 +6,29 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	broadcastcontract "github.com/dujiao-next/internal/modules/telegram/broadcast/contract"
+	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
-func setupTelegramBroadcastRepositoryTest(t *testing.T) *GormTelegramBroadcastRepository {
+func setupStoreTest(t *testing.T) *Store {
 	t.Helper()
 	dsn := fmt.Sprintf("file:telegram_broadcast_repo_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.TelegramBroadcast{}); err != nil {
+	if err := db.AutoMigrate(&broadcastdomain.Broadcast{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
-	return NewTelegramBroadcastRepository(db)
+	return New(db)
 }
 
-func TestTelegramBroadcastRepositoryListFilters(t *testing.T) {
-	repo := setupTelegramBroadcastRepositoryTest(t)
+func TestStoreListPagination(t *testing.T) {
+	repo := setupStoreTest(t)
 	now := time.Now().UTC().Truncate(time.Second)
-	items := []models.TelegramBroadcast{
+	items := []broadcastdomain.Broadcast{
 		{
 			Title:         "Spring Promo",
 			RecipientType: constants.TelegramBroadcastRecipientTypeAll,
@@ -50,8 +51,19 @@ func TestTelegramBroadcastRepositoryListFilters(t *testing.T) {
 			t.Fatalf("create broadcast failed: %v", err)
 		}
 	}
+	deletedAt := now.Add(time.Hour)
+	deleted := broadcastdomain.Broadcast{
+		Title:         "Deleted",
+		RecipientType: constants.TelegramBroadcastRecipientTypeAll,
+		Status:        constants.TelegramBroadcastStatusCompleted,
+		MessageHTML:   "<b>deleted</b>",
+		DeletedAt:     &deletedAt,
+	}
+	if err := repo.Create(&deleted); err != nil {
+		t.Fatalf("create deleted broadcast fixture failed: %v", err)
+	}
 
-	rows, total, err := repo.List(TelegramBroadcastListFilter{
+	rows, total, err := repo.List(broadcastcontract.ListFilter{
 		Page:     1,
 		PageSize: 1,
 	})
@@ -63,5 +75,12 @@ func TestTelegramBroadcastRepositoryListFilters(t *testing.T) {
 	}
 	if rows[0].Title != "VIP Users" {
 		t.Fatalf("unexpected broadcast title: %s", rows[0].Title)
+	}
+	deletedRow, err := repo.GetByID(deleted.ID)
+	if err != nil {
+		t.Fatalf("get deleted broadcast failed: %v", err)
+	}
+	if deletedRow != nil {
+		t.Fatalf("soft-deleted broadcast must be excluded: %#v", deletedRow)
 	}
 }

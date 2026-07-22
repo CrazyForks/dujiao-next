@@ -3,8 +3,9 @@ package router
 import (
 	settingsbootstrap "github.com/dujiao-next/internal/bootstrap/settingshttp"
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/platform/http/response"
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
+	broadcasthttp "github.com/dujiao-next/internal/modules/telegram/broadcast/transport/http"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/provider"
 	adminauthtransport "github.com/dujiao-next/internal/transport/http/adminauth"
 	adminauthztransport "github.com/dujiao-next/internal/transport/http/adminauthz"
@@ -32,7 +33,6 @@ import (
 	resellertransport "github.com/dujiao-next/internal/transport/http/reseller"
 	siteconnectiontransport "github.com/dujiao-next/internal/transport/http/siteconnection"
 	systemtransport "github.com/dujiao-next/internal/transport/http/system"
-	telegramtransport "github.com/dujiao-next/internal/transport/http/telegram"
 	uploadtransport "github.com/dujiao-next/internal/transport/http/upload"
 	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
 	adproxywiring "github.com/dujiao-next/internal/wiring/adproxy"
@@ -40,7 +40,6 @@ import (
 	channelclientwiring "github.com/dujiao-next/internal/wiring/channelclient"
 	compliancewiring "github.com/dujiao-next/internal/wiring/compliance"
 	siteconnectionwiring "github.com/dujiao-next/internal/wiring/siteconnection"
-	telegramwiring "github.com/dujiao-next/internal/wiring/telegram"
 	uploadwiring "github.com/dujiao-next/internal/wiring/upload"
 
 	"github.com/gin-gonic/gin"
@@ -194,5 +193,5 @@ func registerAdminRoutes(
 	channelclienttransport.RegisterAdminRoutes(authorized, channelclientwiring.NewAdminHandler(c))
 
 	// Telegram Bot 群发
-	telegramtransport.RegisterAdminBroadcastRoutes(authorized, telegramwiring.NewAdminBroadcastHandler(c))
+	broadcasthttp.RegisterAdminRoutes(authorized, broadcasthttp.NewAdminHandler(c.TelegramBroadcastService))
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
 	"github.com/glebarez/sqlite" // 纯 Go SQLite 驱动（基于 modernc.org/sqlite）
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -178,7 +179,7 @@ func AutoMigrate() error {
 		&ReconciliationJob{},
 		&ReconciliationItem{},
 		&ChannelClient{},
-		&TelegramBroadcast{},
+		&broadcastdomain.Broadcast{},
 		&MemberLevel{},
 		&MemberLevelPrice{},
 		&Media{},
