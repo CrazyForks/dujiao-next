@@ -6,15 +6,15 @@ import (
 	"io"
 	"net/http"
 
+	adproxydomain "github.com/dujiao-next/internal/modules/adproxy/domain"
 	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/modules/adproxy"
 
 	"github.com/gin-gonic/gin"
 )
 
 // AdminService 是后台广告代理端口。
 type AdminService interface {
-	RenderSlot(ctx context.Context, slotCode string, params map[string]string) (*adproxy.RenderResponse, error)
+	RenderSlot(ctx context.Context, slotCode string, params map[string]string) (*adproxydomain.RenderResponse, error)
 	ReportImpression(ctx context.Context, payload json.RawMessage) error
 }
 

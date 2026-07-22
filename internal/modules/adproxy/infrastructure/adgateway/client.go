@@ -1,4 +1,4 @@
-package adproxy
+package adgateway
 
 import (
 	"bytes"
@@ -8,29 +8,37 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
-	"github.com/dujiao-next/internal/adgateway"
 	"github.com/dujiao-next/internal/logger"
+	"github.com/dujiao-next/internal/modules/adproxy/contract"
+	adproxydomain "github.com/dujiao-next/internal/modules/adproxy/domain"
 )
 
-// Service 代理广告请求到 ad-system。
-type Service struct {
+// Client 通过 HTTP 访问广告网关。
+type Client struct {
 	client  *http.Client
 	baseURL string
 }
 
-func NewService() *Service {
-	return &Service{
-		client: &http.Client{
-			Timeout: 5 * time.Second,
-		},
-		baseURL: adgateway.ServerURL,
+var _ contract.Gateway = (*Client)(nil)
+
+// New 创建使用当前构建环境默认地址的广告网关客户端。
+func New() *Client {
+	return NewClient(&http.Client{Timeout: 5 * time.Second}, ServerURL)
+}
+
+// NewClient 创建可注入 HTTP 客户端和网关地址的广告网关客户端。
+func NewClient(client *http.Client, baseURL string) *Client {
+	if client == nil {
+		panic("adgateway client: http client is nil")
 	}
+	return &Client{client: client, baseURL: strings.TrimRight(baseURL, "/")}
 }
 
 // RenderSlot 请求 ad-system 渲染指定广告位
-func (s *Service) RenderSlot(ctx context.Context, slotCode string, params map[string]string) (*RenderResponse, error) {
+func (s *Client) RenderSlot(ctx context.Context, slotCode string, params map[string]string) (*adproxydomain.RenderResponse, error) {
 	u, err := url.Parse(fmt.Sprintf("%s/api/v1/public/ad-slots/%s/render", s.baseURL, url.PathEscape(slotCode)))
 	if err != nil {
 		return nil, fmt.Errorf("ad_proxy: invalid url: %w", err)
@@ -65,9 +73,9 @@ func (s *Service) RenderSlot(ctx context.Context, slotCode string, params map[st
 	}
 
 	var apiResp struct {
-		StatusCode int             `json:"status_code"`
-		Msg        string          `json:"msg"`
-		Data       *RenderResponse `json:"data"`
+		StatusCode int                           `json:"status_code"`
+		Msg        string                        `json:"msg"`
+		Data       *adproxydomain.RenderResponse `json:"data"`
 	}
 	if err := json.Unmarshal(body, &apiResp); err != nil {
 		return nil, fmt.Errorf("ad_proxy: decode response failed: %w", err)
@@ -80,7 +88,7 @@ func (s *Service) RenderSlot(ctx context.Context, slotCode string, params map[st
 }
 
 // ReportImpression 上报广告曝光
-func (s *Service) ReportImpression(ctx context.Context, payload json.RawMessage) error {
+func (s *Client) ReportImpression(ctx context.Context, payload json.RawMessage) error {
 	u := fmt.Sprintf("%s/api/v1/public/ad-events/impression", s.baseURL)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, bytes.NewReader(payload))

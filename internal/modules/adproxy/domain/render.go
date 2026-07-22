@@ -1,4 +1,4 @@
-package adproxy
+package domain
 
 // RenderSlot 广告位信息。
 type RenderSlot struct {

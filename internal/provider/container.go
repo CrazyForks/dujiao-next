@@ -3,7 +3,7 @@ package provider
 import (
 	"github.com/dujiao-next/internal/authz"
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/modules/adproxy"
+	adproxyapp "github.com/dujiao-next/internal/modules/adproxy/application"
 	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
@@ -173,7 +173,7 @@ type Container struct {
 	ChannelClientService          *channelclientapp.Service
 	TelegramBroadcastService      *broadcastapp.Service
 	MemberLevelService            *memberlevelapp.Service
-	AdProxyService                *adproxy.Service
+	AdProxyService                *adproxyapp.Service
 	OrderRiskControlService       *orderrisk.Service
 	ComplianceService             *compliance.Service
 

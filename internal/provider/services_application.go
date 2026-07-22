@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 
+	adproxyapp "github.com/dujiao-next/internal/modules/adproxy/application"
+	adproxygateway "github.com/dujiao-next/internal/modules/adproxy/infrastructure/adgateway"
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
 
 	giftcardintegration "github.com/dujiao-next/internal/integration/giftcard"
@@ -24,6 +26,7 @@ import (
 
 // initApplicationServices 装配内容、购物车、订单、履约和营销用例。
 func (c *Container) initApplicationServices() {
+	c.AdProxyService = adproxyapp.NewService(adproxygateway.New())
 	postStore := gormstore.NewPostStore(models.DB)
 	postCategoryStore := gormstore.NewPostCategoryStore(models.DB)
 	c.ContentPostService = contentapp.NewPostService(

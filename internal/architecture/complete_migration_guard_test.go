@@ -312,6 +312,11 @@ var completedMigrationPaths = []string{
 	"internal/dto/cart.go",
 	"internal/transport/http/cart",
 	"internal/wiring/cart",
+	"internal/adgateway",
+	"internal/modules/adproxy/service.go",
+	"internal/modules/adproxy/types.go",
+	"internal/transport/http/adproxy",
+	"internal/wiring/adproxy",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {

@@ -1,7 +1,5 @@
 package provider
 
-import "github.com/dujiao-next/internal/modules/adproxy"
-
 // wireServiceDependencies 收口构造后才能建立的双向或延迟依赖。
 func (c *Container) wireServiceDependencies() {
 	c.UserAuthService.SetMemberLevelService(c.MemberLevelService)
@@ -11,5 +9,4 @@ func (c *Container) wireServiceDependencies() {
 	c.PaymentService.SetProcurementService(c.ProcurementOrderService)
 	c.PaymentService.SetDownstreamCallbackService(c.DownstreamCallbackService)
 	c.FulfillmentService.SetDownstreamCallbackService(c.DownstreamCallbackService)
-	c.AdProxyService = adproxy.NewService()
 }

@@ -4,6 +4,7 @@ import (
 	affiliatebootstrap "github.com/dujiao-next/internal/bootstrap/affiliate"
 	settingsbootstrap "github.com/dujiao-next/internal/bootstrap/settingshttp"
 	"github.com/dujiao-next/internal/config"
+	adproxytransport "github.com/dujiao-next/internal/modules/adproxy/transport/http"
 	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	apicredentialtransport "github.com/dujiao-next/internal/modules/apicredential/transport/http"
 	auditlogtransport "github.com/dujiao-next/internal/modules/auditlog/transport/http"
@@ -26,7 +27,6 @@ import (
 	adminauthtransport "github.com/dujiao-next/internal/transport/http/adminauth"
 	adminauthztransport "github.com/dujiao-next/internal/transport/http/adminauthz"
 	adminusertransport "github.com/dujiao-next/internal/transport/http/adminuser"
-	adproxytransport "github.com/dujiao-next/internal/transport/http/adproxy"
 	cardsecrettransport "github.com/dujiao-next/internal/transport/http/cardsecret"
 	compliancetransport "github.com/dujiao-next/internal/transport/http/compliance"
 	fulfillmenttransport "github.com/dujiao-next/internal/transport/http/fulfillment"
@@ -38,7 +38,6 @@ import (
 	systemtransport "github.com/dujiao-next/internal/transport/http/system"
 	uploadtransport "github.com/dujiao-next/internal/transport/http/upload"
 	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
-	adproxywiring "github.com/dujiao-next/internal/wiring/adproxy"
 	compliancewiring "github.com/dujiao-next/internal/wiring/compliance"
 	uploadwiring "github.com/dujiao-next/internal/wiring/upload"
 
@@ -105,7 +104,7 @@ func registerAdminRoutes(
 	dashboardtransport.RegisterAdminRoutes(authorized, adminDashboardHandler)
 
 	// 广告代理
-	adproxytransport.RegisterAdminRoutes(authorized, adproxywiring.NewAdminHandler(c))
+	adproxytransport.RegisterAdminRoutes(authorized, adproxytransport.NewAdminHandler(c.AdProxyService))
 
 	// 商品 / 分类管理
 	producthttp.RegisterAdminRoutes(authorized, adminCatalogProductHandler)
