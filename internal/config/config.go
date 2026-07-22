@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
+	"github.com/dujiao-next/internal/shared/passwordpolicy"
 
 	"github.com/spf13/viper"
 )
@@ -261,6 +262,17 @@ type PasswordPolicyConfig struct {
 	RequireLower   bool `mapstructure:"require_lower"`
 	RequireNumber  bool `mapstructure:"require_number"`
 	RequireSpecial bool `mapstructure:"require_special"`
+}
+
+// ValidationPolicy converts configuration into the shared identity policy.
+func (p PasswordPolicyConfig) ValidationPolicy() passwordpolicy.Policy {
+	return passwordpolicy.Policy{
+		MinLength:      p.MinLength,
+		RequireUpper:   p.RequireUpper,
+		RequireLower:   p.RequireLower,
+		RequireNumber:  p.RequireNumber,
+		RequireSpecial: p.RequireSpecial,
+	}
 }
 
 // WebConfig 仅在 fullstack 二进制模式下生效。

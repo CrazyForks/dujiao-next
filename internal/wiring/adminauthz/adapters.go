@@ -11,6 +11,7 @@ import (
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/passwordpolicy"
 	adminauthztransport "github.com/dujiao-next/internal/transport/http/adminauthz"
 )
 
@@ -147,7 +148,7 @@ func mapAdminAuthzTransportError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, service.ErrWeakPassword) {
+	if errors.Is(err, passwordpolicy.ErrWeak) {
 		type keyed interface {
 			Key() string
 			Args() []interface{}

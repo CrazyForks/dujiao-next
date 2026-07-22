@@ -6,6 +6,7 @@ import (
 	"time"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	"github.com/dujiao-next/internal/shared/passwordpolicy"
 
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/constants"
@@ -20,7 +21,7 @@ func (s *UserAuthService) ResetPassword(email, code, newPassword string) error {
 	if err != nil {
 		return err
 	}
-	if err := ValidatePasswordPolicy(s.cfg.Security.PasswordPolicy, newPassword); err != nil {
+	if err := passwordpolicy.Validate(s.cfg.Security.PasswordPolicy.ValidationPolicy(), newPassword); err != nil {
 		return err
 	}
 	user, err := s.userRepo.GetByEmail(normalized)
@@ -75,7 +76,7 @@ func (s *UserAuthService) ChangePassword(userID uint, oldPassword, newPassword s
 		}
 	}
 
-	if err := ValidatePasswordPolicy(s.cfg.Security.PasswordPolicy, newPassword); err != nil {
+	if err := passwordpolicy.Validate(s.cfg.Security.PasswordPolicy.ValidationPolicy(), newPassword); err != nil {
 		return err
 	}
 

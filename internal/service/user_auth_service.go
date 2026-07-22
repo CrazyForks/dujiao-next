@@ -11,6 +11,7 @@ import (
 	"time"
 
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
+	"github.com/dujiao-next/internal/shared/passwordpolicy"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
@@ -237,7 +238,7 @@ func (s *UserAuthService) Register(email, password, code string, agreementAccept
 	if err := s.checkRegistrationEmailDomain(normalized); err != nil {
 		return nil, "", time.Time{}, err
 	}
-	if err := ValidatePasswordPolicy(s.cfg.Security.PasswordPolicy, password); err != nil {
+	if err := passwordpolicy.Validate(s.cfg.Security.PasswordPolicy.ValidationPolicy(), password); err != nil {
 		return nil, "", time.Time{}, err
 	}
 

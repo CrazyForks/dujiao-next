@@ -24,7 +24,6 @@ var (
 	ErrProductCategoryInvalid              = catalogproduct.ErrProductCategoryInvalid
 	ErrInvalidCredentials                  = errors.New("invalid credentials")
 	ErrInvalidPassword                     = errors.New("invalid password")
-	ErrWeakPassword                        = errors.New("weak password")
 	ErrEmailExists                         = errors.New("email exists")
 	ErrEmailNotVerified                    = errors.New("email not verified")
 	ErrUserDisabled                        = affiliatemodule.ErrUserDisabled

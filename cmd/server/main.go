@@ -14,7 +14,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	adminapplication "github.com/dujiao-next/internal/modules/identity/admin/application"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/service"
+	"github.com/dujiao-next/internal/shared/passwordpolicy"
 	"github.com/dujiao-next/internal/version"
 	"github.com/dujiao-next/internal/web"
 
@@ -185,7 +185,7 @@ func unsafeBootstrapAdminPassword(cfg *config.Config, password string) bool {
 	case "admin", "admin123", "password", "password123", "change-me", "changeme":
 		return true
 	}
-	return cfg == nil || service.ValidatePasswordPolicy(cfg.Security.PasswordPolicy, password) != nil
+	return cfg == nil || passwordpolicy.Validate(cfg.Security.PasswordPolicy.ValidationPolicy(), password) != nil
 }
 
 // runAdminSubcommand 处理 ./dujiao-api admin <subcommand>，仅初始化 DB

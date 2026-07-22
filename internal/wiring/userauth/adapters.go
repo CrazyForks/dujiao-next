@@ -8,6 +8,7 @@ import (
 	"time"
 
 	totpapplication "github.com/dujiao-next/internal/modules/identity/totp/application"
+	"github.com/dujiao-next/internal/shared/passwordpolicy"
 
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 
@@ -447,7 +448,7 @@ func mapUserAuthTransportError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, service.ErrWeakPassword) {
+	if errors.Is(err, passwordpolicy.ErrWeak) {
 		type keyed interface {
 			Key() string
 			Args() []interface{}

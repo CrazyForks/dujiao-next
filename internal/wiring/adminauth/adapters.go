@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	totpapplication "github.com/dujiao-next/internal/modules/identity/totp/application"
+	"github.com/dujiao-next/internal/shared/passwordpolicy"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
@@ -225,7 +226,7 @@ func mapAdminAuthTransportError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, service.ErrWeakPassword) {
+	if errors.Is(err, passwordpolicy.ErrWeak) {
 		type keyed interface {
 			Key() string
 			Args() []interface{}

@@ -102,6 +102,7 @@ var completedMigrationPaths = []string{
 	"internal/service/totp_enable.go",
 	"internal/service/totp_enable_test.go",
 	"internal/service/recovery_codes.go",
+	"internal/service/password_policy.go",
 }
 
 func TestCompletedMigrationPathsStayDeleted(t *testing.T) {
@@ -133,6 +134,14 @@ func TestSharedMoneyOwnsMonetaryValueObject(t *testing.T) {
 	assertFileDeclaresTypes(t, filepath.Join(moneyRoot, "amount.go"), []string{"Amount"})
 	assertFileDeclaresFunctions(t, filepath.Join(moneyRoot, "amount.go"), []string{"FromDecimal"})
 	assertDirectoryGoFileBudget(t, moneyRoot, 2)
+}
+
+func TestSharedPasswordPolicyOwnsStrengthValidation(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	policyRoot := filepath.Join(repositoryRoot, "internal", "shared", "passwordpolicy")
+	assertFileDeclaresTypes(t, filepath.Join(policyRoot, "policy.go"), []string{"Policy"})
+	assertFileDeclaresFunctions(t, filepath.Join(policyRoot, "policy.go"), []string{"Validate"})
+	assertDirectoryGoFileBudget(t, policyRoot, 2)
 }
 
 func TestLegacyHorizontalRootsCanOnlyShrink(t *testing.T) {

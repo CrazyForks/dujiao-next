@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/config"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
+	"github.com/dujiao-next/internal/shared/passwordpolicy"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -48,7 +49,7 @@ func (s *AuthService) ValidatePassword(password string) error {
 	if s == nil || s.cfg == nil {
 		return nil
 	}
-	return ValidatePasswordPolicy(s.cfg.Security.PasswordPolicy, password)
+	return passwordpolicy.Validate(s.cfg.Security.PasswordPolicy.ValidationPolicy(), password)
 }
 
 // JWT typ 常量
