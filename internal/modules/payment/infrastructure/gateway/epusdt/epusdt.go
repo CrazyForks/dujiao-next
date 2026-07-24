@@ -2,7 +2,8 @@ package epusdt
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -123,7 +124,9 @@ func ValidateConfig(cfg *Config) error {
 }
 
 // Sign 计算签名。算法：剔除 signature 与空值，key 升序，按 key=value 用 & 连接，
-// 末尾直接拼接 secret_key（无分隔符），MD5 小写 hex。
+// 用 secret_key 作为 HMAC key 对拼接串做 HMAC-SHA256，小写 hex。
+// epusdt 服务端已从旧版 MD5（拼接 secret_key 后缀）迁移到 HMAC-SHA256，且不再接受 MD5 签名，
+// 数值格式化必须与 epusdt util/sign.MapToParams 保持一致（float 去除多余尾零）。
 func Sign(params map[string]interface{}, secretKey string) string {
 	keys := make([]string, 0, len(params))
 	for k, v := range params {
@@ -139,12 +142,26 @@ func Sign(params map[string]interface{}, secretKey string) string {
 
 	pairs := make([]string, 0, len(keys))
 	for _, k := range keys {
-		pairs = append(pairs, fmt.Sprintf("%s=%v", k, params[k]))
+		pairs = append(pairs, fmt.Sprintf("%s=%s", k, formatSignValue(params[k])))
 	}
 
-	content := strings.Join(pairs, "&") + secretKey
-	sum := md5.Sum([]byte(content))
-	return strings.ToLower(hex.EncodeToString(sum[:]))
+	content := strings.Join(pairs, "&")
+	mac := hmac.New(sha256.New, []byte(secretKey))
+	_, _ = mac.Write([]byte(content))
+	return strings.ToLower(hex.EncodeToString(mac.Sum(nil)))
+}
+
+// formatSignValue 按 epusdt util/sign.MapToParams 的规则格式化签名参数值：
+// float64 用 strconv.FormatFloat(v, 'f', -1, 64) 去除多余尾零，其余按字符串原样拼接。
+func formatSignValue(v interface{}) string {
+	switch val := v.(type) {
+	case float64:
+		return strconv.FormatFloat(val, 'f', -1, 64)
+	case string:
+		return val
+	default:
+		return fmt.Sprintf("%v", val)
+	}
 }
 
 func isEmptyValue(v interface{}) bool {
