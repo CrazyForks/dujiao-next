@@ -7,8 +7,8 @@ import (
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 
 	"github.com/dujiao-next/internal/constants"
-	paymenttransport "github.com/dujiao-next/internal/transport/http/payment"
-	paymentcallbacktransport "github.com/dujiao-next/internal/transport/http/payment/callback"
+	paymenttransport "github.com/dujiao-next/internal/modules/payment/transport/http"
+	paymentcallbacktransport "github.com/dujiao-next/internal/modules/payment/transport/http/callback"
 	upstreamtransport "github.com/dujiao-next/internal/transport/http/upstream"
 
 	"github.com/gin-gonic/gin"

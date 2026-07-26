@@ -9,16 +9,13 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/modules/notification/application/format"
 	"github.com/dujiao-next/internal/modules/notification/contract"
-	paymentcommon "github.com/dujiao-next/internal/payment/common"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/outboundctx"
 )
 
 func detachOutboundRequestContext(parent context.Context) (context.Context, context.CancelFunc) {
-	if parent == nil {
-		return paymentcommon.WithDefaultTimeout(context.Background())
-	}
-	return paymentcommon.WithDefaultTimeout(context.WithoutCancel(parent))
+	return outboundctx.Detach(parent, outboundctx.DefaultTimeout)
 }
 
 // SendTest 测试发送通知

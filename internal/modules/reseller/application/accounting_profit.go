@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
@@ -12,7 +14,6 @@ import (
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
 
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
@@ -36,7 +37,7 @@ func NewAccountingLedgerService(store resellercontract.AccountingLedgerStore, co
 }
 
 // PostOrderProfit 在调用方已开启的事务 store 上写入订单利润流水。
-func (s *AccountingLedgerService) PostOrderProfit(store resellercontract.AccountingLedgerStore, order *orderdomain.Order, payment *models.Payment) error {
+func (s *AccountingLedgerService) PostOrderProfit(store resellercontract.AccountingLedgerStore, order *orderdomain.Order, payment *paymentdomain.Payment) error {
 	if s == nil || store == nil || order == nil || order.ID == 0 {
 		return nil
 	}

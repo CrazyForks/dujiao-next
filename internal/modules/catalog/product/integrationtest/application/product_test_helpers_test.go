@@ -5,6 +5,10 @@ import (
 	"testing"
 	"time"
 
+	paymentgormstore "github.com/dujiao-next/internal/modules/payment/infrastructure/gormstore"
+
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
 
@@ -21,13 +25,11 @@ import (
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
-	"github.com/dujiao-next/internal/models"
 	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
@@ -70,7 +72,7 @@ func newProductServiceForTest(t *testing.T) (catalogproductbootstrap.Services, *
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &cardsecretdomain.Secret{}, &cardsecretdomain.Batch{}, &memberleveldomain.MemberLevelPrice{}, &cartdomain.Item{}, &mappingdomain.Mapping{}, &mappingdomain.SKUMapping{}, &orderdomain.Order{}, &orderdomain.OrderItem{}, &models.PaymentChannel{}); err != nil {
+	if err := db.AutoMigrate(&categorydomain.Category{}, &productdomain.Product{}, &productdomain.ProductSKU{}, &cardsecretdomain.Secret{}, &cardsecretdomain.Batch{}, &memberleveldomain.MemberLevelPrice{}, &cartdomain.Item{}, &mappingdomain.Mapping{}, &mappingdomain.SKUMapping{}, &orderdomain.Order{}, &orderdomain.OrderItem{}, &paymentdomain.PaymentChannel{}); err != nil {
 		t.Fatalf("auto migrate product service tables failed: %v", err)
 	}
 
@@ -84,14 +86,14 @@ func newProductServiceForTest(t *testing.T) (catalogproductbootstrap.Services, *
 		Carts:             cartgormstore.New(db),
 		ProductMappings:   mappinggormstore.NewMappingStore(db),
 		Orders:            ordergormstore.New(db),
-		PaymentChannels:   repository.NewPaymentChannelRepository(db),
+		PaymentChannels:   paymentgormstore.NewChannelStore(db),
 	}), db
 }
 
-func createProductTestPaymentChannel(t *testing.T, db *gorm.DB, name string, active bool, deleted bool) models.PaymentChannel {
+func createProductTestPaymentChannel(t *testing.T, db *gorm.DB, name string, active bool, deleted bool) paymentdomain.PaymentChannel {
 	t.Helper()
 
-	channel := models.PaymentChannel{
+	channel := paymentdomain.PaymentChannel{
 		Name:            name,
 		ProviderType:    "official",
 		ChannelType:     "wechat",

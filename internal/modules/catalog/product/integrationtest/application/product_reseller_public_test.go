@@ -5,6 +5,10 @@ import (
 	"testing"
 	"time"
 
+	paymentgormstore "github.com/dujiao-next/internal/modules/payment/infrastructure/gormstore"
+
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
 
@@ -29,14 +33,12 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
@@ -65,7 +67,7 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		&mappingdomain.SKUMapping{},
 		&orderdomain.Order{},
 		&orderdomain.OrderItem{},
-		&models.PaymentChannel{},
+		&paymentdomain.PaymentChannel{},
 		&resellerdomain.Profile{},
 		&resellerdomain.ProductSetting{},
 	); err != nil {
@@ -82,7 +84,7 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		Carts:             cartgormstore.New(db),
 		ProductMappings:   mappinggormstore.NewMappingStore(db),
 		Orders:            ordergormstore.New(db),
-		PaymentChannels:   repository.NewPaymentChannelRepository(db),
+		PaymentChannels:   paymentgormstore.NewChannelStore(db),
 	})
 	return svc, resellergormstore.New(db), db
 }

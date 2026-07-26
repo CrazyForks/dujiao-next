@@ -5,7 +5,17 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
-	paymentprovider "github.com/dujiao-next/internal/payment/provider"
+	alipayadapter "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/adapters/alipay"
+	bepusdtadapter "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/adapters/bepusdt"
+	dujiaopayadapter "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/adapters/dujiaopay"
+	epayadapter "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/adapters/epay"
+	epusdtadapter "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/adapters/epusdt"
+	okpayadapter "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/adapters/okpay"
+	paypaladapter "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/adapters/paypal"
+	stripeadapter "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/adapters/stripe"
+	tokenpayadapter "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/adapters/tokenpay"
+	wechatpayadapter "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/adapters/wechatpay"
+	paymentprovider "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/provider"
 	"github.com/dujiao-next/internal/queue"
 )
 
@@ -39,15 +49,15 @@ func NewContainer(cfg *config.Config) *Container {
 // PaymentService 构造时依赖完整注册表，因此该步骤必须先于 Service 装配。
 func newPaymentProviderRegistry() *paymentprovider.Registry {
 	registry := paymentprovider.NewRegistry()
-	registry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeStripe, paymentprovider.NewStripeAdapter())
-	registry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypePaypal, paymentprovider.NewPaypalAdapter())
-	registry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeWechat, paymentprovider.NewWechatpayAdapter())
-	registry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeAlipay, paymentprovider.NewAlipayAdapter())
-	registry.Register(constants.PaymentProviderEpay, "", paymentprovider.NewEpayAdapter())
-	registry.Register(constants.PaymentProviderEpusdt, "", paymentprovider.NewEpusdtAdapter())
-	registry.Register(constants.PaymentProviderBepusdt, "", paymentprovider.NewBepusdtAdapter())
-	registry.Register(constants.PaymentProviderDujiaoPay, "", paymentprovider.NewDujiaoPayAdapter())
-	registry.Register(constants.PaymentProviderTokenpay, "", paymentprovider.NewTokenpayAdapter())
-	registry.Register(constants.PaymentProviderOkpay, "", paymentprovider.NewOkpayAdapter())
+	registry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeStripe, stripeadapter.NewStripeAdapter())
+	registry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypePaypal, paypaladapter.NewPaypalAdapter())
+	registry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeWechat, wechatpayadapter.NewWechatpayAdapter())
+	registry.Register(constants.PaymentProviderOfficial, constants.PaymentChannelTypeAlipay, alipayadapter.NewAlipayAdapter())
+	registry.Register(constants.PaymentProviderEpay, "", epayadapter.NewEpayAdapter())
+	registry.Register(constants.PaymentProviderEpusdt, "", epusdtadapter.NewEpusdtAdapter())
+	registry.Register(constants.PaymentProviderBepusdt, "", bepusdtadapter.NewBepusdtAdapter())
+	registry.Register(constants.PaymentProviderDujiaoPay, "", dujiaopayadapter.NewDujiaoPayAdapter())
+	registry.Register(constants.PaymentProviderTokenpay, "", tokenpayadapter.NewTokenpayAdapter())
+	registry.Register(constants.PaymentProviderOkpay, "", okpayadapter.NewOkpayAdapter())
 	return registry
 }

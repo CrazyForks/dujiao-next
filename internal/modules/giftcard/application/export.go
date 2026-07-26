@@ -1,11 +1,12 @@
 package application
 
 import (
-	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
 	"encoding/csv"
 	"strconv"
 	"strings"
 	"time"
+
+	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
 
 	"github.com/dujiao-next/internal/constants"
 )

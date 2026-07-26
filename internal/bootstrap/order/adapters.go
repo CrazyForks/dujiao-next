@@ -4,6 +4,11 @@ import (
 	"errors"
 	"fmt"
 
+	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
+	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderapp "github.com/dujiao-next/internal/modules/order/application"
 	orderrefund "github.com/dujiao-next/internal/modules/order/application/refund"
 	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
@@ -20,7 +25,6 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
@@ -30,8 +34,6 @@ import (
 	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/repository"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/money"
 )
 
@@ -95,18 +97,18 @@ func (a orderAdminPromotionAdapter) GetByID(id uint) (*promotiondomain.Promotion
 }
 
 type orderAdminPaymentAdapter struct {
-	payments repository.PaymentRepository
+	payments paymentcontract.Store
 }
 
-func (a orderAdminPaymentAdapter) ListByOrderID(orderID uint) ([]models.Payment, error) {
+func (a orderAdminPaymentAdapter) ListByOrderID(orderID uint) ([]paymentdomain.Payment, error) {
 	return a.payments.ListByOrderID(orderID)
 }
 
 type orderAdminPaymentChannelAdapter struct {
-	channels repository.PaymentChannelRepository
+	channels paymentcontract.ChannelStore
 }
 
-func (a orderAdminPaymentChannelAdapter) ListByIDs(ids []uint) ([]models.PaymentChannel, error) {
+func (a orderAdminPaymentChannelAdapter) ListByIDs(ids []uint) ([]paymentdomain.PaymentChannel, error) {
 	return a.channels.ListByIDs(ids)
 }
 
@@ -147,7 +149,7 @@ func (a orderUserQueryAdapter) CancelOrder(orderID uint, userID uint) (*orderdom
 }
 
 type orderUserPaymentChannelAdapter struct {
-	payments *service.PaymentService
+	payments *paymentapp.PaymentService
 }
 
 func (a orderUserPaymentChannelAdapter) GetAllowedChannelIDsForOrder(items []orderdomain.OrderItem) []uint {
@@ -161,7 +163,7 @@ func (a orderUserPaymentChannelAdapter) GetAvailableChannels(filter ordertranspo
 	if a.payments == nil {
 		return nil, nil
 	}
-	return a.payments.GetAvailableChannels(service.AvailablePaymentChannelFilter{
+	return a.payments.GetAvailableChannels(paymentapp.AvailablePaymentChannelFilter{
 		TargetAmount: filter.TargetAmount,
 		User:         filter.User,
 		PaymentType:  filter.PaymentType,
@@ -354,14 +356,14 @@ func (a orderGuestCreateCaptchaAdapter) VerifyGuestCreateOrder(payload captchaht
 }
 
 type orderPaymentCreatorAdapter struct {
-	payments *service.PaymentService
+	payments *paymentapp.PaymentService
 }
 
 func (a orderPaymentCreatorAdapter) CreatePayment(input ordertransport.CreatePaymentInput) (*ordertransport.CreatePaymentResult, error) {
 	if a.payments == nil {
-		return nil, service.ErrPaymentInvalid
+		return nil, paymentapp.ErrPaymentInvalid
 	}
-	result, err := a.payments.CreatePayment(service.CreatePaymentInput{
+	result, err := a.payments.CreatePayment(paymentapp.CreatePaymentInput{
 		OrderID:       input.OrderID,
 		ChannelID:     input.ChannelID,
 		UseBalance:    input.UseBalance,

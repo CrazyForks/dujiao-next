@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
 	. "github.com/dujiao-next/internal/modules/order/application"
@@ -17,7 +19,6 @@ import (
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -42,7 +43,7 @@ func TestCancelExpiredOrderExpiresPendingPayments(t *testing.T) {
 		&coupondomain.CouponUsage{},
 		&cardsecretdomain.Batch{},
 		&cardsecretdomain.Secret{},
-		&models.Payment{},
+		&paymentdomain.Payment{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -67,7 +68,7 @@ func TestCancelExpiredOrderExpiresPendingPayments(t *testing.T) {
 		t.Fatalf("create order failed: %v", err)
 	}
 
-	pendingPayment := &models.Payment{
+	pendingPayment := &paymentdomain.Payment{
 		OrderID:         order.ID,
 		ChannelID:       1,
 		ProviderType:    constants.PaymentProviderEpay,
@@ -79,7 +80,7 @@ func TestCancelExpiredOrderExpiresPendingPayments(t *testing.T) {
 		CreatedAt:       now.Add(-2 * time.Hour),
 		UpdatedAt:       now.Add(-2 * time.Hour),
 	}
-	initiatedPayment := &models.Payment{
+	initiatedPayment := &paymentdomain.Payment{
 		OrderID:         order.ID,
 		ChannelID:       1,
 		ProviderType:    constants.PaymentProviderEpay,
@@ -91,7 +92,7 @@ func TestCancelExpiredOrderExpiresPendingPayments(t *testing.T) {
 		CreatedAt:       now.Add(-2 * time.Hour),
 		UpdatedAt:       now.Add(-2 * time.Hour),
 	}
-	successPayment := &models.Payment{
+	successPayment := &paymentdomain.Payment{
 		OrderID:         order.ID,
 		ChannelID:       1,
 		ProviderType:    constants.PaymentProviderEpay,
@@ -104,7 +105,7 @@ func TestCancelExpiredOrderExpiresPendingPayments(t *testing.T) {
 		UpdatedAt:       now.Add(-2 * time.Hour),
 		PaidAt:          &now,
 	}
-	if err := db.Create([]*models.Payment{pendingPayment, initiatedPayment, successPayment}).Error; err != nil {
+	if err := db.Create([]*paymentdomain.Payment{pendingPayment, initiatedPayment, successPayment}).Error; err != nil {
 		t.Fatalf("create payments failed: %v", err)
 	}
 
@@ -123,7 +124,7 @@ func TestCancelExpiredOrderExpiresPendingPayments(t *testing.T) {
 		t.Fatalf("expected canceled order, got: %+v", updated)
 	}
 
-	var reloaded []models.Payment
+	var reloaded []paymentdomain.Payment
 	if err := db.Order("id asc").Find(&reloaded, "order_id = ?", order.ID).Error; err != nil {
 		t.Fatalf("reload payments failed: %v", err)
 	}
@@ -158,7 +159,7 @@ func setupCancelPaymentTestDB(t *testing.T, namespace string) *gorm.DB {
 		&coupondomain.CouponUsage{},
 		&cardsecretdomain.Batch{},
 		&cardsecretdomain.Secret{},
-		&models.Payment{},
+		&paymentdomain.Payment{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -183,8 +184,8 @@ func newPendingOrderForCancel(orderNo string, userID uint, parentID *uint, now t
 	}
 }
 
-func newPaymentForOrder(orderID uint, status string, now time.Time) *models.Payment {
-	return &models.Payment{
+func newPaymentForOrder(orderID uint, status string, now time.Time) *paymentdomain.Payment {
+	return &paymentdomain.Payment{
 		OrderID:         orderID,
 		ChannelID:       1,
 		ProviderType:    constants.PaymentProviderEpay,
@@ -210,7 +211,7 @@ func TestCancelOrderExpiresPendingPayments(t *testing.T) {
 
 	pending := newPaymentForOrder(order.ID, constants.PaymentStatusPending, now)
 	initiated := newPaymentForOrder(order.ID, constants.PaymentStatusInitiated, now)
-	if err := db.Create([]*models.Payment{pending, initiated}).Error; err != nil {
+	if err := db.Create([]*paymentdomain.Payment{pending, initiated}).Error; err != nil {
 		t.Fatalf("create payments failed: %v", err)
 	}
 
@@ -229,7 +230,7 @@ func TestCancelOrderExpiresPendingPayments(t *testing.T) {
 		t.Fatalf("expected canceled order, got: %+v", updated)
 	}
 
-	var reloaded []models.Payment
+	var reloaded []paymentdomain.Payment
 	if err := db.Order("id asc").Find(&reloaded, "order_id = ?", order.ID).Error; err != nil {
 		t.Fatalf("reload payments failed: %v", err)
 	}
@@ -272,7 +273,7 @@ func TestUpdateOrderStatusAdminCancelExpiresPendingPaymentsSingleOrder(t *testin
 		t.Fatalf("expected canceled order, got: %+v", updated)
 	}
 
-	var reloaded models.Payment
+	var reloaded paymentdomain.Payment
 	if err := db.First(&reloaded, pending.ID).Error; err != nil {
 		t.Fatalf("reload payment failed: %v", err)
 	}
@@ -306,7 +307,7 @@ func TestCancelExpiredOrderExpiresPaymentsForParentAndChildren(t *testing.T) {
 	parentPayment := newPaymentForOrder(parent.ID, constants.PaymentStatusPending, now)
 	childAPayment := newPaymentForOrder(childA.ID, constants.PaymentStatusInitiated, now)
 	childBPayment := newPaymentForOrder(childB.ID, constants.PaymentStatusPending, now)
-	if err := db.Create([]*models.Payment{parentPayment, childAPayment, childBPayment}).Error; err != nil {
+	if err := db.Create([]*paymentdomain.Payment{parentPayment, childAPayment, childBPayment}).Error; err != nil {
 		t.Fatalf("create payments failed: %v", err)
 	}
 
@@ -326,7 +327,7 @@ func TestCancelExpiredOrderExpiresPaymentsForParentAndChildren(t *testing.T) {
 	}
 
 	for _, pid := range []uint{parentPayment.ID, childAPayment.ID, childBPayment.ID} {
-		var p models.Payment
+		var p paymentdomain.Payment
 		if err := db.First(&p, pid).Error; err != nil {
 			t.Fatalf("reload payment %d failed: %v", pid, err)
 		}

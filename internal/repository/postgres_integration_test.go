@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
@@ -19,7 +21,6 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
 	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
@@ -49,7 +50,7 @@ func setupPostgresIntegrationDB(t *testing.T) *gorm.DB {
 
 	cleanupModels := []interface{}{
 		&orderdomain.OrderItem{},
-		&models.Payment{},
+		&paymentdomain.Payment{},
 		&orderdomain.Order{},
 		&contentdomain.PostProduct{},
 		&productdomain.Product{},
@@ -67,7 +68,7 @@ func setupPostgresIntegrationDB(t *testing.T) *gorm.DB {
 		&contentdomain.Banner{},
 		&orderdomain.Order{},
 		&orderdomain.OrderItem{},
-		&models.Payment{},
+		&paymentdomain.Payment{},
 	); err != nil {
 		t.Fatalf("migrate postgres models failed: %v", err)
 	}
@@ -340,7 +341,7 @@ func TestPostgresDashboardQueries(t *testing.T) {
 		t.Fatalf("create order item failed: %v", err)
 	}
 
-	payment := &models.Payment{
+	payment := &paymentdomain.Payment{
 		OrderID:         order.ID,
 		ChannelID:       1,
 		ProviderType:    constants.PaymentProviderOfficial,

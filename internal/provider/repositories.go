@@ -23,6 +23,7 @@ import (
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	notificationgormstore "github.com/dujiao-next/internal/modules/notification/infrastructure/gormstore"
 	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+	paymentgormstore "github.com/dujiao-next/internal/modules/payment/infrastructure/gormstore"
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/infrastructure/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	reconciliationgormstore "github.com/dujiao-next/internal/modules/reconciliation/infrastructure/gormstore"
@@ -31,7 +32,6 @@ import (
 	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"
 	broadcaststore "github.com/dujiao-next/internal/modules/telegram/broadcast/infrastructure/gormstore"
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/repository"
 )
 
 func (c *Container) initRepositories() {
@@ -41,8 +41,8 @@ func (c *Container) initRepositories() {
 	c.ExternalIdentityStore = externalidentitystore.New(db)
 	c.EmailVerificationStore = emailverificationstore.New(db)
 	c.OrderStore = ordergormstore.New(db)
-	c.PaymentRepo = repository.NewPaymentRepository(db)
-	c.PaymentChannelRepo = repository.NewPaymentChannelRepository(db)
+	c.PaymentStore = paymentgormstore.New(db)
+	c.PaymentChannelStore = paymentgormstore.NewChannelStore(db)
 	c.CardSecretRepo = cardsecretgormstore.New(db)
 	c.CardSecretBatchRepo = cardsecretgormstore.NewBatch(db)
 	c.GiftCardRepo = giftcardgormstore.New(db)

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
@@ -14,7 +16,6 @@ import (
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -69,12 +70,12 @@ type PromotionLookup interface {
 
 // PaymentDirectory 支付记录查询端口。
 type PaymentDirectory interface {
-	ListByOrderID(orderID uint) ([]models.Payment, error)
+	ListByOrderID(orderID uint) ([]paymentdomain.Payment, error)
 }
 
 // PaymentChannelDirectory 支付渠道查询端口。
 type PaymentChannelDirectory interface {
-	ListByIDs(ids []uint) ([]models.PaymentChannel, error)
+	ListByIDs(ids []uint) ([]paymentdomain.PaymentChannel, error)
 }
 
 // AdminHandler 处理后台订单 HTTP。
@@ -117,7 +118,7 @@ type AdminOrderListItem struct {
 
 // AdminOrderPaymentItem 管理端订单详情中的支付项
 type AdminOrderPaymentItem struct {
-	models.Payment
+	paymentdomain.Payment
 	ChannelName        string `json:"channel_name"`
 	DisplayChannelType string `json:"display_channel_type,omitempty"`
 }
@@ -359,7 +360,7 @@ func (h *AdminHandler) AdminGetOrder(c *gin.Context) {
 	})
 }
 
-func (h *AdminHandler) resolvePaymentChannelNames(payments []models.Payment) (map[uint]string, error) {
+func (h *AdminHandler) resolvePaymentChannelNames(payments []paymentdomain.Payment) (map[uint]string, error) {
 	channelIDs := make([]uint, 0, len(payments))
 	seen := make(map[uint]struct{})
 	for _, payment := range payments {
@@ -386,7 +387,7 @@ func (h *AdminHandler) resolvePaymentChannelNames(payments []models.Payment) (ma
 	return result, nil
 }
 
-func paymentDisplayChannelType(payment models.Payment) string {
+func paymentDisplayChannelType(payment paymentdomain.Payment) string {
 	if displayChannelType := strings.TrimSpace(payment.DisplayChannelType); displayChannelType != "" {
 		return displayChannelType
 	}

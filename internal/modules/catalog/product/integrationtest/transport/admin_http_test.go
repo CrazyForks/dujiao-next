@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
@@ -22,7 +24,6 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 	cartgormstore "github.com/dujiao-next/internal/modules/cart/infrastructure/gormstore"
@@ -104,11 +105,11 @@ func (s *orderHistoryStore) CountOrderItemsByProduct(productID uint) (int64, err
 
 type paymentChannelStore struct{ db *gorm.DB }
 
-func (s *paymentChannelStore) ListByIDs(ids []uint) ([]models.PaymentChannel, error) {
+func (s *paymentChannelStore) ListByIDs(ids []uint) ([]paymentdomain.PaymentChannel, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	var rows []models.PaymentChannel
+	var rows []paymentdomain.PaymentChannel
 	err := s.db.Where("id IN ?", ids).Find(&rows).Error
 	return rows, err
 }
@@ -134,7 +135,7 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 		&mappingdomain.SKUMapping{},
 		&orderdomain.Order{},
 		&orderdomain.OrderItem{},
-		&models.PaymentChannel{},
+		&paymentdomain.PaymentChannel{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}

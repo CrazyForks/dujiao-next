@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -39,7 +40,7 @@ func TestTrendQueriesBucketByRequestedTimezone(t *testing.T) {
 		}
 	}
 
-	channel := &models.PaymentChannel{
+	channel := &paymentdomain.PaymentChannel{
 		Name:            "支付宝",
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeAlipay,
@@ -58,7 +59,7 @@ func TestTrendQueriesBucketByRequestedTimezone(t *testing.T) {
 		{createdAt: baseUTC, status: constants.PaymentStatusSuccess, amount: 30},
 		{createdAt: nextUTC, status: constants.PaymentStatusFailed, amount: 40},
 	} {
-		payment := &models.Payment{
+		payment := &paymentdomain.Payment{
 			OrderID:         uint(idx + 1),
 			ChannelID:       channel.ID,
 			ProviderType:    constants.PaymentProviderOfficial,

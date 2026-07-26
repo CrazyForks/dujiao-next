@@ -4,19 +4,22 @@ import (
 	"errors"
 	"fmt"
 
+	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
+	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderapp "github.com/dujiao-next/internal/modules/order/application"
 	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/provider"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
 )
@@ -31,7 +34,7 @@ func NewHandler(c *provider.Container) *channeltransport.Handler {
 		ProductMappingRepo: c.ProductMappingRepo, SKUMappingRepo: c.SKUMappingRepo,
 		UserAuthService: identityAdapter{auth: c.UserAuthService}, MemberLevelService: c.MemberLevelService,
 		SettingService: c.SettingService, OrderService: orderAdapter{orders: c.OrderService},
-		PaymentService: paymentAdapter{payments: c.PaymentService}, PaymentRepo: c.PaymentRepo,
+		PaymentService: paymentAdapter{payments: c.PaymentService}, PaymentStore: c.PaymentStore,
 	})
 }
 
@@ -141,25 +144,25 @@ func (a orderAdapter) ListOrdersByUser(filter channeltransport.OrderListFilter) 
 }
 
 type paymentAdapter struct {
-	payments *service.PaymentService
+	payments *paymentapp.PaymentService
 }
 
-func (a paymentAdapter) GetWalletRechargeChannels() ([]models.PaymentChannel, error) {
+func (a paymentAdapter) GetWalletRechargeChannels() ([]paymentdomain.PaymentChannel, error) {
 	return a.payments.GetWalletRechargeChannels()
 }
 
-func (a paymentAdapter) ListChannels(filter channeltransport.PaymentChannelListFilter) ([]models.PaymentChannel, int64, error) {
-	return a.payments.ListChannels(repository.PaymentChannelListFilter{
+func (a paymentAdapter) ListChannels(filter channeltransport.PaymentChannelListFilter) ([]paymentdomain.PaymentChannel, int64, error) {
+	return a.payments.ListChannels(paymentcontract.ChannelListFilter{
 		Page: filter.Page, PageSize: filter.PageSize, ActiveOnly: filter.ActiveOnly,
 	})
 }
 
-func (a paymentAdapter) GetAllowedChannelsForProducts(productIDs []uint) ([]models.PaymentChannel, error) {
+func (a paymentAdapter) GetAllowedChannelsForProducts(productIDs []uint) ([]paymentdomain.PaymentChannel, error) {
 	return a.payments.GetAllowedChannelsForProducts(productIDs)
 }
 
 func (a paymentAdapter) CreatePayment(input channeltransport.CreatePaymentInput) (*channeltransport.CreatePaymentResult, error) {
-	result, err := a.payments.CreatePayment(service.CreatePaymentInput{
+	result, err := a.payments.CreatePayment(paymentapp.CreatePaymentInput{
 		OrderID: input.OrderID, ChannelID: input.ChannelID, UseBalance: input.UseBalance,
 		ClientIP: input.ClientIP, Context: input.Context,
 	})
@@ -204,16 +207,16 @@ func mapError(err error) error {
 		{service.ErrManualFormFieldInvalid, channeltransport.ErrManualFormFieldInvalid},
 		{service.ErrManualFormTypeInvalid, channeltransport.ErrManualFormTypeInvalid},
 		{service.ErrManualFormOptionInvalid, channeltransport.ErrManualFormOptionInvalid},
-		{service.ErrPaymentInvalid, channeltransport.ErrPaymentInvalid},
+		{paymentapp.ErrPaymentInvalid, channeltransport.ErrPaymentInvalid},
 		{orderapp.ErrOrderNotFound, channeltransport.ErrOrderNotFound},
 		{orderapp.ErrOrderStatusInvalid, channeltransport.ErrOrderStatusInvalid},
-		{service.ErrPaymentChannelNotFound, channeltransport.ErrPaymentChannelNotFound},
-		{service.ErrPaymentChannelInactive, channeltransport.ErrPaymentChannelInactive},
-		{service.ErrPaymentProviderNotSupported, channeltransport.ErrPaymentProviderUnsupported},
-		{service.ErrPaymentChannelConfigInvalid, channeltransport.ErrPaymentChannelConfigInvalid},
-		{service.ErrPaymentGatewayRequestFailed, channeltransport.ErrPaymentGatewayRequestFailed},
-		{service.ErrPaymentGatewayResponseInvalid, channeltransport.ErrPaymentGatewayResponseInvalid},
-		{service.ErrPaymentCurrencyMismatch, channeltransport.ErrPaymentCurrencyMismatch},
+		{paymentapp.ErrPaymentChannelNotFound, channeltransport.ErrPaymentChannelNotFound},
+		{paymentapp.ErrPaymentChannelInactive, channeltransport.ErrPaymentChannelInactive},
+		{paymentapp.ErrPaymentProviderNotSupported, channeltransport.ErrPaymentProviderUnsupported},
+		{paymentapp.ErrPaymentChannelConfigInvalid, channeltransport.ErrPaymentChannelConfigInvalid},
+		{paymentapp.ErrPaymentGatewayRequestFailed, channeltransport.ErrPaymentGatewayRequestFailed},
+		{paymentapp.ErrPaymentGatewayResponseInvalid, channeltransport.ErrPaymentGatewayResponseInvalid},
+		{paymentapp.ErrPaymentCurrencyMismatch, channeltransport.ErrPaymentCurrencyMismatch},
 		{walletcontract.ErrOnlyPaymentRequired, channeltransport.ErrWalletOnlyPaymentRequired},
 	} {
 		if errors.Is(err, mapping.source) {

@@ -4,10 +4,11 @@ import (
 	"testing"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -17,7 +18,7 @@ func TestPaymentStatsExcludeWalletProvider(t *testing.T) {
 	repo, db := setupDashboardRepositoryTest(t)
 	now := time.Now().UTC().Truncate(time.Second)
 
-	channel := &models.PaymentChannel{
+	channel := &paymentdomain.PaymentChannel{
 		Name:            "支付宝",
 		ProviderType:    constants.PaymentProviderOfficial,
 		ChannelType:     constants.PaymentChannelTypeAlipay,
@@ -29,7 +30,7 @@ func TestPaymentStatsExcludeWalletProvider(t *testing.T) {
 		t.Fatalf("create channel failed: %v", err)
 	}
 
-	onlineSuccess := &models.Payment{
+	onlineSuccess := &paymentdomain.Payment{
 		OrderID:         1,
 		ChannelID:       channel.ID,
 		ProviderType:    constants.PaymentProviderOfficial,
@@ -47,7 +48,7 @@ func TestPaymentStatsExcludeWalletProvider(t *testing.T) {
 		t.Fatalf("create online success payment failed: %v", err)
 	}
 
-	onlineFailed := &models.Payment{
+	onlineFailed := &paymentdomain.Payment{
 		OrderID:         2,
 		ChannelID:       channel.ID,
 		ProviderType:    constants.PaymentProviderOfficial,
@@ -65,7 +66,7 @@ func TestPaymentStatsExcludeWalletProvider(t *testing.T) {
 		t.Fatalf("create online failed payment failed: %v", err)
 	}
 
-	walletSuccess := &models.Payment{
+	walletSuccess := &paymentdomain.Payment{
 		OrderID:         3,
 		ChannelID:       0,
 		ProviderType:    constants.PaymentProviderWallet,
@@ -81,6 +82,25 @@ func TestPaymentStatsExcludeWalletProvider(t *testing.T) {
 	}
 	if err := db.Create(walletSuccess).Error; err != nil {
 		t.Fatalf("create wallet payment failed: %v", err)
+	}
+	deletedAt := now.Add(time.Minute)
+	deletedOnlineSuccess := &paymentdomain.Payment{
+		OrderID:         4,
+		ChannelID:       channel.ID,
+		ProviderType:    constants.PaymentProviderOfficial,
+		ChannelType:     constants.PaymentChannelTypeAlipay,
+		InteractionMode: constants.PaymentInteractionRedirect,
+		Amount:          money.FromDecimal(decimal.NewFromInt(999)),
+		FeeRate:         money.FromDecimal(decimal.Zero),
+		FeeAmount:       money.FromDecimal(decimal.Zero),
+		Currency:        "CNY",
+		Status:          constants.PaymentStatusSuccess,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+		DeletedAt:       &deletedAt,
+	}
+	if err := db.Create(deletedOnlineSuccess).Error; err != nil {
+		t.Fatalf("create soft-deleted online payment failed: %v", err)
 	}
 
 	startAt := now.Add(-time.Hour)
@@ -163,7 +183,7 @@ func TestGetPaymentOrderAlertCountsExcludesChildOrdersAndWalletPayments(t *testi
 		t.Fatalf("create child pending order failed: %v", err)
 	}
 
-	onlineFailed := &models.Payment{
+	onlineFailed := &paymentdomain.Payment{
 		OrderID:         parentOrder.ID,
 		ChannelID:       1,
 		ProviderType:    constants.PaymentProviderOfficial,
@@ -181,7 +201,7 @@ func TestGetPaymentOrderAlertCountsExcludesChildOrdersAndWalletPayments(t *testi
 		t.Fatalf("create online failed payment failed: %v", err)
 	}
 
-	walletFailed := &models.Payment{
+	walletFailed := &paymentdomain.Payment{
 		OrderID:         parentOrder.ID,
 		ProviderType:    constants.PaymentProviderWallet,
 		ChannelType:     constants.PaymentChannelTypeBalance,

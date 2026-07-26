@@ -5,11 +5,13 @@ import (
 	"errors"
 	"strings"
 
+	paymentpresenter "github.com/dujiao-next/internal/modules/payment/transport/presenter"
+
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
-	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/models"
 	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	orderpresenter "github.com/dujiao-next/internal/modules/order/transport/presenter"
@@ -44,7 +46,7 @@ type CreatePaymentInput struct {
 
 // CreatePaymentResult 创建支付结果。
 type CreatePaymentResult struct {
-	Payment          *models.Payment
+	Payment          *paymentdomain.Payment
 	OrderPaid        bool
 	WalletPaidAmount money.Amount
 	OnlinePayAmount  money.Amount
@@ -302,7 +304,7 @@ func (h *CreateHandler) respondCreateAndPay(c *gin.Context, order *orderdomain.O
 		resp["interaction_mode"] = result.Payment.InteractionMode
 		resp["pay_url"] = result.Payment.PayURL
 		resp["qr_code"] = result.Payment.QRCode
-		if info := dto.ExtractCryptoWalletInfo(result.Payment.ProviderType, result.Payment.InteractionMode, result.Payment.ProviderPayload); info.HasAny() {
+		if info := paymentpresenter.ExtractCryptoWalletInfo(result.Payment.ProviderType, result.Payment.InteractionMode, result.Payment.ProviderPayload); info.HasAny() {
 			if info.Address != "" {
 				resp["wallet_address"] = info.Address
 			}

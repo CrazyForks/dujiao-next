@@ -4,12 +4,13 @@ import (
 	"net/http"
 	"strings"
 
+	paymentpresenter "github.com/dujiao-next/internal/modules/payment/transport/presenter"
+
 	"github.com/dujiao-next/internal/platform/http/channelresponse"
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/dto"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -191,7 +192,7 @@ func (h *ChannelHandler) CreateWalletRecharge(c *gin.Context) {
 		"qr_code":          result.Payment.QRCode,
 		"expires_at":       result.Payment.ExpiredAt,
 	}
-	if info := dto.ExtractCryptoWalletInfo(result.Payment.ProviderType, result.Payment.InteractionMode, result.Payment.ProviderPayload); info.HasAny() {
+	if info := paymentpresenter.ExtractCryptoWalletInfo(result.Payment.ProviderType, result.Payment.InteractionMode, result.Payment.ProviderPayload); info.HasAny() {
 		if info.Address != "" {
 			paymentBlock["wallet_address"] = info.Address
 		}

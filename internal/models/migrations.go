@@ -12,6 +12,7 @@ import (
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
@@ -427,7 +428,7 @@ func ensurePaymentChannelBepusdtConfigMigration() error {
 	}
 
 	return DB.Transaction(func(tx *gorm.DB) error {
-		var channels []PaymentChannel
+		var channels []paymentdomain.PaymentChannel
 		if err := tx.Where("provider_type = ?", "bepusdt").Find(&channels).Error; err != nil {
 			return err
 		}

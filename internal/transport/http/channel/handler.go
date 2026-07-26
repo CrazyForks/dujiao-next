@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
@@ -15,7 +17,6 @@ import (
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -134,8 +135,8 @@ type CreatePaymentInput struct {
 }
 
 type CreatePaymentResult struct {
-	Payment          *models.Payment
-	Channel          *models.PaymentChannel
+	Payment          *paymentdomain.Payment
+	Channel          *paymentdomain.PaymentChannel
 	OrderPaid        bool
 	WalletPaidAmount money.Amount
 	OnlinePayAmount  money.Amount
@@ -193,15 +194,15 @@ type Orders interface {
 }
 
 type Payments interface {
-	GetWalletRechargeChannels() ([]models.PaymentChannel, error)
-	ListChannels(filter PaymentChannelListFilter) ([]models.PaymentChannel, int64, error)
-	GetAllowedChannelsForProducts(productIDs []uint) ([]models.PaymentChannel, error)
+	GetWalletRechargeChannels() ([]paymentdomain.PaymentChannel, error)
+	ListChannels(filter PaymentChannelListFilter) ([]paymentdomain.PaymentChannel, int64, error)
+	GetAllowedChannelsForProducts(productIDs []uint) ([]paymentdomain.PaymentChannel, error)
 	CreatePayment(input CreatePaymentInput) (*CreatePaymentResult, error)
 }
 
-type PaymentRepository interface {
-	GetLatestPendingByOrder(orderID uint, now time.Time) (*models.Payment, error)
-	GetByID(id uint) (*models.Payment, error)
+type PaymentStoresitory interface {
+	GetLatestPendingByOrder(orderID uint, now time.Time) (*paymentdomain.Payment, error)
+	GetByID(id uint) (*paymentdomain.Payment, error)
 }
 
 type Dependencies struct {
@@ -216,7 +217,7 @@ type Dependencies struct {
 	SettingService     Settings
 	OrderService       Orders
 	PaymentService     Payments
-	PaymentRepo        PaymentRepository
+	PaymentStore       PaymentStoresitory
 }
 
 type Handler struct {
@@ -227,7 +228,7 @@ func New(dependencies Dependencies) *Handler {
 	if dependencies.CategoryService == nil || dependencies.CategoryRepo == nil || dependencies.ProductService == nil ||
 		dependencies.ProductRepo == nil || dependencies.ProductMappingRepo == nil || dependencies.SKUMappingRepo == nil ||
 		dependencies.UserAuthService == nil || dependencies.MemberLevelService == nil || dependencies.SettingService == nil ||
-		dependencies.OrderService == nil || dependencies.PaymentService == nil || dependencies.PaymentRepo == nil {
+		dependencies.OrderService == nil || dependencies.PaymentService == nil || dependencies.PaymentStore == nil {
 		panic("channel handler: required dependency is nil")
 	}
 	return &Handler{Dependencies: dependencies}

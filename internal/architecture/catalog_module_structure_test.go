@@ -197,7 +197,7 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 		"TestAdminServiceUpdateWholesalePricesCanonicalizesSKU",
 	})
 	assertFileDeclaresTypes(t, filepath.Join(writeRoot, "service.go"), []string{
-		"ProductRepository", "SKURepository", "CategoryRepository", "PaymentChannelRepository",
+		"ProductRepository", "SKURepository", "CategoryRepository", "PaymentChannelStoresitory",
 		"CardSecretStockRepository", "TransactionRepositories", "UnitOfWork", "ErrorSet", "Options",
 		"WriteService", "CreateProductInput", "WholesalePriceInput", "ProductSKUInput",
 	})

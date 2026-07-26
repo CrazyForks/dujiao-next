@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"testing"
 
+	paymentgormstore "github.com/dujiao-next/internal/modules/payment/infrastructure/gormstore"
+
 	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 
@@ -25,7 +27,6 @@ import (
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
@@ -209,7 +210,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 		Carts:             cartgormstore.New(db),
 		ProductMappings:   mappinggormstore.NewMappingStore(db),
 		Orders:            ordergormstore.New(db),
-		PaymentChannels:   repository.NewPaymentChannelRepository(db),
+		PaymentChannels:   paymentgormstore.NewChannelStore(db),
 	})
 
 	product := productdomain.Product{

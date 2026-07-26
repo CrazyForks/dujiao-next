@@ -9,7 +9,7 @@ import (
 
 func TestPaymentCallbackImplementationIsSplitByResponsibility(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	serviceDirectory := filepath.Join(repositoryRoot, "internal", "service")
+	serviceDirectory := filepath.Join(repositoryRoot, "internal", "modules", "payment", "application")
 	expected := map[string][]string{
 		"payment_service_callback.go": {
 			"HandleCallback", "updateCallbackMeta", "applyPaymentUpdate",
@@ -45,7 +45,7 @@ func TestPaymentCallbackImplementationIsSplitByResponsibility(t *testing.T) {
 
 func TestPaymentCallbackTypesLiveWithTheirResponsibilities(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	serviceDirectory := filepath.Join(repositoryRoot, "internal", "service")
+	serviceDirectory := filepath.Join(repositoryRoot, "internal", "modules", "payment", "application")
 	expectedOwner := map[string]string{
 		"PaymentCallbackInput": "payment_service_callback.go",
 	}

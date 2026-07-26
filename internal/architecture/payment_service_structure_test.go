@@ -10,20 +10,27 @@ import (
 
 func TestPaymentServiceImplementationIsSplitByResponsibility(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	serviceDirectory := filepath.Join(repositoryRoot, "internal", "service")
+	serviceDirectory := filepath.Join(repositoryRoot, "internal", "modules", "payment", "application")
 	expected := map[string][]string{
 		"payment_service.go": {
 			"SetProcurementService", "SetDownstreamCallbackService", "SetMemberLevelService",
-			"NewPaymentService", "paymentLogger",
+			"NewPaymentService", "ListPayments", "GetPayment", "ListChannels", "GetChannel",
+			"paymentLogger",
 		},
-		"payment_service_create.go":   {"hasProviderResult", "CreatePayment"},
-		"payment_service_recharge.go": {"CreateWalletRechargePayment", "generateWalletRechargeNo"},
-		"payment_service_query.go":    {"ListPayments", "GetPayment", "ListChannels", "GetChannel"},
-		"payment_service_gateway.go": {
+		"payment_service_create.go": {"hasProviderResult", "CreatePayment"},
+		"payment_service_recharge.go": {
+			"CreateWalletRechargePayment", "generateWalletRechargeNo",
+			"ExpireWalletRechargePayment", "canExpireWalletRechargePayment",
+		},
+		"payment_service_provider.go": {
+			"detachOutboundRequestContext",
 			"shouldUseGatewayOrderNo", "buildGatewayOrderNo", "resolveGatewayOrderNo",
 			"resolveProviderOrderNo", "matchesBusinessOrderNo", "buildPaymentReturnQuery",
+			"applyProviderPayment", "ValidateChannel", "resolveTenantReturnURL",
+			"tenantReturnPath", "resolveTokenPayOrderUserKey",
 		},
 		"payment_service_rules.go": {
+			"normalizeOrderAmount", "pickFirstNonEmpty",
 			"shouldMarkFulfilling", "shouldUseCNYPaymentCurrency", "validatePaymentAmountForChannel",
 			"validatePaymentCurrencyForChannel", "resolveExpireMinutes", "normalizePaymentStatus",
 			"isPaymentStatusValid", "shouldAutoFulfill", "isOrderFullyAutoFulfill",
@@ -33,6 +40,8 @@ func TestPaymentServiceImplementationIsSplitByResponsibility(t *testing.T) {
 			"computeProductChannelIntersection",
 			"validateProductPaymentChannel", "validateWalletRechargeChannel",
 			"GetAllowedChannelsForProducts", "GetWalletRechargeChannels", "GetAllowedChannelIDsForOrder",
+			"GetAvailableChannels", "matchesChannelAmount", "matchesChannelRole",
+			"matchesChannelMemberLevel", "matchesChannelPaymentType",
 		},
 	}
 
@@ -49,7 +58,7 @@ func TestPaymentServiceImplementationIsSplitByResponsibility(t *testing.T) {
 
 func TestPaymentServiceInputTypesLiveWithTheirResponsibilities(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	serviceDirectory := filepath.Join(repositoryRoot, "internal", "service")
+	serviceDirectory := filepath.Join(repositoryRoot, "internal", "modules", "payment", "application")
 	expectedOwner := map[string]string{
 		"PaymentService":                    "payment_service.go",
 		"PaymentServiceOptions":             "payment_service.go",

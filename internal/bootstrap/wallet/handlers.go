@@ -19,7 +19,7 @@ func New(c *provider.Container) Handlers {
 			wallets, wallets, c.UserStore, c.SettingService,
 		),
 		Admin: wallettransport.NewAdminHandler(
-			wallets, c.UserStore, c.PaymentChannelRepo, c.PaymentRepo, c.SettingService,
+			wallets, c.UserStore, c.PaymentChannelStore, c.PaymentStore, c.SettingService,
 		),
 		Channel: wallettransport.NewChannelHandler(
 			wallets,

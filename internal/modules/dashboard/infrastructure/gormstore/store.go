@@ -3,8 +3,9 @@ package gormstore
 import (
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
 
 	"gorm.io/gorm"
@@ -31,8 +32,9 @@ func paidOrderStatuses() []string {
 }
 
 func onlinePaymentBase(db *gorm.DB, startAt, endAt time.Time) *gorm.DB {
-	return db.Model(&models.Payment{}).
-		Where("created_at >= ? AND created_at < ? AND provider_type <> ?", startAt, endAt, constants.PaymentProviderWallet)
+	return db.Model(&paymentdomain.Payment{}).
+		Where("payments.deleted_at IS NULL").
+		Where("payments.created_at >= ? AND payments.created_at < ? AND payments.provider_type <> ?", startAt, endAt, constants.PaymentProviderWallet)
 }
 
 var _ dashboard.Repository = (*Store)(nil)

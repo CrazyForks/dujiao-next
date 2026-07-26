@@ -28,8 +28,8 @@ func TestResellerModuleOwnsCompleteVerticalSlice(t *testing.T) {
 	assertDirectoryGoFileBudget(t, applicationRoot, 17)
 
 	storeRoot := filepath.Join(moduleRoot, "infrastructure", "gormstore")
-	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "store.go"), []string{"Store", "AccountingTransactionBridge"})
-	assertFileDeclaresFunctions(t, filepath.Join(storeRoot, "store.go"), []string{"New", "Migrate", "NewAccountingTransactionBridge"})
+	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "store.go"), []string{"Store"})
+	assertFileDeclaresFunctions(t, filepath.Join(storeRoot, "store.go"), []string{"New", "Migrate"})
 	assertDirectoryGoFileBudget(t, storeRoot, 18)
 
 	transportRoot := filepath.Join(moduleRoot, "transport", "http")

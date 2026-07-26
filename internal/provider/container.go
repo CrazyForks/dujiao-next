@@ -55,6 +55,9 @@ import (
 	orderrefund "github.com/dujiao-next/internal/modules/order/application/refund"
 	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
 	orderriskapp "github.com/dujiao-next/internal/modules/orderrisk/application"
+	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
+	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+	paymentprovider "github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/provider"
 	procurementapp "github.com/dujiao-next/internal/modules/procurement/application"
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/infrastructure/gormstore"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
@@ -73,9 +76,7 @@ import (
 	uploadapp "github.com/dujiao-next/internal/modules/upload/application"
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
-	paymentprovider "github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 )
 
@@ -90,8 +91,8 @@ type Container struct {
 	ExternalIdentityStore  externalidentitycontract.Store
 	EmailVerificationStore emailverificationcontract.Store
 	OrderStore             ordercontract.Store
-	PaymentRepo            repository.PaymentRepository
-	PaymentChannelRepo     repository.PaymentChannelRepository
+	PaymentStore           paymentcontract.Store
+	PaymentChannelStore    paymentcontract.ChannelStore
 	CardSecretRepo         *cardsecretgormstore.Store
 	CardSecretBatchRepo    *cardsecretgormstore.BatchStore
 	GiftCardRepo           *giftcardgormstore.Store
@@ -127,65 +128,64 @@ type Container struct {
 	MemberLevelUserRepo    memberlevelcontract.UserRepository
 
 	// Services
-	AuthzService                   *authz.Service
-	AuthService                    *adminauthapp.Service
-	TOTPService                    *admintotpapp.Service
-	UserTOTPService                *usertotpapp.Service
-	UserAuthService                *userauthapp.Service
-	TelegramAuthService            *telegramauthapp.Service
-	EmailService                   *service.EmailService
-	CaptchaService                 *captchaapp.Service
-	UploadService                  *uploadapp.Service
-	ProductReadService             *productapplication.Service
-	ProductAdminService            *productadmin.AdminService
-	ProductWriteService            *productwrite.WriteService
-	ContentPostService             *contentapp.PostService
-	ContentPostCategoryService     *contentapp.PostCategoryService
-	ContentBannerService           *contentapp.BannerService
-	ContentMediaService            *contentapp.MediaService
-	CategoryService                *categoryapp.Service
-	SettingService                 *settingsapp.Service
-	SitemapService                 *sitemapapp.Service
-	CartService                    *cartapp.Service
-	WalletService                  *walletapp.Service
-	OrderRefundService             *orderrefund.Service
-	OrderService                   *orderapp.OrderService
-	FulfillmentService             *fulfillmentapp.Service
-	CouponAdminService             *couponapp.AdminService
-	PromotionAdminService          *promotionapp.AdminService
-	PaymentService                 *service.PaymentService
-	CardSecretService              *cardsecretapp.Service
-	GiftCardService                *giftcardapp.Service
-	UserLoginLogService            *auditlogapp.UserLoginService
-	AuthzAuditService              *auditlogapp.AuthzService
-	AdminLoginLogService           *auditlogapp.AdminLoginService
-	NotificationLogService         *notificationapp.LogService
-	DashboardService               *dashboardapp.Service
-	NotificationService            *notificationapp.Service
-	AffiliateService               *affiliateapp.Service
-	ResellerDomainResolver         *reseller.DomainResolver
-	ResellerPricingResolver        *orderapp.ResellerPricingResolver
-	ResellerManagementService      *reseller.ManagementService
-	ResellerSiteConfigService      *reseller.SiteConfigService
-	ResellerProductSettingService  *reseller.ProductSettingService
-	ResellerAccountingQuery        *reseller.AccountingQueryService
-	ResellerAccountingWithdraw     *reseller.AccountingWithdrawService
-	ResellerAccountingLedger       *reseller.AccountingLedgerService
-	ResellerAccountingTransactions *resellergormstore.AccountingTransactionBridge
-	ResellerOrderService           *reseller.OrderQueryService
-	ResellerOperationsService      *reseller.OperationsService
-	ApiCredentialService           *apicredentialapp.Service
-	SiteConnectionService          *siteconnectionapp.Service
-	ProductMappingService          *mappingapp.Service
-	ProcurementOrderService        *procurementapp.Service
-	DownstreamCallbackService      *downstreamcallbackapp.Service
-	ReconciliationService          *reconciliationapp.Service
-	ChannelClientService           *channelclientapp.Service
-	TelegramBroadcastService       *broadcastapp.Service
-	MemberLevelService             *memberlevelapp.Service
-	AdProxyService                 *adproxyapp.Service
-	OrderRiskControlService        *orderriskapp.Service
-	ComplianceService              *complianceapp.Service
+	AuthzService                  *authz.Service
+	AuthService                   *adminauthapp.Service
+	TOTPService                   *admintotpapp.Service
+	UserTOTPService               *usertotpapp.Service
+	UserAuthService               *userauthapp.Service
+	TelegramAuthService           *telegramauthapp.Service
+	EmailService                  *service.EmailService
+	CaptchaService                *captchaapp.Service
+	UploadService                 *uploadapp.Service
+	ProductReadService            *productapplication.Service
+	ProductAdminService           *productadmin.AdminService
+	ProductWriteService           *productwrite.WriteService
+	ContentPostService            *contentapp.PostService
+	ContentPostCategoryService    *contentapp.PostCategoryService
+	ContentBannerService          *contentapp.BannerService
+	ContentMediaService           *contentapp.MediaService
+	CategoryService               *categoryapp.Service
+	SettingService                *settingsapp.Service
+	SitemapService                *sitemapapp.Service
+	CartService                   *cartapp.Service
+	WalletService                 *walletapp.Service
+	OrderRefundService            *orderrefund.Service
+	OrderService                  *orderapp.OrderService
+	FulfillmentService            *fulfillmentapp.Service
+	CouponAdminService            *couponapp.AdminService
+	PromotionAdminService         *promotionapp.AdminService
+	PaymentService                *paymentapp.PaymentService
+	CardSecretService             *cardsecretapp.Service
+	GiftCardService               *giftcardapp.Service
+	UserLoginLogService           *auditlogapp.UserLoginService
+	AuthzAuditService             *auditlogapp.AuthzService
+	AdminLoginLogService          *auditlogapp.AdminLoginService
+	NotificationLogService        *notificationapp.LogService
+	DashboardService              *dashboardapp.Service
+	NotificationService           *notificationapp.Service
+	AffiliateService              *affiliateapp.Service
+	ResellerDomainResolver        *reseller.DomainResolver
+	ResellerPricingResolver       *orderapp.ResellerPricingResolver
+	ResellerManagementService     *reseller.ManagementService
+	ResellerSiteConfigService     *reseller.SiteConfigService
+	ResellerProductSettingService *reseller.ProductSettingService
+	ResellerAccountingQuery       *reseller.AccountingQueryService
+	ResellerAccountingWithdraw    *reseller.AccountingWithdrawService
+	ResellerAccountingLedger      *reseller.AccountingLedgerService
+	ResellerOrderService          *reseller.OrderQueryService
+	ResellerOperationsService     *reseller.OperationsService
+	ApiCredentialService          *apicredentialapp.Service
+	SiteConnectionService         *siteconnectionapp.Service
+	ProductMappingService         *mappingapp.Service
+	ProcurementOrderService       *procurementapp.Service
+	DownstreamCallbackService     *downstreamcallbackapp.Service
+	ReconciliationService         *reconciliationapp.Service
+	ChannelClientService          *channelclientapp.Service
+	TelegramBroadcastService      *broadcastapp.Service
+	MemberLevelService            *memberlevelapp.Service
+	AdProxyService                *adproxyapp.Service
+	OrderRiskControlService       *orderriskapp.Service
+	ComplianceService             *complianceapp.Service
 
 	PaymentProviderRegistry *paymentprovider.Registry
 }

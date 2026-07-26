@@ -3,7 +3,8 @@ package productwrite
 import (
 	"errors"
 
-	"github.com/dujiao-next/internal/models"
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/shopspring/decimal"
@@ -32,9 +33,9 @@ type CategoryRepository interface {
 	productdomain.CategoryAssignmentRepository
 }
 
-// PaymentChannelRepository 是商品允许支付渠道过滤所需的最小端口。
-type PaymentChannelRepository interface {
-	ListByIDs(ids []uint) ([]models.PaymentChannel, error)
+// PaymentChannelStoresitory 是商品允许支付渠道过滤所需的最小端口。
+type PaymentChannelStoresitory interface {
+	ListByIDs(ids []uint) ([]paymentdomain.PaymentChannel, error)
 }
 
 // CardSecretStockRepository 是修改自动发货 SKU 前所需的库存保护端口。
@@ -74,7 +75,7 @@ type Options struct {
 	Products        ProductRepository
 	SKUs            SKURepository
 	Categories      CategoryRepository
-	PaymentChannels PaymentChannelRepository
+	PaymentChannels PaymentChannelStoresitory
 	Transactions    UnitOfWork
 	Errors          ErrorSet
 }
@@ -84,7 +85,7 @@ type WriteService struct {
 	products        ProductRepository
 	skus            SKURepository
 	categories      CategoryRepository
-	paymentChannels PaymentChannelRepository
+	paymentChannels PaymentChannelStoresitory
 	transactions    UnitOfWork
 	errors          ErrorSet
 }

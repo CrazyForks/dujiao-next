@@ -20,6 +20,8 @@ import (
 	downstreamcallbackqueue "github.com/dujiao-next/internal/modules/downstreamcallback/infrastructure/queueadapter"
 	notificationapp "github.com/dujiao-next/internal/modules/notification/application"
 	notificationasyncqueue "github.com/dujiao-next/internal/modules/notification/infrastructure/asyncqueue"
+	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
+	paymentqueue "github.com/dujiao-next/internal/modules/payment/infrastructure/queueadapter"
 	procurementapp "github.com/dujiao-next/internal/modules/procurement/application"
 	procurementmapping "github.com/dujiao-next/internal/modules/procurement/infrastructure/mappingreader"
 	procurementnotification "github.com/dujiao-next/internal/modules/procurement/infrastructure/notificationadapter"
@@ -35,7 +37,6 @@ import (
 	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
 	notifyapp "github.com/dujiao-next/internal/modules/telegram/notify/application"
 	notifybotapi "github.com/dujiao-next/internal/modules/telegram/notify/infrastructure/botapi"
-	"github.com/dujiao-next/internal/service"
 )
 
 // initIntegrationServices 装配通知、站点对接、支付、采购、渠道与 Telegram 集成。
@@ -91,16 +92,16 @@ func (c *Container) initIntegrationServices() {
 		Queue:       downstreamQueue,
 		Deliverer:   downstreamcallbackclient.New(),
 	})
-	c.PaymentService = service.NewPaymentService(service.PaymentServiceOptions{
+	c.PaymentService = paymentapp.NewPaymentService(paymentapp.PaymentServiceOptions{
 		OrderStore:              c.OrderStore,
 		ProductRepo:             c.ProductRepo,
 		ProductSKURepo:          c.ProductSKURepo,
-		PaymentRepo:             c.PaymentRepo,
-		ChannelRepo:             c.PaymentChannelRepo,
+		PaymentStore:            c.PaymentStore,
+		ChannelStore:            c.PaymentChannelStore,
 		WalletRepo:              c.WalletRepo,
 		UserStore:               c.UserStore,
 		ExternalIdentityStore:   c.ExternalIdentityStore,
-		QueueClient:             c.QueueClient,
+		Queue:                   paymentqueue.New(c.QueueClient),
 		WalletService:           c.WalletService,
 		SettingService:          c.SettingService,
 		DefaultEmailConfig:      c.Config.Email,
@@ -108,7 +109,7 @@ func (c *Container) initIntegrationServices() {
 		AffiliateService:        c.AffiliateService,
 		NotificationService:     c.NotificationService,
 		PaymentProviderRegistry: c.PaymentProviderRegistry,
-		ResellerAccounting:      c.ResellerAccountingTransactions,
+		ResellerAccounting:      c.ResellerAccountingLedger,
 	})
 	c.ProcurementOrderService = procurementapp.NewService(procurementapp.Options{
 		Repository:         c.ProcurementOrderRepo,

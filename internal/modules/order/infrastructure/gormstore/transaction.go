@@ -3,6 +3,8 @@ package gormstore
 import (
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
@@ -20,7 +22,6 @@ import (
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 
 	"gorm.io/gorm"
 )
@@ -88,8 +89,8 @@ func (tx transaction) ExpirePendingPaymentsByOrderIDs(orderIDs []uint, expiredAt
 	if len(orderIDs) == 0 {
 		return 0, nil
 	}
-	result := tx.db.Model(&models.Payment{}).
-		Where("order_id IN ? AND status IN ?", orderIDs, []string{constants.PaymentStatusInitiated, constants.PaymentStatusPending}).
+	result := tx.db.Model(&paymentdomain.Payment{}).
+		Where("deleted_at IS NULL AND order_id IN ? AND status IN ?", orderIDs, []string{constants.PaymentStatusInitiated, constants.PaymentStatusPending}).
 		Updates(map[string]interface{}{
 			"status":     constants.PaymentStatusExpired,
 			"expired_at": expiredAt,

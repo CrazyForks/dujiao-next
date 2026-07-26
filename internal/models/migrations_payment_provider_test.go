@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
@@ -21,7 +22,7 @@ func setupPaymentProviderRenameTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	DB = db
-	if err := db.AutoMigrate(&PaymentChannel{}, &settingsstore.SettingRecord{}); err != nil {
+	if err := db.AutoMigrate(&paymentdomain.PaymentChannel{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 	return db
@@ -32,21 +33,21 @@ func TestEnsurePaymentProviderBepusdtRenameMigration_RenamesAndIsIdempotent(t *t
 
 	// Seed: 两条 provider_type='epusdt'（旧 BEpusdt）+ 一条无关
 	now := time.Now()
-	if err := db.Create(&PaymentChannel{
+	if err := db.Create(&paymentdomain.PaymentChannel{
 		Name: "old-bepusdt-1", ProviderType: "epusdt", ChannelType: "usdt-trc20",
 		InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{},
 		CreatedAt: now, UpdatedAt: now,
 	}).Error; err != nil {
 		t.Fatalf("seed channel 1 failed: %v", err)
 	}
-	if err := db.Create(&PaymentChannel{
+	if err := db.Create(&paymentdomain.PaymentChannel{
 		Name: "old-bepusdt-2", ProviderType: "epusdt", ChannelType: "trx",
 		InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{},
 		CreatedAt: now, UpdatedAt: now,
 	}).Error; err != nil {
 		t.Fatalf("seed channel 2 failed: %v", err)
 	}
-	if err := db.Create(&PaymentChannel{
+	if err := db.Create(&paymentdomain.PaymentChannel{
 		Name: "alipay", ProviderType: "official", ChannelType: "alipay",
 		InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{},
 		CreatedAt: now, UpdatedAt: now,
@@ -59,7 +60,7 @@ func TestEnsurePaymentProviderBepusdtRenameMigration_RenamesAndIsIdempotent(t *t
 		t.Fatalf("first migration failed: %v", err)
 	}
 
-	var renamed []PaymentChannel
+	var renamed []paymentdomain.PaymentChannel
 	if err := db.Where("provider_type = ?", "bepusdt").Find(&renamed).Error; err != nil {
 		t.Fatalf("query bepusdt failed: %v", err)
 	}
@@ -68,7 +69,7 @@ func TestEnsurePaymentProviderBepusdtRenameMigration_RenamesAndIsIdempotent(t *t
 	}
 
 	var stillEpusdt int64
-	if err := db.Model(&PaymentChannel{}).Where("provider_type = ?", "epusdt").Count(&stillEpusdt).Error; err != nil {
+	if err := db.Model(&paymentdomain.PaymentChannel{}).Where("provider_type = ?", "epusdt").Count(&stillEpusdt).Error; err != nil {
 		t.Fatalf("count epusdt failed: %v", err)
 	}
 	if stillEpusdt != 0 {
@@ -85,7 +86,7 @@ func TestEnsurePaymentProviderBepusdtRenameMigration_RenamesAndIsIdempotent(t *t
 	}
 
 	// Now seed a NEW real epusdt channel (post-migration scenario)
-	if err := db.Create(&PaymentChannel{
+	if err := db.Create(&paymentdomain.PaymentChannel{
 		Name: "real-epusdt", ProviderType: "epusdt", ChannelType: "usdt-trc20",
 		InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{},
 		CreatedAt: time.Now(), UpdatedAt: time.Now(),
@@ -99,7 +100,7 @@ func TestEnsurePaymentProviderBepusdtRenameMigration_RenamesAndIsIdempotent(t *t
 	}
 
 	var realEpusdtCount int64
-	if err := db.Model(&PaymentChannel{}).Where("name = ? AND provider_type = ?", "real-epusdt", "epusdt").Count(&realEpusdtCount).Error; err != nil {
+	if err := db.Model(&paymentdomain.PaymentChannel{}).Where("name = ? AND provider_type = ?", "real-epusdt", "epusdt").Count(&realEpusdtCount).Error; err != nil {
 		t.Fatalf("count real epusdt failed: %v", err)
 	}
 	if realEpusdtCount != 1 {
@@ -108,7 +109,7 @@ func TestEnsurePaymentProviderBepusdtRenameMigration_RenamesAndIsIdempotent(t *t
 
 	// And bepusdt count should still be 2 (not 3, the new real epusdt didn't get migrated)
 	var bepusdtCount int64
-	if err := db.Model(&PaymentChannel{}).Where("provider_type = ?", "bepusdt").Count(&bepusdtCount).Error; err != nil {
+	if err := db.Model(&paymentdomain.PaymentChannel{}).Where("provider_type = ?", "bepusdt").Count(&bepusdtCount).Error; err != nil {
 		t.Fatalf("count bepusdt failed: %v", err)
 	}
 	if bepusdtCount != 2 {
@@ -129,20 +130,20 @@ func TestEnsurePaymentChannelBepusdtConfigMigration_NormalizesLegacyChannels(t *
 		{name: "legacy-trx", channelType: "trx", tradeType: "usdt.trc20"},
 	}
 	for _, tc := range tests {
-		if err := db.Create(&PaymentChannel{
+		if err := db.Create(&paymentdomain.PaymentChannel{
 			Name: tc.name, ProviderType: "bepusdt", ChannelType: tc.channelType,
 			InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{"gateway_url": "https://bepusdt.example.com"},
 		}).Error; err != nil {
 			t.Fatalf("seed %s failed: %v", tc.name, err)
 		}
 	}
-	if err := db.Create(&PaymentChannel{
+	if err := db.Create(&paymentdomain.PaymentChannel{
 		Name: "explicit", ProviderType: "bepusdt", ChannelType: "usdt-trc20",
 		InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{"trade_type": "usdt.arbitrum"},
 	}).Error; err != nil {
 		t.Fatalf("seed explicit failed: %v", err)
 	}
-	if err := db.Create(&PaymentChannel{
+	if err := db.Create(&paymentdomain.PaymentChannel{
 		Name: "unknown", ProviderType: "bepusdt", ChannelType: "future-coin",
 		InteractionMode: "redirect", IsActive: true, ConfigJSON: jsonmap.JSON{},
 	}).Error; err != nil {
@@ -153,7 +154,7 @@ func TestEnsurePaymentChannelBepusdtConfigMigration_NormalizesLegacyChannels(t *
 		t.Fatalf("migration failed: %v", err)
 	}
 	for _, tc := range tests {
-		var channel PaymentChannel
+		var channel paymentdomain.PaymentChannel
 		if err := db.First(&channel, "name = ?", tc.name).Error; err != nil {
 			t.Fatalf("load %s failed: %v", tc.name, err)
 		}
@@ -168,7 +169,7 @@ func TestEnsurePaymentChannelBepusdtConfigMigration_NormalizesLegacyChannels(t *
 		}
 	}
 
-	var explicit PaymentChannel
+	var explicit paymentdomain.PaymentChannel
 	if err := db.First(&explicit, "name = ?", "explicit").Error; err != nil {
 		t.Fatalf("load explicit failed: %v", err)
 	}
@@ -181,7 +182,7 @@ func TestEnsurePaymentChannelBepusdtConfigMigration_NormalizesLegacyChannels(t *
 	if got := explicit.ConfigJSON["order_mode"]; got != "transaction" {
 		t.Fatalf("explicit order_mode = %v, want transaction", got)
 	}
-	var unknown PaymentChannel
+	var unknown paymentdomain.PaymentChannel
 	if err := db.First(&unknown, "name = ?", "unknown").Error; err != nil {
 		t.Fatalf("load unknown failed: %v", err)
 	}

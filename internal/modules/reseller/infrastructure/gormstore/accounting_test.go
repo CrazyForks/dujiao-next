@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
@@ -14,7 +16,6 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
@@ -33,7 +34,7 @@ func openResellerAccountingRepoTestDB(t *testing.T) *gorm.DB {
 		&admindomain.Admin{},
 		&userdomain.User{},
 		&orderdomain.Order{},
-		&models.Payment{},
+		&paymentdomain.Payment{},
 		&resellerdomain.Profile{},
 		&resellerdomain.Domain{},
 		&resellerdomain.SiteConfig{},

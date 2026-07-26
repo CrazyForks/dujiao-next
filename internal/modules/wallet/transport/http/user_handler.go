@@ -1,16 +1,17 @@
 package wallethttp
 
 import (
-	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	"context"
 	"errors"
 	"strings"
+
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/money"
@@ -55,8 +56,8 @@ type WalletService interface {
 type PaymentService interface {
 	GetAvailableWalletRechargeChannels(amount money.Amount, user *userdomain.User) ([]map[string]interface{}, error)
 	CreateWalletRechargePayment(input CreateRechargePaymentInput) (*CreateRechargePaymentResult, error)
-	GetPayment(id uint) (*models.Payment, error)
-	CapturePayment(input CapturePaymentInput) (*models.Payment, error)
+	GetPayment(id uint) (*paymentdomain.Payment, error)
+	CapturePayment(input CapturePaymentInput) (*paymentdomain.Payment, error)
 }
 
 // UserReader 用于读取支付渠道匹配需要的用户信息。
@@ -82,7 +83,7 @@ type CreateRechargePaymentInput struct {
 
 type CreateRechargePaymentResult struct {
 	Recharge *walletdomain.RechargeOrder
-	Payment  *models.Payment
+	Payment  *paymentdomain.Payment
 }
 
 type CapturePaymentInput struct {

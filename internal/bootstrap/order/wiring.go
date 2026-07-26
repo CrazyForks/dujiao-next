@@ -23,8 +23,8 @@ func New(c *provider.Container) Handlers {
 			orderAdminUserAdapter{users: c.UserStore},
 			orderAdminCouponAdapter{coupons: c.CouponRepo},
 			orderAdminPromotionAdapter{promotions: c.PromotionRepo},
-			orderAdminPaymentAdapter{payments: c.PaymentRepo},
-			orderAdminPaymentChannelAdapter{channels: c.PaymentChannelRepo},
+			orderAdminPaymentAdapter{payments: c.PaymentStore},
+			orderAdminPaymentChannelAdapter{channels: c.PaymentChannelStore},
 		),
 		AdminRefund: NewAdminRefundHandler(c),
 		User: ordertransport.NewUserHandler(

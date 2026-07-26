@@ -4,15 +4,17 @@ import (
 	"errors"
 	"fmt"
 
+	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
+
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	orderapp "github.com/dujiao-next/internal/modules/order/application"
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	wallettransport "github.com/dujiao-next/internal/modules/wallet/transport/http"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/money"
 )
 
@@ -20,7 +22,7 @@ import (
 // needed by the wallet HTTP surface.
 type walletTransportAdapter struct {
 	wallets  *walletapp.Service
-	payments *service.PaymentService
+	payments *paymentapp.PaymentService
 }
 
 func (a walletTransportAdapter) GetAccount(userID uint) (*walletdomain.Account, error) {
@@ -93,14 +95,14 @@ func (a walletTransportAdapter) GetRechargeOrderByPaymentIDAndUser(paymentID uin
 }
 
 func (a walletTransportAdapter) GetAvailableWalletRechargeChannels(amount money.Amount, user *userdomain.User) ([]map[string]interface{}, error) {
-	channels, err := a.payments.GetAvailableChannels(service.AvailablePaymentChannelFilter{
+	channels, err := a.payments.GetAvailableChannels(paymentapp.AvailablePaymentChannelFilter{
 		TargetAmount: &amount, User: user, PaymentType: constants.PaymentTypeWallet,
 	})
 	return channels, mapWalletTransportError(err)
 }
 
 func (a walletTransportAdapter) CreateWalletRechargePayment(input wallettransport.CreateRechargePaymentInput) (*wallettransport.CreateRechargePaymentResult, error) {
-	result, err := a.payments.CreateWalletRechargePayment(service.CreateWalletRechargePaymentInput{
+	result, err := a.payments.CreateWalletRechargePayment(paymentapp.CreateWalletRechargePaymentInput{
 		UserID: input.UserID, ChannelID: input.ChannelID, Amount: input.Amount, Currency: input.Currency,
 		Remark: input.Remark, ClientIP: input.ClientIP, Context: input.Context, RequestScheme: input.RequestScheme,
 	})
@@ -110,13 +112,13 @@ func (a walletTransportAdapter) CreateWalletRechargePayment(input wallettranspor
 	return &wallettransport.CreateRechargePaymentResult{Recharge: result.Recharge, Payment: result.Payment}, nil
 }
 
-func (a walletTransportAdapter) GetPayment(id uint) (*models.Payment, error) {
+func (a walletTransportAdapter) GetPayment(id uint) (*paymentdomain.Payment, error) {
 	payment, err := a.payments.GetPayment(id)
 	return payment, mapWalletTransportError(err)
 }
 
-func (a walletTransportAdapter) CapturePayment(input wallettransport.CapturePaymentInput) (*models.Payment, error) {
-	payment, err := a.payments.CapturePayment(service.CapturePaymentInput{PaymentID: input.PaymentID, Context: input.Context})
+func (a walletTransportAdapter) CapturePayment(input wallettransport.CapturePaymentInput) (*paymentdomain.Payment, error) {
+	payment, err := a.payments.CapturePayment(paymentapp.CapturePaymentInput{PaymentID: input.PaymentID, Context: input.Context})
 	return payment, mapWalletTransportError(err)
 }
 
@@ -132,22 +134,22 @@ func mapWalletTransportError(err error) error {
 		{walletcontract.ErrInsufficientBalance, wallettransport.ErrInsufficientBalance},
 		{walletcontract.ErrNotSupportedForGuest, wallettransport.ErrNotSupportedForGuest},
 		{walletcontract.ErrRechargeNotFound, wallettransport.ErrRechargeNotFound},
-		{service.ErrPaymentInvalid, wallettransport.ErrPaymentInvalid},
-		{service.ErrPaymentNotFound, wallettransport.ErrPaymentNotFound},
+		{paymentapp.ErrPaymentInvalid, wallettransport.ErrPaymentInvalid},
+		{paymentapp.ErrPaymentNotFound, wallettransport.ErrPaymentNotFound},
 		{orderapp.ErrOrderNotFound, wallettransport.ErrOrderNotFound},
 		{orderapp.ErrOrderStatusInvalid, wallettransport.ErrOrderStatusInvalid},
-		{service.ErrPaymentChannelNotFound, wallettransport.ErrPaymentChannelNotFound},
-		{service.ErrPaymentChannelInactive, wallettransport.ErrPaymentChannelInactive},
-		{service.ErrPaymentProviderNotSupported, wallettransport.ErrPaymentProviderNotSupported},
-		{service.ErrPaymentChannelConfigInvalid, wallettransport.ErrPaymentChannelConfigInvalid},
-		{service.ErrPaymentGatewayRequestFailed, wallettransport.ErrPaymentGatewayRequestFailed},
-		{service.ErrPaymentGatewayResponseInvalid, wallettransport.ErrPaymentGatewayResponseInvalid},
-		{service.ErrPaymentCurrencyMismatch, wallettransport.ErrPaymentCurrencyMismatch},
-		{service.ErrPaymentChannelNotAllowedForProduct, wallettransport.ErrPaymentChannelNotAllowedProduct},
-		{service.ErrPaymentChannelNotAllowedForRecharge, wallettransport.ErrPaymentChannelNotAllowedRecharge},
+		{paymentapp.ErrPaymentChannelNotFound, wallettransport.ErrPaymentChannelNotFound},
+		{paymentapp.ErrPaymentChannelInactive, wallettransport.ErrPaymentChannelInactive},
+		{paymentapp.ErrPaymentProviderNotSupported, wallettransport.ErrPaymentProviderNotSupported},
+		{paymentapp.ErrPaymentChannelConfigInvalid, wallettransport.ErrPaymentChannelConfigInvalid},
+		{paymentapp.ErrPaymentGatewayRequestFailed, wallettransport.ErrPaymentGatewayRequestFailed},
+		{paymentapp.ErrPaymentGatewayResponseInvalid, wallettransport.ErrPaymentGatewayResponseInvalid},
+		{paymentapp.ErrPaymentCurrencyMismatch, wallettransport.ErrPaymentCurrencyMismatch},
+		{paymentapp.ErrPaymentChannelNotAllowedForProduct, wallettransport.ErrPaymentChannelNotAllowedProduct},
+		{paymentapp.ErrPaymentChannelNotAllowedForRecharge, wallettransport.ErrPaymentChannelNotAllowedRecharge},
 		{walletcontract.ErrOnlyPaymentRequired, wallettransport.ErrWalletOnlyPaymentRequired},
-		{service.ErrPaymentStatusInvalid, wallettransport.ErrPaymentStatusInvalid},
-		{service.ErrPaymentAmountMismatch, wallettransport.ErrPaymentAmountMismatch},
+		{paymentapp.ErrPaymentStatusInvalid, wallettransport.ErrPaymentStatusInvalid},
+		{paymentapp.ErrPaymentAmountMismatch, wallettransport.ErrPaymentAmountMismatch},
 	} {
 		if errors.Is(err, mapping.source) {
 			return fmt.Errorf("%w: %v", mapping.target, err)

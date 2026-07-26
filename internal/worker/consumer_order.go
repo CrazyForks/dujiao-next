@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
+
 	fulfillmentapp "github.com/dujiao-next/internal/modules/fulfillment/application"
 	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
 	orderapp "github.com/dujiao-next/internal/modules/order/application"
@@ -304,13 +306,13 @@ func (c *Consumer) handleWalletRechargeExpire(_ context.Context, task *asynq.Tas
 	}
 	if _, err := c.PaymentService.ExpireWalletRechargePayment(payload.PaymentID); err != nil {
 		switch {
-		case errors.Is(err, service.ErrPaymentNotFound):
+		case errors.Is(err, paymentapp.ErrPaymentNotFound):
 			logger.Debugw("worker_wallet_recharge_expire_skip_payment_not_found", "payment_id", payload.PaymentID)
 			return nil
 		case errors.Is(err, walletcontract.ErrRechargeNotFound):
 			logger.Debugw("worker_wallet_recharge_expire_skip_recharge_not_found", "payment_id", payload.PaymentID)
 			return nil
-		case errors.Is(err, service.ErrPaymentUpdateFailed):
+		case errors.Is(err, paymentapp.ErrPaymentUpdateFailed):
 			logger.Warnw("worker_wallet_recharge_expire_update_failed", "payment_id", payload.PaymentID, "error", err)
 			return err
 		default:

@@ -3,8 +3,9 @@ package gormstore
 import (
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
 )
 
@@ -14,7 +15,7 @@ func (r *Store) GetTopChannels(startAt, endAt time.Time, limit int) ([]dashboard
 		limit = 5
 	}
 	rows := make([]dashboard.ChannelRankingRow, 0)
-	if err := r.db.Model(&models.Payment{}).
+	if err := r.db.Model(&paymentdomain.Payment{}).
 		Select(`
 			payments.channel_id as channel_id,
 			COALESCE(payment_channels.name, '') as channel_name,
@@ -25,6 +26,7 @@ func (r *Store) GetTopChannels(startAt, endAt time.Time, limit int) ([]dashboard
 			COALESCE(SUM(CASE WHEN payments.status = 'success' THEN payments.amount ELSE 0 END), 0) as success_amount
 		`).
 		Joins("LEFT JOIN payment_channels ON payment_channels.id = payments.channel_id").
+		Where("payments.deleted_at IS NULL").
 		Where("payments.created_at >= ? AND payments.created_at < ? AND payments.provider_type <> ?", startAt, endAt, constants.PaymentProviderWallet).
 		Group("payments.channel_id, payment_channels.name, payments.provider_type, payments.channel_type").
 		Order("success_amount DESC, success_count DESC").

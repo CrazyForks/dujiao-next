@@ -6,9 +6,10 @@ import (
 	"testing"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -80,7 +81,7 @@ func TestWalletRechargePaymentPayloadOmitsSensitiveFields(t *testing.T) {
 		Amount:     newMoney("100.00"),
 		Status:     "success",
 	}
-	payment := &models.Payment{
+	payment := &paymentdomain.Payment{
 		ID:              5,
 		ProviderType:    "alipay",
 		ChannelType:     "alipay",

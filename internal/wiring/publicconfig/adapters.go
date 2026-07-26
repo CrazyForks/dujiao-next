@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
+
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 
@@ -14,7 +16,6 @@ import (
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	resellerapplication "github.com/dujiao-next/internal/modules/reseller/application"
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -101,11 +102,11 @@ func (a publicConfigSettingsAdapter) GetActiveHomeAnnouncement() (jsonmap.JSON, 
 }
 
 type publicConfigPaymentAdapter struct {
-	payments *service.PaymentService
+	payments *paymentapp.PaymentService
 }
 
 func (a publicConfigPaymentAdapter) GetOrderPaymentChannels() ([]map[string]interface{}, error) {
-	return a.payments.GetAvailableChannels(service.AvailablePaymentChannelFilter{
+	return a.payments.GetAvailableChannels(paymentapp.AvailablePaymentChannelFilter{
 		PaymentType: constants.PaymentTypeOrder,
 	})
 }

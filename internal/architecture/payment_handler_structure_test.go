@@ -8,7 +8,7 @@ import (
 
 func TestPaymentHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "payment")
+	transportRoot := filepath.Join(repositoryRoot, "internal", "modules", "payment", "transport", "http")
 
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{
 		"RegisterGuestLatestRoute", "RegisterUserLatestRoute",
@@ -67,11 +67,11 @@ func TestPaymentHTTPLivesInTransport(t *testing.T) {
 	}
 
 	if _, err := os.Stat(filepath.Join(repositoryRoot, "internal", "router", "payment_adapter.go")); err == nil {
-		t.Fatal("payment composition adapters belong in internal/wiring/payment, not internal/router")
+		t.Fatal("payment composition adapters belong in internal/bootstrap/payment, not internal/router")
 	} else if !os.IsNotExist(err) {
 		t.Fatalf("stat legacy payment router adapter: %v", err)
 	}
-	wiringRoot := filepath.Join(repositoryRoot, "internal", "wiring", "payment")
+	wiringRoot := filepath.Join(repositoryRoot, "internal", "bootstrap", "payment")
 	for _, file := range []string{"wiring.go", "storefront.go", "admin_callbacks.go"} {
 		if _, err := os.Stat(filepath.Join(wiringRoot, file)); err != nil {
 			t.Fatalf("payment wiring file %s missing: %v", file, err)
@@ -82,7 +82,7 @@ func TestPaymentHTTPLivesInTransport(t *testing.T) {
 
 func TestPaymentCallbackHTTPLivesInFocusedTransportPackage(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "payment", "callback")
+	transportRoot := filepath.Join(repositoryRoot, "internal", "modules", "payment", "transport", "http", "callback")
 
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "handler.go"), []string{
 		"Handler", "Service", "PaymentLookup", "ChannelLookup", "ExceptionAlerter", "WechatWebhookInput",

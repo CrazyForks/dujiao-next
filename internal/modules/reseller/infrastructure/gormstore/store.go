@@ -3,13 +3,8 @@ package gormstore
 import (
 	"errors"
 
-	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
-
-	"github.com/dujiao-next/internal/models"
-	resellerapplication "github.com/dujiao-next/internal/modules/reseller/application"
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
-	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -61,36 +56,6 @@ func (s *Store) BindTx(tx *gorm.DB) *Store {
 		return s
 	}
 	return New(tx)
-}
-
-// AccountingTransactionBridge binds reseller ledger use cases to a transaction
-// owned by the order or payment workflow.
-type AccountingTransactionBridge struct {
-	store  *Store
-	ledger *resellerapplication.AccountingLedgerService
-}
-
-func NewAccountingTransactionBridge(store *Store, ledger *resellerapplication.AccountingLedgerService) *AccountingTransactionBridge {
-	return &AccountingTransactionBridge{store: store, ledger: ledger}
-}
-
-func (b *AccountingTransactionBridge) PostOrderProfitTx(tx *gorm.DB, order *orderdomain.Order, payment *models.Payment) error {
-	if b == nil || b.store == nil || b.ledger == nil || tx == nil || order == nil || order.ID == 0 {
-		return nil
-	}
-	return b.ledger.PostOrderProfit(b.store.BindTx(tx), order, payment)
-}
-
-func (b *AccountingTransactionBridge) HandleRefundDeductTx(
-	tx *gorm.DB,
-	order *orderdomain.Order,
-	refundRecord *orderdomain.OrderRefundRecord,
-	refundedBefore decimal.Decimal,
-) error {
-	if b == nil || b.store == nil || b.ledger == nil || tx == nil || order == nil || refundRecord == nil || refundRecord.ID == 0 {
-		return nil
-	}
-	return b.ledger.HandleRefundDeduct(b.store.BindTx(tx), order, refundRecord, refundedBefore)
 }
 
 func (s *Store) transaction(run func(*Store) error) error {

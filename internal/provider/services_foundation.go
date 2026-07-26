@@ -18,7 +18,6 @@ import (
 	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
 	orderapp "github.com/dujiao-next/internal/modules/order/application"
 	reseller "github.com/dujiao-next/internal/modules/reseller/application"
-	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
@@ -51,10 +50,6 @@ func (c *Container) initPolicyAndSettingServices() {
 	c.ResellerAccountingLedger = reseller.NewAccountingLedgerService(
 		c.ResellerStore,
 		c.Config.Reseller.SettlementConfirmDays,
-	)
-	c.ResellerAccountingTransactions = resellergormstore.NewAccountingTransactionBridge(
-		c.ResellerStore,
-		c.ResellerAccountingLedger,
 	)
 	c.ResellerOrderService = reseller.NewOrderQueryService(c.ResellerStore)
 	c.ResellerOperationsService = reseller.NewOperationsService(c.ResellerStore)
@@ -112,7 +107,7 @@ func (c *Container) initIdentityAndCatalogServices() {
 		Carts:             c.CartRepo,
 		ProductMappings:   c.ProductMappingRepo,
 		Orders:            c.OrderStore,
-		PaymentChannels:   c.PaymentChannelRepo,
+		PaymentChannels:   c.PaymentChannelStore,
 	})
 	c.ProductReadService = productServices.Read
 	c.ProductAdminService = productServices.Admin

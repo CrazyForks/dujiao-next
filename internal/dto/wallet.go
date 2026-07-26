@@ -3,9 +3,11 @@ package dto
 import (
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	paymentpresenter "github.com/dujiao-next/internal/modules/payment/transport/presenter"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
 )
 
@@ -118,7 +120,7 @@ type WalletRechargePaymentPayload struct {
 }
 
 // NewWalletRechargePaymentPayload 构造钱包充值支付响应
-func NewWalletRechargePaymentPayload(recharge *walletdomain.RechargeOrder, payment *models.Payment, account *walletdomain.Account) WalletRechargePaymentPayload {
+func NewWalletRechargePaymentPayload(recharge *walletdomain.RechargeOrder, payment *paymentdomain.Payment, account *walletdomain.Account) WalletRechargePaymentPayload {
 	p := WalletRechargePaymentPayload{}
 	if recharge != nil {
 		r := NewWalletRechargeResp(recharge)
@@ -139,7 +141,7 @@ func NewWalletRechargePaymentPayload(recharge *walletdomain.RechargeOrder, payme
 		p.QRCode = payment.QRCode
 		p.ExpiresAt = payment.ExpiredAt
 		p.Status = payment.Status
-		info := ExtractCryptoWalletInfo(
+		info := paymentpresenter.ExtractCryptoWalletInfo(
 			payment.ProviderType,
 			payment.InteractionMode,
 			payment.ProviderPayload,

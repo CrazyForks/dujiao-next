@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/gin-gonic/gin"
@@ -196,7 +197,7 @@ func TestBuildChannelPaymentResponseIncludesOrderSummary(t *testing.T) {
 		WalletPaidAmount: money.FromDecimal(decimal.RequireFromString("19.00")),
 		OnlinePaidAmount: money.FromDecimal(decimal.RequireFromString("80.00")),
 	}
-	payment := &models.Payment{
+	payment := &paymentdomain.Payment{
 		ID:              5,
 		OrderID:         order.ID,
 		ChannelID:       11,
@@ -346,7 +347,7 @@ func TestBuildChannelPaymentResponse_ProviderModeMatrix(t *testing.T) {
 			if channelType == "" {
 				channelType = "test-channel-type"
 			}
-			payment := &models.Payment{
+			payment := &paymentdomain.Payment{
 				ID:              1,
 				OrderID:         2,
 				ChannelID:       3,
@@ -420,7 +421,7 @@ func TestBuildChannelPaymentResponse_ProviderModeMatrix(t *testing.T) {
 }
 
 func TestBuildChannelPaymentResponse_USDTQRExposesWalletFields(t *testing.T) {
-	payment := &models.Payment{
+	payment := &paymentdomain.Payment{
 		ID:              42,
 		OrderID:         1,
 		ChannelID:       2,

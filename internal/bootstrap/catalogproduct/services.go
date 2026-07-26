@@ -3,6 +3,8 @@ package catalogproductbootstrap
 import (
 	"errors"
 
+	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
+
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 
 	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
@@ -13,7 +15,6 @@ import (
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productadmin "github.com/dujiao-next/internal/modules/catalog/product/application/admin"
 	productwrite "github.com/dujiao-next/internal/modules/catalog/product/application/write"
-	"github.com/dujiao-next/internal/repository"
 
 	"gorm.io/gorm"
 )
@@ -68,7 +69,7 @@ type Dependencies struct {
 	Carts             *cartgormstore.Store
 	ProductMappings   MappingStore
 	Orders            OrderReader
-	PaymentChannels   repository.PaymentChannelRepository
+	PaymentChannels   paymentcontract.ChannelStore
 }
 
 // Services 是 Product 查询、管理和写入用例的显式集合。

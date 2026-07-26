@@ -25,7 +25,7 @@ func (s *Service) ApplyRechargePayment(
 	}
 	_, transaction, err := s.CreditInTransaction(tx, walletcontract.CreditInput{
 		UserID: recharge.UserID, Amount: recharge.Amount, Currency: recharge.Currency,
-		Type: constants.WalletTxnTypeRecharge,
+		Type:      constants.WalletTxnTypeRecharge,
 		Reference: fmt.Sprintf("recharge:%d:success", recharge.ID),
 		Remark:    cleanRemark(recharge.Remark, "在线充值到账"),
 	})

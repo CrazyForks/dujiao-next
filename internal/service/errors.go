@@ -40,27 +40,10 @@ var (
 	ErrManualFormFieldInvalid              = manualform.ErrFieldInvalid
 	ErrManualFormTypeInvalid               = manualform.ErrTypeInvalid
 	ErrManualFormOptionInvalid             = manualform.ErrOptionInvalid
-	ErrProductFetchFailed                  = errors.New("product fetch failed")
 	ErrProductNotFound                     = errors.New("product not found")
 	ErrProductSKURequired                  = errors.New("product sku required")
 	ErrProductSKUInvalid                   = productcontract.ErrProductSKUInvalid
 	ErrProductSKUHasCardSecretStock        = productcontract.ErrProductSKUHasCardSecretStock
-	ErrPaymentInvalid                      = errors.New("payment invalid")
-	ErrPaymentNotFound                     = errors.New("payment not found")
-	ErrPaymentCreateFailed                 = errors.New("payment create failed")
-	ErrPaymentUpdateFailed                 = errors.New("payment update failed")
-	ErrPaymentStatusInvalid                = errors.New("payment status invalid")
-	ErrPaymentAmountMismatch               = errors.New("payment amount mismatch")
-	ErrPaymentCurrencyMismatch             = errors.New("payment currency mismatch")
-	ErrPaymentChannelNotFound              = errors.New("payment channel not found")
-	ErrPaymentChannelInactive              = errors.New("payment channel inactive")
-	ErrPaymentProviderNotSupported         = errors.New("payment provider not supported")
-	ErrPaymentChannelConfigInvalid         = errors.New("payment channel config invalid")
-	ErrPaymentAmountTooSmall               = errors.New("payment amount too small")
-	ErrPaymentAmountTooLarge               = errors.New("payment amount too large")
-	ErrPaymentGatewayRequestFailed         = errors.New("payment gateway request failed")
-	ErrPaymentGatewayResponseInvalid       = errors.New("payment gateway response invalid")
-	ErrQueueUnavailable                    = errors.New("queue unavailable")
 	ErrAffiliateConfigInvalid              = settingsintegration.ErrAffiliateConfigInvalid
 	ErrResellerAccountingUnavailable       = resellermodule.ErrAccountingUnavailable
 	ErrResellerLedgerInvalidSnapshot       = resellermodule.ErrLedgerInvalidSnapshot
@@ -86,8 +69,6 @@ var (
 	ErrNotificationSendFailed              = notificationcontract.ErrSendFailed
 	ErrNotificationEventInvalid            = notificationcontract.ErrEventInvalid
 	ErrOrderEmailTemplateConfigInvalid     = settingsmessaging.ErrOrderEmailTemplateConfigInvalid
-	ErrPaymentChannelNotAllowedForProduct  = errors.New("payment channel not allowed for product")
-	ErrPaymentChannelNotAllowedForRecharge = errors.New("payment channel not allowed for wallet recharge")
 	ErrProductHasStock                     = productcontract.ErrProductHasStock
 	ErrProductHasOrderRecord               = productcontract.ErrProductHasOrderRecord
 )

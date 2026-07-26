@@ -5,12 +5,14 @@ import (
 	"strings"
 	"time"
 
+	paymentpresenter "github.com/dujiao-next/internal/modules/payment/transport/presenter"
+
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -37,7 +39,7 @@ func (h *Handler) GetPaymentChannels(c *gin.Context) {
 	contextParam := strings.TrimSpace(c.Query("context"))
 	orderNo := strings.TrimSpace(c.Query("order_no"))
 
-	var channels []models.PaymentChannel
+	var channels []paymentdomain.PaymentChannel
 	var err error
 
 	if contextParam == "recharge" {
@@ -185,7 +187,7 @@ func (h *Handler) GetLatestPayment(c *gin.Context) {
 		return
 	}
 
-	payment, err := h.PaymentRepo.GetLatestPendingByOrder(order.ID, time.Now())
+	payment, err := h.PaymentStore.GetLatestPendingByOrder(order.ID, time.Now())
 	if err != nil {
 		respondChannelError(c, 500, response.CodeInternal, "internal_error", "error.payment_fetch_failed", err)
 		return
@@ -279,7 +281,7 @@ func (h *Handler) GetPaymentDetail(c *gin.Context) {
 		return
 	}
 
-	payment, err := h.PaymentRepo.GetByID(uint(paymentID))
+	payment, err := h.PaymentStore.GetByID(uint(paymentID))
 	if err != nil {
 		respondChannelError(c, 500, response.CodeInternal, "internal_error", "error.payment_fetch_failed", err)
 		return
@@ -306,7 +308,7 @@ func (h *Handler) GetPaymentDetail(c *gin.Context) {
 	respondChannelSuccess(c, buildChannelPaymentResponse(order, payment))
 }
 
-func buildChannelPaymentResponse(order *orderdomain.Order, payment *models.Payment) gin.H {
+func buildChannelPaymentResponse(order *orderdomain.Order, payment *paymentdomain.Payment) gin.H {
 	resp := gin.H{
 		"payment_id":       payment.ID,
 		"order_id":         payment.OrderID,
@@ -327,7 +329,7 @@ func buildChannelPaymentResponse(order *orderdomain.Order, payment *models.Payme
 		"created_at":       payment.CreatedAt,
 		"updated_at":       payment.UpdatedAt,
 	}
-	if info := dto.ExtractCryptoWalletInfo(payment.ProviderType, payment.InteractionMode, payment.ProviderPayload); info.HasAny() {
+	if info := paymentpresenter.ExtractCryptoWalletInfo(payment.ProviderType, payment.InteractionMode, payment.ProviderPayload); info.HasAny() {
 		if info.Address != "" {
 			resp["wallet_address"] = info.Address
 		}

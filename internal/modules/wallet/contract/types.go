@@ -67,20 +67,20 @@ type CreditInput struct {
 }
 
 type OrderBalanceInput struct {
-	OrderID         uint
-	UserID          uint
-	TotalAmount     money.Amount
+	OrderID          uint
+	UserID           uint
+	TotalAmount      money.Amount
 	WalletPaidAmount money.Amount
-	Currency        string
-	UseBalance      bool
+	Currency         string
+	UseBalance       bool
 }
 
 type OrderReleaseInput struct {
-	OrderID         uint
-	UserID          uint
+	OrderID          uint
+	UserID           uint
 	WalletPaidAmount money.Amount
-	TotalAmount     money.Amount
-	Currency        string
-	TransactionType string
-	Remark          string
+	TotalAmount      money.Amount
+	Currency         string
+	TransactionType  string
+	Remark           string
 }

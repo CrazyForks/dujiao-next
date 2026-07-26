@@ -2,9 +2,10 @@ package externalidentitystore
 
 import (
 	"errors"
+	"strings"
+
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
-	"strings"
 
 	"gorm.io/gorm"
 )

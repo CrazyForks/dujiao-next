@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -13,7 +15,6 @@ import (
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
@@ -38,12 +39,12 @@ type AdminUserReader interface {
 
 // PaymentChannelReader 读取支付渠道名称。
 type PaymentChannelReader interface {
-	ListByIDs(ids []uint) ([]models.PaymentChannel, error)
+	ListByIDs(ids []uint) ([]paymentdomain.PaymentChannel, error)
 }
 
 // PaymentReader 读取支付状态。
 type PaymentReader interface {
-	GetByIDs(ids []uint) ([]models.Payment, error)
+	GetByIDs(ids []uint) ([]paymentdomain.Payment, error)
 }
 
 // AdminRechargeListFilter 管理端充值单列表过滤条件。

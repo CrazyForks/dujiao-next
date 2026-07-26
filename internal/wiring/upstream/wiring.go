@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	paymentapp "github.com/dujiao-next/internal/modules/payment/application"
+
 	orderapp "github.com/dujiao-next/internal/modules/order/application"
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
@@ -94,11 +96,11 @@ func (a orderServiceAdapter) BuildLocalRefundRecordsForOrder(order *orderdomain.
 }
 
 type paymentServiceAdapter struct {
-	payments *service.PaymentService
+	payments *paymentapp.PaymentService
 }
 
 func (a paymentServiceAdapter) CreatePayment(input upstreamtransport.CreatePaymentInput) (*upstreamtransport.CreatePaymentResult, error) {
-	result, err := a.payments.CreatePayment(service.CreatePaymentInput{
+	result, err := a.payments.CreatePayment(paymentapp.CreatePaymentInput{
 		OrderID: input.OrderID, UseBalance: input.UseBalance, ClientIP: input.ClientIP,
 	})
 	if err != nil || result == nil {
