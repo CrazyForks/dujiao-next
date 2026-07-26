@@ -15,6 +15,16 @@ import (
 // 保留路径，不能与 admin path 冲突或互为前缀。
 var reservedPaths = []string{"/api", "/uploads", "/health"}
 
+// isReservedPath 报告请求路径是否落在后端保留前缀之下。
+func isReservedPath(p string) bool {
+	for _, r := range reservedPaths {
+		if p == r || strings.HasPrefix(p, r+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 // ValidateAdminPath 校验 web.admin_path 配置项的合法性。
 // 规则：
 //   - 必须以 "/" 开头
@@ -106,6 +116,14 @@ func RegisterUser(r *gin.Engine, fsys fs.FS) error {
 	fileServer := http.FileServer(http.FS(fsys))
 
 	r.NoRoute(func(c *gin.Context) {
+		// 后端保留前缀下的未命中请求必须保持 404，不能被 SPA 兜底成 200 HTML：
+		// 否则调用了不存在的接口的客户端会拿到 index.html 当响应体去解析 JSON。
+		// 这也让单二进制部署与「nginx 反代 + 独立前端」的分离部署行为保持一致。
+		if isReservedPath(c.Request.URL.Path) {
+			c.String(http.StatusNotFound, "404 page not found")
+			return
+		}
+
 		fp := strings.TrimPrefix(c.Request.URL.Path, "/")
 		if fp == "" || fp == "index.html" {
 			c.Data(http.StatusOK, "text/html; charset=utf-8", indexCached)
