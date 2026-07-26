@@ -1,4 +1,4 @@
-package router
+package httpserver
 
 import (
 	"os"
@@ -115,39 +115,39 @@ func extractAdminRoutesFromSource() ([]adminRoute, error) {
 	}
 	sources = append(sources,
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "modules", "content", "transport", "http", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "..", "modules", "content", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "modules", "dashboard", "transport", "http", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "..", "modules", "dashboard", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "modules", "memberlevel", "transport", "http", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "..", "modules", "memberlevel", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "modules", "apicredential", "transport", "http", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "..", "modules", "apicredential", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "modules", "auditlog", "transport", "http", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "..", "modules", "auditlog", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "modules", "coupon", "transport", "http", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "..", "modules", "coupon", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "modules", "promotion", "transport", "http", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "..", "modules", "promotion", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "modules", "giftcard", "transport", "http", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "..", "modules", "giftcard", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "modules", "notification", "transport", "http", "routes.go"),
+			path:       filepath.Join(routerDirectory, "..", "..", "modules", "notification", "transport", "http", "routes.go"),
 			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
 		},
 	)

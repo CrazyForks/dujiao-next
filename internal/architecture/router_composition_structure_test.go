@@ -8,11 +8,12 @@ import (
 	"testing"
 )
 
-func TestRouterContainsRoutesAndMiddlewareOnly(t *testing.T) {
+func TestHTTPServerSeparatesRoutesFromMiddleware(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	routerRoot := filepath.Join(repositoryRoot, "internal", "router")
+	httpServerRoot := filepath.Join(repositoryRoot, "internal", "app", "httpserver")
+	middlewareRoot := filepath.Join(httpServerRoot, "middleware")
 
-	adapters, err := filepath.Glob(filepath.Join(routerRoot, "*_adapter.go"))
+	adapters, err := filepath.Glob(filepath.Join(httpServerRoot, "*_adapter.go"))
 	if err != nil {
 		t.Fatalf("list router adapters: %v", err)
 	}
@@ -20,9 +21,9 @@ func TestRouterContainsRoutesAndMiddlewareOnly(t *testing.T) {
 		t.Fatalf("composition adapters belong in internal/bootstrap, not internal/router: %v", adapters)
 	}
 
-	entries, err := os.ReadDir(routerRoot)
+	entries, err := os.ReadDir(httpServerRoot)
 	if err != nil {
-		t.Fatalf("read router directory: %v", err)
+		t.Fatalf("read HTTP server directory: %v", err)
 	}
 	productionFiles := make([]string, 0, len(entries))
 	for _, entry := range entries {
@@ -32,9 +33,11 @@ func TestRouterContainsRoutesAndMiddlewareOnly(t *testing.T) {
 		productionFiles = append(productionFiles, entry.Name())
 	}
 	sort.Strings(productionFiles)
-	if len(productionFiles) > 13 {
-		t.Fatalf("router production file budget exceeded: got %d files: %v", len(productionFiles), productionFiles)
+	if len(productionFiles) > 6 {
+		t.Fatalf("HTTP server route assembly file budget exceeded: got %d files: %v", len(productionFiles), productionFiles)
 	}
+	assertDirectoryGoFileBudget(t, httpServerRoot, 10)
+	assertDirectoryGoFileBudget(t, middlewareRoot, 16)
 }
 
 func TestBootstrapPackagesStayFocused(t *testing.T) {

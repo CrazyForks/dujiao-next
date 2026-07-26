@@ -1,4 +1,4 @@
-package router
+package httpserver
 
 import (
 	"encoding/json"
@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dujiao-next/internal/app/httpserver/middleware"
 	"github.com/dujiao-next/internal/authz"
 	contenttransport "github.com/dujiao-next/internal/modules/content/transport/http"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
@@ -153,7 +154,7 @@ func extractPublicContentRoutesFromSource() ([]adminRoute, error) {
 	if !ok {
 		return nil, fmt.Errorf("resolve content route test filename")
 	}
-	routerSource := filepath.Join(filepath.Dir(thisFile), "..", "modules", "content", "transport", "http", "routes.go")
+	routerSource := filepath.Join(filepath.Dir(thisFile), "..", "..", "modules", "content", "transport", "http", "routes.go")
 	raw, err := os.ReadFile(routerSource)
 	if err != nil {
 		return nil, err
@@ -264,7 +265,7 @@ func signContentAdminToken(t *testing.T, admin *admindomain.Admin) string {
 func newContentRouteAccessRouter(adminRepo admincontract.Store, authzService *authz.Service) *gin.Engine {
 	router := gin.New()
 	admin := router.Group("/api/v1/admin")
-	admin.Use(JWTAuthMiddleware(contentAdminJWTSecret, adminRepo), AdminRBACMiddleware(authzService))
+	admin.Use(middleware.JWTAuthMiddleware(contentAdminJWTSecret, adminRepo), middleware.AdminRBACMiddleware(authzService))
 	admin.Use(func(c *gin.Context) {
 		response.Success(c, nil)
 		c.Abort()

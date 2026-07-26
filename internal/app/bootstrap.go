@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/dujiao-next/internal/app/container"
+	"github.com/dujiao-next/internal/app/httpserver"
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/router"
 	"github.com/dujiao-next/internal/worker"
 )
 
@@ -21,7 +21,7 @@ func BuildRunner(cfg *config.Config, mode string) (*Runner, error) {
 
 	// 初始化 HTTP 服务
 	if mode == ModeAll || mode == ModeAPI {
-		engine := router.SetupRouter(cfg, dependencies)
+		engine := httpserver.SetupRouter(cfg, dependencies)
 		addr := cfg.Server.Host + ":" + cfg.Server.Port
 		httpService := NewHTTPService(addr, engine)
 		services = append(services, httpService)

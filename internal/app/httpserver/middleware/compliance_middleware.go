@@ -1,4 +1,4 @@
-package router
+package middleware
 
 import (
 	complianceapp "github.com/dujiao-next/internal/modules/compliance/application"

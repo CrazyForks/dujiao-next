@@ -1,4 +1,4 @@
-package router
+package httpserver
 
 import (
 	"os"
@@ -44,15 +44,15 @@ func TestRouteDomainFilesPreserveTrustBoundaries(t *testing.T) {
 		{
 			file: "routes_storefront.go",
 			required: []string{
-				`storefront.Use(ResellerTenantMiddleware(`,
+				`storefront.Use(middleware.ResellerTenantMiddleware(`,
 				`producthttp.RegisterPublicRoutes(public, publicCatalogHandler)`,
 				`categoryhttp.RegisterPublicRoutes(public, publicCategoryHandler)`,
 				`contenttransport.RegisterPublicRoutes(public, publicContentHandler)`,
 				`captchatransport.RegisterPublicRoutes(public,`,
 				`affiliatetransport.RegisterPublicRoutes(public, affiliateHandler)`,
 				`affiliatetransport.RegisterUserRoutes(user, affiliateHandler)`,
-				`user.Use(UserJWTAuthMiddleware(`,
-				`resellerConsole.Use(RequireMainTenantForResellerConsole())`,
+				`user.Use(middleware.UserJWTAuthMiddleware(`,
+				`resellerConsole.Use(middleware.RequireMainTenantForResellerConsole())`,
 				`resellertransport.RegisterUserConsoleRoutes(resellerConsole, userResellerHandler)`,
 				`resellertransport.RegisterUserProductSettingRoutes(resellerConsole, userResellerProductSettingHandler)`,
 				`resellertransport.RegisterUserFinanceRoutes(resellerConsole, userResellerFinanceHandler)`,
@@ -65,12 +65,12 @@ func TestRouteDomainFilesPreserveTrustBoundaries(t *testing.T) {
 				`userauthtransport.RegisterUserEmailRoutes(user, userEmailHandler)`,
 				`userauthtransport.RegisterUserVerifyAuthRoutes(auth, userVerifyHandler)`,
 				`userauthtransport.RegisterUserRegisterAuthRoutes(auth, userLoginHandler)`,
-				`userauthtransport.RegisterUserLoginAuthRoutes(auth, userLoginHandler, RateLimitMiddleware(redisClient, loginRule, KeyByIPAndJSONField("email")))`,
-				`userauthtransport.RegisterUser2FAAuthRoutes(auth, user2FAHandler, RateLimitMiddleware(redisClient, loginRule, KeyByIP))`,
+				`userauthtransport.RegisterUserLoginAuthRoutes(auth, userLoginHandler, middleware.RateLimitMiddleware(redisClient, loginRule, middleware.KeyByIPAndJSONField("email")))`,
+				`userauthtransport.RegisterUser2FAAuthRoutes(auth, user2FAHandler, middleware.RateLimitMiddleware(redisClient, loginRule, middleware.KeyByIP))`,
 				`userauthtransport.RegisterUser2FARoutes(user, user2FAHandler)`,
-				`userauthtransport.RegisterUserTelegramAuthRoutes(auth, userTelegramHandler, RateLimitMiddleware(redisClient, loginRule, KeyByIP))`,
+				`userauthtransport.RegisterUserTelegramAuthRoutes(auth, userTelegramHandler, middleware.RateLimitMiddleware(redisClient, loginRule, middleware.KeyByIP))`,
 				`userauthtransport.RegisterUserTelegramRoutes(user, userTelegramHandler)`,
-				`userauthtransport.RegisterUserTelegramOIDCAuthRoutes(auth, userTelegramOIDCHandler, RateLimitMiddleware(redisClient, loginRule, KeyByIP))`,
+				`userauthtransport.RegisterUserTelegramOIDCAuthRoutes(auth, userTelegramOIDCHandler, middleware.RateLimitMiddleware(redisClient, loginRule, middleware.KeyByIP))`,
 				`userauthtransport.RegisterUserTelegramOIDCRoutes(user, userTelegramOIDCHandler)`,
 				`userauthtransport.RegisterUserPasswordAuthRoutes(auth, userPasswordHandler)`,
 				`userauthtransport.RegisterUserPasswordRoutes(user, userPasswordHandler)`,
@@ -97,15 +97,15 @@ func TestRouteDomainFilesPreserveTrustBoundaries(t *testing.T) {
 		{
 			file: "routes_upstream.go",
 			required: []string{
-				`upstreamAPI.Use(RateLimitMiddleware(`,
-				`upstreamAPI.Use(UpstreamAPIAuthMiddleware(`,
+				`upstreamAPI.Use(middleware.RateLimitMiddleware(`,
+				`upstreamAPI.Use(middleware.UpstreamAPIAuthMiddleware(`,
 				`apiV1.POST("/upstream/callback",`,
 			},
 		},
 		{
 			file: "routes_channel.go",
 			required: []string{
-				`channelAPI.Use(ChannelAPIAuthMiddleware(`,
+				`channelAPI.Use(middleware.ChannelAPIAuthMiddleware(`,
 				`telegramtransport.RegisterChannelBotRoutes(channelAPI, channelTelegramBotHandler)`,
 				`affiliatetransport.RegisterChannelRoutes(channelAPI, channelAffiliateHandler)`,
 				`memberleveltransport.RegisterChannelRoutes(channelAPI, channelMemberLevelHandler)`,
@@ -116,8 +116,8 @@ func TestRouteDomainFilesPreserveTrustBoundaries(t *testing.T) {
 		{
 			file: "routes_admin.go",
 			required: []string{
-				`adminauthtransport.RegisterAdminLoginAuthRoutes(admin, adminLoginHandler, RateLimitMiddleware(redisClient, adminLoginRule, KeyByIP))`,
-				`adminauthtransport.RegisterAdmin2FAAuthRoutes(admin, admin2FAHandler, RateLimitMiddleware(redisClient, adminLoginRule, KeyByIP))`,
+				`adminauthtransport.RegisterAdminLoginAuthRoutes(admin, adminLoginHandler, middleware.RateLimitMiddleware(redisClient, adminLoginRule, middleware.KeyByIP))`,
+				`adminauthtransport.RegisterAdmin2FAAuthRoutes(admin, admin2FAHandler, middleware.RateLimitMiddleware(redisClient, adminLoginRule, middleware.KeyByIP))`,
 				`adminauthtransport.RegisterAdminPasswordRoutes(authorized, adminLoginHandler)`,
 				`adminauthtransport.RegisterAdmin2FARoutes(authorized, admin2FAHandler)`,
 				`adminauthtransport.RegisterAdminUser2FARoutes(authorized, adminUser2FAHandler)`,
@@ -127,8 +127,8 @@ func TestRouteDomainFilesPreserveTrustBoundaries(t *testing.T) {
 				`ordertransport.RegisterAdminRefundWriteRoutes(authorized, adminOrderRefundHandler)`,
 				`ordertransport.RegisterAdminRefundRoutes(authorized, adminOrderRefundHandler)`,
 				`fulfillmenttransport.RegisterAdminRoutes(authorized, adminFulfillmentHandler)`,
-				`authorized := admin.Use(JWTAuthMiddleware(`,
-				`paymentProtected := admin.Group("", PaymentComplianceRequired(`,
+				`authorized := admin.Use(middleware.JWTAuthMiddleware(`,
+				`paymentProtected := admin.Group("", middleware.PaymentComplianceRequired(`,
 				`compliancetransport.RegisterAdminRoutes(authorized,`,
 				`systemtransport.RegisterAdminRoutes(authorized,`,
 				`adproxytransport.RegisterAdminRoutes(authorized,`,

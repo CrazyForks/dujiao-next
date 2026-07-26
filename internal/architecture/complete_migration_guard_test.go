@@ -14,7 +14,6 @@ import (
 // or moving files is allowed, adding files below these roots is not. The map is
 // removed together with the roots when the migration is complete.
 var legacyRootGoFileBudgets = map[string]int{
-	"internal/router": 23,
 	"internal/worker": 10,
 }
 
@@ -33,7 +32,6 @@ type packageFileBudget struct {
 // their packages are split into bounded-context leaf packages.
 var transitionalPackageFileBudgets = map[string]packageFileBudget{
 	"internal/architecture": {production: 0, total: 55},
-	"internal/router":       {production: 13, total: 23},
 }
 
 // completedMigrationPaths are deleted compatibility-free entry points. Once a
@@ -46,6 +44,7 @@ var completedMigrationPaths = []string{
 	"internal/models",
 	"internal/provider",
 	"internal/repository",
+	"internal/router",
 	"internal/service",
 	"internal/transport",
 	"internal/wiring",

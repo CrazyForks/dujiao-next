@@ -1,4 +1,4 @@
-package router
+package httpserver
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/app/container"
+	"github.com/dujiao-next/internal/app/httpserver/middleware"
 	"github.com/dujiao-next/internal/authz"
 	adminauthwiring "github.com/dujiao-next/internal/bootstrap/adminauth"
 	adminauthzwiring "github.com/dujiao-next/internal/bootstrap/adminauthz"
@@ -171,21 +172,21 @@ func SetupRouter(cfg *config.Config, c *container.Container) *gin.Engine {
 		redisPrefix = constants.RedisPrefixDefault
 	}
 	redisClient := cache.Client()
-	loginRule := RateLimitRule{
+	loginRule := middleware.RateLimitRule{
 		Prefix:        fmt.Sprintf("%s:rate:login", redisPrefix),
 		WindowSeconds: cfg.Security.LoginRateLimit.WindowSeconds,
 		MaxRequests:   cfg.Security.LoginRateLimit.MaxAttempts,
 		BlockSeconds:  cfg.Security.LoginRateLimit.BlockSeconds,
 		MessageKey:    "error.login_too_many",
 	}
-	adminLoginRule := RateLimitRule{
+	adminLoginRule := middleware.RateLimitRule{
 		Prefix:        fmt.Sprintf("%s:rate:admin_login", redisPrefix),
 		WindowSeconds: cfg.Security.LoginRateLimit.WindowSeconds,
 		MaxRequests:   cfg.Security.LoginRateLimit.MaxAttempts,
 		BlockSeconds:  cfg.Security.LoginRateLimit.BlockSeconds,
 		MessageKey:    "error.login_too_many",
 	}
-	upstreamAPIRule := RateLimitRule{
+	upstreamAPIRule := middleware.RateLimitRule{
 		Prefix:        fmt.Sprintf("%s:rate:upstream_api", redisPrefix),
 		WindowSeconds: 60,
 		MaxRequests:   60,
@@ -193,12 +194,12 @@ func SetupRouter(cfg *config.Config, c *container.Container) *gin.Engine {
 		MessageKey:    "error.rate_limited",
 	}
 
-	// RequestIDMiddleware 必须前置于 RecoveryMiddleware：panic 日志与响应都依赖 request_id。
-	r.Use(RequestIDMiddleware())
-	r.Use(RecoveryMiddleware())
-	r.Use(LoggerMiddleware(log))
-	r.Use(CORSMiddleware(cfg.CORS))
-	r.Use(CallbackRouteMiddleware(c.SettingService, paymentCallbackHandler, paymentWebhookHandler, upstreamHandler))
+	// middleware.RequestIDMiddleware 必须前置于 middleware.RecoveryMiddleware：panic 日志与响应都依赖 request_id。
+	r.Use(middleware.RequestIDMiddleware())
+	r.Use(middleware.RecoveryMiddleware())
+	r.Use(middleware.LoggerMiddleware(log))
+	r.Use(middleware.CORSMiddleware(cfg.CORS))
+	r.Use(middleware.CallbackRouteMiddleware(c.SettingService, paymentCallbackHandler, paymentWebhookHandler, upstreamHandler))
 
 	// 静态文件服务（上传的图片）必须放在前面。
 	r.Static("/uploads", "./uploads")

@@ -1,7 +1,8 @@
-package router
+package httpserver
 
 import (
 	"github.com/dujiao-next/internal/app/container"
+	"github.com/dujiao-next/internal/app/httpserver/middleware"
 	affiliatebootstrap "github.com/dujiao-next/internal/bootstrap/affiliate"
 	settingsbootstrap "github.com/dujiao-next/internal/bootstrap/settingshttp"
 	"github.com/dujiao-next/internal/config"
@@ -81,19 +82,19 @@ func registerAdminRoutes(
 	adminPaymentHandler *paymenttransport.AdminHandler,
 	adminPaymentChannelHandler *paymenttransport.AdminChannelHandler,
 	redisClient *redis.Client,
-	adminLoginRule RateLimitRule,
+	adminLoginRule middleware.RateLimitRule,
 ) {
 	admin := apiV1.Group("/admin")
 
 	// 登录接口（无需鉴权）
-	adminauthtransport.RegisterAdminLoginAuthRoutes(admin, adminLoginHandler, RateLimitMiddleware(redisClient, adminLoginRule, KeyByIP))
-	adminauthtransport.RegisterAdmin2FAAuthRoutes(admin, admin2FAHandler, RateLimitMiddleware(redisClient, adminLoginRule, KeyByIP))
+	adminauthtransport.RegisterAdminLoginAuthRoutes(admin, adminLoginHandler, middleware.RateLimitMiddleware(redisClient, adminLoginRule, middleware.KeyByIP))
+	adminauthtransport.RegisterAdmin2FAAuthRoutes(admin, admin2FAHandler, middleware.RateLimitMiddleware(redisClient, adminLoginRule, middleware.KeyByIP))
 
 	// 需要鉴权的接口
-	authorized := admin.Use(JWTAuthMiddleware(cfg.JWT.SecretKey, c.AdminStore), AdminRBACMiddleware(c.AuthzService))
+	authorized := admin.Use(middleware.JWTAuthMiddleware(cfg.JWT.SecretKey, c.AdminStore), middleware.AdminRBACMiddleware(c.AuthzService))
 	// 支付/财务相关受保护子组：未确认合规声明时拦截
 	// 注：admin.Use(...) 已 mutate admin 自身，新 Group 继承 JWT + RBAC 中间件
-	paymentProtected := admin.Group("", PaymentComplianceRequired(c.ComplianceService))
+	paymentProtected := admin.Group("", middleware.PaymentComplianceRequired(c.ComplianceService))
 
 	// 合规声明
 	compliancetransport.RegisterAdminRoutes(authorized, compliancetransport.NewAdminHandler(c.ComplianceService))

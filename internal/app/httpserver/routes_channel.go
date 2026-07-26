@@ -1,7 +1,8 @@
-package router
+package httpserver
 
 import (
 	"github.com/dujiao-next/internal/app/container"
+	"github.com/dujiao-next/internal/app/httpserver/middleware"
 	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	channeltransport "github.com/dujiao-next/internal/modules/channelapi/transport/http"
 	giftcardtransport "github.com/dujiao-next/internal/modules/giftcard/transport/http"
@@ -24,7 +25,7 @@ func registerChannelRoutes(
 ) {
 	// 渠道 API（Telegram Bot 等外部服务调用）
 	channelAPI := apiV1.Group("/channel")
-	channelAPI.Use(ChannelAPIAuthMiddleware(c))
+	channelAPI.Use(middleware.ChannelAPIAuthMiddleware(c))
 	{
 		telegramtransport.RegisterChannelBotRoutes(channelAPI, channelTelegramBotHandler)
 		channeltransport.RegisterRoutes(channelAPI, channelHandler)

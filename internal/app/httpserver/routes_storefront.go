@@ -1,7 +1,8 @@
-package router
+package httpserver
 
 import (
 	"github.com/dujiao-next/internal/app/container"
+	"github.com/dujiao-next/internal/app/httpserver/middleware"
 	affiliatebootstrap "github.com/dujiao-next/internal/bootstrap/affiliate"
 	"github.com/dujiao-next/internal/config"
 	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
@@ -59,10 +60,10 @@ func registerStorefrontRoutes(
 	paymentWriteHandler *paymenttransport.WriteHandler,
 	userWalletHandler *wallettransport.UserHandler,
 	redisClient *redis.Client,
-	loginRule RateLimitRule,
+	loginRule middleware.RateLimitRule,
 ) {
 	storefront := apiV1.Group("")
-	storefront.Use(ResellerTenantMiddleware(c.ResellerDomainResolver))
+	storefront.Use(middleware.ResellerTenantMiddleware(c.ResellerDomainResolver))
 	affiliateHandler := affiliatebootstrap.NewStorefrontHandler(c)
 
 	// 公开接口
@@ -93,16 +94,16 @@ func registerStorefrontRoutes(
 	{
 		userauthtransport.RegisterUserVerifyAuthRoutes(auth, userVerifyHandler)
 		userauthtransport.RegisterUserRegisterAuthRoutes(auth, userLoginHandler)
-		userauthtransport.RegisterUserLoginAuthRoutes(auth, userLoginHandler, RateLimitMiddleware(redisClient, loginRule, KeyByIPAndJSONField("email")))
-		userauthtransport.RegisterUser2FAAuthRoutes(auth, user2FAHandler, RateLimitMiddleware(redisClient, loginRule, KeyByIP))
-		userauthtransport.RegisterUserTelegramAuthRoutes(auth, userTelegramHandler, RateLimitMiddleware(redisClient, loginRule, KeyByIP))
-		userauthtransport.RegisterUserTelegramOIDCAuthRoutes(auth, userTelegramOIDCHandler, RateLimitMiddleware(redisClient, loginRule, KeyByIP))
+		userauthtransport.RegisterUserLoginAuthRoutes(auth, userLoginHandler, middleware.RateLimitMiddleware(redisClient, loginRule, middleware.KeyByIPAndJSONField("email")))
+		userauthtransport.RegisterUser2FAAuthRoutes(auth, user2FAHandler, middleware.RateLimitMiddleware(redisClient, loginRule, middleware.KeyByIP))
+		userauthtransport.RegisterUserTelegramAuthRoutes(auth, userTelegramHandler, middleware.RateLimitMiddleware(redisClient, loginRule, middleware.KeyByIP))
+		userauthtransport.RegisterUserTelegramOIDCAuthRoutes(auth, userTelegramOIDCHandler, middleware.RateLimitMiddleware(redisClient, loginRule, middleware.KeyByIP))
 		userauthtransport.RegisterUserPasswordAuthRoutes(auth, userPasswordHandler)
 	}
 
 	// 用户接口（需鉴权）
 	user := storefront.Group("")
-	user.Use(UserJWTAuthMiddleware(cfg.UserJWT.SecretKey, c.UserStore))
+	user.Use(middleware.UserJWTAuthMiddleware(cfg.UserJWT.SecretKey, c.UserStore))
 	{
 		userauthtransport.RegisterUserProfileRoutes(user, userProfileHandler)
 		auditlogtransport.RegisterUserRoutes(user, userAuditLogHandler)
@@ -125,7 +126,7 @@ func registerStorefrontRoutes(
 		affiliatetransport.RegisterUserRoutes(user, affiliateHandler)
 
 		resellerConsole := user.Group("/reseller")
-		resellerConsole.Use(RequireMainTenantForResellerConsole())
+		resellerConsole.Use(middleware.RequireMainTenantForResellerConsole())
 		{
 			resellertransport.RegisterUserConsoleRoutes(resellerConsole, userResellerHandler)
 			resellertransport.RegisterUserProductSettingRoutes(resellerConsole, userResellerProductSettingHandler)
