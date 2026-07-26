@@ -4,33 +4,18 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"testing"
 )
-
-// legacyRootGoFileBudgets freeze the remaining horizontal architecture at the
-// start of the complete migration. Every entry is a one-way budget: deleting
-// or moving files is allowed, adding files below these roots is not. The map is
-// removed together with the roots when the migration is complete.
-var legacyRootGoFileBudgets = map[string]int{
-	"internal/worker": 10,
-}
-
-// These are the only production compatibility shims that existed at the
-// migration baseline. They may be deleted, but no replacement shim may be
-// introduced. The final migration gate requires this set to become empty.
-var baselineCompatibilityFiles = map[string]struct{}{}
 
 type packageFileBudget struct {
 	production int
 	total      int
 }
 
-// Existing oversized packages are frozen at their baseline size. All new or
-// already-focused packages use the default limit below. Entries disappear as
-// their packages are split into bounded-context leaf packages.
-var transitionalPackageFileBudgets = map[string]packageFileBudget{
+// Test-only architecture assertions intentionally share one package so they can
+// reuse AST helpers. Production packages have no file-budget exceptions.
+var packageFileBudgetOverrides = map[string]packageFileBudget{
 	"internal/architecture": {production: 0, total: 55},
 }
 
@@ -48,6 +33,7 @@ var completedMigrationPaths = []string{
 	"internal/service",
 	"internal/transport",
 	"internal/wiring",
+	"internal/worker",
 	"internal/models/payment.go",
 	"internal/models/payment_channel.go",
 	"internal/repository/payment_repository.go",
@@ -614,31 +600,6 @@ func TestDatabaseBootstrapIsSeparatedFromPlatformConnection(t *testing.T) {
 	assertDirectoryGoFileBudget(t, migrationRoot, 4)
 }
 
-func TestLegacyHorizontalRootsCanOnlyShrink(t *testing.T) {
-	repositoryRoot := findRepositoryRoot(t)
-
-	paths := make([]string, 0, len(legacyRootGoFileBudgets))
-	for relativePath := range legacyRootGoFileBudgets {
-		paths = append(paths, relativePath)
-	}
-	sort.Strings(paths)
-
-	for _, relativePath := range paths {
-		t.Run(strings.TrimPrefix(relativePath, "internal/"), func(t *testing.T) {
-			absolutePath := filepath.Join(repositoryRoot, filepath.FromSlash(relativePath))
-			count := countGoFilesRecursively(t, absolutePath)
-			if count > legacyRootGoFileBudgets[relativePath] {
-				t.Fatalf(
-					"legacy root %s grew from its migration baseline of %d Go files to %d; move new code into a bounded context",
-					relativePath,
-					legacyRootGoFileBudgets[relativePath],
-					count,
-				)
-			}
-		})
-	}
-}
-
 func TestNoNewCompatibilityOrLegacyProductionFiles(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	internalRoot := filepath.Join(repositoryRoot, "internal")
@@ -661,9 +622,7 @@ func TestNoNewCompatibilityOrLegacyProductionFiles(t *testing.T) {
 			return err
 		}
 		relativePath = filepath.ToSlash(relativePath)
-		if _, allowedDuringMigration := baselineCompatibilityFiles[relativePath]; !allowedDuringMigration {
-			t.Errorf("new compatibility or legacy production file is forbidden: %s", relativePath)
-		}
+		t.Errorf("compatibility or legacy production file is forbidden: %s", relativePath)
 		return nil
 	})
 	if err != nil {
@@ -695,8 +654,8 @@ func TestGoPackagesStayWithinFileBudgets(t *testing.T) {
 		relativePath = filepath.ToSlash(relativePath)
 
 		budget := packageFileBudget{production: 12, total: 20}
-		if transitional, ok := transitionalPackageFileBudgets[relativePath]; ok {
-			budget = transitional
+		if override, ok := packageFileBudgetOverrides[relativePath]; ok {
+			budget = override
 		}
 
 		if production > budget.production || total > budget.total {
@@ -714,31 +673,6 @@ func TestGoPackagesStayWithinFileBudgets(t *testing.T) {
 	if err != nil {
 		t.Fatalf("inspect Go package budgets: %v", err)
 	}
-}
-
-func countGoFilesRecursively(t *testing.T, root string) int {
-	t.Helper()
-	if _, err := os.Stat(root); err != nil {
-		if os.IsNotExist(err) {
-			return 0
-		}
-		t.Fatalf("stat %s: %v", root, err)
-	}
-
-	count := 0
-	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if !entry.IsDir() && filepath.Ext(path) == ".go" {
-			count++
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("count Go files below %s: %v", root, err)
-	}
-	return count
 }
 
 func countDirectGoFiles(t *testing.T, directory string) (production int, total int) {

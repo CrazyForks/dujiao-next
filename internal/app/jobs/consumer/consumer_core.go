@@ -1,4 +1,4 @@
-package worker
+package consumer
 
 import (
 	"github.com/dujiao-next/internal/app/container"
@@ -19,8 +19,8 @@ type orderReader interface {
 	GetByID(id uint) (*orderdomain.Order, error)
 }
 
-// NewConsumer 创建消费者
-func NewConsumer(c *container.Container) *Consumer {
+// New 创建消费者
+func New(c *container.Container) *Consumer {
 	var orders orderReader
 	if c != nil {
 		orders = c.OrderStore

@@ -1,9 +1,10 @@
-package worker
+package jobs
 
 import (
 	"context"
 	"errors"
 
+	jobconsumer "github.com/dujiao-next/internal/app/jobs/consumer"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/logger"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
@@ -18,11 +19,11 @@ type Service struct {
 	server    *asynq.Server
 	mux       *asynq.ServeMux
 	scheduler *asynq.Scheduler
-	consumer  *Consumer
+	consumer  *jobconsumer.Consumer
 }
 
 // NewService 创建异步队列服务
-func NewService(cfg *config.QueueConfig, consumer *Consumer) (*Service, error) {
+func NewService(cfg *config.QueueConfig, consumer *jobconsumer.Consumer) (*Service, error) {
 	if cfg == nil || !cfg.Enabled {
 		return nil, errors.New("queue disabled")
 	}
@@ -47,7 +48,7 @@ func NewService(cfg *config.QueueConfig, consumer *Consumer) (*Service, error) {
 }
 
 // registerPeriodicTasks 注册所有周期性任务
-func registerPeriodicTasks(scheduler *asynq.Scheduler, consumer *Consumer, cfg *config.QueueConfig) {
+func registerPeriodicTasks(scheduler *asynq.Scheduler, consumer *jobconsumer.Consumer, cfg *config.QueueConfig) {
 	if scheduler == nil || consumer == nil {
 		return
 	}

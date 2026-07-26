@@ -1,4 +1,4 @@
-package worker
+package consumer
 
 import (
 	"context"
@@ -41,7 +41,7 @@ func TestResellerConfirmLedgerWorkerMarksDueEntriesAvailable(t *testing.T) {
 		t.Fatalf("seed ledger failed: %v", err)
 	}
 	repo := resellergormstore.New(db)
-	c := NewConsumer(&container.Container{
+	c := New(&container.Container{
 		ResellerAccountingLedger: resellerapplication.NewAccountingLedgerService(repo, 0),
 	})
 	if err := c.handleResellerConfirmLedger(context.Background(), queue.NewResellerConfirmLedgerTask()); err != nil {
@@ -67,7 +67,7 @@ func TestResellerConfirmLedgerTaskType(t *testing.T) {
 }
 
 func TestResellerConfirmLedgerWorkerSkipNilService(t *testing.T) {
-	c := NewConsumer(&container.Container{})
+	c := New(&container.Container{})
 	if err := c.handleResellerConfirmLedger(context.Background(), asynq.NewTask(queue.TaskResellerConfirmLedger, nil)); err != nil {
 		t.Fatalf("nil service should be skipped, got %v", err)
 	}

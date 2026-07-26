@@ -8,16 +8,17 @@ import (
 
 func TestWorkerConsumerIsSplitByJobDomain(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	workerDirectory := filepath.Join(repositoryRoot, "internal", "worker")
-	legacyPath := filepath.Join(workerDirectory, "asynq_worker.go")
+	jobsDirectory := filepath.Join(repositoryRoot, "internal", "app", "jobs")
+	consumerDirectory := filepath.Join(jobsDirectory, "consumer")
+	legacyPath := filepath.Join(repositoryRoot, "internal", "worker")
 	if _, err := os.Stat(legacyPath); err == nil {
-		t.Fatalf("asynq_worker.go must be replaced by job-domain-focused consumer files")
+		t.Fatalf("legacy worker root must stay deleted")
 	} else if !os.IsNotExist(err) {
-		t.Fatalf("stat asynq_worker.go: %v", err)
+		t.Fatalf("stat legacy worker root: %v", err)
 	}
 
 	expectedOwner := map[string]string{
-		"NewConsumer":                       "consumer_core.go",
+		"New":                               "consumer_core.go",
 		"Register":                          "consumer_core.go",
 		"handleOrderStatusEmail":            "consumer_order.go",
 		"handleOrderAutoFulfill":            "consumer_order.go",
@@ -50,7 +51,7 @@ func TestWorkerConsumerIsSplitByJobDomain(t *testing.T) {
 	actualOwners := make(map[string][]string, len(expectedOwner))
 	consumerTypeOwners := make([]string, 0, 1)
 	for _, file := range files {
-		parsed := parseProductionGoFile(t, filepath.Join(workerDirectory, file))
+		parsed := parseProductionGoFile(t, filepath.Join(consumerDirectory, file))
 		for _, function := range declaredFunctionNames(parsed) {
 			if _, tracked := expectedOwner[function]; tracked {
 				actualOwners[function] = append(actualOwners[function], file)
@@ -72,4 +73,7 @@ func TestWorkerConsumerIsSplitByJobDomain(t *testing.T) {
 	if len(consumerTypeOwners) != 1 || consumerTypeOwners[0] != "consumer_core.go" {
 		t.Errorf("Consumer ownership mismatch: want [consumer_core.go], got %v", consumerTypeOwners)
 	}
+
+	assertFileDeclaresTypes(t, filepath.Join(jobsDirectory, "service.go"), []string{"Service"})
+	assertFileDeclaresFunctions(t, filepath.Join(jobsDirectory, "service.go"), []string{"NewService"})
 }
