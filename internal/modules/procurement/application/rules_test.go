@@ -1,4 +1,4 @@
-package procurement
+package application
 
 import (
 	"testing"

@@ -2,6 +2,7 @@ package procurement_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,11 +10,45 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
+	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
+
+func TestProcurementStoreExcludesSoftDeletedRows(t *testing.T) {
+	db := setupProcurementTestDB(t)
+	order := createProcTestOrder(t, db, "PROC-SOFT-DELETED", constants.OrderStatusPaid, constants.FulfillmentTypeUpstream)
+	proc := createTestProcurementOrder(t, db, 1, order.ID, order.OrderNo, constants.ProcurementStatusAccepted)
+
+	deletedAt := time.Now()
+	if err := db.Model(&procurementdomain.Order{}).
+		Where("id = ?", proc.ID).
+		Update("deleted_at", deletedAt).Error; err != nil {
+		t.Fatalf("soft delete procurement order: %v", err)
+	}
+
+	svc := newTestProcurementService(db, newTestSiteConnectionService(db, "test-key", t.TempDir()))
+	if _, err := svc.GetByID(proc.ID); !errors.Is(err, procurementcontract.ErrNotFound) {
+		t.Fatalf("GetByID error = %v, want ErrNotFound", err)
+	}
+	orders, total, err := svc.List(ListFilter{})
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if total != 0 || len(orders) != 0 {
+		t.Fatalf("List returned soft-deleted row: total=%d len=%d", total, len(orders))
+	}
+	stats, err := svc.StatsByStatus(ListFilter{})
+	if err != nil {
+		t.Fatalf("StatsByStatus: %v", err)
+	}
+	if stats[constants.ProcurementStatusAccepted] != 0 {
+		t.Fatalf("StatsByStatus counted soft-deleted row: %v", stats)
+	}
+}
 
 func TestProcurement_GetByID_DoesNotIncludeLocalRefundRecords(t *testing.T) {
 	db := setupProcurementTestDB(t)
@@ -223,7 +258,7 @@ func TestProcurement_GetByID_SyncsUpstreamRefundStatusAndRecords(t *testing.T) {
 	}
 
 	proc := createTestProcurementOrder(t, db, conn.ID, order.ID, order.OrderNo, constants.ProcurementStatusFulfilled)
-	if err := db.Model(&models.ProcurementOrder{}).Where("id = ?", proc.ID).Updates(map[string]interface{}{
+	if err := db.Model(&ProcurementOrder{}).Where("id = ?", proc.ID).Updates(map[string]interface{}{
 		"upstream_order_id": uint(999),
 		"upstream_order_no": "UP-999",
 	}).Error; err != nil {
@@ -251,7 +286,7 @@ func TestProcurement_GetByID_SyncsUpstreamRefundStatusAndRecords(t *testing.T) {
 		t.Fatalf("expected upstream_refunded_amount 10.00, got %q", got.UpstreamRefundedAmount)
 	}
 
-	var refreshed models.ProcurementOrder
+	var refreshed ProcurementOrder
 	if err := db.First(&refreshed, proc.ID).Error; err != nil {
 		t.Fatalf("reload procurement order: %v", err)
 	}
@@ -293,7 +328,7 @@ func TestProcurement_List_SyncsUpstreamRefundStatusAndRecords(t *testing.T) {
 	}
 
 	proc := createTestProcurementOrder(t, db, conn.ID, order.ID, order.OrderNo, constants.ProcurementStatusFulfilled)
-	if err := db.Model(&models.ProcurementOrder{}).Where("id = ?", proc.ID).Updates(map[string]interface{}{
+	if err := db.Model(&ProcurementOrder{}).Where("id = ?", proc.ID).Updates(map[string]interface{}{
 		"upstream_order_id": uint(888),
 		"upstream_order_no": "UP-888",
 	}).Error; err != nil {
@@ -357,7 +392,7 @@ func TestProcurement_GetByID_WithoutUpstreamRefundOmitsRefundFields(t *testing.T
 	}
 
 	proc := createTestProcurementOrder(t, db, conn.ID, order.ID, order.OrderNo, constants.ProcurementStatusFulfilled)
-	if err := db.Model(&models.ProcurementOrder{}).Where("id = ?", proc.ID).Updates(map[string]interface{}{
+	if err := db.Model(&ProcurementOrder{}).Where("id = ?", proc.ID).Updates(map[string]interface{}{
 		"upstream_order_id": uint(777),
 		"upstream_order_no": "UP-777",
 	}).Error; err != nil {

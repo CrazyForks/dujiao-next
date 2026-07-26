@@ -1,4 +1,4 @@
-package procurement
+package application
 
 import (
 	"context"
@@ -6,11 +6,9 @@ import (
 	"strings"
 	"time"
 
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
-
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/queue"
+	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
+	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 )
 
 // pollIntervals 短期轮询间隔：捕获自动交付等快速场景（共约30分钟后停止）
@@ -30,7 +28,7 @@ func (s *Service) PollUpstreamStatus(procurementOrderID uint) error {
 		return fmt.Errorf("load procurement order: %w", err)
 	}
 	if procOrder == nil {
-		return ErrNotFound
+		return procurementcontract.ErrNotFound
 	}
 
 	// 只轮询 accepted 状态的订单
@@ -38,23 +36,18 @@ func (s *Service) PollUpstreamStatus(procurementOrderID uint) error {
 		return nil
 	}
 
-	conn, err := s.connections.GetByID(procOrder.ConnectionID)
+	connection, err := s.connections.Open(procOrder.ConnectionID)
 	if err != nil {
 		return fmt.Errorf("load connection: %w", err)
 	}
-	if conn == nil {
-		return ErrConnectionNotFound
-	}
-
-	adapter, err := s.connections.GetAdapter(conn)
-	if err != nil {
-		return fmt.Errorf("get adapter: %w", err)
+	if connection == nil {
+		return procurementcontract.ErrConnectionNotFound
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	detail, err := adapter.GetOrder(ctx, procOrder.UpstreamOrderID)
+	detail, err := connection.GetOrder(ctx, procOrder.UpstreamOrderID)
 	if err != nil {
 		logger.Warnw("procurement_poll_status_error",
 			"procurement_order_id", procOrder.ID,
@@ -62,7 +55,7 @@ func (s *Service) PollUpstreamStatus(procurementOrderID uint) error {
 			"error", err,
 		)
 		// 轮询失败，重新入队
-		return s.requeuePoll(procOrder, conn)
+		return s.requeuePoll(procOrder)
 	}
 
 	mappedStatus := mapProcurementUpstreamStatus(detail.Status)
@@ -75,12 +68,12 @@ func (s *Service) PollUpstreamStatus(procurementOrderID uint) error {
 		return s.HandleUpstreamCallback(procOrder.ID, mappedStatus, detail.Fulfillment)
 	default:
 		// 状态未变，继续轮询
-		return s.requeuePoll(procOrder, conn)
+		return s.requeuePoll(procOrder)
 	}
 }
 
 // requeuePoll 重新入队轮询任务
-func (s *Service) requeuePoll(procOrder *models.ProcurementOrder, _ *siteconnectiondomain.Connection) error {
+func (s *Service) requeuePoll(procOrder *procurementdomain.Order) error {
 	if s.queue == nil {
 		return nil
 	}
@@ -104,15 +97,13 @@ func (s *Service) requeuePoll(procOrder *models.ProcurementOrder, _ *siteconnect
 		"updated_at":  now,
 	})
 
-	return s.queue.EnqueueProcurementPollStatus(queue.ProcurementPollStatusPayload{
-		ProcurementOrderID: procOrder.ID,
-	}, delay)
+	return s.queue.EnqueuePoll(procOrder.ID, delay)
 }
 
 // SyncAcceptedOrders 定时巡检：检查所有 accepted 状态的采购单，向上游查询最新状态
 // 由 worker 定时任务调用（每30分钟）
 func (s *Service) SyncAcceptedOrders() {
-	orders, _, err := s.procRepo.List(ListFilter{
+	orders, _, err := s.procRepo.List(procurementcontract.ListFilter{
 		Status:   "accepted",
 		Page:     1,
 		PageSize: 200,
@@ -133,17 +124,13 @@ func (s *Service) SyncAcceptedOrders() {
 			continue
 		}
 
-		conn, err := s.connections.GetByID(procOrder.ConnectionID)
-		if err != nil || conn == nil {
-			continue
-		}
-		adapter, err := s.connections.GetAdapter(conn)
-		if err != nil {
+		connection, err := s.connections.Open(procOrder.ConnectionID)
+		if err != nil || connection == nil {
 			continue
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-		detail, err := adapter.GetOrder(ctx, procOrder.UpstreamOrderID)
+		detail, err := connection.GetOrder(ctx, procOrder.UpstreamOrderID)
 		cancel()
 
 		if err != nil {

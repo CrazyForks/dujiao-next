@@ -1,4 +1,4 @@
-package procurement
+package application
 
 import (
 	"context"
@@ -7,15 +7,10 @@ import (
 	"strings"
 	"time"
 
-	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
-
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
-	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
-	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/shared/jsonmap"
-	"github.com/dujiao-next/internal/upstream"
+	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
+	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 )
 
 // SubmitToUpstream Worker 调用：向上游站点提交采购单
@@ -25,29 +20,23 @@ func (s *Service) SubmitToUpstream(procurementOrderID uint) error {
 		return fmt.Errorf("load procurement order: %w", err)
 	}
 	if procOrder == nil {
-		return ErrNotFound
+		return procurementcontract.ErrNotFound
 	}
 
 	// 校验状态
 	if procOrder.Status != "pending" && procOrder.Status != "failed" {
-		return ErrStatusInvalid
+		return procurementcontract.ErrStatusInvalid
 	}
 
 	// 获取连接和适配器
-	conn, err := s.connections.GetByID(procOrder.ConnectionID)
+	connection, err := s.connections.Open(procOrder.ConnectionID)
 	if err != nil {
 		s.markProcurementError(procOrder, fmt.Sprintf("load connection failed: %v", err))
 		return fmt.Errorf("load connection: %w", err)
 	}
-	if conn == nil {
+	if connection == nil {
 		s.rejectProcurement(procOrder, fmt.Sprintf("connection %d not found", procOrder.ConnectionID))
 		return nil // 永久性错误，不重试
-	}
-
-	adapter, err := s.connections.GetAdapter(conn)
-	if err != nil {
-		s.rejectProcurement(procOrder, fmt.Sprintf("get adapter failed: %v", err))
-		return nil // 配置错误，不重试
 	}
 
 	// 加载本地订单获取 SKU 信息
@@ -67,23 +56,23 @@ func (s *Service) SubmitToUpstream(procurementOrderID uint) error {
 	item := localOrder.Items[0]
 
 	// 查找 SKU 映射
-	skuMapping, err := s.skuMapRepo.GetByLocalSKUID(item.SKUID)
+	upstreamSKUID, found, err := s.skuMapRepo.FindUpstreamSKUID(item.SKUID)
 	if err != nil {
 		s.markProcurementError(procOrder, fmt.Sprintf("lookup sku mapping failed: %v", err))
 		return fmt.Errorf("lookup sku mapping: %w", err)
 	}
-	if skuMapping == nil {
+	if !found {
 		s.rejectProcurement(procOrder, fmt.Sprintf("no sku mapping for local sku %d", item.SKUID))
 		return nil // 永久性错误，不重试
 	}
 
 	// 构建上游请求
-	req := upstream.CreateUpstreamOrderReq{
-		SKUID:             skuMapping.UpstreamSKUID,
+	req := procurementcontract.CreateOrderRequest{
+		SKUID:             upstreamSKUID,
 		Quantity:          item.Quantity,
 		DownstreamOrderNo: localOrder.OrderNo,
 		TraceID:           procOrder.TraceID,
-		CallbackURL:       conn.CallbackURL,
+		CallbackURL:       connection.CallbackURL(),
 	}
 
 	// 传递人工表单数据（如有）
@@ -94,9 +83,9 @@ func (s *Service) SubmitToUpstream(procurementOrderID uint) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	resp, err := adapter.CreateOrder(ctx, req)
+	resp, err := connection.CreateOrder(ctx, req)
 	if err != nil {
-		return s.handleSubmitFailure(procOrder, conn, fmt.Sprintf("upstream request error: %v", err), true)
+		return s.handleSubmitFailure(procOrder, connection, fmt.Sprintf("upstream request error: %v", err), true)
 	}
 
 	if !resp.OK {
@@ -105,7 +94,7 @@ func (s *Service) SubmitToUpstream(procurementOrderID uint) error {
 		if errMsg == "" {
 			errMsg = resp.ErrorCode
 		}
-		return s.handleSubmitFailure(procOrder, conn, errMsg, retryable)
+		return s.handleSubmitFailure(procOrder, connection, errMsg, retryable)
 	}
 
 	// 成功：更新状态，重置 retry_count 用于轮询阶段
@@ -136,16 +125,14 @@ func (s *Service) SubmitToUpstream(procurementOrderID uint) error {
 
 	// 入队轮询任务（30s 延迟，作为回调的 fallback）
 	if s.queue != nil {
-		_ = s.queue.EnqueueProcurementPollStatus(queue.ProcurementPollStatusPayload{
-			ProcurementOrderID: procOrder.ID,
-		}, 30*time.Second)
+		_ = s.queue.EnqueuePoll(procOrder.ID, 30*time.Second)
 	}
 
 	return nil
 }
 
 // markProcurementError 记录错误信息但不改变状态（用于瞬态错误，asynq 可重试）
-func (s *Service) markProcurementError(procOrder *models.ProcurementOrder, errMsg string) {
+func (s *Service) markProcurementError(procOrder *procurementdomain.Order, errMsg string) {
 	now := time.Now()
 	_ = s.procRepo.UpdateStatus(procOrder.ID, procOrder.Status, map[string]interface{}{
 		"error_message": errMsg,
@@ -159,7 +146,7 @@ func (s *Service) markProcurementError(procOrder *models.ProcurementOrder, errMs
 
 // rejectProcurement 将采购单标记为 rejected（用于永久性配置错误，不值得重试）
 // 同时回退本地订单状态并通知管理员
-func (s *Service) rejectProcurement(procOrder *models.ProcurementOrder, errMsg string) {
+func (s *Service) rejectProcurement(procOrder *procurementdomain.Order, errMsg string) {
 	now := time.Now()
 	_ = s.procRepo.UpdateStatus(procOrder.ID, "rejected", map[string]interface{}{
 		"error_message": errMsg,
@@ -173,7 +160,7 @@ func (s *Service) rejectProcurement(procOrder *models.ProcurementOrder, errMsg s
 }
 
 // rollbackLocalOrderOnProcurementFailure 采购单终态失败时回退本地订单状态并通知管理员
-func (s *Service) rollbackLocalOrderOnProcurementFailure(procOrder *models.ProcurementOrder, errMsg string) {
+func (s *Service) rollbackLocalOrderOnProcurementFailure(procOrder *procurementdomain.Order, errMsg string) {
 	localOrder, err := s.orderRepo.GetByID(procOrder.LocalOrderID)
 	if err != nil || localOrder == nil {
 		return
@@ -198,28 +185,19 @@ func (s *Service) rollbackLocalOrderOnProcurementFailure(procOrder *models.Procu
 }
 
 // notifyProcurementFailure 发送采购失败异常告警
-func (s *Service) notifyProcurementFailure(procOrder *models.ProcurementOrder, errMsg string) {
+func (s *Service) notifyProcurementFailure(procOrder *procurementdomain.Order, errMsg string) {
 	if s.notifications == nil {
 		return
 	}
-	_ = s.notifications.Enqueue(notificationcontract.EnqueueInput{
-		EventType: constants.NotificationEventExceptionAlert,
-		BizType:   constants.NotificationBizTypeProcurement,
-		BizID:     procOrder.ID,
-		Data: jsonmap.JSON{
-			"procurement_order_id": procOrder.ID,
-			"local_order_no":       procOrder.LocalOrderNo,
-			"error":                errMsg,
-		},
-	})
+	_ = s.notifications.NotifyFailure(procOrder, errMsg)
 }
 
 // handleSubmitFailure 处理提交失败
-func (s *Service) handleSubmitFailure(procOrder *models.ProcurementOrder, conn *siteconnectiondomain.Connection, errMsg string, retryable bool) error {
+func (s *Service) handleSubmitFailure(procOrder *procurementdomain.Order, connection procurementcontract.UpstreamConnection, errMsg string, retryable bool) error {
 	now := time.Now()
 
-	if retryable && procOrder.RetryCount < conn.RetryMax {
-		intervals := parseRetryIntervals(conn.RetryIntervals)
+	if retryable && procOrder.RetryCount < connection.RetryMax() {
+		intervals := parseRetryIntervals(connection.RetryIntervals())
 		idx := procOrder.RetryCount
 		if idx >= len(intervals) {
 			idx = len(intervals) - 1
@@ -246,9 +224,7 @@ func (s *Service) handleSubmitFailure(procOrder *models.ProcurementOrder, conn *
 
 		// 入队重试
 		if s.queue != nil {
-			_ = s.queue.EnqueueProcurementSubmit(queue.ProcurementSubmitPayload{
-				ProcurementOrderID: procOrder.ID,
-			})
+			_ = s.queue.EnqueueSubmit(procOrder.ID)
 		}
 
 		return nil

@@ -3,12 +3,12 @@ package procurementreader
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 	reconciliationcontract "github.com/dujiao-next/internal/modules/reconciliation/contract"
 )
 
 type Source interface {
-	ListByConnectionAndTimeRange(connectionID uint, start, end time.Time) ([]models.ProcurementOrder, error)
+	ListByConnectionAndTimeRange(connectionID uint, start, end time.Time) ([]procurementdomain.Order, error)
 }
 
 type Reader struct {

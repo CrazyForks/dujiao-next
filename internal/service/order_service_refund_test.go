@@ -15,6 +15,7 @@ import (
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
@@ -43,7 +44,7 @@ func setupOrderRefundServiceTest(t *testing.T) (*OrderRefundService, *gorm.DB) {
 		&models.OrderItem{},
 		&models.Fulfillment{},
 		&siteconnectiondomain.Connection{},
-		&models.ProcurementOrder{},
+		&procurementdomain.Order{},
 		&affiliatedomain.Profile{},
 		&affiliatedomain.Commission{},
 		&affiliatedomain.WithdrawRequest{},
@@ -108,7 +109,7 @@ func TestOrderRefundServiceAdminManualRefundGuestCreatesRecord(t *testing.T) {
 		t.Fatalf("create guest order failed: %v", err)
 	}
 	conn := createOrderRefundTestSiteConnection(t, db, 1)
-	proc := &models.ProcurementOrder{
+	proc := &procurementdomain.Order{
 		ConnectionID:    conn.ID,
 		LocalOrderID:    order.ID,
 		LocalOrderNo:    order.OrderNo,
@@ -160,7 +161,7 @@ func TestOrderRefundServiceAdminManualRefundGuestCreatesRecord(t *testing.T) {
 	if record.Remark != "manual partial refund" {
 		t.Fatalf("unexpected refund record remark: %s", record.Remark)
 	}
-	var refreshedProc models.ProcurementOrder
+	var refreshedProc procurementdomain.Order
 	if err := db.First(&refreshedProc, proc.ID).Error; err != nil {
 		t.Fatalf("reload procurement order failed: %v", err)
 	}

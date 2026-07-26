@@ -8,7 +8,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	notificationformat "github.com/dujiao-next/internal/modules/notification/application/format"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
-	"github.com/dujiao-next/internal/modules/procurement"
+	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
 	"github.com/dujiao-next/internal/queue"
 
 	"github.com/hibiken/asynq"
@@ -107,7 +107,7 @@ func (s *PaymentService) enqueueProcurementAsync(order *models.Order, log *zap.S
 		return
 	}
 	if err := s.procurementSvc.CreateForOrder(order.ID); err != nil {
-		if !errors.Is(err, procurement.ErrExists) {
+		if !errors.Is(err, procurementcontract.ErrExists) {
 			log.Warnw("payment_enqueue_procurement_failed",
 				"order_id", order.ID,
 				"order_no", order.OrderNo,

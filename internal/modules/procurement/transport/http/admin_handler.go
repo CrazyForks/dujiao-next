@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/modules/procurement"
+	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
+	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -14,10 +14,10 @@ import (
 )
 
 type Service interface {
-	List(procurement.ListFilter) ([]models.ProcurementOrder, int64, error)
-	StatsByStatus(procurement.ListFilter) (map[string]int64, error)
-	GetByID(id uint) (*models.ProcurementOrder, error)
-	FillParentOrderNo(order *models.ProcurementOrder)
+	List(procurementcontract.ListFilter) ([]procurementdomain.Order, int64, error)
+	StatsByStatus(procurementcontract.ListFilter) (map[string]int64, error)
+	GetByID(id uint) (*procurementdomain.Order, error)
+	FillParentOrderNo(order *procurementdomain.Order)
 	RetryManual(id uint) error
 	CancelManual(id uint) error
 }
@@ -37,7 +37,7 @@ func NewAdminHandler(service Service) *AdminHandler {
 func (h *AdminHandler) GetProcurementOrders(c *gin.Context) {
 	page, pageSize := ginutil.ParsePagination(c)
 
-	filter := procurement.ListFilter{Page: page, PageSize: pageSize}
+	filter := procurementcontract.ListFilter{Page: page, PageSize: pageSize}
 	if connID := strings.TrimSpace(c.Query("connection_id")); connID != "" {
 		if id, err := ginutil.ParseQueryUint(connID, false); err == nil {
 			filter.ConnectionID = id
@@ -77,7 +77,7 @@ func (h *AdminHandler) GetProcurementOrderStats(c *gin.Context) {
 		return
 	}
 
-	filter := procurement.ListFilter{}
+	filter := procurementcontract.ListFilter{}
 	if connID := strings.TrimSpace(c.Query("connection_id")); connID != "" {
 		if id, err := ginutil.ParseQueryUint(connID, false); err == nil {
 			filter.ConnectionID = id
@@ -126,6 +126,10 @@ func (h *AdminHandler) GetProcurementOrder(c *gin.Context) {
 	}
 	order, err := h.service.GetByID(id)
 	if err != nil {
+		if errors.Is(err, procurementcontract.ErrNotFound) {
+			ginutil.RespondError(c, response.CodeNotFound, "error.procurement_not_found", nil)
+			return
+		}
 		ginutil.RespondError(c, response.CodeInternal, "error.procurement_fetch_failed", err)
 		return
 	}
@@ -133,7 +137,7 @@ func (h *AdminHandler) GetProcurementOrder(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeNotFound, "error.procurement_not_found", nil)
 		return
 	}
-	order.TruncateUpstreamPayload(models.FulfillmentPayloadMaxPreviewLines)
+	order.TruncateUpstreamPayload(procurementdomain.PayloadPreviewMaxLines)
 	h.service.FillParentOrderNo(order)
 	response.Success(c, order)
 }
@@ -176,11 +180,11 @@ func (h *AdminHandler) RetryProcurementOrder(c *gin.Context) {
 		return
 	}
 	if err := h.service.RetryManual(id); err != nil {
-		if errors.Is(err, procurement.ErrNotFound) {
+		if errors.Is(err, procurementcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.procurement_not_found", nil)
 			return
 		}
-		if errors.Is(err, procurement.ErrStatusInvalid) {
+		if errors.Is(err, procurementcontract.ErrStatusInvalid) {
 			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
 			return
 		}
@@ -202,11 +206,11 @@ func (h *AdminHandler) CancelProcurementOrder(c *gin.Context) {
 		return
 	}
 	if err := h.service.CancelManual(id); err != nil {
-		if errors.Is(err, procurement.ErrNotFound) {
+		if errors.Is(err, procurementcontract.ErrNotFound) {
 			ginutil.RespondError(c, response.CodeNotFound, "error.procurement_not_found", nil)
 			return
 		}
-		if errors.Is(err, procurement.ErrStatusInvalid) {
+		if errors.Is(err, procurementcontract.ErrStatusInvalid) {
 			ginutil.RespondErrorWithMsg(c, response.CodeBadRequest, err.Error(), nil)
 			return
 		}

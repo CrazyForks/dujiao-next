@@ -15,6 +15,7 @@ import (
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
@@ -43,7 +44,7 @@ func setupWalletServiceTest(t *testing.T) (*WalletService, *gorm.DB) {
 		&models.OrderItem{},
 		&models.Fulfillment{},
 		&siteconnectiondomain.Connection{},
-		&models.ProcurementOrder{},
+		&procurementdomain.Order{},
 		&affiliatedomain.Profile{},
 		&affiliatedomain.Commission{},
 		&affiliatedomain.WithdrawRequest{},
@@ -521,7 +522,7 @@ func TestWalletServiceAdminRefundToWalletCompletedOrderPartialSetsPartiallyRefun
 	}).Error; err != nil {
 		t.Fatalf("update order status failed: %v", err)
 	}
-	proc := &models.ProcurementOrder{
+	proc := &procurementdomain.Order{
 		ConnectionID:    conn.ID,
 		LocalOrderID:    order.ID,
 		LocalOrderNo:    order.OrderNo,
@@ -553,7 +554,7 @@ func TestWalletServiceAdminRefundToWalletCompletedOrderPartialSetsPartiallyRefun
 	if updatedOrder.Status != constants.OrderStatusPartiallyRefunded {
 		t.Fatalf("expected status partially_refunded, got: %s", updatedOrder.Status)
 	}
-	var refreshedProc models.ProcurementOrder
+	var refreshedProc procurementdomain.Order
 	if err := db.First(&refreshedProc, proc.ID).Error; err != nil {
 		t.Fatalf("reload procurement order failed: %v", err)
 	}

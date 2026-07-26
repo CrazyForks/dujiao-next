@@ -1,4 +1,4 @@
-package procurement
+package application
 
 import (
 	"fmt"
@@ -7,17 +7,17 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/upstream"
+	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
 )
 
 // HandleUpstreamCallback 处理上游回调通知
-func (s *Service) HandleUpstreamCallback(procurementOrderID uint, upstreamStatus string, fulfillment *upstream.UpstreamFulfillment) error {
+func (s *Service) HandleUpstreamCallback(procurementOrderID uint, upstreamStatus string, fulfillment *procurementcontract.Fulfillment) error {
 	procOrder, err := s.procRepo.GetByID(procurementOrderID)
 	if err != nil {
 		return fmt.Errorf("load procurement order: %w", err)
 	}
 	if procOrder == nil {
-		return ErrNotFound
+		return procurementcontract.ErrNotFound
 	}
 
 	now := time.Now()
@@ -142,6 +142,6 @@ func (s *Service) HandleUpstreamCallback(procurementOrderID uint, upstreamStatus
 }
 
 // createUpstreamFulfillment 在本地订单上创建上游交付记录
-func (s *Service) createUpstreamFulfillment(orderID uint, uf *upstream.UpstreamFulfillment, now time.Time) error {
+func (s *Service) createUpstreamFulfillment(orderID uint, uf *procurementcontract.Fulfillment, now time.Time) error {
 	return s.orderLifecycle.CreateUpstreamFulfillment(orderID, uf, now)
 }

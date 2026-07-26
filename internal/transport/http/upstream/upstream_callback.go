@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/logger"
+	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	upstreamadapter "github.com/dujiao-next/internal/upstream"
 
@@ -121,9 +122,9 @@ func (h *Handler) HandleCallback(c *gin.Context) {
 	}
 
 	// 转换状态并处理回调
-	var uf *upstreamadapter.UpstreamFulfillment
+	var uf *procurementcontract.Fulfillment
 	if payload.Fulfillment != nil {
-		uf = &upstreamadapter.UpstreamFulfillment{
+		uf = &procurementcontract.Fulfillment{
 			Type:         payload.Fulfillment.Type,
 			Status:       payload.Fulfillment.Status,
 			Payload:      payload.Fulfillment.Payload,

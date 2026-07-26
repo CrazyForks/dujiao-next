@@ -12,12 +12,16 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/models"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/modules/procurement"
-	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/store/gormstore"
+	procurementapp "github.com/dujiao-next/internal/modules/procurement/application"
+	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
+	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
+	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/infrastructure/gormstore"
+	procurementmapping "github.com/dujiao-next/internal/modules/procurement/infrastructure/mappingreader"
+	procurementorder "github.com/dujiao-next/internal/modules/procurement/infrastructure/orderreader"
+	procurementupstream "github.com/dujiao-next/internal/modules/procurement/infrastructure/upstreamgateway"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -26,10 +30,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type ListFilter = procurement.ListFilter
+type ListFilter = procurementcontract.ListFilter
+type ProcurementOrder = procurementdomain.Order
 
 var (
-	ErrExists = procurement.ErrExists
+	ErrExists = procurementcontract.ErrExists
 )
 
 func newTestSiteConnectionService(db *gorm.DB, secretKey, uploadsDir string) *siteconnectionapp.Service {
@@ -50,7 +55,7 @@ func setupProcurementTestDB(t *testing.T) *gorm.DB {
 		&models.OrderItem{},
 		&models.OrderRefundRecord{},
 		&models.Fulfillment{},
-		&models.ProcurementOrder{},
+		&procurementdomain.Order{},
 		&siteconnectiondomain.Connection{},
 		&mappingdomain.Mapping{},
 		&mappingdomain.SKUMapping{},
@@ -94,9 +99,9 @@ func createProcTestOrder(t *testing.T, db *gorm.DB, orderNo, status, fulfillment
 	return &loaded
 }
 
-func createTestProcurementOrder(t *testing.T, db *gorm.DB, connID, localOrderID uint, localOrderNo, status string) *models.ProcurementOrder {
+func createTestProcurementOrder(t *testing.T, db *gorm.DB, connID, localOrderID uint, localOrderNo, status string) *ProcurementOrder {
 	t.Helper()
-	order := &models.ProcurementOrder{
+	order := &ProcurementOrder{
 		ConnectionID:    connID,
 		LocalOrderID:    localOrderID,
 		LocalOrderNo:    localOrderNo,
@@ -111,21 +116,14 @@ func createTestProcurementOrder(t *testing.T, db *gorm.DB, connID, localOrderID 
 	return order
 }
 
-func newTestProcurementService(db *gorm.DB, connections *siteconnectionapp.Service) *procurement.Service {
+func newTestProcurementService(db *gorm.DB, connections *siteconnectionapp.Service) *procurementapp.Service {
 	orders := repository.NewOrderRepository(db)
-	fulfillments := repository.NewFulfillmentRepository(db)
-	return procurement.NewService(procurement.ServiceOptions{
+	return procurementapp.NewService(procurementapp.Options{
 		Repository:      procurementgormstore.New(db),
-		Orders:          orders,
-		ProductMappings: mappinggormstore.NewMappingStore(db),
-		SKUMappings:     mappinggormstore.NewSKUMappingStore(db),
-		Connections:     connections,
-		OrderLifecycle: service.NewProcurementOrderLifecycle(
-			orders,
-			fulfillments,
-			nil,
-			nil,
-			config.EmailConfig{},
-		),
+		Orders:          procurementorder.New(orders),
+		ProductMappings: procurementmapping.NewProducts(mappinggormstore.NewMappingStore(db)),
+		SKUMappings:     procurementmapping.NewSKUs(mappinggormstore.NewSKUMappingStore(db)),
+		Connections:     procurementupstream.New(connections),
+		OrderLifecycle:  procurementgormstore.NewLifecycle(db, nil, nil, config.EmailConfig{}),
 	})
 }

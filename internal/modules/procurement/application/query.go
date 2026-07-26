@@ -1,4 +1,4 @@
-package procurement
+package application
 
 import (
 	"context"
@@ -8,7 +8,8 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
+	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
+	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -16,25 +17,25 @@ import (
 )
 
 // GetByID 根据 ID 获取采购单
-func (s *Service) GetByID(id uint) (*models.ProcurementOrder, error) {
+func (s *Service) GetByID(id uint) (*procurementdomain.Order, error) {
 	procOrder, err := s.procRepo.GetByID(id)
 	if err != nil {
 		return nil, err
 	}
 	if procOrder == nil {
-		return nil, ErrNotFound
+		return nil, procurementcontract.ErrNotFound
 	}
 	s.fillUpstreamRefundRecordsForProcurementOrder(procOrder)
 	return procOrder, nil
 }
 
 // GetByLocalOrderNo 根据本地订单号获取采购单
-func (s *Service) GetByLocalOrderNo(localOrderNo string) (*models.ProcurementOrder, error) {
+func (s *Service) GetByLocalOrderNo(localOrderNo string) (*procurementdomain.Order, error) {
 	return s.procRepo.GetByLocalOrderNo(localOrderNo)
 }
 
 // List 列表查询采购单
-func (s *Service) List(filter ListFilter) ([]models.ProcurementOrder, int64, error) {
+func (s *Service) List(filter procurementcontract.ListFilter) ([]procurementdomain.Order, int64, error) {
 	orders, total, err := s.procRepo.List(filter)
 	if err != nil {
 		return nil, 0, err
@@ -45,12 +46,12 @@ func (s *Service) List(filter ListFilter) ([]models.ProcurementOrder, int64, err
 }
 
 // StatsByStatus 按状态聚合采购单数量（基于全量数据）
-func (s *Service) StatsByStatus(filter ListFilter) (map[string]int64, error) {
+func (s *Service) StatsByStatus(filter procurementcontract.ListFilter) (map[string]int64, error) {
 	return s.procRepo.StatsByStatus(filter)
 }
 
 // FillParentOrderNo 为单个采购单填充父订单号
-func (s *Service) FillParentOrderNo(order *models.ProcurementOrder) {
+func (s *Service) FillParentOrderNo(order *procurementdomain.Order) {
 	if order == nil || order.LocalOrder == nil || order.LocalOrder.ParentID == nil {
 		return
 	}
@@ -62,7 +63,7 @@ func (s *Service) FillParentOrderNo(order *models.ProcurementOrder) {
 }
 
 // fillParentOrderNos 为采购单批量填充父订单号
-func (s *Service) fillParentOrderNos(orders []models.ProcurementOrder) {
+func (s *Service) fillParentOrderNos(orders []procurementdomain.Order) {
 	// 收集需要查询的父订单 ID
 	parentIDs := make(map[uint]bool)
 	for i := range orders {
@@ -83,7 +84,7 @@ func (s *Service) fillParentOrderNos(orders []models.ProcurementOrder) {
 	if err != nil {
 		return
 	}
-	parentMap := make(map[uint]*models.Order, len(parentOrders))
+	parentMap := make(map[uint]*procurementdomain.LocalOrder, len(parentOrders))
 	for _, o := range parentOrders {
 		order := o
 		parentMap[o.ID] = &order
@@ -100,7 +101,7 @@ func (s *Service) fillParentOrderNos(orders []models.ProcurementOrder) {
 }
 
 // applyProcurementLocalRefundedAmountFallback 在子订单退款金额为空时回填父订单退款金额，便于采购单视图展示。
-func applyProcurementLocalRefundedAmountFallback(localOrder *models.Order, parentOrder *models.Order) {
+func applyProcurementLocalRefundedAmountFallback(localOrder *procurementdomain.LocalOrder, parentOrder *procurementdomain.LocalOrder) {
 	if localOrder == nil || parentOrder == nil {
 		return
 	}
@@ -209,7 +210,7 @@ func parseUpstreamRefundRecordCreatedAt(v interface{}) (time.Time, bool) {
 }
 
 // fillUpstreamRefundRecordsForProcurementOrder 为单条采购单补充上游退款记录与退款金额，并同步退款状态。
-func (s *Service) fillUpstreamRefundRecordsForProcurementOrder(order *models.ProcurementOrder) {
+func (s *Service) fillUpstreamRefundRecordsForProcurementOrder(order *procurementdomain.Order) {
 	if order == nil {
 		return
 	}
@@ -218,17 +219,13 @@ func (s *Service) fillUpstreamRefundRecordsForProcurementOrder(order *models.Pro
 	if s.connections == nil || order.UpstreamOrderID == 0 || !shouldSyncUpstreamRefundStatus(order.Status) {
 		return
 	}
-	conn, err := s.connections.GetByID(order.ConnectionID)
-	if err != nil || conn == nil {
-		return
-	}
-	adapter, err := s.connections.GetAdapter(conn)
-	if err != nil {
+	connection, err := s.connections.Open(order.ConnectionID)
+	if err != nil || connection == nil {
 		return
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
-	detail, err := adapter.GetOrder(ctx, order.UpstreamOrderID)
+	detail, err := connection.GetOrder(ctx, order.UpstreamOrderID)
 	if err != nil || detail == nil {
 		return
 	}
@@ -281,7 +278,7 @@ func isPositiveUpstreamRefundAmount(raw string) bool {
 }
 
 // fillUpstreamRefundRecordsForProcurementOrders 批量为采购单补充上游退款记录与退款金额。
-func (s *Service) fillUpstreamRefundRecordsForProcurementOrders(orders []models.ProcurementOrder) {
+func (s *Service) fillUpstreamRefundRecordsForProcurementOrders(orders []procurementdomain.Order) {
 	for i := range orders {
 		s.fillUpstreamRefundRecordsForProcurementOrder(&orders[i])
 	}

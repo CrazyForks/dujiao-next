@@ -51,7 +51,8 @@ import (
 	notificationapp "github.com/dujiao-next/internal/modules/notification/application"
 	notificationgormstore "github.com/dujiao-next/internal/modules/notification/infrastructure/gormstore"
 	orderriskapp "github.com/dujiao-next/internal/modules/orderrisk/application"
-	"github.com/dujiao-next/internal/modules/procurement"
+	procurementapp "github.com/dujiao-next/internal/modules/procurement/application"
+	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/infrastructure/gormstore"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	reconciliationapp "github.com/dujiao-next/internal/modules/reconciliation/application"
@@ -111,7 +112,7 @@ type Container struct {
 	SiteConnectionRepo         siteconnectioncontract.Repository
 	ProductMappingRepo         *mappinggormstore.MappingStore
 	SKUMappingRepo             *mappinggormstore.SKUMappingStore
-	ProcurementOrderRepo       procurement.Repository
+	ProcurementOrderRepo       *procurementgormstore.Store
 	DownstreamOrderRefRepo     downstreamcallbackcontract.Repository
 	ReconciliationJobRepo      reconciliationcontract.JobRepository
 	ReconciliationItemRepo     reconciliationcontract.ItemRepository
@@ -170,7 +171,7 @@ type Container struct {
 	ApiCredentialService          *apicredentialapp.Service
 	SiteConnectionService         *siteconnectionapp.Service
 	ProductMappingService         *mappingapp.Service
-	ProcurementOrderService       *procurement.Service
+	ProcurementOrderService       *procurementapp.Service
 	DownstreamCallbackService     *downstreamcallbackapp.Service
 	ReconciliationService         *reconciliationapp.Service
 	ChannelClientService          *channelclientapp.Service

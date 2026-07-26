@@ -57,7 +57,7 @@ func TestPollUpstreamStatus_Delivered(t *testing.T) {
 	}
 
 	// 验证采购单状态 = fulfilled
-	var updatedProc models.ProcurementOrder
+	var updatedProc ProcurementOrder
 	db.First(&updatedProc, proc.ID)
 	if updatedProc.Status != "fulfilled" {
 		t.Errorf("expected procurement status 'fulfilled', got %q", updatedProc.Status)
@@ -112,7 +112,7 @@ func TestPollUpstreamStatus_FulfilledMappedToDelivered(t *testing.T) {
 		t.Fatalf("PollUpstreamStatus: %v", err)
 	}
 
-	var updatedProc models.ProcurementOrder
+	var updatedProc ProcurementOrder
 	db.First(&updatedProc, proc.ID)
 	if updatedProc.Status != "fulfilled" {
 		t.Errorf("expected procurement status 'fulfilled', got %q", updatedProc.Status)

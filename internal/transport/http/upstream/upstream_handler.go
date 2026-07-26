@@ -7,6 +7,8 @@ import (
 
 	downstreamcallbackdomain "github.com/dujiao-next/internal/modules/downstreamcallback/domain"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
+	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
+	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 
@@ -20,7 +22,6 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
-	upstreamadapter "github.com/dujiao-next/internal/upstream"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -124,8 +125,8 @@ type Payments interface {
 }
 
 type ProcurementOrders interface {
-	GetByLocalOrderNo(orderNo string) (*models.ProcurementOrder, error)
-	HandleUpstreamCallback(orderID uint, status string, fulfillment *upstreamadapter.UpstreamFulfillment) error
+	GetByLocalOrderNo(orderNo string) (*procurementdomain.Order, error)
+	HandleUpstreamCallback(orderID uint, status string, fulfillment *procurementcontract.Fulfillment) error
 }
 
 type DownstreamOrderReferences interface {

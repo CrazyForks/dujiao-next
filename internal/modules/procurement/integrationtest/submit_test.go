@@ -70,7 +70,7 @@ func TestSubmitToUpstream_Success(t *testing.T) {
 	}
 
 	// 验证采购单状态 = accepted
-	var updatedProc models.ProcurementOrder
+	var updatedProc ProcurementOrder
 	db.First(&updatedProc, proc.ID)
 	if updatedProc.Status != "accepted" {
 		t.Errorf("expected procurement status 'accepted', got %q", updatedProc.Status)
@@ -119,7 +119,7 @@ func TestSubmitToUpstream_NonRetryableError_Rejects(t *testing.T) {
 	_ = svc.SubmitToUpstream(proc.ID)
 
 	// 验证采购单状态 = rejected
-	var updatedProc models.ProcurementOrder
+	var updatedProc ProcurementOrder
 	db.First(&updatedProc, proc.ID)
 	if updatedProc.Status != "rejected" {
 		t.Errorf("expected procurement status 'rejected', got %q", updatedProc.Status)
@@ -168,7 +168,7 @@ func TestSubmitToUpstream_RetryableError_Retries(t *testing.T) {
 	}
 
 	// 验证采购单状态 = failed（而非 rejected）
-	var updatedProc models.ProcurementOrder
+	var updatedProc ProcurementOrder
 	db.First(&updatedProc, proc.ID)
 	if updatedProc.Status != "failed" {
 		t.Errorf("expected procurement status 'failed', got %q", updatedProc.Status)
@@ -221,7 +221,7 @@ func TestHandleSubmitFailure_MaxRetriesExhausted(t *testing.T) {
 	_ = svc.SubmitToUpstream(proc.ID)
 
 	// 验证采购单状态 = rejected
-	var updatedProc models.ProcurementOrder
+	var updatedProc ProcurementOrder
 	db.First(&updatedProc, proc.ID)
 	if updatedProc.Status != "rejected" {
 		t.Errorf("expected procurement status 'rejected', got %q", updatedProc.Status)

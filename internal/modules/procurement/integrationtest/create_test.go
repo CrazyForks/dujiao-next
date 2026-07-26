@@ -6,7 +6,6 @@ import (
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 )
 
 // ── CreateForOrder tests ──
@@ -25,7 +24,7 @@ func TestCreateForOrder_SkipsNonUpstreamItems(t *testing.T) {
 
 	// 验证没有创建采购单
 	var count int64
-	db.Model(&models.ProcurementOrder{}).Count(&count)
+	db.Model(&ProcurementOrder{}).Count(&count)
 	if count != 0 {
 		t.Errorf("expected no procurement orders for auto fulfillment, got %d", count)
 	}

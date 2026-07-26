@@ -20,7 +20,12 @@ import (
 	downstreamcallbackqueue "github.com/dujiao-next/internal/modules/downstreamcallback/infrastructure/queueadapter"
 	notificationapp "github.com/dujiao-next/internal/modules/notification/application"
 	notificationasyncqueue "github.com/dujiao-next/internal/modules/notification/infrastructure/asyncqueue"
-	"github.com/dujiao-next/internal/modules/procurement"
+	procurementapp "github.com/dujiao-next/internal/modules/procurement/application"
+	procurementmapping "github.com/dujiao-next/internal/modules/procurement/infrastructure/mappingreader"
+	procurementnotification "github.com/dujiao-next/internal/modules/procurement/infrastructure/notificationadapter"
+	procurementorder "github.com/dujiao-next/internal/modules/procurement/infrastructure/orderreader"
+	procurementqueue "github.com/dujiao-next/internal/modules/procurement/infrastructure/queueadapter"
+	procurementupstream "github.com/dujiao-next/internal/modules/procurement/infrastructure/upstreamgateway"
 	reconciliationapp "github.com/dujiao-next/internal/modules/reconciliation/application"
 	reconciliationnotification "github.com/dujiao-next/internal/modules/reconciliation/infrastructure/notificationadapter"
 	reconciliationprocurement "github.com/dujiao-next/internal/modules/reconciliation/infrastructure/procurementreader"
@@ -105,17 +110,17 @@ func (c *Container) initIntegrationServices() {
 		PaymentProviderRegistry:   c.PaymentProviderRegistry,
 		ResellerAccountingService: c.ResellerAccountingService,
 	})
-	c.ProcurementOrderService = procurement.NewService(procurement.ServiceOptions{
+	c.ProcurementOrderService = procurementapp.NewService(procurementapp.Options{
 		Repository:         c.ProcurementOrderRepo,
-		Orders:             c.OrderRepo,
-		ProductMappings:    c.ProductMappingRepo,
-		SKUMappings:        c.SKUMappingRepo,
-		Connections:        c.SiteConnectionService,
-		Queue:              c.QueueClient,
-		OrderLifecycle:     service.NewProcurementOrderLifecycle(c.OrderRepo, c.FulfillmentRepo, c.QueueClient, c.SettingService, c.Config.Email),
+		Orders:             procurementorder.New(c.OrderRepo),
+		ProductMappings:    procurementmapping.NewProducts(c.ProductMappingRepo),
+		SKUMappings:        procurementmapping.NewSKUs(c.SKUMappingRepo),
+		Connections:        procurementupstream.New(c.SiteConnectionService),
+		Queue:              procurementqueue.New(c.QueueClient),
+		OrderLifecycle:     c.ProcurementOrderRepo.NewLifecycle(c.QueueClient, c.SettingService, c.Config.Email),
 		DownstreamCallback: c.DownstreamCallbackService,
 		BotNotifier:        c.FulfillmentService,
-		Notifications:      c.NotificationService,
+		Notifications:      procurementnotification.New(c.NotificationService),
 	})
 	c.ReconciliationService = reconciliationapp.NewService(reconciliationapp.Options{
 		Jobs: c.ReconciliationJobRepo, Items: c.ReconciliationItemRepo,

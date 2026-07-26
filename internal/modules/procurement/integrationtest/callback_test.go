@@ -6,7 +6,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/upstream"
+	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
 )
 
 type procurementCallbackStatusFixture struct {
@@ -32,7 +32,7 @@ func assertProcurementCallbackStatus(t *testing.T, fixture procurementCallbackSt
 		t.Fatalf("HandleUpstreamCallback: %v", err)
 	}
 
-	var updatedProc models.ProcurementOrder
+	var updatedProc ProcurementOrder
 	if err := db.First(&updatedProc, proc.ID).Error; err != nil {
 		t.Fatalf("load procurement: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestRejectProcurement_RollsBackOrderStatus(t *testing.T) {
 	}
 
 	// 验证采购单状态 = rejected
-	var updatedProc models.ProcurementOrder
+	var updatedProc ProcurementOrder
 	if err := db.First(&updatedProc, proc.ID).Error; err != nil {
 		t.Fatalf("load procurement: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestHandleUpstreamCallback_Canceled_RollsBackOrder(t *testing.T) {
 	}
 
 	// 验证采购单状态 = canceled
-	var updatedProc models.ProcurementOrder
+	var updatedProc ProcurementOrder
 	if err := db.First(&updatedProc, proc.ID).Error; err != nil {
 		t.Fatalf("load procurement: %v", err)
 	}
@@ -125,7 +125,7 @@ func TestHandleUpstreamCallback_Delivered_CreatesFulfillment(t *testing.T) {
 	svc := newTestProcurementService(db, connSvc)
 
 	now := time.Now()
-	fulfillment := &upstream.UpstreamFulfillment{
+	fulfillment := &procurementcontract.Fulfillment{
 		Type:        constants.FulfillmentTypeUpstream,
 		Status:      constants.FulfillmentStatusDelivered,
 		Payload:     "CDK-001\nCDK-002",
@@ -137,7 +137,7 @@ func TestHandleUpstreamCallback_Delivered_CreatesFulfillment(t *testing.T) {
 	}
 
 	// 验证采购单状态 = fulfilled
-	var updatedProc models.ProcurementOrder
+	var updatedProc ProcurementOrder
 	if err := db.First(&updatedProc, proc.ID).Error; err != nil {
 		t.Fatalf("load procurement: %v", err)
 	}
@@ -164,6 +164,29 @@ func TestHandleUpstreamCallback_Delivered_CreatesFulfillment(t *testing.T) {
 	}
 	if ff.Type != constants.FulfillmentTypeUpstream {
 		t.Errorf("expected fulfillment type %q, got %q", constants.FulfillmentTypeUpstream, ff.Type)
+	}
+}
+
+func TestHandleUpstreamCallback_Delivered_SynchronizesParentStatus(t *testing.T) {
+	db := setupProcurementTestDB(t)
+	parent := createProcTestOrder(t, db, "PROC-PARENT-DELIVERED", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
+	child := createProcTestOrder(t, db, "PROC-CHILD-DELIVERED", constants.OrderStatusFulfilling, constants.FulfillmentTypeUpstream)
+	if err := db.Model(&child).Update("parent_id", parent.ID).Error; err != nil {
+		t.Fatalf("set child parent: %v", err)
+	}
+	proc := createTestProcurementOrder(t, db, 1, child.ID, child.OrderNo, constants.ProcurementStatusAccepted)
+
+	svc := newTestProcurementService(db, newTestSiteConnectionService(db, "test-key", t.TempDir()))
+	if err := svc.HandleUpstreamCallback(proc.ID, "delivered", nil); err != nil {
+		t.Fatalf("HandleUpstreamCallback: %v", err)
+	}
+
+	var updatedParent models.Order
+	if err := db.First(&updatedParent, parent.ID).Error; err != nil {
+		t.Fatalf("load parent order: %v", err)
+	}
+	if updatedParent.Status != constants.OrderStatusDelivered {
+		t.Fatalf("parent status = %q, want %q", updatedParent.Status, constants.OrderStatusDelivered)
 	}
 }
 
