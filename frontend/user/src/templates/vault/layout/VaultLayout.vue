@@ -9,13 +9,21 @@
         </RouterLink>
 
         <nav class="flex gap-0.5 max-[900px]:hidden">
-          <RouterLink
-            v-for="item in menuItems"
-            :key="item.key"
-            :to="item.path"
-            class="whitespace-nowrap rounded-full px-3.5 py-2 text-[15px] font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            active-class="!bg-primary/10 !text-primary"
-          >{{ item.label }}</RouterLink>
+          <template v-for="item in menuItems" :key="item.key">
+            <RouterLink
+              v-if="item.type === 'route'"
+              :to="item.path"
+              class="whitespace-nowrap rounded-full px-3.5 py-2 text-[15px] font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              active-class="!bg-primary/10 !text-primary"
+            >{{ item.label }}</RouterLink>
+            <a
+              v-else
+              :href="item.path"
+              :target="item.target"
+              rel="noopener noreferrer"
+              class="whitespace-nowrap rounded-full px-3.5 py-2 text-[15px] font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >{{ item.label }}</a>
+          </template>
         </nav>
 
         <div class="ml-auto flex items-center gap-2">
@@ -57,7 +65,10 @@
               <X v-else class="h-[18px] w-[18px]" />
             </button>
             <div v-if="moreOpen" class="absolute right-0 top-[calc(100%+8px)] z-[60] flex min-w-[168px] flex-col gap-0.5 rounded-md border bg-card p-2 shadow-[var(--shadow-lg)]">
-              <RouterLink v-for="item in menuItems" :key="`m-${item.key}`" :to="item.path" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="moreOpen = false">{{ item.label }}</RouterLink>
+              <template v-for="item in menuItems" :key="`m-${item.key}`">
+                <RouterLink v-if="item.type === 'route'" :to="item.path" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="moreOpen = false">{{ item.label }}</RouterLink>
+                <a v-else :href="item.path" :target="item.target" rel="noopener noreferrer" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="moreOpen = false">{{ item.label }}</a>
+              </template>
               <RouterLink to="/guest/orders" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="moreOpen = false">{{ t('navbar.guestOrders') }}</RouterLink>
               <RouterLink v-if="userAuthStore.isAuthenticated" to="/me" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="moreOpen = false">{{ t('navbar.personalCenter') }}</RouterLink>
               <RouterLink v-else to="/auth/login" class="flex w-full items-center gap-2.5 rounded-sm px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground" @click="moreOpen = false">{{ t('navbar.login') }}</RouterLink>
@@ -90,7 +101,7 @@
         </div>
         <div>
           <h4 class="mb-3 text-sm font-bold">{{ t('vault.footer.shop') }}</h4>
-          <RouterLink to="/products" class="flex items-center gap-[7px] py-[5px] text-[14.5px] text-muted-foreground hover:text-primary">{{ t('products.allCategories') }}</RouterLink>
+          <RouterLink v-if="!isListMode" to="/products" class="flex items-center gap-[7px] py-[5px] text-[14.5px] text-muted-foreground hover:text-primary">{{ t('products.allCategories') }}</RouterLink>
           <RouterLink v-if="noticeEnabled" to="/notice" class="flex items-center gap-[7px] py-[5px] text-[14.5px] text-muted-foreground hover:text-primary">{{ t('nav.notice') }}</RouterLink>
           <RouterLink v-if="blogEnabled" to="/blog" class="flex items-center gap-[7px] py-[5px] text-[14.5px] text-muted-foreground hover:text-primary">{{ t('nav.blog') }}</RouterLink>
           <RouterLink to="/me" class="flex items-center gap-[7px] py-[5px] text-[14.5px] text-muted-foreground hover:text-primary">{{ t('navbar.personalCenter') }}</RouterLink>
@@ -99,11 +110,14 @@
           <h4 class="mb-3 text-sm font-bold">{{ t('vault.footer.support') }}</h4>
           <RouterLink v-if="aboutEnabled" to="/about" class="flex items-center gap-[7px] py-[5px] text-[14.5px] text-muted-foreground hover:text-primary"><Info class="h-4 w-4" /> {{ t('nav.about') }}</RouterLink>
           <RouterLink to="/guest/orders" class="flex items-center gap-[7px] py-[5px] text-[14.5px] text-muted-foreground hover:text-primary"><ClipboardList class="h-4 w-4" /> {{ t('navbar.guestOrders') }}</RouterLink>
+          <a v-if="contact?.telegram" :href="contact.telegram" target="_blank" rel="noopener noreferrer" class="flex items-center gap-[7px] py-[5px] text-[14.5px] text-muted-foreground hover:text-primary"><Send class="h-4 w-4" /> Telegram</a>
+          <a v-if="contact?.whatsapp" :href="contact.whatsapp" target="_blank" rel="noopener noreferrer" class="flex items-center gap-[7px] py-[5px] text-[14.5px] text-muted-foreground hover:text-primary"><MessageCircle class="h-4 w-4" /> WhatsApp</a>
         </div>
         <div>
           <h4 class="mb-3 text-sm font-bold">{{ t('vault.footer.legal') }}</h4>
           <RouterLink to="/terms" class="flex items-center gap-[7px] py-[5px] text-[14.5px] text-muted-foreground hover:text-primary">{{ t('footer.terms') }}</RouterLink>
           <RouterLink to="/privacy" class="flex items-center gap-[7px] py-[5px] text-[14.5px] text-muted-foreground hover:text-primary">{{ t('footer.privacy') }}</RouterLink>
+          <a v-for="link in footerLinks" :key="link.name" :href="link.url || 'javascript:void(0)'" :target="link.url ? '_blank' : undefined" rel="noopener noreferrer" class="flex items-center gap-[7px] py-[5px] text-[14.5px] text-muted-foreground hover:text-primary">{{ link.name }}</a>
         </div>
       </div>
       <div class="mx-auto flex w-full max-w-[1180px] flex-wrap items-center justify-between gap-3.5 border-t px-6 pb-[30px] pt-[18px] text-[13.5px] text-muted-foreground">
@@ -125,12 +139,15 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Search, Moon, Sun, ShoppingCart, Languages, Menu, X, User, Info, ClipboardList, LogOut, Github,
+  LayoutGrid, Send, MessageCircle,
 } from 'lucide-vue-next'
 import { useAppStore } from '../../../stores/app'
 import { useCartStore } from '../../../stores/cart'
 import { useUserAuthStore } from '../../../stores/userAuth'
+import { useNavConfig, type NavItem } from '../../../composables/useNavConfig'
 import { useTheme } from '../../../utils/theme'
 import { getImageUrl } from '../../../utils/image'
+import { getLocalizedText } from '../../../utils/resellerSiteConfig'
 // 本地自托管字体（替代 Google Fonts CDN），仅 vault 模板加载
 import '@fontsource/rubik/latin-400.css'
 import '@fontsource/rubik/latin-500.css'
@@ -170,20 +187,32 @@ const brandDescription = computed(() => {
   return ''
 })
 
-const navBuiltin = computed(() => (appStore.config?.nav_config as { builtin?: Record<string, boolean> } | undefined)?.builtin)
-const blogEnabled = computed(() => navBuiltin.value?.blog !== false)
-const noticeEnabled = computed(() => navBuiltin.value?.notice !== false)
-const aboutEnabled = computed(() => navBuiltin.value?.about !== false)
+const { isListMode, blogEnabled, noticeEnabled, aboutEnabled, secondaryNavItems } = useNavConfig()
 
-const menuItems = computed(() => {
-  const items: Array<{ key: string; path: string; label: string }> = [
-    { key: 'products', path: '/products', label: t('products.allCategories') },
-  ]
-  if (blogEnabled.value) items.push({ key: 'blog', path: '/blog', label: t('nav.blog') })
-  if (noticeEnabled.value) items.push({ key: 'notice', path: '/notice', label: t('nav.notice') })
-  if (aboutEnabled.value) items.push({ key: 'about', path: '/about', label: t('nav.about') })
+const menuItems = computed<NavItem[]>(() => {
+  const items: NavItem[] = []
+  // 列表模式下首页就是商品列表，/products 与首页同页，不再单列一项
+  if (!isListMode.value) {
+    items.push({ key: 'products', path: '/products', label: t('products.allCategories'), icon: LayoutGrid, type: 'route', target: '_self' })
+  }
+  // 内置（博客/公告/关于）+ 后台自定义导航项
+  items.push(...secondaryNavItems.value)
   return items
 })
+
+/** 后台配置的自定义页脚链接 */
+const footerLinks = computed(() => {
+  const links = appStore.config?.footer_links
+  if (!Array.isArray(links)) return []
+  return links
+    .map((item: { name?: unknown; url?: unknown }) => ({
+      name: typeof item?.name === 'string' ? item.name.trim() : getLocalizedText(item?.name as Record<string, string>, appStore.locale),
+      url: String(item?.url || '').trim(),
+    }))
+    .filter((item) => item.name)
+})
+
+const contact = computed(() => appStore.config?.contact as { telegram?: string; whatsapp?: string } | undefined)
 
 const cartCount = computed(() => cartStore.totalItems)
 
@@ -207,6 +236,14 @@ const onDocClick = (e: MouseEvent) => {
   if (moreOpen.value && moreEl.value && !moreEl.value.contains(target)) moreOpen.value = false
 }
 
-onMounted(() => document.addEventListener('click', onDocClick))
-onUnmounted(() => document.removeEventListener('click', onDocClick))
+onMounted(() => {
+  document.addEventListener('click', onDocClick)
+  // Teleport 到 body 的浮层（Toast / ConfirmDialog / 公告弹窗 / Select 下拉）在
+  // .vault-scope 之外，靠 body 上的这个 class 拿到 vault 配色，详见 styles/vault.css
+  document.body.classList.add('vault-tokens')
+})
+onUnmounted(() => {
+  document.removeEventListener('click', onDocClick)
+  document.body.classList.remove('vault-tokens')
+})
 </script>

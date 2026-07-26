@@ -22,7 +22,7 @@
             class="gap-1.5 text-muted-foreground whitespace-nowrap shrink-0">
             <router-link :to="item.path" active-class="!text-primary !bg-primary/10">
               <component :is="item.icon" class="w-4 h-4 shrink-0 opacity-70" />
-              <span>{{ item.label.startsWith('nav.') ? t(item.label) : item.label }}</span>
+              <span>{{ item.label }}</span>
             </router-link>
           </Button>
           <Button v-else as-child variant="ghost" size="sm"
@@ -153,7 +153,7 @@
               class="w-full justify-start gap-3 h-auto py-3 rounded-xl text-sm text-muted-foreground [&_svg]:size-5">
               <router-link :to="item.path" @click="showMobileMenu = false" active-class="!text-primary !bg-primary/10">
                 <component :is="item.icon" class="shrink-0 opacity-60" />
-                {{ item.label.startsWith('nav.') ? t(item.label) : item.label }}
+                {{ item.label }}
               </router-link>
             </Button>
             <Button v-else as-child variant="ghost"
@@ -204,130 +204,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, type Component } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '../stores/app'
 import { useCartStore } from '../stores/cart'
 import { useUserAuthStore } from '../stores/userAuth'
 import { useTheme } from '../utils/theme'
 import { getImageUrl } from '../utils/image'
+import { useNavConfig } from '../composables/useNavConfig'
 import {
   Sun, Moon, ShoppingCart, ClipboardList, LogIn, User, LogOut, Languages,
-  EllipsisVertical, X, Home, LayoutGrid, Newspaper, Bell, Info,
-  Link2, FileText, Globe, Star, Heart, MessageCircle, Gift, Zap, Shield,
-  BookOpen, Code, Phone, MapPin, Music, Camera,
+  EllipsisVertical, X,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const appStore = useAppStore()
 const cartStore = useCartStore()
 const userAuthStore = useUserAuthStore()
 const { theme, toggleTheme } = useTheme()
+const { primaryNavItems, secondaryNavItems } = useNavConfig()
 
 const showMobileMenu = ref(false)
 const langOpen = ref(false)
 const scrolled = ref(false)
 const cartBounce = ref(false)
 
-const isListMode = computed(() => appStore.config?.template_mode === 'list')
-
-// 内置导航项定义
-const builtinNavDefs: Record<string, { path: string; label: string; icon: Component }> = {
-  blog: { path: '/blog', label: 'nav.blog', icon: Newspaper },
-  notice: { path: '/notice', label: 'nav.notice', icon: Bell },
-  about: { path: '/about', label: 'nav.about', icon: Info },
-}
-
-interface NavItem {
-  key: string
-  path: string
-  label: string
-  icon: Component
-  type: 'route' | 'link'
-  target: string
-}
-
-const navConfig = computed(() => appStore.config?.nav_config as {
-  builtin?: Record<string, boolean>
-  custom_items?: Array<{
-    id?: number; title?: Record<string, string>; name?: Record<string, string>; link_type?: string
-    url: string; target?: string; sort_order?: number; enabled?: boolean; icon?: string
-  }>
-} | undefined)
-
-const getCustomItemTitle = (item: { title?: Record<string, string>; name?: Record<string, string> }): string => {
-  const titles = item.title || item.name || {}
-  return titles[locale.value] || titles['zh-CN'] || titles['en-US'] || ''
-}
-
-const presetIcons: Record<string, Component> = {
-  link: Link2,
-  document: FileText,
-  globe: Globe,
-  star: Star,
-  heart: Heart,
-  chat: MessageCircle,
-  gift: Gift,
-  lightning: Zap,
-  shield: Shield,
-  book: BookOpen,
-  code: Code,
-  phone: Phone,
-  map: MapPin,
-  music: Music,
-  camera: Camera,
-}
-const defaultIcon: Component = Link2
-
-const buildCustomNavItems = (): NavItem[] => {
-  const items = navConfig.value?.custom_items
-  if (!Array.isArray(items)) return []
-  return items
-    .filter((item) => item.enabled !== false)
-    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-    .map((item, index) => {
-      const icon = presetIcons[item.icon as string] || defaultIcon
-      return {
-        key: `custom-${item.id || index}`,
-        path: item.url || '',
-        label: getCustomItemTitle(item),
-        icon,
-        type: item.link_type === 'internal' ? 'route' as const : 'link' as const,
-        target: item.target || '_self',
-      }
-    })
-    .filter((item) => item.label && item.path)
-}
-
-const buildBuiltinNavItems = (): NavItem[] => {
-  const builtin = navConfig.value?.builtin
-  const result: NavItem[] = []
-  for (const [key, def] of Object.entries(builtinNavDefs)) {
-    if (builtin && builtin[key] === false) continue
-    result.push({ key, path: def.path, label: def.label, icon: def.icon, type: 'route', target: '_self' })
-  }
-  return result
-}
-
-const menuItems = computed<NavItem[]>(() => {
-  const items: NavItem[] = [
-    { key: 'home', path: '/', label: 'nav.home', icon: Home, type: 'route', target: '_self' },
-  ]
-  if (!isListMode.value) {
-    items.push({ key: 'products', path: '/products', label: 'nav.products', icon: LayoutGrid, type: 'route', target: '_self' })
-  }
-  items.push(...buildBuiltinNavItems())
-  items.push(...buildCustomNavItems())
-  return items
-})
+const menuItems = primaryNavItems
 
 // Mobile drawer only shows items NOT in the bottom nav (Home, Products, Cart, Me are in bottom nav)
-const mobileDrawerItems = computed<NavItem[]>(() => {
-  const items: NavItem[] = [...buildBuiltinNavItems(), ...buildCustomNavItems()]
-  return items
-})
+const mobileDrawerItems = secondaryNavItems
 
 const languages = [
   { code: 'zh-CN', name: '简体中文' },

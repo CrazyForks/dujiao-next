@@ -1,8 +1,16 @@
 /* =========================================================================
    D&J Studio — vault 模板设计令牌（"数字礼券店" v2）
    方向: Vibrant & Block-based · 靛蓝 + 金 + 宝石青 · 圆体 Rubik
-   作用域: 全部选择器限定在 .vault-scope 下，不影响 classic 模板。
+   作用域: 全部选择器限定在 .vault-scope / body.vault-tokens 下，不影响 classic 模板。
            暗色跟随全局 .dark（document.documentElement）。
+
+   为什么令牌要额外挂一份到 body.vault-tokens:
+           Toast / ConfirmDialog / 公告弹窗 / reka-ui 的 SelectContent 等浮层都
+           Teleport 到 <body>，落在 .vault-scope 之外。只写 .vault-scope 的话这些
+           浮层会退回 classic 的 --ui-* 调色板（蓝 #0071e3），与 vault 的靛蓝页面
+           撞色。body 上的 class 由 VaultLayout 挂载时打上、卸载时摘掉。
+           注意：只有「令牌」双挂，背景/flex 布局那几条仍只作用于 .vault-scope，
+           否则会改掉 body 自身的布局。
 
    说明: 页面已全量改用 shadcn 组件 + Tailwind utility。本文件只保留
          「设计令牌层」——vault 调色板 + 把 shadcn 的 --ui-* 在 .vault-scope
@@ -13,7 +21,8 @@
    ========================================================================= */
 
 /* ---------- Tokens: 亮色（默认） ---------- */
-.vault-scope {
+.vault-scope,
+body.vault-tokens {
   --font-head: "Rubik", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-body: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 
@@ -101,7 +110,10 @@
   --ui-radius-xl: var(--r-xl);
   --ui-shadow-soft: var(--shadow);
   --ui-shadow-card: var(--shadow-lg);
+}
 
+/* ---------- 外壳自身的排版与布局（不能挂到 body，否则改掉 body 布局） ---------- */
+.vault-scope {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
@@ -115,7 +127,8 @@
 }
 
 /* ---------- Tokens: 暗色（跟随全局 .dark） ---------- */
-.dark .vault-scope {
+.dark .vault-scope,
+.dark body.vault-tokens {
   --bg: #15151f;
   --bg-warm: #1c1c28;
   --surface: #1f1f2c;
