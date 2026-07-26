@@ -1,14 +1,14 @@
 package orderreader
 
 import (
-	"github.com/dujiao-next/internal/models"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
 	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 )
 
 type Source interface {
-	GetByID(id uint) (*models.Order, error)
-	GetByIDs(ids []uint) ([]models.Order, error)
+	GetByID(id uint) (*orderdomain.Order, error)
+	GetByIDs(ids []uint) ([]orderdomain.Order, error)
 	UpdateStatus(id uint, status string, updates map[string]interface{}) error
 }
 
@@ -51,7 +51,7 @@ func (r *Reader) UpdateStatus(id uint, status string, updates map[string]interfa
 }
 
 // MapOrder 将订单域的持久化实体收窄为采购上下文快照。
-func MapOrder(order models.Order) procurementdomain.LocalOrder {
+func MapOrder(order orderdomain.Order) procurementdomain.LocalOrder {
 	result := procurementdomain.LocalOrder{
 		ID: order.ID, OrderNo: order.OrderNo, ParentID: order.ParentID,
 		UserID: order.UserID, GuestEmail: order.GuestEmail, Status: order.Status,

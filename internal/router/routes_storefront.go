@@ -16,7 +16,7 @@ import (
 	resellertransport "github.com/dujiao-next/internal/modules/reseller/transport/http/user"
 	wallettransport "github.com/dujiao-next/internal/modules/wallet/transport/http"
 	"github.com/dujiao-next/internal/provider"
-	ordertransport "github.com/dujiao-next/internal/transport/http/order"
+	ordertransport "github.com/dujiao-next/internal/modules/order/transport/http"
 	paymenttransport "github.com/dujiao-next/internal/transport/http/payment"
 	paymentcallbacktransport "github.com/dujiao-next/internal/transport/http/payment/callback"
 	publicconfigtransport "github.com/dujiao-next/internal/transport/http/publicconfig"

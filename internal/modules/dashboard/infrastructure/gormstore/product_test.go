@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -34,7 +35,7 @@ func TestGetTopProductsIncludesChildOrderItems(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	parentOrder := &models.Order{
+	parentOrder := &orderdomain.Order{
 		OrderNo:        "DJ-TEST-PARENT",
 		UserID:         1,
 		Status:         constants.OrderStatusPaid,
@@ -48,7 +49,7 @@ func TestGetTopProductsIncludesChildOrderItems(t *testing.T) {
 		t.Fatalf("create parent order failed: %v", err)
 	}
 
-	childOrder := &models.Order{
+	childOrder := &orderdomain.Order{
 		OrderNo:        "DJ-TEST-PARENT-01",
 		ParentID:       &parentOrder.ID,
 		UserID:         1,
@@ -63,7 +64,7 @@ func TestGetTopProductsIncludesChildOrderItems(t *testing.T) {
 		t.Fatalf("create child order failed: %v", err)
 	}
 
-	orderItem := &models.OrderItem{
+	orderItem := &orderdomain.OrderItem{
 		OrderID:           childOrder.ID,
 		ProductID:         product.ID,
 		TitleJSON:         jsonmap.JSON{"zh-CN": "测试商品"},
@@ -137,7 +138,7 @@ func TestGetTopProductsGroupsBySKU(t *testing.T) {
 		{skuB, 2, 200},
 		{skuB, 3, 300},
 	} {
-		order := &models.Order{
+		order := &orderdomain.Order{
 			OrderNo:        fmt.Sprintf("DJ-SKU-%d", i),
 			UserID:         1,
 			Status:         constants.OrderStatusPaid,
@@ -149,7 +150,7 @@ func TestGetTopProductsGroupsBySKU(t *testing.T) {
 		if err := db.Create(order).Error; err != nil {
 			t.Fatalf("create order failed: %v", err)
 		}
-		if err := db.Create(&models.OrderItem{
+		if err := db.Create(&orderdomain.OrderItem{
 			OrderID:         order.ID,
 			ProductID:       product.ID,
 			SKUID:           combo.sku.ID,

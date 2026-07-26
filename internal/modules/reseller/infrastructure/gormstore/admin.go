@@ -34,7 +34,7 @@ func (r *Store) ListAdminResellerLedgerEntries(filter resellercontract.AdminLedg
 		query = query.Where("reseller_ledger_entries.order_id = ?", filter.OrderID)
 	}
 	if orderNo := strings.TrimSpace(filter.OrderNo); orderNo != "" {
-		query = query.Joins("LEFT JOIN orders o_filter ON o_filter.id = reseller_ledger_entries.order_id").
+		query = query.Joins("LEFT JOIN orders o_filter ON o_filter.id = reseller_ledger_entries.order_id AND o_filter.deleted_at IS NULL").
 			Where("o_filter.order_no = ?", orderNo)
 	}
 	if filter.CreatedFrom != nil {

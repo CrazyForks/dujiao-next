@@ -37,7 +37,7 @@ func New(c *provider.Container) Handlers {
 		Admin: paymenttransport.NewAdminHandler(
 			adminQueryAdapter{payments: c.PaymentService},
 			adminChannelLookupAdapter{channels: c.PaymentChannelRepo},
-			adminOrderLookupAdapter{orders: c.OrderRepo},
+			adminOrderLookupAdapter{orders: c.OrderStore},
 			adminRechargeLookupAdapter{wallets: c.WalletRepo},
 		),
 		AdminChannel: paymenttransport.NewAdminChannelHandler(

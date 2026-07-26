@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -58,14 +60,14 @@ func TestBuildOrderNotificationPayloadIncludesCustomerAndItemSummary(t *testing.
 		userRepo:       userstore.New(db),
 		settingService: settingsapp.NewService(repo),
 	}
-	order := &models.Order{
+	order := &orderdomain.Order{
 		ID:          1001,
 		OrderNo:     "DJ202603230001",
 		UserID:      user.ID,
 		Currency:    "usd",
 		Status:      constants.OrderStatusPaid,
 		TotalAmount: money.FromDecimal(decimal.NewFromInt(99)),
-		Items: []models.OrderItem{
+		Items: []orderdomain.OrderItem{
 			{
 				TitleJSON: jsonmap.JSON{
 					"zh-CN": "自动发货商品",
@@ -140,7 +142,7 @@ func TestBuildOrderNotificationPayloadIncludesCustomerAndItemSummary(t *testing.
 
 func TestBuildOrderNotificationPayloadUsesDisplayChannelType(t *testing.T) {
 	svc := &PaymentService{}
-	order := &models.Order{
+	order := &orderdomain.Order{
 		ID:          1002,
 		OrderNo:     "DJ202603230002",
 		Currency:    "usd",
@@ -168,7 +170,7 @@ func TestBuildOrderNotificationPayloadUsesDisplayChannelType(t *testing.T) {
 
 func TestBuildOrderNotificationPayloadKeepsBepusdtCashierChannel(t *testing.T) {
 	svc := &PaymentService{}
-	order := &models.Order{
+	order := &orderdomain.Order{
 		ID:          1003,
 		OrderNo:     "DJ202603230003",
 		Currency:    "usd",
@@ -227,16 +229,16 @@ func TestBuildOrderNotificationPayloadFallsBackToChildrenItems(t *testing.T) {
 	svc := &PaymentService{
 		settingService: settingsapp.NewService(repo),
 	}
-	order := &models.Order{
+	order := &orderdomain.Order{
 		ID:          2001,
 		OrderNo:     "DJ202603230201",
 		Currency:    "usd",
 		Status:      constants.OrderStatusPaid,
 		TotalAmount: money.FromDecimal(decimal.NewFromInt(42)),
-		Children: []models.Order{
+		Children: []orderdomain.Order{
 			{
 				ID: 2002,
-				Items: []models.OrderItem{
+				Items: []orderdomain.OrderItem{
 					{
 						OrderID: 2002,
 						TitleJSON: jsonmap.JSON{
@@ -257,7 +259,7 @@ func TestBuildOrderNotificationPayloadFallsBackToChildrenItems(t *testing.T) {
 			},
 			{
 				ID: 2003,
-				Items: []models.OrderItem{
+				Items: []orderdomain.OrderItem{
 					{
 						OrderID: 2003,
 						TitleJSON: jsonmap.JSON{
@@ -308,13 +310,13 @@ func TestBuildOrderNotificationPayloadFallsBackToChildrenItems(t *testing.T) {
 
 func TestBuildManualFulfillmentNotificationPayloadUsesGuestEmailAndPendingItems(t *testing.T) {
 	svc := &PaymentService{}
-	order := &models.Order{
+	order := &orderdomain.Order{
 		ID:         88,
 		OrderNo:    "DJ202603230099",
 		GuestEmail: "guest@example.com",
 		Status:     constants.OrderStatusPaid,
 		Currency:   "CNY",
-		Items: []models.OrderItem{
+		Items: []orderdomain.OrderItem{
 			{
 				TitleJSON:       jsonmap.JSON{"zh-CN": "自动商品"},
 				SKUSnapshotJSON: jsonmap.JSON{"sku_code": "AUTO-001"},
@@ -329,7 +331,7 @@ func TestBuildManualFulfillmentNotificationPayloadUsesGuestEmailAndPendingItems(
 			},
 		},
 	}
-	parent := &models.Order{
+	parent := &orderdomain.Order{
 		ID:      66,
 		OrderNo: "DJ202603230001",
 	}

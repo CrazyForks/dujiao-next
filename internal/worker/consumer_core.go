@@ -2,6 +2,7 @@ package worker
 
 import (
 	"github.com/dujiao-next/internal/logger"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/queue"
 
@@ -11,12 +12,22 @@ import (
 // Consumer 异步任务消费者
 type Consumer struct {
 	*provider.Container
+	orderReader orderReader
+}
+
+type orderReader interface {
+	GetByID(id uint) (*orderdomain.Order, error)
 }
 
 // NewConsumer 创建消费者
 func NewConsumer(c *provider.Container) *Consumer {
+	var orders orderReader
+	if c != nil {
+		orders = c.OrderStore
+	}
 	return &Consumer{
-		Container: c,
+		Container:   c,
+		orderReader: orders,
 	}
 }
 

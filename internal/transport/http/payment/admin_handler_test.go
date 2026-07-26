@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
@@ -87,10 +89,10 @@ type fakeAdminOrderLookup struct {
 	orderNos map[uint]string
 }
 
-func (f fakeAdminOrderLookup) GetByIDs(ids []uint) ([]models.Order, error) {
-	out := make([]models.Order, 0, len(ids))
+func (f fakeAdminOrderLookup) GetByIDs(ids []uint) ([]orderdomain.Order, error) {
+	out := make([]orderdomain.Order, 0, len(ids))
 	for _, id := range ids {
-		out = append(out, models.Order{ID: id, OrderNo: f.orderNos[id]})
+		out = append(out, orderdomain.Order{ID: id, OrderNo: f.orderNos[id]})
 	}
 	return out, nil
 }

@@ -6,10 +6,11 @@ import (
 	"strings"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/shopspring/decimal"
 )
@@ -164,8 +165,8 @@ func (r *Store) scanOrderOverview(startAt, endAt time.Time, out *resellercontrac
 		ActiveResellersWithOrders int64
 	}
 	var orders orderScan
-	err := r.db.Model(&models.Order{}).
-		Where("orders.reseller_id IS NOT NULL AND orders.parent_id IS NULL AND orders.created_at >= ? AND orders.created_at < ?", startAt, endAt).
+	err := r.db.Model(&orderdomain.Order{}).
+		Where("orders.deleted_at IS NULL AND orders.reseller_id IS NOT NULL AND orders.parent_id IS NULL AND orders.created_at >= ? AND orders.created_at < ?", startAt, endAt).
 		Select(`
 			COUNT(1) AS orders_total,
 			SUM(CASE WHEN orders.status IN ? THEN 1 ELSE 0 END) AS paid_orders,
@@ -258,14 +259,14 @@ func (r *Store) scanPeriodCurrencyRows(startAt, endAt time.Time) ([]resellercont
 		GMVPaid     decimal.Decimal
 	}
 	orderRows := []orderCurrencyScan{}
-	if err := r.db.Model(&models.Order{}).
+	if err := r.db.Model(&orderdomain.Order{}).
 		Select(`
 			currency,
 			COUNT(1) AS orders_total,
 			SUM(CASE WHEN status IN ? THEN 1 ELSE 0 END) AS paid_orders,
 			COALESCE(SUM(CASE WHEN status IN ? THEN total_amount ELSE 0 END), 0) AS gmv_paid
 		`, paidStatuses, paidStatuses).
-		Where("reseller_id IS NOT NULL AND parent_id IS NULL AND created_at >= ? AND created_at < ?", startAt, endAt).
+		Where("deleted_at IS NULL AND reseller_id IS NOT NULL AND parent_id IS NULL AND created_at >= ? AND created_at < ?", startAt, endAt).
 		Group("currency").
 		Scan(&orderRows).Error; err != nil {
 		return nil, err

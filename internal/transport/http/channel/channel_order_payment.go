@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
 	"github.com/dujiao-next/internal/logger"
@@ -304,7 +306,7 @@ func (h *Handler) GetPaymentDetail(c *gin.Context) {
 	respondChannelSuccess(c, buildChannelPaymentResponse(order, payment))
 }
 
-func buildChannelPaymentResponse(order *models.Order, payment *models.Payment) gin.H {
+func buildChannelPaymentResponse(order *orderdomain.Order, payment *models.Payment) gin.H {
 	resp := gin.H{
 		"payment_id":       payment.ID,
 		"order_id":         payment.OrderID,

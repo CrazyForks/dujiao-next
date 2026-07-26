@@ -5,13 +5,14 @@ import (
 	"strings"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -151,7 +152,7 @@ func (s *Service) HandleOrderCanceled(orderID uint, reason string) error {
 // HandleOrderRefunded 使用调用方提供的事务 Store 处理退款后的佣金回滚。
 func (s *Service) HandleOrderRefunded(
 	repoTx affiliatecontract.Store,
-	order *models.Order,
+	order *orderdomain.Order,
 	refundDelta decimal.Decimal,
 	refundedBefore decimal.Decimal,
 	reason string,
@@ -250,7 +251,7 @@ func (s *Service) HandleOrderRefunded(
 	return nil
 }
 
-func (s *Service) resolveAffiliateProfileForOrder(order *models.Order) (*affiliatedomain.Profile, error) {
+func (s *Service) resolveAffiliateProfileForOrder(order *orderdomain.Order) (*affiliatedomain.Profile, error) {
 	if order == nil || s.repo == nil {
 		return nil, nil
 	}
@@ -263,7 +264,7 @@ func (s *Service) resolveAffiliateProfileForOrder(order *models.Order) (*affilia
 	return nil, nil
 }
 
-func (s *Service) calculateCommissionBaseAmount(order *models.Order) (decimal.Decimal, error) {
+func (s *Service) calculateCommissionBaseAmount(order *orderdomain.Order) (decimal.Decimal, error) {
 	if order == nil || s.productRepo == nil {
 		return decimal.Zero, nil
 	}
@@ -282,7 +283,7 @@ func (s *Service) calculateCommissionBaseAmount(order *models.Order) (decimal.De
 
 	targetOrders := order.Children
 	if len(targetOrders) == 0 {
-		targetOrders = []models.Order{*order}
+		targetOrders = []orderdomain.Order{*order}
 	}
 
 	total := decimal.Zero
@@ -302,13 +303,13 @@ func (s *Service) calculateCommissionBaseAmount(order *models.Order) (decimal.De
 	return total, nil
 }
 
-func collectAffiliateProductIDs(order *models.Order) []uint {
+func collectAffiliateProductIDs(order *orderdomain.Order) []uint {
 	if order == nil {
 		return nil
 	}
 	ids := make([]uint, 0)
 	seen := make(map[uint]struct{})
-	appendItem := func(item models.OrderItem) {
+	appendItem := func(item orderdomain.OrderItem) {
 		if item.ProductID == 0 {
 			return
 		}

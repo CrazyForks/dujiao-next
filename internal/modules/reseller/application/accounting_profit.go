@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
@@ -34,7 +36,7 @@ func NewAccountingLedgerService(store resellercontract.AccountingLedgerStore, co
 }
 
 // PostOrderProfit 在调用方已开启的事务 store 上写入订单利润流水。
-func (s *AccountingLedgerService) PostOrderProfit(store resellercontract.AccountingLedgerStore, order *models.Order, payment *models.Payment) error {
+func (s *AccountingLedgerService) PostOrderProfit(store resellercontract.AccountingLedgerStore, order *orderdomain.Order, payment *models.Payment) error {
 	if s == nil || store == nil || order == nil || order.ID == 0 {
 		return nil
 	}
@@ -100,6 +102,12 @@ func (s *AccountingLedgerService) PostOrderProfit(store resellercontract.Account
 		return nil
 	}
 	return RefreshBalanceAccount(store, snapshot.ResellerID, entry.Currency, now)
+}
+
+// PostOrderProfitForOrder 在订单状态流转事务中入账分销利润。
+// 订单用例不需要感知尚未迁移的支付持久化实体。
+func (s *AccountingLedgerService) PostOrderProfitForOrder(store resellercontract.AccountingLedgerStore, order *orderdomain.Order) error {
+	return s.PostOrderProfit(store, order, nil)
 }
 
 // ConfirmDueLedgerEntries 将到期待确认流水转为可用并刷新余额缓存。

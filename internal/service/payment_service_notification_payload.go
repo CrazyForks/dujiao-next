@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	"github.com/dujiao-next/internal/constants"
@@ -15,11 +18,11 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (s *PaymentService) buildOrderNotificationPayload(order *models.Order, payment *models.Payment) jsonmap.JSON {
+func (s *PaymentService) buildOrderNotificationPayload(order *orderdomain.Order, payment *models.Payment) jsonmap.JSON {
 	locale := s.notificationTemplateLocale()
 	customerEmail, customerLabel, customerType := s.resolveNotificationCustomer(order)
 	// 父订单拆单时商品项可能只存在于子订单，通知变量需先补齐聚合商品明细。
-	fillOrderItemsFromChildren(order)
+	orderapp.FillOrderItemsFromChildren(order)
 	itemsSummary, fulfillmentItemsSummary, counts := notificationformat.BuildOrderItemSummaries(order.Items, locale)
 	providerType, channelType, paymentChannel := notificationPaymentChannel(order, payment)
 
@@ -84,7 +87,7 @@ func (s *PaymentService) buildWalletRechargeNotificationPayload(recharge *wallet
 	return payload
 }
 
-func (s *PaymentService) buildManualFulfillmentNotificationPayload(order *models.Order, parent *models.Order) jsonmap.JSON {
+func (s *PaymentService) buildManualFulfillmentNotificationPayload(order *orderdomain.Order, parent *orderdomain.Order) jsonmap.JSON {
 	payload := s.buildOrderNotificationPayload(order, nil)
 	if parent != nil {
 		payload["parent_order_id"] = fmt.Sprintf("%d", parent.ID)
@@ -104,7 +107,7 @@ func (s *PaymentService) notificationTemplateLocale() string {
 	return settingsmessaging.NormalizeNotificationLocale(setting.DefaultLocale)
 }
 
-func (s *PaymentService) resolveNotificationCustomer(order *models.Order) (string, string, string) {
+func (s *PaymentService) resolveNotificationCustomer(order *orderdomain.Order) (string, string, string) {
 	if order == nil {
 		return "", "", "guest"
 	}
@@ -147,7 +150,7 @@ func (s *PaymentService) resolveUserNotificationIdentity(userID uint) (string, s
 	}
 }
 
-func notificationPaymentChannel(order *models.Order, payment *models.Payment) (string, string, string) {
+func notificationPaymentChannel(order *orderdomain.Order, payment *models.Payment) (string, string, string) {
 	providerType := ""
 	channelType := ""
 	if payment != nil {

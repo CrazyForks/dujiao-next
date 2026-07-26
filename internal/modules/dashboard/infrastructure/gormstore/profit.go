@@ -6,8 +6,9 @@ import (
 	"strings"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
 )
 
@@ -19,21 +20,21 @@ func profitOrderStatuses() []string {
 // GetProfitOverview 获取利润总览统计
 func (r *Store) GetProfitOverview(startAt, endAt time.Time) (dashboard.ProfitOverviewRow, error) {
 	result := dashboard.ProfitOverviewRow{}
-	if err := r.db.Model(&models.OrderItem{}).
+	if err := r.db.Model(&orderdomain.OrderItem{}).
 		Select(`
 			COALESCE(SUM(order_items.total_price - order_items.coupon_discount), 0) as total_revenue,
 			COALESCE(SUM(order_items.cost_price * order_items.quantity), 0) as total_cost
 		`).
 		Joins("JOIN orders ON orders.id = order_items.order_id").
-		Where("order_items.cost_price > 0 AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, profitOrderStatuses()).
+		Where("order_items.deleted_at IS NULL AND orders.deleted_at IS NULL AND order_items.cost_price > 0 AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, profitOrderStatuses()).
 		Scan(&result).Error; err != nil {
 		return result, err
 	}
 
 	var refundedAmount float64
-	if err := r.db.Model(&models.OrderRefundRecord{}).
+	if err := r.db.Model(&orderdomain.OrderRefundRecord{}).
 		Select("COALESCE(SUM(amount), 0)").
-		Where("created_at >= ? AND created_at < ?", startAt, endAt).
+		Where("deleted_at IS NULL AND created_at >= ? AND created_at < ?", startAt, endAt).
 		Scan(&refundedAmount).Error; err != nil {
 		return result, err
 	}
@@ -46,13 +47,13 @@ func (r *Store) GetProfitTrends(startAt, endAt time.Time) ([]dashboard.ProfitTre
 	orderDayExpr := dateGroupExpr(r.db, "orders.created_at", startAt.Location(), startAt)
 
 	rows := make([]dashboard.ProfitTrendRow, 0)
-	if err := r.db.Model(&models.OrderItem{}).Select(fmt.Sprintf(`
+	if err := r.db.Model(&orderdomain.OrderItem{}).Select(fmt.Sprintf(`
 		%s as day,
 		COALESCE(SUM(order_items.total_price - order_items.coupon_discount), 0) as revenue,
 		COALESCE(SUM(order_items.cost_price * order_items.quantity), 0) as cost
 	`, orderDayExpr)).
 		Joins("JOIN orders ON orders.id = order_items.order_id").
-		Where("order_items.cost_price > 0 AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, profitOrderStatuses()).
+		Where("order_items.deleted_at IS NULL AND orders.deleted_at IS NULL AND order_items.cost_price > 0 AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, profitOrderStatuses()).
 		Group(orderDayExpr).
 		Scan(&rows).Error; err != nil {
 		return nil, err
@@ -64,12 +65,12 @@ func (r *Store) GetProfitTrends(startAt, endAt time.Time) ([]dashboard.ProfitTre
 	}
 	refundRows := make([]refundTrendRow, 0)
 	refundDayExpr := dateGroupExpr(r.db, "created_at", startAt.Location(), startAt)
-	if err := r.db.Model(&models.OrderRefundRecord{}).
+	if err := r.db.Model(&orderdomain.OrderRefundRecord{}).
 		Select(fmt.Sprintf(`
 			%s as day,
 			COALESCE(SUM(amount), 0) as refund_amount
 		`, refundDayExpr)).
-		Where("created_at >= ? AND created_at < ?", startAt, endAt).
+		Where("deleted_at IS NULL AND created_at >= ? AND created_at < ?", startAt, endAt).
 		Group(refundDayExpr).
 		Scan(&refundRows).Error; err != nil {
 		return nil, err

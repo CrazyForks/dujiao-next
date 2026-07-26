@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -11,7 +13,6 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
 )
 
@@ -46,9 +47,9 @@ func (r *Store) GetOverview(startAt, endAt time.Time) (dashboard.OverviewRow, er
 		COALESCE(SUM(CASE WHEN status IN (%s) THEN total_amount ELSE 0 END), 0) as gmv_paid
 	`, paidIn, constants.OrderStatusCompleted, constants.OrderStatusPendingPayment, processingIn, paidIn)
 
-	if err := r.db.Model(&models.Order{}).
+	if err := r.db.Model(&orderdomain.Order{}).
 		Select(orderSelectSQL).
-		Where("parent_id IS NULL AND created_at >= ? AND created_at < ?", startAt, endAt).
+		Where("deleted_at IS NULL AND parent_id IS NULL AND created_at >= ? AND created_at < ?", startAt, endAt).
 		Scan(&orderAgg).Error; err != nil {
 		return result, err
 	}
@@ -92,15 +93,15 @@ func (r *Store) GetOverview(startAt, endAt time.Time) (dashboard.OverviewRow, er
 		return result, err
 	}
 
-	_ = r.db.Model(&models.Order{}).
-		Where("parent_id IS NULL AND created_at >= ? AND created_at < ? AND currency <> ''", startAt, endAt).
+	_ = r.db.Model(&orderdomain.Order{}).
+		Where("deleted_at IS NULL AND parent_id IS NULL AND created_at >= ? AND created_at < ? AND currency <> ''", startAt, endAt).
 		Order("id DESC").
 		Limit(1).
 		Pluck("currency", &result.Currency).Error
 	// 时间范围内无订单时，回退到最近一笔订单的币种
 	if result.Currency == "" {
-		_ = r.db.Model(&models.Order{}).
-			Where("parent_id IS NULL AND currency <> ''").
+		_ = r.db.Model(&orderdomain.Order{}).
+			Where("deleted_at IS NULL AND parent_id IS NULL AND currency <> ''").
 			Order("id DESC").
 			Limit(1).
 			Pluck("currency", &result.Currency).Error
@@ -113,8 +114,8 @@ func (r *Store) GetOverview(startAt, endAt time.Time) (dashboard.OverviewRow, er
 func (r *Store) GetPaymentOrderAlertCounts(startAt, endAt time.Time) (dashboard.PaymentOrderAlertCountsRow, error) {
 	result := dashboard.PaymentOrderAlertCountsRow{}
 
-	if err := r.db.Model(&models.Order{}).
-		Where("parent_id IS NULL AND status = ? AND created_at >= ? AND created_at < ?", constants.OrderStatusPendingPayment, startAt, endAt).
+	if err := r.db.Model(&orderdomain.Order{}).
+		Where("deleted_at IS NULL AND parent_id IS NULL AND status = ? AND created_at >= ? AND created_at < ?", constants.OrderStatusPendingPayment, startAt, endAt).
 		Count(&result.PendingPaymentOrders).Error; err != nil {
 		return result, err
 	}

@@ -6,8 +6,9 @@ import (
 	"strings"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -55,7 +56,7 @@ func truncate(value string, limit int) string {
 	return string(runes[:limit]) + "..."
 }
 
-func channelOrderPaidAmount(order *models.Order) string {
+func channelOrderPaidAmount(order *orderdomain.Order) string {
 	if order == nil {
 		return "0.00"
 	}

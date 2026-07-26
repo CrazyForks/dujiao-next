@@ -10,6 +10,11 @@ import (
 	"testing"
 	"time"
 
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
@@ -31,10 +36,10 @@ import (
 )
 
 type okpayCallbackFixture struct {
-	orderRepo   repository.OrderRepository
+	orderRepo   ordercontract.Store
 	paymentRepo repository.PaymentRepository
 	handler     *paymentcallback.Handler
-	order       *models.Order
+	order       *orderdomain.Order
 	payment     *models.Payment
 }
 
@@ -69,9 +74,9 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 		&userdomain.User{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.Order{},
-		&models.OrderItem{},
-		&models.Fulfillment{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
+		&fulfillmentdomain.Fulfillment{},
 		&models.PaymentChannel{},
 		&models.Payment{},
 	); err != nil {
@@ -89,7 +94,7 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 	if err := db.Create(user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo:                 "DJOKPAYCALLBACK001",
 		UserID:                  user.ID,
 		Status:                  constants.OrderStatusPendingPayment,
@@ -149,7 +154,7 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 		t.Fatalf("create payment failed: %v", err)
 	}
 
-	orderRepo := repository.NewOrderRepository(db)
+	orderRepo := ordergormstore.New(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	channelRepo := repository.NewPaymentChannelRepository(db)
 	productRepo := productgormstore.NewProductStore(db)
@@ -159,7 +164,7 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 	registry.Register(constants.PaymentProviderOkpay, "", paymentprovider.NewOkpayAdapter())
 
 	paymentService := service.NewPaymentService(service.PaymentServiceOptions{
-		OrderRepo:               orderRepo,
+		OrderStore:              orderRepo,
 		ProductRepo:             productRepo,
 		ProductSKURepo:          productSKURepo,
 		PaymentRepo:             paymentRepo,

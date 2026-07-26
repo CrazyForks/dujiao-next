@@ -4,6 +4,10 @@ import (
 	"errors"
 	"strings"
 
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderqueue "github.com/dujiao-next/internal/modules/order/infrastructure/queueadapter"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	"github.com/dujiao-next/internal/constants"
@@ -17,7 +21,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (s *PaymentService) enqueueOrderPaidAsync(order *models.Order, payment *models.Payment, log *zap.SugaredLogger) {
+func (s *PaymentService) enqueueOrderPaidAsync(order *orderdomain.Order, payment *models.Payment, log *zap.SugaredLogger) {
 	if order == nil {
 		return
 	}
@@ -32,7 +36,7 @@ func (s *PaymentService) enqueueOrderPaidAsync(order *models.Order, payment *mod
 	}
 	if s.queueClient != nil && !isOrderFullyAutoFulfill(order) {
 		// 完全自动交付的订单会紧接着发送含卡密内容的"已完成"邮件，跳过"已支付"邮件避免重复打扰
-		if _, err := enqueueOrderStatusEmailTaskIfEligible(s.orderRepo, s.queueClient, s.settingService, s.defaultEmailConfig, order.ID, constants.OrderStatusPaid); err != nil {
+		if _, err := orderapp.EnqueueStatusEmailTaskIfEligible(s.orderRepo, orderqueue.New(s.queueClient), s.settingService, s.defaultEmailConfig, order.ID, constants.OrderStatusPaid); err != nil {
 			log.Warnw("payment_enqueue_status_email_failed",
 				"order_id", order.ID,
 				"order_no", order.OrderNo,
@@ -104,7 +108,7 @@ func (s *PaymentService) enqueueOrderPaidAsync(order *models.Order, payment *mod
 }
 
 // enqueueProcurementAsync 如果订单包含上游交付类型商品，创建采购单
-func (s *PaymentService) enqueueProcurementAsync(order *models.Order, log *zap.SugaredLogger) {
+func (s *PaymentService) enqueueProcurementAsync(order *orderdomain.Order, log *zap.SugaredLogger) {
 	if s.procurementSvc == nil || order == nil {
 		return
 	}
@@ -120,14 +124,14 @@ func (s *PaymentService) enqueueProcurementAsync(order *models.Order, log *zap.S
 }
 
 // enqueueDownstreamCallbackAsync B 侧：通知下游 A 站点订单已支付
-func (s *PaymentService) enqueueDownstreamCallbackAsync(order *models.Order, log *zap.SugaredLogger) {
+func (s *PaymentService) enqueueDownstreamCallbackAsync(order *orderdomain.Order, log *zap.SugaredLogger) {
 	if s.downstreamCallbackSvc == nil || order == nil {
 		return
 	}
 	s.downstreamCallbackSvc.EnqueueCallback(order.ID)
 }
 
-func (s *PaymentService) enqueueOrderPaidNotificationAsync(order *models.Order, payment *models.Payment, log *zap.SugaredLogger) {
+func (s *PaymentService) enqueueOrderPaidNotificationAsync(order *orderdomain.Order, payment *models.Payment, log *zap.SugaredLogger) {
 	if s.notificationSvc == nil || order == nil {
 		return
 	}
@@ -165,7 +169,7 @@ func (s *PaymentService) enqueueWalletRechargeSuccessAsync(recharge *walletdomai
 	}
 }
 
-func (s *PaymentService) enqueueOrderPaidBotNotifyAsync(order *models.Order, log *zap.SugaredLogger) {
+func (s *PaymentService) enqueueOrderPaidBotNotifyAsync(order *orderdomain.Order, log *zap.SugaredLogger) {
 	if s.queueClient == nil || order == nil || order.UserID == 0 || s.userOAuthIdentityRepo == nil {
 		return
 	}
@@ -233,7 +237,7 @@ func (s *PaymentService) enqueueWalletRechargeBotNotifyAsync(recharge *walletdom
 
 // hasManualFulfillmentItems 判断订单是否包含需要人工交付的商品项。
 // upstream 类型由采购流程自动交付，不触发待人工交付提醒。
-func hasManualFulfillmentItems(order *models.Order) bool {
+func hasManualFulfillmentItems(order *orderdomain.Order) bool {
 	if order == nil {
 		return false
 	}
@@ -245,7 +249,7 @@ func hasManualFulfillmentItems(order *models.Order) bool {
 	return false
 }
 
-func (s *PaymentService) enqueueManualFulfillmentPendingAsync(order *models.Order, parent *models.Order, log *zap.SugaredLogger) {
+func (s *PaymentService) enqueueManualFulfillmentPendingAsync(order *orderdomain.Order, parent *orderdomain.Order, log *zap.SugaredLogger) {
 	if s.notificationSvc == nil || order == nil {
 		return
 	}

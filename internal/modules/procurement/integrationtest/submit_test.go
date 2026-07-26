@@ -6,10 +6,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 )
 
@@ -80,7 +81,7 @@ func TestSubmitToUpstream_Success(t *testing.T) {
 	}
 
 	// 验证本地订单状态 = fulfilling
-	var updatedOrder models.Order
+	var updatedOrder orderdomain.Order
 	db.First(&updatedOrder, order.ID)
 	if updatedOrder.Status != constants.OrderStatusFulfilling {
 		t.Errorf("expected order status %q, got %q", constants.OrderStatusFulfilling, updatedOrder.Status)
@@ -126,7 +127,7 @@ func TestSubmitToUpstream_NonRetryableError_Rejects(t *testing.T) {
 	}
 
 	// 验证本地订单状态回退到 paid
-	var updatedOrder models.Order
+	var updatedOrder orderdomain.Order
 	db.First(&updatedOrder, order.ID)
 	if updatedOrder.Status != constants.OrderStatusPaid {
 		t.Errorf("expected order status %q after rejection, got %q", constants.OrderStatusPaid, updatedOrder.Status)
@@ -228,7 +229,7 @@ func TestHandleSubmitFailure_MaxRetriesExhausted(t *testing.T) {
 	}
 
 	// 验证本地订单回退到 paid
-	var updatedOrder models.Order
+	var updatedOrder orderdomain.Order
 	db.First(&updatedOrder, order.ID)
 	if updatedOrder.Status != constants.OrderStatusPaid {
 		t.Errorf("expected order status %q, got %q", constants.OrderStatusPaid, updatedOrder.Status)

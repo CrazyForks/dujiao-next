@@ -3,9 +3,10 @@ package contract
 import (
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/affiliate/domain"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 	"github.com/shopspring/decimal"
@@ -13,7 +14,7 @@ import (
 
 // OrderReader 是 Affiliate 计算订单佣金所需的最小订单读取端口。
 type OrderReader interface {
-	GetByID(id uint) (*models.Order, error)
+	GetByID(id uint) (*orderdomain.Order, error)
 }
 
 // ProductReader 是 Affiliate 计算可返利金额所需的最小商品读取端口。

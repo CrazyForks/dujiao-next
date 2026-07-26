@@ -10,34 +10,39 @@ import (
 
 func TestOrderServiceTestsAreSplitByResponsibility(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	serviceDirectory := filepath.Join(repositoryRoot, "internal", "service")
-	legacyPath := filepath.Join(serviceDirectory, "order_service_test.go")
-	if _, err := os.Stat(legacyPath); err == nil {
-		t.Fatalf("order_service_test.go must be replaced by responsibility-focused test files")
-	} else if !os.IsNotExist(err) {
-		t.Fatalf("stat order_service_test.go: %v", err)
+	applicationDirectory := filepath.Join(repositoryRoot, "internal", "modules", "order", "application")
+	integrationDirectory := filepath.Join(repositoryRoot, "internal", "modules", "order", "integrationtest", "application")
+	for _, legacyPath := range []string{
+		filepath.Join(repositoryRoot, "internal", "service", "order_service_test.go"),
+		filepath.Join(applicationDirectory, "order_service_test.go"),
+	} {
+		if _, err := os.Stat(legacyPath); err == nil {
+			t.Fatalf("monolithic order_service_test.go must stay removed: %s", legacyPath)
+		} else if !os.IsNotExist(err) {
+			t.Fatalf("stat %s: %v", legacyPath, err)
+		}
 	}
 
 	expected := map[string][]string{
-		"order_service_helpers_test.go": {
+		filepath.Join(applicationDirectory, "order_service_helpers_test.go"): {
 			"TestMergeCreateOrderItems", "TestMergeCreateOrderItemsConflict",
 			"TestApplyCouponDiscountToItems", "TestResolveManualFormSubmissionPreferOrderItemKey",
 			"TestResolveManualFormSubmissionFallbackLegacyProductKey",
 		},
-		"order_service_cancel_test.go": {
+		filepath.Join(integrationDirectory, "order_service_cancel_test.go"): {
 			"TestCancelExpiredOrderExpiresPendingPayments", "setupCancelPaymentTestDB",
 			"newPendingOrderForCancel", "newPaymentForOrder", "TestCancelOrderExpiresPendingPayments",
 			"TestUpdateOrderStatusAdminCancelExpiresPendingPaymentsSingleOrder",
 			"TestCancelExpiredOrderExpiresPaymentsForParentAndChildren",
 		},
-		"order_service_status_test.go": {
+		filepath.Join(applicationDirectory, "order_service_status_test.go"): {
 			"TestCalcParentStatus", "TestCalcParentStatusAllRefunded", "TestCalcParentStatusPartiallyRefunded",
 			"TestExpectedRefundStatus", "TestResolvedParentStatusPrefersOwnRefund",
 			"TestIsTransitionAllowedRefunded", "TestUpdateOrderStatusParentToPartiallyRefundedSyncsChildren",
 			"TestCanCompleteParentOrder", "TestCanCompleteParentOrderRejectInvalidStatus",
 			"TestCanCompleteParentOrderRejectInvalidChild",
 		},
-		"order_service_pricing_test.go": {
+		filepath.Join(applicationDirectory, "order_service_pricing_test.go"): {
 			"assertBuildOrderResultRejectsPurchaseQuantity", "TestBuildOrderResultRejectsZeroPromotionPrice",
 			"TestPreviewOrderAppliesMemberDiscountForManualProductBeforeFormCompleted",
 			"TestBuildOrderResultStacksPromotionAndMemberDiscount",
@@ -49,37 +54,38 @@ func TestOrderServiceTestsAreSplitByResponsibility(t *testing.T) {
 	}
 
 	for file, want := range expected {
-		parsed := parseProductionGoFile(t, filepath.Join(serviceDirectory, file))
+		parsed := parseProductionGoFile(t, file)
 		got := declaredFunctionNames(parsed)
 		sort.Strings(want)
 		sort.Strings(got)
 		if strings.Join(got, "\n") != strings.Join(want, "\n") {
-			t.Errorf("%s function ownership mismatch\nwant: %v\ngot:  %v", file, want, got)
+			t.Errorf("%s function ownership mismatch\nwant: %v\ngot:  %v", filepath.Base(file), want, got)
 		}
 	}
 }
 
 func TestOrderServiceTestFixtureLivesWithPricingTests(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	serviceDirectory := filepath.Join(repositoryRoot, "internal", "service")
+	applicationDirectory := filepath.Join(repositoryRoot, "internal", "modules", "order", "application")
+	integrationDirectory := filepath.Join(repositoryRoot, "internal", "modules", "order", "integrationtest", "application")
 	files := []string{
-		"order_service_helpers_test.go",
-		"order_service_cancel_test.go",
-		"order_service_status_test.go",
-		"order_service_pricing_test.go",
+		filepath.Join(applicationDirectory, "order_service_helpers_test.go"),
+		filepath.Join(integrationDirectory, "order_service_cancel_test.go"),
+		filepath.Join(applicationDirectory, "order_service_status_test.go"),
+		filepath.Join(applicationDirectory, "order_service_pricing_test.go"),
 	}
 
 	owners := make(map[string]string)
 	for _, file := range files {
-		parsed := parseProductionGoFile(t, filepath.Join(serviceDirectory, file))
+		parsed := parseProductionGoFile(t, file)
 		for _, typeName := range declaredTypeNames(parsed) {
 			if previous, exists := owners[typeName]; exists {
-				t.Fatalf("type %s declared in both %s and %s", typeName, previous, file)
+				t.Fatalf("type %s declared in both %s and %s", typeName, filepath.Base(previous), filepath.Base(file))
 			}
 			owners[typeName] = file
 		}
 	}
-	if got := owners["orderPurchaseQuantityLimitFixture"]; got != "order_service_pricing_test.go" {
+	if got := filepath.Base(owners["orderPurchaseQuantityLimitFixture"]); got != "order_service_pricing_test.go" {
 		t.Fatalf("orderPurchaseQuantityLimitFixture must live in pricing tests, got %q", got)
 	}
 }

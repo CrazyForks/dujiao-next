@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
@@ -49,7 +51,7 @@ type AdminChannelLookup interface {
 
 // AdminOrderLookup 后台订单号查询端口。
 type AdminOrderLookup interface {
-	GetByIDs(ids []uint) ([]models.Order, error)
+	GetByIDs(ids []uint) ([]orderdomain.Order, error)
 }
 
 // AdminRechargeLookup 后台充值单元数据查询端口。

@@ -5,6 +5,10 @@ import (
 	"testing"
 	"time"
 
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -35,9 +39,9 @@ func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.Order{},
-		&models.OrderItem{},
-		&models.Fulfillment{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
+		&fulfillmentdomain.Fulfillment{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
 		&walletdomain.Account{},
@@ -50,7 +54,7 @@ func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	}
 	models.DB = db
 
-	orderRepo := repository.NewOrderRepository(db)
+	orderRepo := ordergormstore.New(db)
 	productRepo := productgormstore.NewProductStore(db)
 	productSKURepo := productgormstore.NewSKUStore(db)
 	paymentRepo := repository.NewPaymentRepository(db)
@@ -76,7 +80,7 @@ func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	reg.Register(constants.PaymentProviderOkpay, "", provider.NewOkpayAdapter())
 
 	paymentSvc := NewPaymentService(PaymentServiceOptions{
-		OrderRepo:               orderRepo,
+		OrderStore:              orderRepo,
 		ProductRepo:             productRepo,
 		ProductSKURepo:          productSKURepo,
 		PaymentRepo:             paymentRepo,
@@ -105,7 +109,7 @@ func TestCreatePaymentWalletFullAmountCreatesPaymentRecord(t *testing.T) {
 		t.Fatalf("create user failed: %v", err)
 	}
 
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo:                 "DJTESTWALLETPAY001",
 		UserID:                  user.ID,
 		Status:                  constants.OrderStatusPendingPayment,
@@ -181,7 +185,7 @@ func TestCreatePaymentWalletFullAmountCreatesPaymentRecord(t *testing.T) {
 		t.Fatalf("wallet payment should set paid_at")
 	}
 
-	var refreshedOrder models.Order
+	var refreshedOrder orderdomain.Order
 	if err := db.First(&refreshedOrder, order.ID).Error; err != nil {
 		t.Fatalf("reload order failed: %v", err)
 	}

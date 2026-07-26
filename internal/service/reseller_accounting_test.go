@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+
 	resellerapplication "github.com/dujiao-next/internal/modules/reseller/application"
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
@@ -52,10 +55,10 @@ func openResellerAccountingServiceTestDB(t *testing.T) *gorm.DB {
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.Order{},
+		&orderdomain.Order{},
 		&models.Payment{},
 		&models.PaymentChannel{},
-		&models.OrderRefundRecord{},
+		&orderdomain.OrderRefundRecord{},
 		&resellerdomain.Profile{},
 		&resellerdomain.OrderSnapshot{},
 		&resellerdomain.LedgerEntry{},
@@ -207,7 +210,7 @@ func TestResellerAccountingServiceApplyUserWithdrawRequiresActiveNormalProfile(t
 	}
 }
 
-func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (models.Order, models.Payment, resellerdomain.OrderSnapshot) {
+func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (orderdomain.Order, models.Payment, resellerdomain.OrderSnapshot) {
 	t.Helper()
 	user := userdomain.User{Email: fmt.Sprintf("buyer-%d@example.test", time.Now().UnixNano()), PasswordHash: "x"}
 	if err := db.Create(&user).Error; err != nil {
@@ -219,7 +222,7 @@ func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (mo
 	}
 	resellerID := profile.ID
 	now := time.Now()
-	order := models.Order{
+	order := orderdomain.Order{
 		OrderNo:              fmt.Sprintf("DJ-RES-%d", now.UnixNano()),
 		UserID:               user.ID,
 		Status:               constants.OrderStatusPaid,
@@ -419,12 +422,12 @@ func TestPaymentSuccessTransactionPostsResellerLedger(t *testing.T) {
 	}
 	repo := resellergormstore.New(db)
 	accounting := newResellerAccountingTestHarness(repo, 0)
-	orderRepo := repository.NewOrderRepository(db)
+	orderRepo := ordergormstore.New(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	productRepo := productgormstore.NewProductStore(db)
 	productSKURepo := productgormstore.NewSKUStore(db)
 	paymentSvc := NewPaymentService(PaymentServiceOptions{
-		OrderRepo:          orderRepo,
+		OrderStore:         orderRepo,
 		PaymentRepo:        paymentRepo,
 		ProductRepo:        productRepo,
 		ProductSKURepo:     productSKURepo,
@@ -456,7 +459,7 @@ func TestResellerAccountingRefundDeductUsesSnapshotItems(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("post profit failed: %v", err)
 	}
-	refundRecord := models.OrderRefundRecord{
+	refundRecord := orderdomain.OrderRefundRecord{
 		UserID:    order.UserID,
 		OrderID:   order.ID,
 		Type:      constants.OrderRefundTypeManual,
@@ -498,7 +501,7 @@ func TestResellerAccountingRefundDeductIsIdempotent(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("post profit failed: %v", err)
 	}
-	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
+	refundRecord := orderdomain.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
 	if err := db.Create(&refundRecord).Error; err != nil {
 		t.Fatalf("create refund record failed: %v", err)
 	}
@@ -523,7 +526,7 @@ func TestResellerAccountingRefundDeductSkipsIneligibleSnapshot(t *testing.T) {
 	order, _, _ := seedPaidResellerOrderSnapshot(t, db, false)
 	repo := resellergormstore.New(db)
 	svc := newResellerAccountingTestHarness(repo, 0)
-	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
+	refundRecord := orderdomain.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
 	if err := db.Create(&refundRecord).Error; err != nil {
 		t.Fatalf("create refund record failed: %v", err)
 	}
@@ -549,7 +552,7 @@ func TestResellerAccountingRefundDeductMissingSnapshotSkipsWithoutRollingBack(t 
 	}
 	repo := resellergormstore.New(db)
 	svc := newResellerAccountingTestHarness(repo, 0)
-	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
+	refundRecord := orderdomain.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
 	if err := db.Create(&refundRecord).Error; err != nil {
 		t.Fatalf("create refund record failed: %v", err)
 	}
@@ -721,7 +724,7 @@ func TestResellerAccountingRefundDeductDefersWhileProfitPending(t *testing.T) {
 	}
 
 	// 确认窗口内发生退款（退一半 65/130），扣减利润 15。
-	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
+	refundRecord := orderdomain.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
 	if err := db.Create(&refundRecord).Error; err != nil {
 		t.Fatalf("create refund record failed: %v", err)
 	}
@@ -791,7 +794,7 @@ func TestResellerAccountingRefundDeductDoesNotOverDeductAcrossPartialRefunds(t *
 	}
 
 	// 第一次部分退款 52/130，扣减利润 30 * 0.4 = 12。
-	refund1 := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(52)), Currency: "USD"}
+	refund1 := orderdomain.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(52)), Currency: "USD"}
 	if err := db.Create(&refund1).Error; err != nil {
 		t.Fatalf("create refund1 failed: %v", err)
 	}
@@ -802,7 +805,7 @@ func TestResellerAccountingRefundDeductDoesNotOverDeductAcrossPartialRefunds(t *
 	}
 
 	// 第二次退款 78（剩余全部），refundedBefore=52，订单转为全额退款。
-	refund2 := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(78)), Currency: "USD"}
+	refund2 := orderdomain.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(78)), Currency: "USD"}
 	if err := db.Create(&refund2).Error; err != nil {
 		t.Fatalf("create refund2 failed: %v", err)
 	}

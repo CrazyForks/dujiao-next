@@ -5,10 +5,11 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -37,7 +38,7 @@ func TestGetProfitOverviewDeductsRefundRecords(t *testing.T) {
 	manualRefundedOrder := createDashboardProfitOrderWithItem(t, db, product, "DJ-PROFIT-MANUAL", constants.OrderStatusRefunded, 100, 40, "利润测试商品", now)
 	walletRefundedOrder := createDashboardProfitOrderWithItem(t, db, product, "DJ-PROFIT-WALLET", constants.OrderStatusPartiallyRefunded, 120, 50, "利润测试商品", now)
 
-	records := []models.OrderRefundRecord{
+	records := []orderdomain.OrderRefundRecord{
 		{
 			UserID:    1,
 			OrderID:   manualRefundedOrder.ID,
@@ -105,7 +106,7 @@ func TestGetProfitTrendsDeductsRefundRecords(t *testing.T) {
 	day1Order := createDashboardProfitOrderWithItem(t, db, product, "DJ-PROFIT-TREND-DAY1", constants.OrderStatusRefunded, 80, 30, "利润趋势测试商品", base)
 	day2Order := createDashboardProfitOrderWithItem(t, db, product, "DJ-PROFIT-TREND-DAY2", constants.OrderStatusRefunded, 100, 40, "利润趋势测试商品", base.Add(24*time.Hour))
 
-	records := []models.OrderRefundRecord{
+	records := []orderdomain.OrderRefundRecord{
 		{
 			UserID:    1,
 			OrderID:   day1Order.ID,
@@ -181,7 +182,7 @@ func TestGetProfitOverviewDeductsInWindowRefundForOutOfWindowOrder(t *testing.T)
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	outsideOrder := &models.Order{
+	outsideOrder := &orderdomain.Order{
 		OrderNo:        "DJ-PROFIT-OUTSIDE-ORDER",
 		UserID:         1,
 		Status:         constants.OrderStatusRefunded,
@@ -195,7 +196,7 @@ func TestGetProfitOverviewDeductsInWindowRefundForOutOfWindowOrder(t *testing.T)
 	if err := db.Create(outsideOrder).Error; err != nil {
 		t.Fatalf("create outside order failed: %v", err)
 	}
-	if err := db.Create(&models.OrderItem{
+	if err := db.Create(&orderdomain.OrderItem{
 		OrderID:         outsideOrder.ID,
 		ProductID:       product.ID,
 		TitleJSON:       jsonmap.JSON{"zh-CN": "周期退款测试商品"},
@@ -211,7 +212,7 @@ func TestGetProfitOverviewDeductsInWindowRefundForOutOfWindowOrder(t *testing.T)
 		t.Fatalf("create outside order item failed: %v", err)
 	}
 
-	inWindowOrder := &models.Order{
+	inWindowOrder := &orderdomain.Order{
 		OrderNo:        "DJ-PROFIT-IN-WINDOW",
 		UserID:         1,
 		Status:         constants.OrderStatusCompleted,
@@ -225,7 +226,7 @@ func TestGetProfitOverviewDeductsInWindowRefundForOutOfWindowOrder(t *testing.T)
 	if err := db.Create(inWindowOrder).Error; err != nil {
 		t.Fatalf("create in-window order failed: %v", err)
 	}
-	if err := db.Create(&models.OrderItem{
+	if err := db.Create(&orderdomain.OrderItem{
 		OrderID:         inWindowOrder.ID,
 		ProductID:       product.ID,
 		TitleJSON:       jsonmap.JSON{"zh-CN": "周期退款测试商品"},
@@ -241,7 +242,7 @@ func TestGetProfitOverviewDeductsInWindowRefundForOutOfWindowOrder(t *testing.T)
 		t.Fatalf("create in-window order item failed: %v", err)
 	}
 
-	if err := db.Create(&models.OrderRefundRecord{
+	if err := db.Create(&orderdomain.OrderRefundRecord{
 		UserID:    1,
 		OrderID:   outsideOrder.ID,
 		Type:      constants.OrderRefundTypeManual,
@@ -286,7 +287,7 @@ func TestGetProfitTrendsIncludesRefundOnlyDayInWindow(t *testing.T) {
 		t.Fatalf("create product failed: %v", err)
 	}
 
-	inWindowOrder := &models.Order{
+	inWindowOrder := &orderdomain.Order{
 		OrderNo:        "DJ-PROFIT-TREND-IN-WINDOW",
 		UserID:         1,
 		Status:         constants.OrderStatusCompleted,
@@ -300,7 +301,7 @@ func TestGetProfitTrendsIncludesRefundOnlyDayInWindow(t *testing.T) {
 	if err := db.Create(inWindowOrder).Error; err != nil {
 		t.Fatalf("create in-window order failed: %v", err)
 	}
-	if err := db.Create(&models.OrderItem{
+	if err := db.Create(&orderdomain.OrderItem{
 		OrderID:         inWindowOrder.ID,
 		ProductID:       product.ID,
 		TitleJSON:       jsonmap.JSON{"zh-CN": "退款单日测试商品"},
@@ -316,7 +317,7 @@ func TestGetProfitTrendsIncludesRefundOnlyDayInWindow(t *testing.T) {
 		t.Fatalf("create in-window order item failed: %v", err)
 	}
 
-	outsideOrder := &models.Order{
+	outsideOrder := &orderdomain.Order{
 		OrderNo:        "DJ-PROFIT-TREND-OUTSIDE-ORDER",
 		UserID:         1,
 		Status:         constants.OrderStatusRefunded,
@@ -330,7 +331,7 @@ func TestGetProfitTrendsIncludesRefundOnlyDayInWindow(t *testing.T) {
 	if err := db.Create(outsideOrder).Error; err != nil {
 		t.Fatalf("create outside order failed: %v", err)
 	}
-	if err := db.Create(&models.OrderItem{
+	if err := db.Create(&orderdomain.OrderItem{
 		OrderID:         outsideOrder.ID,
 		ProductID:       product.ID,
 		TitleJSON:       jsonmap.JSON{"zh-CN": "退款单日测试商品"},
@@ -346,7 +347,7 @@ func TestGetProfitTrendsIncludesRefundOnlyDayInWindow(t *testing.T) {
 		t.Fatalf("create outside order item failed: %v", err)
 	}
 
-	if err := db.Create(&models.OrderRefundRecord{
+	if err := db.Create(&orderdomain.OrderRefundRecord{
 		UserID:    1,
 		OrderID:   outsideOrder.ID,
 		Type:      constants.OrderRefundTypeManual,

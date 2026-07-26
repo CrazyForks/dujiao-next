@@ -86,13 +86,13 @@ func (c *Container) initIntegrationServices() {
 	}
 	c.DownstreamCallbackService = downstreamcallbackapp.NewService(downstreamcallbackapp.Options{
 		References:  c.DownstreamOrderRefRepo,
-		Orders:      downstreamcallbackorderreader.New(c.OrderRepo),
+		Orders:      downstreamcallbackorderreader.New(c.OrderStore),
 		Credentials: downstreamcallbackcredentialreader.New(c.ApiCredentialRepo),
 		Queue:       downstreamQueue,
 		Deliverer:   downstreamcallbackclient.New(),
 	})
 	c.PaymentService = service.NewPaymentService(service.PaymentServiceOptions{
-		OrderRepo:               c.OrderRepo,
+		OrderStore:              c.OrderStore,
 		ProductRepo:             c.ProductRepo,
 		ProductSKURepo:          c.ProductSKURepo,
 		PaymentRepo:             c.PaymentRepo,
@@ -112,7 +112,7 @@ func (c *Container) initIntegrationServices() {
 	})
 	c.ProcurementOrderService = procurementapp.NewService(procurementapp.Options{
 		Repository:         c.ProcurementOrderRepo,
-		Orders:             procurementorder.New(c.OrderRepo),
+		Orders:             procurementorder.New(c.OrderStore),
 		ProductMappings:    procurementmapping.NewProducts(c.ProductMappingRepo),
 		SKUMappings:        procurementmapping.NewSKUs(c.SKUMappingRepo),
 		Connections:        procurementupstream.New(c.SiteConnectionService),

@@ -5,6 +5,9 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+
 	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
 
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
@@ -60,8 +63,8 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		&cartdomain.Item{},
 		&mappingdomain.Mapping{},
 		&mappingdomain.SKUMapping{},
-		&models.Order{},
-		&models.OrderItem{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
 		&models.PaymentChannel{},
 		&resellerdomain.Profile{},
 		&resellerdomain.ProductSetting{},
@@ -78,7 +81,7 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
 		Carts:             cartgormstore.New(db),
 		ProductMappings:   mappinggormstore.NewMappingStore(db),
-		Orders:            repository.NewOrderRepository(db),
+		Orders:            ordergormstore.New(db),
 		PaymentChannels:   repository.NewPaymentChannelRepository(db),
 	})
 	return svc, resellergormstore.New(db), db

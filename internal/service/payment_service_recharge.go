@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
@@ -13,6 +15,7 @@ import (
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/money"
+	"github.com/dujiao-next/internal/shared/serial"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -154,7 +157,7 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 	}
 
 	// 复用支付网关下单逻辑，使用充值单号作为业务单号。
-	virtualOrder := &models.Order{
+	virtualOrder := &orderdomain.Order{
 		OrderNo: recharge.RechargeNo,
 		UserID:  recharge.UserID,
 	}
@@ -234,5 +237,5 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 }
 
 func generateWalletRechargeNo() string {
-	return generateSerialNo("WR")
+	return serial.Generate("WR")
 }

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 
@@ -96,7 +98,7 @@ type orderHistoryStore struct{ db *gorm.DB }
 
 func (s *orderHistoryStore) CountOrderItemsByProduct(productID uint) (int64, error) {
 	var count int64
-	err := s.db.Model(&models.OrderItem{}).Where("product_id = ?", productID).Count(&count).Error
+	err := s.db.Model(&orderdomain.OrderItem{}).Where("product_id = ?", productID).Count(&count).Error
 	return count, err
 }
 
@@ -130,8 +132,8 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 		&cartdomain.Item{},
 		&mappingdomain.Mapping{},
 		&mappingdomain.SKUMapping{},
-		&models.Order{},
-		&models.OrderItem{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
 		&models.PaymentChannel{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)

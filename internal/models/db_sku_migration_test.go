@@ -9,6 +9,7 @@ import (
 	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -36,7 +37,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 	if err := db.AutoMigrate(
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&OrderItem{},
+		&orderdomain.OrderItem{},
 		&cartdomain.Item{},
 		&cardsecretdomain.Secret{},
 		&cardsecretdomain.Batch{},
@@ -62,7 +63,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 	}
 
 	now := time.Now()
-	orderItem := &OrderItem{
+	orderItem := &orderdomain.OrderItem{
 		OrderID:         1,
 		ProductID:       product.ID,
 		SKUID:           0,
@@ -132,7 +133,7 @@ func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
 		t.Fatalf("default sku stock snapshot mismatch")
 	}
 
-	var gotOrderItem OrderItem
+	var gotOrderItem orderdomain.OrderItem
 	if err := db.First(&gotOrderItem, orderItem.ID).Error; err != nil {
 		t.Fatalf("reload order item failed: %v", err)
 	}

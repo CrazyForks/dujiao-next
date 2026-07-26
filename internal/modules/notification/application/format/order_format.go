@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -16,7 +17,7 @@ type OrderItemCounts struct {
 	Upstream int
 }
 
-func BuildOrderItemSummaries(items []models.OrderItem, locale string) (string, string, OrderItemCounts) {
+func BuildOrderItemSummaries(items []orderdomain.OrderItem, locale string) (string, string, OrderItemCounts) {
 	counts := OrderItemCounts{Total: len(items)}
 	if len(items) == 0 {
 		empty := localizedNotificationText(locale, "暂无商品明细", "暫無商品明細", "No item details")
@@ -47,7 +48,7 @@ func BuildOrderItemSummaries(items []models.OrderItem, locale string) (string, s
 	return strings.Join(allLines, "\n"), strings.Join(fulfillmentLines, "\n"), counts
 }
 
-func buildNotificationOrderItemLine(index int, item models.OrderItem, locale string) string {
+func buildNotificationOrderItemLine(index int, item orderdomain.OrderItem, locale string) string {
 	title := resolveNotificationLocalizedJSON(item.TitleJSON, locale, constants.LocaleZhCN)
 	if title == "" {
 		title = localizedNotificationText(locale, "未命名商品", "未命名商品", "Unnamed item")

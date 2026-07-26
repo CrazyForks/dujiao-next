@@ -3,7 +3,10 @@ package service
 import (
 	"strings"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/shared/serial"
 )
 
 func shouldUseGatewayOrderNo(channel *models.PaymentChannel) bool {
@@ -11,7 +14,7 @@ func shouldUseGatewayOrderNo(channel *models.PaymentChannel) bool {
 }
 
 func buildGatewayOrderNo() string {
-	return generateSerialNo("DJP")
+	return serial.Generate("DJP")
 }
 
 func resolveGatewayOrderNo(channel *models.PaymentChannel, payment *models.Payment) string {
@@ -44,7 +47,7 @@ func matchesBusinessOrderNo(callbackOrderNo string, businessOrderNo string, paym
 	return callbackOrderNo == strings.TrimSpace(payment.GatewayOrderNo)
 }
 
-func buildPaymentReturnQuery(input CreatePaymentInput, order *models.Order, marker string, sessionID string) map[string]string {
+func buildPaymentReturnQuery(input CreatePaymentInput, order *orderdomain.Order, marker string, sessionID string) map[string]string {
 	params := map[string]string{}
 
 	bizType := strings.ToLower(strings.TrimSpace(input.ReturnBizType))

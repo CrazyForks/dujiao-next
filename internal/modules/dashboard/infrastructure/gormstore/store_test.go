@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -29,13 +31,13 @@ func setupDashboardRepositoryTest(t *testing.T) (*Store, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&userdomain.User{}, &categorydomain.Category{}, &productdomain.Product{}, &models.Order{}, &models.OrderItem{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &categorydomain.Category{}, &productdomain.Product{}, &orderdomain.Order{}, &orderdomain.OrderItem{}); err != nil {
 		t.Fatalf("migrate dashboard models failed: %v", err)
 	}
 	if err := db.AutoMigrate(&productdomain.ProductSKU{}); err != nil {
 		t.Fatalf("migrate dashboard sku models failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.PaymentChannel{}, &models.Payment{}, &models.OrderRefundRecord{}); err != nil {
+	if err := db.AutoMigrate(&models.PaymentChannel{}, &models.Payment{}, &orderdomain.OrderRefundRecord{}); err != nil {
 		t.Fatalf("migrate dashboard models failed: %v", err)
 	}
 	return New(db), db
@@ -63,9 +65,9 @@ func createDashboardProfitOrderWithItem(
 	cost int64,
 	title string,
 	createdAt time.Time,
-) *models.Order {
+) *orderdomain.Order {
 	t.Helper()
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo:        orderNo,
 		UserID:         1,
 		Status:         status,
@@ -79,7 +81,7 @@ func createDashboardProfitOrderWithItem(
 	if err := db.Create(order).Error; err != nil {
 		t.Fatalf("create order failed: %v", err)
 	}
-	item := &models.OrderItem{
+	item := &orderdomain.OrderItem{
 		OrderID:         order.ID,
 		ProductID:       product.ID,
 		TitleJSON:       jsonmap.JSON{"zh-CN": title},

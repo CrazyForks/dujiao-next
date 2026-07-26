@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
 )
 
@@ -15,7 +16,7 @@ func (r *Store) GetTopProducts(startAt, endAt time.Time, limit int) ([]dashboard
 	}
 	rows := make([]dashboard.ProductRankingRow, 0)
 	titleExpr := localizedJSONCoalesceExpr(r.db, "order_items.title_json")
-	if err := r.db.Model(&models.OrderItem{}).
+	if err := r.db.Model(&orderdomain.OrderItem{}).
 		Select(fmt.Sprintf(`
 			order_items.product_id as product_id,
 			order_items.sku_id as sku_id,
@@ -29,7 +30,7 @@ func (r *Store) GetTopProducts(startAt, endAt time.Time, limit int) ([]dashboard
 		`, titleExpr)).
 		Joins("JOIN orders ON orders.id = order_items.order_id").
 		Joins("LEFT JOIN product_skus ON product_skus.id = order_items.sku_id AND product_skus.deleted_at IS NULL").
-		Where("orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, paidOrderStatuses()).
+		Where("order_items.deleted_at IS NULL AND orders.deleted_at IS NULL AND orders.created_at >= ? AND orders.created_at < ? AND orders.status IN ?", startAt, endAt, paidOrderStatuses()).
 		// 注意：不能把 product_skus.spec_values_json 直接放进 GROUP BY —— 在 Postgres 下 json 列没有等值运算符会报错。
 		// 通过 GROUP BY 产品主键 product_skus.id，利用 PK 函数依赖让 Postgres 允许 SELECT sku_code/spec_values_json 不必聚合。
 		Group("order_items.product_id, order_items.sku_id, product_skus.id, title").

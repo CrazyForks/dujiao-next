@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
@@ -18,7 +20,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *models.Order, channel *models.PaymentChannel, payment *models.Payment) (err error) {
+func (s *PaymentService) applyProviderPayment(input CreatePaymentInput, order *orderdomain.Order, channel *models.PaymentChannel, payment *models.Payment) (err error) {
 	providerType := strings.ToLower(strings.TrimSpace(channel.ProviderType))
 	channelType := strings.ToLower(strings.TrimSpace(channel.ChannelType))
 	gatewayCtx, cancel := detachOutboundRequestContext(input.Context)
@@ -262,7 +264,7 @@ func tenantReturnPath(channel *models.PaymentChannel) string {
 	return "/pay"
 }
 
-func resolveTokenPayOrderUserKey(order *models.Order) string {
+func resolveTokenPayOrderUserKey(order *orderdomain.Order) string {
 	if order == nil {
 		return ""
 	}

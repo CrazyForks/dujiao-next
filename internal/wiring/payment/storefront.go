@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/models"
 	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
@@ -14,29 +17,29 @@ import (
 )
 
 type guestOrderLookupAdapter struct {
-	orders *service.OrderService
+	orders *orderapp.OrderService
 }
 
-func (a guestOrderLookupAdapter) GetOrderByGuestOrderNoForTenant(tenant reseller.TenantContext, orderNo, email, password string) (*models.Order, error) {
+func (a guestOrderLookupAdapter) GetOrderByGuestOrderNoForTenant(tenant reseller.TenantContext, orderNo, email, password string) (*orderdomain.Order, error) {
 	order, err := a.orders.GetOrderByGuestOrderNoForTenant(tenant, orderNo, email, password)
 	return order, mapTransportError(err)
 }
 
-func (a guestOrderLookupAdapter) GetOrderByGuestForTenant(tenant reseller.TenantContext, orderID uint, email, password string) (*models.Order, error) {
+func (a guestOrderLookupAdapter) GetOrderByGuestForTenant(tenant reseller.TenantContext, orderID uint, email, password string) (*orderdomain.Order, error) {
 	order, err := a.orders.GetOrderByGuestForTenant(tenant, orderID, email, password)
 	return order, mapTransportError(err)
 }
 
 type userOrderLookupAdapter struct {
-	orders *service.OrderService
+	orders *orderapp.OrderService
 }
 
-func (a userOrderLookupAdapter) GetOrderByUserOrderNoForTenant(tenant reseller.TenantContext, orderNo string, userID uint) (*models.Order, error) {
+func (a userOrderLookupAdapter) GetOrderByUserOrderNoForTenant(tenant reseller.TenantContext, orderNo string, userID uint) (*orderdomain.Order, error) {
 	order, err := a.orders.GetOrderByUserOrderNoForTenant(tenant, orderNo, userID)
 	return order, mapTransportError(err)
 }
 
-func (a userOrderLookupAdapter) GetOrderByUserForTenant(tenant reseller.TenantContext, orderID, userID uint) (*models.Order, error) {
+func (a userOrderLookupAdapter) GetOrderByUserForTenant(tenant reseller.TenantContext, orderID, userID uint) (*orderdomain.Order, error) {
 	order, err := a.orders.GetOrderByUserForTenant(tenant, orderID, userID)
 	return order, mapTransportError(err)
 }
@@ -98,9 +101,9 @@ func mapTransportError(err error) error {
 		source error
 		target error
 	}{
-		{service.ErrOrderNotFound, paymenttransport.ErrOrderNotFound},
-		{service.ErrGuestOrderNotFound, paymenttransport.ErrGuestOrderNotFound},
-		{service.ErrOrderStatusInvalid, paymenttransport.ErrOrderStatusInvalid},
+		{orderapp.ErrOrderNotFound, paymenttransport.ErrOrderNotFound},
+		{orderapp.ErrGuestOrderNotFound, paymenttransport.ErrGuestOrderNotFound},
+		{orderapp.ErrOrderStatusInvalid, paymenttransport.ErrOrderStatusInvalid},
 		{service.ErrPaymentInvalid, paymenttransport.ErrPaymentInvalid},
 		{service.ErrPaymentNotFound, paymenttransport.ErrPaymentNotFound},
 		{service.ErrPaymentChannelNotFound, paymenttransport.ErrPaymentChannelNotFound},

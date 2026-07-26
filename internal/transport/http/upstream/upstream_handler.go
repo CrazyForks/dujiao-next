@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	downstreamcallbackdomain "github.com/dujiao-next/internal/modules/downstreamcallback/domain"
@@ -22,7 +24,6 @@ import (
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
 	"github.com/gin-gonic/gin"
@@ -116,10 +117,10 @@ type Wallet interface {
 }
 
 type Orders interface {
-	CreateOrder(input CreateOrderInput) (*models.Order, error)
-	GetOrderByUser(orderID, userID uint) (*models.Order, error)
-	CancelOrder(orderID, userID uint) (*models.Order, error)
-	BuildLocalRefundRecordsForOrder(order *models.Order) ([]jsonmap.JSON, error)
+	CreateOrder(input CreateOrderInput) (*orderdomain.Order, error)
+	GetOrderByUser(orderID, userID uint) (*orderdomain.Order, error)
+	CancelOrder(orderID, userID uint) (*orderdomain.Order, error)
+	BuildLocalRefundRecordsForOrder(order *orderdomain.Order) ([]jsonmap.JSON, error)
 }
 
 type Payments interface {

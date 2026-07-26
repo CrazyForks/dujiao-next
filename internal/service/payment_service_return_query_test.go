@@ -3,11 +3,11 @@ package service
 import (
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 )
 
 func TestBuildPaymentReturnQueryForOrder(t *testing.T) {
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo: "DJ202603230001",
 		UserID:  0,
 	}
@@ -35,7 +35,7 @@ func TestBuildPaymentReturnQueryForOrder(t *testing.T) {
 }
 
 func TestBuildPaymentReturnQueryForRecharge(t *testing.T) {
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo: "DJRECHARGE0001",
 		UserID:  100,
 	}

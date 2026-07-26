@@ -3,12 +3,13 @@ package application
 import (
 	"testing"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
@@ -17,7 +18,7 @@ func TestNeutralProfitStatusUnavailableWhenIneligible(t *testing.T) {
 	status := neutralProfitStatus(resellerdomain.OrderSnapshot{
 		ProfitEligible: false,
 		ProfitAmount:   money.FromDecimal(decimal.NewFromInt(10)),
-	}, models.Order{Status: constants.OrderStatusPaid}, nil)
+	}, orderdomain.Order{Status: constants.OrderStatusPaid}, nil)
 	if status != resellercontract.ProfitStatusUnavailable {
 		t.Fatalf("expected unavailable, got %s", status)
 	}

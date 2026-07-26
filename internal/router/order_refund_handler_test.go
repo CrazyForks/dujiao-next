@@ -8,26 +8,28 @@ import (
 	"testing"
 	"time"
 
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
+	orderrefund "github.com/dujiao-next/internal/modules/order/application/refund"
+	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
 
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
+	orderwiring "github.com/dujiao-next/internal/bootstrap/order"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	ordertransport "github.com/dujiao-next/internal/modules/order/transport/http"
 	"github.com/dujiao-next/internal/provider"
-	"github.com/dujiao-next/internal/repository"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
-	ordertransport "github.com/dujiao-next/internal/transport/http/order"
-	orderwiring "github.com/dujiao-next/internal/wiring/order"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -55,10 +57,10 @@ func setupAdminOrderRefundHandlerTest(t *testing.T) (*ordertransport.AdminRefund
 	if err := db.AutoMigrate(
 		&userdomain.User{},
 		&externalidentitydomain.Identity{},
-		&models.Order{},
-		&models.OrderItem{},
-		&models.Fulfillment{},
-		&models.OrderRefundRecord{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
+		&fulfillmentdomain.Fulfillment{},
+		&orderdomain.OrderRefundRecord{},
 		&affiliatedomain.Profile{},
 		&affiliatedomain.Commission{},
 		&affiliatedomain.WithdrawRequest{},
@@ -68,14 +70,13 @@ func setupAdminOrderRefundHandlerTest(t *testing.T) (*ordertransport.AdminRefund
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	orderRepo := repository.NewOrderRepository(db)
-	orderRefundRecordRepo := repository.NewOrderRefundRecordRepository(db)
+	orderRepo := ordergormstore.New(db)
 	userRepo := userstore.New(db)
 	affiliateSvc := affiliateapp.NewService(affiliategormstore.New(db), nil, nil, nil, nil)
-	affiliateRefund := affiliategormstore.NewRefundHandler(affiliateSvc)
-	orderRefundService := service.NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateRefund, nil, nil)
+	orderRefundService := orderrefund.New(orderRepo, userRepo, affiliateSvc, nil, nil)
 
 	return orderwiring.NewAdminRefundHandler(&provider.Container{
+		OrderStore:         orderRepo,
 		OrderRefundService: orderRefundService,
 	}), db
 }
@@ -106,7 +107,7 @@ func seedAdminOrderRefundData(t *testing.T, db *gorm.DB) adminOrderRefundFixture
 		t.Fatalf("create oauth identity failed: %v", err)
 	}
 
-	memberOrder := &models.Order{
+	memberOrder := &orderdomain.Order{
 		OrderNo:          "DJ-ADMIN-REFUND-ORDER-1",
 		UserID:           member.ID,
 		Status:           constants.OrderStatusPartiallyRefunded,
@@ -120,7 +121,7 @@ func seedAdminOrderRefundData(t *testing.T, db *gorm.DB) adminOrderRefundFixture
 		CreatedAt:        now.Add(-2 * time.Hour),
 		UpdatedAt:        now.Add(-2 * time.Hour),
 	}
-	guestOrder := &models.Order{
+	guestOrder := &orderdomain.Order{
 		OrderNo:          "DJ-ADMIN-REFUND-ORDER-2",
 		UserID:           0,
 		GuestEmail:       "refund-guest@example.com",
@@ -136,13 +137,13 @@ func seedAdminOrderRefundData(t *testing.T, db *gorm.DB) adminOrderRefundFixture
 		CreatedAt:        now.Add(-90 * time.Minute),
 		UpdatedAt:        now.Add(-90 * time.Minute),
 	}
-	for _, order := range []*models.Order{memberOrder, guestOrder} {
+	for _, order := range []*orderdomain.Order{memberOrder, guestOrder} {
 		if err := db.Create(order).Error; err != nil {
 			t.Fatalf("create order failed: %v", err)
 		}
 	}
 
-	items := []models.OrderItem{
+	items := []orderdomain.OrderItem{
 		{
 			OrderID:         memberOrder.ID,
 			ProductID:       1,
@@ -176,7 +177,7 @@ func seedAdminOrderRefundData(t *testing.T, db *gorm.DB) adminOrderRefundFixture
 		}
 	}
 
-	manualRefund := &models.OrderRefundRecord{
+	manualRefund := &orderdomain.OrderRefundRecord{
 		UserID:     member.ID,
 		OrderID:    memberOrder.ID,
 		Type:       constants.OrderRefundTypeManual,
@@ -187,7 +188,7 @@ func seedAdminOrderRefundData(t *testing.T, db *gorm.DB) adminOrderRefundFixture
 		UpdatedAt:  now.Add(-40 * time.Minute),
 		GuestEmail: "",
 	}
-	walletRefund := &models.OrderRefundRecord{
+	walletRefund := &orderdomain.OrderRefundRecord{
 		UserID:     0,
 		GuestEmail: "refund-guest@example.com",
 		OrderID:    guestOrder.ID,
@@ -198,7 +199,7 @@ func seedAdminOrderRefundData(t *testing.T, db *gorm.DB) adminOrderRefundFixture
 		CreatedAt:  now.Add(-20 * time.Minute),
 		UpdatedAt:  now.Add(-20 * time.Minute),
 	}
-	for _, record := range []*models.OrderRefundRecord{manualRefund, walletRefund} {
+	for _, record := range []*orderdomain.OrderRefundRecord{manualRefund, walletRefund} {
 		if err := db.Create(record).Error; err != nil {
 			t.Fatalf("create refund record failed: %v", err)
 		}

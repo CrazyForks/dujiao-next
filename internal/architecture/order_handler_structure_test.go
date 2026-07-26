@@ -8,7 +8,35 @@ import (
 
 func TestOrderAdminHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "order")
+	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "order")
+	domainRoot := filepath.Join(moduleRoot, "domain")
+	contractRoot := filepath.Join(moduleRoot, "contract")
+	applicationRoot := filepath.Join(moduleRoot, "application")
+	storeRoot := filepath.Join(moduleRoot, "infrastructure", "gormstore")
+	transportRoot := filepath.Join(repositoryRoot, "internal", "modules", "order", "transport", "http")
+	presenterRoot := filepath.Join(repositoryRoot, "internal", "modules", "order", "transport", "presenter")
+
+	production, total := countDirectGoFiles(t, moduleRoot)
+	if production != 0 || total != 0 {
+		t.Fatalf("order module root must remain structural only, got production=%d total=%d", production, total)
+	}
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "order.go"), []string{"Order"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "order_item.go"), []string{"OrderItem"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "order_refund_record.go"), []string{"OrderRefundRecord"})
+	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "store.go"), []string{"Store", "Transaction"})
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "order_service.go"), []string{"OrderService", "OrderServiceOptions"})
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "order_service.go"), []string{"NewOrderService"})
+	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "order_store.go"), []string{"Store"})
+	assertFileDeclaresFunctions(t, filepath.Join(storeRoot, "order_store.go"), []string{"New"})
+	assertFileDeclaresTypes(t, filepath.Join(presenterRoot, "order.go"), []string{"OrderSummary", "OrderDetail"})
+	assertDirectoryGoFileBudget(t, domainRoot, 5)
+	assertDirectoryGoFileBudget(t, contractRoot, 4)
+	assertDirectoryGoFileBudget(t, applicationRoot, 20)
+	assertDirectoryGoFileBudget(t, storeRoot, 7)
+	assertDirectoryGoFileBudget(t, presenterRoot, 3)
+	assertProductionImportsAbsent(t, applicationRoot, moduleImportPath+"/internal/service")
+	assertProductionImportsAbsent(t, applicationRoot, moduleImportPath+"/internal/repository")
+	assertProductionImportsAbsent(t, applicationRoot, "gorm.io/gorm")
 
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{
 		"RegisterAdminRoutes", "RegisterAdminRefundRoutes", "RegisterAdminRefundWriteRoutes",
@@ -75,11 +103,11 @@ func TestOrderAdminHTTPLivesInTransport(t *testing.T) {
 	}
 
 	if _, err := os.Stat(filepath.Join(repositoryRoot, "internal", "router", "order_adapter.go")); err == nil {
-		t.Fatal("order composition adapters belong in internal/wiring/order, not internal/router")
+		t.Fatal("order composition adapters belong in internal/bootstrap/order, not internal/router")
 	} else if !os.IsNotExist(err) {
 		t.Fatalf("stat legacy order router adapter: %v", err)
 	}
-	wiringRoot := filepath.Join(repositoryRoot, "internal", "wiring", "order")
+	wiringRoot := filepath.Join(repositoryRoot, "internal", "bootstrap", "order")
 	for _, file := range []string{"wiring.go", "adapters.go"} {
 		if _, err := os.Stat(filepath.Join(wiringRoot, file)); err != nil {
 			t.Fatalf("order wiring file %s missing: %v", file, err)

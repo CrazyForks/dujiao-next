@@ -8,8 +8,9 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
 	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
@@ -61,7 +62,7 @@ func TestProcurement_GetByID_DoesNotIncludeLocalRefundRecords(t *testing.T) {
 
 	proc := createTestProcurementOrder(t, db, 1, child.ID, child.OrderNo, constants.ProcurementStatusAccepted)
 
-	localRecord := &models.OrderRefundRecord{
+	localRecord := &orderdomain.OrderRefundRecord{
 		OrderID:    child.ID,
 		Type:       constants.OrderRefundTypeManual,
 		Amount:     money.FromDecimal(decimal.NewFromFloat(10.5)),
@@ -73,7 +74,7 @@ func TestProcurement_GetByID_DoesNotIncludeLocalRefundRecords(t *testing.T) {
 		t.Fatalf("create local refund record: %v", err)
 	}
 
-	parentRecord := &models.OrderRefundRecord{
+	parentRecord := &orderdomain.OrderRefundRecord{
 		OrderID:    parent.ID,
 		Type:       constants.OrderRefundTypeWallet,
 		Amount:     money.FromDecimal(decimal.NewFromFloat(7.25)),
@@ -104,14 +105,14 @@ func TestProcurement_FillParentOrderNo_BackfillsLocalRefundedAmountFromParent(t 
 	db := setupProcurementTestDB(t)
 
 	parent := createProcTestOrder(t, db, "PROC-PARENT-REFUND-001", constants.OrderStatusPartiallyRefunded, constants.FulfillmentTypeUpstream)
-	if err := db.Model(&models.Order{}).Where("id = ?", parent.ID).Updates(map[string]interface{}{
+	if err := db.Model(&orderdomain.Order{}).Where("id = ?", parent.ID).Updates(map[string]interface{}{
 		"refunded_amount": money.FromDecimal(decimal.NewFromFloat(12.34)),
 	}).Error; err != nil {
 		t.Fatalf("set parent refunded_amount: %v", err)
 	}
 
 	child := createProcTestOrder(t, db, "PROC-CHILD-REFUND-001", constants.OrderStatusPartiallyRefunded, constants.FulfillmentTypeUpstream)
-	if err := db.Model(&models.Order{}).Where("id = ?", child.ID).Update("parent_id", parent.ID).Error; err != nil {
+	if err := db.Model(&orderdomain.Order{}).Where("id = ?", child.ID).Update("parent_id", parent.ID).Error; err != nil {
 		t.Fatalf("set child parent: %v", err)
 	}
 
@@ -141,14 +142,14 @@ func TestProcurement_List_BackfillsChildLocalRefundedAmountFromParent(t *testing
 	db := setupProcurementTestDB(t)
 
 	parent := createProcTestOrder(t, db, "PROC-LIST-PARENT-REFUND-001", constants.OrderStatusPartiallyRefunded, constants.FulfillmentTypeUpstream)
-	if err := db.Model(&models.Order{}).Where("id = ?", parent.ID).Updates(map[string]interface{}{
+	if err := db.Model(&orderdomain.Order{}).Where("id = ?", parent.ID).Updates(map[string]interface{}{
 		"refunded_amount": money.FromDecimal(decimal.NewFromFloat(8.88)),
 	}).Error; err != nil {
 		t.Fatalf("set parent refunded_amount: %v", err)
 	}
 
 	child := createProcTestOrder(t, db, "PROC-LIST-CHILD-REFUND-001", constants.OrderStatusPartiallyRefunded, constants.FulfillmentTypeUpstream)
-	if err := db.Model(&models.Order{}).Where("id = ?", child.ID).Update("parent_id", parent.ID).Error; err != nil {
+	if err := db.Model(&orderdomain.Order{}).Where("id = ?", child.ID).Update("parent_id", parent.ID).Error; err != nil {
 		t.Fatalf("set child parent: %v", err)
 	}
 
@@ -184,7 +185,7 @@ func TestProcurement_List_DoesNotIncludeLocalRefundRecords(t *testing.T) {
 	order := createProcTestOrder(t, db, "PROC-LIST-REFUND-001", constants.OrderStatusPaid, constants.FulfillmentTypeUpstream)
 	proc := createTestProcurementOrder(t, db, 1, order.ID, order.OrderNo, constants.ProcurementStatusAccepted)
 
-	record := &models.OrderRefundRecord{
+	record := &orderdomain.OrderRefundRecord{
 		OrderID:  order.ID,
 		Type:     constants.OrderRefundTypeManual,
 		Amount:   money.FromDecimal(decimal.NewFromInt(12)),

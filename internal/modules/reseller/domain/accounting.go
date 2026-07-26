@@ -3,7 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -27,8 +28,8 @@ type LedgerEntry struct {
 	UpdatedAt         time.Time    `gorm:"index" json:"updated_at"`
 	DeletedAt         *time.Time   `gorm:"index" json:"-"`
 
-	Profile *Profile      `gorm:"foreignKey:ResellerID" json:"profile,omitempty"`
-	Order   *models.Order `gorm:"foreignKey:OrderID" json:"order,omitempty"`
+	Profile *Profile           `gorm:"foreignKey:ResellerID" json:"profile,omitempty"`
+	Order   *orderdomain.Order `gorm:"foreignKey:OrderID" json:"order,omitempty"`
 }
 
 func (LedgerEntry) TableName() string { return "reseller_ledger_entries" }

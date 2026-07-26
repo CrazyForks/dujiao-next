@@ -3,6 +3,9 @@ package service
 import (
 	"strings"
 
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
@@ -11,7 +14,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func shouldMarkFulfilling(order *models.Order) bool {
+func shouldMarkFulfilling(order *orderdomain.Order) bool {
 	if order == nil {
 		return false
 	}
@@ -70,7 +73,7 @@ func validatePaymentCurrencyForChannel(currency string, channel *models.PaymentC
 }
 
 func (s *PaymentService) resolveExpireMinutes() int {
-	return resolveOrderPaymentExpireMinutes(s.settingService, s.expireMinutes)
+	return orderapp.ResolvePaymentExpireMinutes(s.settingService, s.expireMinutes)
 }
 
 func normalizePaymentStatus(status string) string {
@@ -86,7 +89,7 @@ func isPaymentStatusValid(status string) bool {
 	}
 }
 
-func shouldAutoFulfill(order *models.Order) bool {
+func shouldAutoFulfill(order *orderdomain.Order) bool {
 	if order == nil || len(order.Items) == 0 {
 		return false
 	}
@@ -101,7 +104,7 @@ func shouldAutoFulfill(order *models.Order) bool {
 // isOrderFullyAutoFulfill 判断订单是否完全为自动交付。
 // 父订单：所有子订单均满足 shouldAutoFulfill；单订单：自身满足 shouldAutoFulfill。
 // 用于支付成功时跳过"已支付"邮件——自动交付会紧接着发送含卡密内容的"已完成"邮件，避免重复打扰。
-func isOrderFullyAutoFulfill(order *models.Order) bool {
+func isOrderFullyAutoFulfill(order *orderdomain.Order) bool {
 	if order == nil {
 		return false
 	}
@@ -116,7 +119,7 @@ func isOrderFullyAutoFulfill(order *models.Order) bool {
 	return shouldAutoFulfill(order)
 }
 
-func buildOrderSubject(order *models.Order) string {
+func buildOrderSubject(order *orderdomain.Order) string {
 	if order == nil {
 		return ""
 	}

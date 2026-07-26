@@ -5,7 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
 	resellerstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
@@ -22,7 +23,7 @@ func openMigrationDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&userdomain.User{}, &models.Order{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &orderdomain.Order{}); err != nil {
 		t.Fatalf("migrate base models failed: %v", err)
 	}
 	if err := resellerstore.Migrate(db); err != nil {
@@ -39,13 +40,13 @@ func TestMigrateCreatesResellerTablesAndOrderColumns(t *testing.T) {
 	if !db.Migrator().HasTable(&resellerdomain.Domain{}) {
 		t.Fatal("expected reseller_domains table")
 	}
-	if !db.Migrator().HasColumn(&models.Order{}, "reseller_id") {
+	if !db.Migrator().HasColumn(&orderdomain.Order{}, "reseller_id") {
 		t.Fatal("expected orders.reseller_id column")
 	}
-	if !db.Migrator().HasColumn(&models.Order{}, "reseller_domain") {
+	if !db.Migrator().HasColumn(&orderdomain.Order{}, "reseller_domain") {
 		t.Fatal("expected orders.reseller_domain column")
 	}
-	if !db.Migrator().HasColumn(&models.Order{}, "reseller_profit_amount") {
+	if !db.Migrator().HasColumn(&orderdomain.Order{}, "reseller_profit_amount") {
 		t.Fatal("expected orders.reseller_profit_amount column")
 	}
 }

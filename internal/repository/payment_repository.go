@@ -183,7 +183,7 @@ func (r *GormPaymentRepository) ListAdmin(filter PaymentListFilter) ([]models.Pa
 
 	if filter.UserID != 0 {
 		query = query.
-			Joins("LEFT JOIN orders ON orders.id = payments.order_id").
+			Joins("LEFT JOIN orders ON orders.id = payments.order_id AND orders.deleted_at IS NULL").
 			Joins("LEFT JOIN wallet_recharge_orders ON wallet_recharge_orders.payment_id = payments.id").
 			Where("(orders.user_id = ? OR wallet_recharge_orders.user_id = ?)", filter.UserID, filter.UserID)
 	}

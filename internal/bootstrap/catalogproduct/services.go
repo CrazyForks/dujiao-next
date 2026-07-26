@@ -53,6 +53,10 @@ type MappingStore interface {
 	BindTx(tx *gorm.DB) mappingcontract.MappingRepository
 }
 
+type OrderReader interface {
+	CountOrderItemsByProduct(productID uint) (int64, error)
+}
+
 // Dependencies 是 Product 三组应用用例的装配依赖。
 type Dependencies struct {
 	Products          ProductStore
@@ -63,7 +67,7 @@ type Dependencies struct {
 	MemberLevelPrices memberLevelPriceCleaner
 	Carts             *cartgormstore.Store
 	ProductMappings   MappingStore
-	Orders            repository.OrderRepository
+	Orders            OrderReader
 	PaymentChannels   repository.PaymentChannelRepository
 }
 

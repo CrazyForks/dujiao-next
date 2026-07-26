@@ -35,7 +35,6 @@ var (
 	ErrProductStockDisplayInvalid          = productcontract.ErrProductStockDisplayInvalid
 	ErrWholesalePriceInvalid               = productdomain.ErrWholesalePriceInvalid
 	ErrManualStockInvalid                  = productcontract.ErrManualStockInvalid
-	ErrManualStockInsufficient             = errors.New("manual stock insufficient")
 	ErrManualFormSchemaInvalid             = manualform.ErrSchemaInvalid
 	ErrManualFormRequiredMissing           = manualform.ErrRequiredMissing
 	ErrManualFormFieldInvalid              = manualform.ErrFieldInvalid
@@ -46,25 +45,6 @@ var (
 	ErrProductSKURequired                  = errors.New("product sku required")
 	ErrProductSKUInvalid                   = productcontract.ErrProductSKUInvalid
 	ErrProductSKUHasCardSecretStock        = productcontract.ErrProductSKUHasCardSecretStock
-	ErrInvalidOrderItem                    = productdomain.ErrPurchaseQuantityInvalid
-	ErrInvalidOrderAmount                  = errors.New("invalid order amount")
-	ErrOrderCurrencyMismatch               = errors.New("order currency mismatch")
-	ErrOrderNotFound                       = resellermodule.ErrOrderNotFound
-	ErrOrderCreateFailed                   = errors.New("order create failed")
-	ErrOrderFetchFailed                    = errors.New("order fetch failed")
-	ErrProductNotAvailable                 = errors.New("product not available")
-	ErrProductPurchaseNotAllowed           = errors.New("product purchase not allowed")
-	ErrOrderStatusInvalid                  = errors.New("order status invalid")
-	ErrOrderRefundExpired                  = errors.New("order refund expired")
-	ErrOrderCancelNotAllowed               = errors.New("order cancel not allowed")
-	ErrOrderUpdateFailed                   = errors.New("order update failed")
-	ErrGuestOrderNotFound                  = errors.New("guest order not found")
-	ErrGuestEmailRequired                  = errors.New("guest email required")
-	ErrGuestPasswordRequired               = errors.New("guest password required")
-	ErrGuestCouponNotAllowed               = errors.New("guest coupon not allowed")
-	ErrFulfillmentInvalid                  = productcontract.ErrFulfillmentInvalid
-	ErrFulfillmentExists                   = errors.New("fulfillment exists")
-	ErrFulfillmentCreateFailed             = errors.New("fulfillment create failed")
 	ErrPaymentInvalid                      = errors.New("payment invalid")
 	ErrPaymentNotFound                     = errors.New("payment not found")
 	ErrPaymentCreateFailed                 = errors.New("payment create failed")
@@ -80,9 +60,6 @@ var (
 	ErrPaymentAmountTooLarge               = errors.New("payment amount too large")
 	ErrPaymentGatewayRequestFailed         = errors.New("payment gateway request failed")
 	ErrPaymentGatewayResponseInvalid       = errors.New("payment gateway response invalid")
-	ErrRefundRecordCreateFailed            = errors.New("refund record create failed")
-	ErrCardSecretInsufficient              = errors.New("card secret insufficient")
-	ErrFulfillmentNotAuto                  = errors.New("fulfillment not auto")
 	ErrQueueUnavailable                    = errors.New("queue unavailable")
 	ErrAffiliateConfigInvalid              = settingsintegration.ErrAffiliateConfigInvalid
 	ErrResellerAccountingUnavailable       = resellermodule.ErrAccountingUnavailable
@@ -111,11 +88,6 @@ var (
 	ErrOrderEmailTemplateConfigInvalid     = settingsmessaging.ErrOrderEmailTemplateConfigInvalid
 	ErrPaymentChannelNotAllowedForProduct  = errors.New("payment channel not allowed for product")
 	ErrPaymentChannelNotAllowedForRecharge = errors.New("payment channel not allowed for wallet recharge")
-	ErrResellerProductNotListed            = productcontract.ErrResellerProductNotListed
-	ErrResellerPriceBelowBase              = resellermodule.ErrPriceBelowBase
-	ErrResellerMarkupExceeded              = resellermodule.ErrMarkupExceeded
-	ErrResellerCouponNotAllowed            = errors.New("reseller coupon not allowed")
-	ErrResellerPricingModeInvalid          = resellermodule.ErrPricingModeInvalid
 	ErrProductHasStock                     = productcontract.ErrProductHasStock
 	ErrProductHasOrderRecord               = productcontract.ErrProductHasOrderRecord
 )

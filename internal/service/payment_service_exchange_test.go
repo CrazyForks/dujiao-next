@@ -5,6 +5,10 @@ import (
 	"testing"
 	"time"
 
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -36,9 +40,9 @@ func setupExchangeTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.Order{},
-		&models.OrderItem{},
-		&models.Fulfillment{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
+		&fulfillmentdomain.Fulfillment{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
 		&walletdomain.Account{},
@@ -51,7 +55,7 @@ func setupExchangeTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	}
 	models.DB = db
 
-	orderRepo := repository.NewOrderRepository(db)
+	orderRepo := ordergormstore.New(db)
 	productRepo := productgormstore.NewProductStore(db)
 	productSKURepo := productgormstore.NewSKUStore(db)
 	paymentRepo := repository.NewPaymentRepository(db)
@@ -62,7 +66,7 @@ func setupExchangeTest(t *testing.T) (*PaymentService, *gorm.DB) {
 		Transactions: walletRepo,
 	})
 	paymentSvc := NewPaymentService(PaymentServiceOptions{
-		OrderRepo:      orderRepo,
+		OrderStore:     orderRepo,
 		ProductRepo:    productRepo,
 		ProductSKURepo: productSKURepo,
 		PaymentRepo:    paymentRepo,
@@ -74,7 +78,7 @@ func setupExchangeTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	return paymentSvc, db
 }
 
-func createExchangePaymentFixture(t *testing.T, db *gorm.DB, originalAmount decimal.Decimal, originalCurrency string, convertedAmount decimal.Decimal, convertedCurrency string, exchangeRate string) (*models.Payment, *models.Order) {
+func createExchangePaymentFixture(t *testing.T, db *gorm.DB, originalAmount decimal.Decimal, originalCurrency string, convertedAmount decimal.Decimal, convertedCurrency string, exchangeRate string) (*models.Payment, *orderdomain.Order) {
 	t.Helper()
 	now := time.Now()
 
@@ -89,7 +93,7 @@ func createExchangePaymentFixture(t *testing.T, db *gorm.DB, originalAmount deci
 		t.Fatalf("create user failed: %v", err)
 	}
 
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo:          fmt.Sprintf("DJEXTEST%d", now.UnixNano()),
 		UserID:           user.ID,
 		Status:           constants.OrderStatusPendingPayment,
@@ -276,7 +280,7 @@ func TestCallbackNoConversionPaymentStillWorks(t *testing.T) {
 	if err := db.Create(user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo: fmt.Sprintf("DJNOCONV%d", now.UnixNano()), UserID: user.ID,
 		Status: constants.OrderStatusPendingPayment, Currency: "USD",
 		OriginalAmount:   money.FromDecimal(decimal.NewFromInt(25)),
@@ -326,7 +330,7 @@ func TestCallbackRejectsAmountMismatchWithoutConversion(t *testing.T) {
 	if err := db.Create(user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo: fmt.Sprintf("DJMISMATCH%d", now.UnixNano()), UserID: user.ID,
 		Status: constants.OrderStatusPendingPayment, Currency: "USD",
 		OriginalAmount:   money.FromDecimal(decimal.NewFromInt(25)),

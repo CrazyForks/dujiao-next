@@ -4,8 +4,10 @@ import (
 	"testing"
 	"time"
 
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
 )
 
@@ -40,7 +42,7 @@ func assertProcurementCallbackStatus(t *testing.T, fixture procurementCallbackSt
 		t.Errorf("expected procurement status %q, got %q", fixture.expectedProcurementStatus, updatedProc.Status)
 	}
 
-	var updatedOrder models.Order
+	var updatedOrder orderdomain.Order
 	if err := db.First(&updatedOrder, order.ID).Error; err != nil {
 		t.Fatalf("load order: %v", err)
 	}
@@ -74,7 +76,7 @@ func TestRejectProcurement_RollsBackOrderStatus(t *testing.T) {
 	}
 
 	// 验证本地订单状态从 fulfilling 回退到 paid
-	var updatedOrder models.Order
+	var updatedOrder orderdomain.Order
 	if err := db.First(&updatedOrder, order.ID).Error; err != nil {
 		t.Fatalf("load order: %v", err)
 	}
@@ -106,7 +108,7 @@ func TestHandleUpstreamCallback_Canceled_RollsBackOrder(t *testing.T) {
 	}
 
 	// 验证本地订单状态从 fulfilling 回退到 paid
-	var updatedOrder models.Order
+	var updatedOrder orderdomain.Order
 	if err := db.First(&updatedOrder, order.ID).Error; err != nil {
 		t.Fatalf("load order: %v", err)
 	}
@@ -146,7 +148,7 @@ func TestHandleUpstreamCallback_Delivered_CreatesFulfillment(t *testing.T) {
 	}
 
 	// 验证本地订单状态 = delivered
-	var updatedOrder models.Order
+	var updatedOrder orderdomain.Order
 	if err := db.First(&updatedOrder, order.ID).Error; err != nil {
 		t.Fatalf("load order: %v", err)
 	}
@@ -155,7 +157,7 @@ func TestHandleUpstreamCallback_Delivered_CreatesFulfillment(t *testing.T) {
 	}
 
 	// 验证 Fulfillment 记录已创建
-	var ff models.Fulfillment
+	var ff fulfillmentdomain.Fulfillment
 	if err := db.Where("order_id = ?", order.ID).First(&ff).Error; err != nil {
 		t.Fatalf("expected fulfillment record to exist: %v", err)
 	}
@@ -181,7 +183,7 @@ func TestHandleUpstreamCallback_Delivered_SynchronizesParentStatus(t *testing.T)
 		t.Fatalf("HandleUpstreamCallback: %v", err)
 	}
 
-	var updatedParent models.Order
+	var updatedParent orderdomain.Order
 	if err := db.First(&updatedParent, parent.ID).Error; err != nil {
 		t.Fatalf("load parent order: %v", err)
 	}

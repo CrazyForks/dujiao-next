@@ -3,6 +3,8 @@ package gormstore
 import (
 	"errors"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/models"
 	resellerapplication "github.com/dujiao-next/internal/modules/reseller/application"
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
@@ -72,7 +74,7 @@ func NewAccountingTransactionBridge(store *Store, ledger *resellerapplication.Ac
 	return &AccountingTransactionBridge{store: store, ledger: ledger}
 }
 
-func (b *AccountingTransactionBridge) PostOrderProfitTx(tx *gorm.DB, order *models.Order, payment *models.Payment) error {
+func (b *AccountingTransactionBridge) PostOrderProfitTx(tx *gorm.DB, order *orderdomain.Order, payment *models.Payment) error {
 	if b == nil || b.store == nil || b.ledger == nil || tx == nil || order == nil || order.ID == 0 {
 		return nil
 	}
@@ -81,8 +83,8 @@ func (b *AccountingTransactionBridge) PostOrderProfitTx(tx *gorm.DB, order *mode
 
 func (b *AccountingTransactionBridge) HandleRefundDeductTx(
 	tx *gorm.DB,
-	order *models.Order,
-	refundRecord *models.OrderRefundRecord,
+	order *orderdomain.Order,
+	refundRecord *orderdomain.OrderRefundRecord,
 	refundedBefore decimal.Decimal,
 ) error {
 	if b == nil || b.store == nil || b.ledger == nil || tx == nil || order == nil || refundRecord == nil || refundRecord.ID == 0 {

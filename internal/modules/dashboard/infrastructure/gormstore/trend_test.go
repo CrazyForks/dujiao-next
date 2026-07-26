@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
@@ -22,7 +24,7 @@ func TestTrendQueriesBucketByRequestedTimezone(t *testing.T) {
 	nextUTC := time.Date(2026, 3, 1, 16, 30, 0, 0, time.UTC)
 
 	for idx, createdAt := range []time.Time{baseUTC, nextUTC} {
-		order := &models.Order{
+		order := &orderdomain.Order{
 			OrderNo:        fmt.Sprintf("DJ-TZ-%d", idx),
 			UserID:         1,
 			Status:         constants.OrderStatusPaid,

@@ -3,9 +3,10 @@ package contract
 import (
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
 
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 )
@@ -89,8 +90,8 @@ type OrderSnapshotListFilter struct {
 // OrderSnapshotRow 聚合订单快照、订单展示字段、商品行和账务流水。
 type OrderSnapshotRow struct {
 	Snapshot      resellerdomain.OrderSnapshot
-	Order         models.Order
-	Items         []models.OrderItem
+	Order         orderdomain.Order
+	Items         []orderdomain.OrderItem
 	LedgerEntries []resellerdomain.LedgerEntry
 	BuyerEmail    string
 }

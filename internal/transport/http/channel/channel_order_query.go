@@ -5,8 +5,9 @@ import (
 	"strings"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -224,7 +225,7 @@ func (h *Handler) ListOrders(c *gin.Context) {
 }
 
 // joinLocalizedInstructions 拼接 items 的多语言交付说明（去重，按 locale 取值）。
-func joinLocalizedInstructions(items []models.OrderItem, locale string) string {
+func joinLocalizedInstructions(items []orderdomain.OrderItem, locale string) string {
 	if len(items) == 0 {
 		return ""
 	}
@@ -244,7 +245,7 @@ func joinLocalizedInstructions(items []models.OrderItem, locale string) string {
 	return strings.Join(parts, "\n\n")
 }
 
-func buildChannelOrderDetailResponse(order *models.Order, locale string) gin.H {
+func buildChannelOrderDetailResponse(order *orderdomain.Order, locale string) gin.H {
 	resp := gin.H{
 		"order_id":           order.ID,
 		"order_no":           order.OrderNo,
@@ -339,7 +340,7 @@ func buildChannelOrderDetailResponse(order *models.Order, locale string) gin.H {
 	return resp
 }
 
-func channelOrderFulfillmentType(order *models.Order) string {
+func channelOrderFulfillmentType(order *orderdomain.Order) string {
 	if order == nil {
 		return ""
 	}

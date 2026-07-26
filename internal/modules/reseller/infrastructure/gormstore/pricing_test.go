@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -15,7 +18,6 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
@@ -35,9 +37,9 @@ func openResellerPricingRepoTestDB(t *testing.T) *gorm.DB {
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.Order{},
-		&models.OrderItem{},
-		&models.Fulfillment{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
+		&fulfillmentdomain.Fulfillment{},
 		&resellerdomain.Profile{},
 		&resellerdomain.ProductSetting{},
 		&resellerdomain.RelatedAccount{},
@@ -273,7 +275,7 @@ func TestResellerPricingRepositoryRelatedAccountAndSnapshot(t *testing.T) {
 		t.Fatal("other reseller related account should not match")
 	}
 
-	order := models.Order{
+	order := orderdomain.Order{
 		OrderNo:     "SNAPSHOT-ORDER",
 		UserID:      activeUser.ID,
 		Status:      constants.OrderStatusPendingPayment,

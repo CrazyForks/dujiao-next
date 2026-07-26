@@ -5,12 +5,13 @@ import (
 	"strings"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
 
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
@@ -67,8 +68,8 @@ func stringFromSnapshotValue(v interface{}) string {
 // HandleRefundDeduct 在调用方已开启的事务 store 上写入退款利润扣减流水。
 func (s *AccountingLedgerService) HandleRefundDeduct(
 	store resellercontract.AccountingLedgerStore,
-	order *models.Order,
-	refundRecord *models.OrderRefundRecord,
+	order *orderdomain.Order,
+	refundRecord *orderdomain.OrderRefundRecord,
 	refundedBefore decimal.Decimal,
 ) error {
 	if s == nil || store == nil || order == nil || refundRecord == nil || refundRecord.ID == 0 {

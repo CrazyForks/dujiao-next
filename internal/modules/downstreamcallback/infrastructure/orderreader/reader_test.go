@@ -4,30 +4,32 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 type sourceStub struct {
-	order *models.Order
+	order *orderdomain.Order
 }
 
-func (s sourceStub) GetByID(uint) (*models.Order, error) {
+func (s sourceStub) GetByID(uint) (*orderdomain.Order, error) {
 	return s.order, nil
 }
 
 func TestReaderProjectsParentAndChildFulfillment(t *testing.T) {
 	parentID := uint(8)
 	deliveredAt := time.Unix(1_700_000_000, 0).UTC()
-	source := sourceStub{order: &models.Order{
+	source := sourceStub{order: &orderdomain.Order{
 		ID:      parentID,
 		OrderNo: "DJ-8",
 		Status:  "completed",
-		Children: []models.Order{{
+		Children: []orderdomain.Order{{
 			ID:       9,
 			ParentID: &parentID,
 			Status:   "delivered",
-			Fulfillment: &models.Fulfillment{
+			Fulfillment: &fulfillmentdomain.Fulfillment{
 				Type:          "manual",
 				Status:        "delivered",
 				Payload:       "code-123",

@@ -4,7 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
 	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 	"github.com/dujiao-next/internal/modules/procurement/infrastructure/orderreader"
@@ -158,8 +159,11 @@ func (s *Store) attachLocalOrder(order *procurementdomain.Order) error {
 	if order == nil || order.LocalOrderID == 0 {
 		return nil
 	}
-	var local models.Order
-	if err := s.db.Preload("Items").First(&local, order.LocalOrderID).Error; err != nil {
+	var local orderdomain.Order
+	if err := s.db.
+		Where("orders.deleted_at IS NULL").
+		Preload("Items", "deleted_at IS NULL").
+		First(&local, order.LocalOrderID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil
 		}
@@ -183,8 +187,11 @@ func (s *Store) attachLocalOrders(orders []procurementdomain.Order) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	var locals []models.Order
-	if err := s.db.Preload("Items").Where("id IN ?", ids).Find(&locals).Error; err != nil {
+	var locals []orderdomain.Order
+	if err := s.db.
+		Where("orders.deleted_at IS NULL AND id IN ?", ids).
+		Preload("Items", "deleted_at IS NULL").
+		Find(&locals).Error; err != nil {
 		return err
 	}
 	byID := make(map[uint]procurementdomain.LocalOrder, len(locals))

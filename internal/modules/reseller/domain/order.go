@@ -3,7 +3,8 @@ package domain
 import (
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 )
@@ -28,7 +29,7 @@ type OrderSnapshot struct {
 	UpdatedAt           time.Time    `gorm:"index" json:"updated_at"`
 	DeletedAt           *time.Time   `gorm:"index" json:"-"`
 
-	Order models.Order `gorm:"foreignKey:OrderID" json:"-"`
+	Order orderdomain.Order `gorm:"foreignKey:OrderID" json:"-"`
 }
 
 func (OrderSnapshot) TableName() string { return "reseller_order_snapshots" }

@@ -19,10 +19,12 @@ import (
 	contentdomain "github.com/dujiao-next/internal/modules/content/domain"
 	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 	downstreamcallbackdomain "github.com/dujiao-next/internal/modules/downstreamcallback/domain"
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
 	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 	notificationdomain "github.com/dujiao-next/internal/modules/notification/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 	reconciliationdomain "github.com/dujiao-next/internal/modules/reconciliation/domain"
@@ -164,9 +166,9 @@ func AutoMigrate() error {
 		&notificationdomain.NotificationLog{},
 		&auditlogdomain.AdminLoginLog{},
 		&emailverificationdomain.Code{},
-		&Order{},
-		&OrderItem{},
-		&OrderRefundRecord{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
+		&orderdomain.OrderRefundRecord{},
 		&cartdomain.Item{},
 		&PaymentChannel{},
 		&Payment{},
@@ -174,7 +176,7 @@ func AutoMigrate() error {
 		&cardsecretdomain.Batch{},
 		&giftcarddomain.GiftCard{},
 		&giftcarddomain.GiftCardBatch{},
-		&Fulfillment{},
+		&fulfillmentdomain.Fulfillment{},
 		&coupondomain.Coupon{},
 		&coupondomain.CouponUsage{},
 		&promotiondomain.Promotion{},

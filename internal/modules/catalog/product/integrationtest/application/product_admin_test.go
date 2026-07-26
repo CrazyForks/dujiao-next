@@ -13,6 +13,7 @@ import (
 	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
@@ -207,7 +208,7 @@ func TestProductServiceDeleteRollsBackCascadeWhenProductDeleteFails(t *testing.T
 		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
 		Carts:             cartgormstore.New(db),
 		ProductMappings:   mappinggormstore.NewMappingStore(db),
-		Orders:            repository.NewOrderRepository(db),
+		Orders:            ordergormstore.New(db),
 		PaymentChannels:   repository.NewPaymentChannelRepository(db),
 	})
 

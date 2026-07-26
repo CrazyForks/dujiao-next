@@ -14,6 +14,7 @@ import (
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	dashboardgormstore "github.com/dujiao-next/internal/modules/dashboard/infrastructure/gormstore"
 	downstreamcallbackgormstore "github.com/dujiao-next/internal/modules/downstreamcallback/infrastructure/gormstore"
+	fulfillmentgormstore "github.com/dujiao-next/internal/modules/fulfillment/infrastructure/gormstore"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/infrastructure/gormstore"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
@@ -21,6 +22,7 @@ import (
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	notificationgormstore "github.com/dujiao-next/internal/modules/notification/infrastructure/gormstore"
+	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/infrastructure/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	reconciliationgormstore "github.com/dujiao-next/internal/modules/reconciliation/infrastructure/gormstore"
@@ -38,13 +40,13 @@ func (c *Container) initRepositories() {
 	c.UserStore = userstore.New(db)
 	c.ExternalIdentityStore = externalidentitystore.New(db)
 	c.EmailVerificationStore = emailverificationstore.New(db)
-	c.OrderRepo = repository.NewOrderRepository(db)
+	c.OrderStore = ordergormstore.New(db)
 	c.PaymentRepo = repository.NewPaymentRepository(db)
 	c.PaymentChannelRepo = repository.NewPaymentChannelRepository(db)
 	c.CardSecretRepo = cardsecretgormstore.New(db)
 	c.CardSecretBatchRepo = cardsecretgormstore.NewBatch(db)
 	c.GiftCardRepo = giftcardgormstore.New(db)
-	c.FulfillmentRepo = repository.NewFulfillmentRepository(db)
+	c.FulfillmentStore = fulfillmentgormstore.New(db)
 	c.ProductRepo = productgormstore.NewProductStore(db)
 	c.ProductSKURepo = productgormstore.NewSKUStore(db)
 	c.CartRepo = cartgormstore.New(db)
@@ -52,7 +54,6 @@ func (c *Container) initRepositories() {
 	c.CouponUsageRepo = coupongormstore.NewUsageStore(db)
 	c.PromotionRepo = promotiongormstore.New(db)
 	c.WalletRepo = walletgormstore.New(db)
-	c.OrderRefundRecordRepo = repository.NewOrderRefundRecordRepository(db)
 	c.CategoryRepo = categorygormstore.NewCategoryStore(db)
 	c.SettingRepo = settingsstore.New(db)
 	c.UserLoginLogRepo = auditloggormstore.NewUserLoginStore(db)

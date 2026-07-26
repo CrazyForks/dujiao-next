@@ -1,13 +1,13 @@
 package orderreader
 
 import (
-	"github.com/dujiao-next/internal/models"
 	downstreamcontract "github.com/dujiao-next/internal/modules/downstreamcallback/contract"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 )
 
 // Source 是旧订单上下文暴露给防腐适配器的最小读取端口。
 type Source interface {
-	GetByID(id uint) (*models.Order, error)
+	GetByID(id uint) (*orderdomain.Order, error)
 }
 
 // Reader 将订单持久化模型投影为下游回调读模型。
@@ -32,7 +32,7 @@ func (r *Reader) GetByID(id uint) (*downstreamcontract.OrderSnapshot, error) {
 	return projectOrder(order), nil
 }
 
-func projectOrder(order *models.Order) *downstreamcontract.OrderSnapshot {
+func projectOrder(order *orderdomain.Order) *downstreamcontract.OrderSnapshot {
 	if order == nil {
 		return nil
 	}

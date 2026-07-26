@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	"github.com/shopspring/decimal"
@@ -19,38 +18,9 @@ type Store struct {
 	db *gorm.DB
 }
 
-// RefundUseCase 是退款事务适配器调用的最小 Affiliate 用例端口。
-type RefundUseCase interface {
-	HandleOrderRefunded(store affiliatecontract.Store, order *models.Order, refundDelta, refundedBefore decimal.Decimal, reason string) error
-}
-
-// RefundHandler 把现有订单事务绑定为 Affiliate Store 后调用应用用例。
-type RefundHandler struct {
-	useCase RefundUseCase
-}
-
 // New 创建推广返利仓储
 func New(db *gorm.DB) *Store {
 	return &Store{db: db}
-}
-
-// NewRefundHandler 创建 Affiliate 退款事务适配器。
-func NewRefundHandler(useCase RefundUseCase) *RefundHandler {
-	return &RefundHandler{useCase: useCase}
-}
-
-// HandleOrderRefundedTx 在调用方的数据库事务中执行佣金回滚。
-func (h *RefundHandler) HandleOrderRefundedTx(
-	tx *gorm.DB,
-	order *models.Order,
-	refundDelta decimal.Decimal,
-	refundedBefore decimal.Decimal,
-	reason string,
-) error {
-	if h == nil || h.useCase == nil || tx == nil {
-		return nil
-	}
-	return h.useCase.HandleOrderRefunded(New(tx), order, refundDelta, refundedBefore, reason)
 }
 
 func (r *Store) WithinTransaction(fn func(affiliatecontract.Store) error) error {
@@ -288,7 +258,7 @@ func (r *Store) ListCommissions(filter affiliatecontract.CommissionListFilter) (
 		query = query.Where("affiliate_commissions.order_id = ?", filter.OrderID)
 	}
 	if orderNo := strings.TrimSpace(filter.OrderNo); orderNo != "" {
-		query = query.Joins("LEFT JOIN orders ON orders.id = affiliate_commissions.order_id").
+		query = query.Joins("LEFT JOIN orders ON orders.id = affiliate_commissions.order_id AND orders.deleted_at IS NULL").
 			Where("orders.order_no LIKE ?", "%"+orderNo+"%")
 	}
 	if status := strings.TrimSpace(filter.Status); status != "" {

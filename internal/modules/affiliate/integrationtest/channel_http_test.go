@@ -10,6 +10,9 @@ import (
 	"testing"
 	"time"
 
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 
@@ -54,8 +57,8 @@ type channelAffiliateOrderReader struct {
 	db *gorm.DB
 }
 
-func (r channelAffiliateOrderReader) GetByID(id uint) (*models.Order, error) {
-	var order models.Order
+func (r channelAffiliateOrderReader) GetByID(id uint) (*orderdomain.Order, error) {
+	var order orderdomain.Order
 	err := r.db.Preload("Items").Preload("Children").Preload("Children.Items").First(&order, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
@@ -96,9 +99,9 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 		&externalidentitydomain.Identity{},
 		&emailverificationdomain.Code{},
 		&settingsstore.SettingRecord{},
-		&models.Order{},
-		&models.OrderItem{},
-		&models.Fulfillment{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
+		&fulfillmentdomain.Fulfillment{},
 		&affiliatedomain.Profile{},
 		&affiliatedomain.Click{},
 		&affiliatedomain.Commission{},
@@ -245,7 +248,7 @@ func TestChannelAffiliateListsCommissionAndWithdrawRecords(t *testing.T) {
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
-	order := models.Order{
+	order := orderdomain.Order{
 		UserID:         user.ID,
 		OrderNo:        "DJ-AFF-001",
 		Status:         constants.OrderStatusPaid,
@@ -443,7 +446,7 @@ func TestChannelAffiliateApplyWithdraw(t *testing.T) {
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
-	order := models.Order{
+	order := orderdomain.Order{
 		UserID:         user.ID,
 		OrderNo:        "DJ-AFF-WD-001",
 		Status:         constants.OrderStatusPaid,

@@ -3,6 +3,7 @@ package service
 import (
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/repository"
@@ -51,7 +52,7 @@ func computeProductChannelIntersection(products []productdomain.Product) []uint 
 
 // validateProductPaymentChannel 校验支付渠道是否被订单中的商品允许
 // tx 参数可选：在事务内调用时传入 tx 以避免 SQLite 自锁
-func (s *PaymentService) validateProductPaymentChannel(items []models.OrderItem, channelID uint, tx ...*gorm.DB) error {
+func (s *PaymentService) validateProductPaymentChannel(items []orderdomain.OrderItem, channelID uint, tx ...*gorm.DB) error {
 	if len(items) == 0 {
 		return nil
 	}
@@ -174,7 +175,7 @@ func (s *PaymentService) GetWalletRechargeChannels() ([]models.PaymentChannel, e
 }
 
 // GetAllowedChannelIDsForOrder 获取订单中所有商品允许的支付渠道ID交集
-func (s *PaymentService) GetAllowedChannelIDsForOrder(items []models.OrderItem) []uint {
+func (s *PaymentService) GetAllowedChannelIDsForOrder(items []orderdomain.OrderItem) []uint {
 	if len(items) == 0 {
 		return nil
 	}

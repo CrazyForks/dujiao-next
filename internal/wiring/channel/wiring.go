@@ -4,6 +4,10 @@ import (
 	"errors"
 	"fmt"
 
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
+	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/models"
@@ -17,7 +21,7 @@ import (
 	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
 )
 
-// NewHandler connects the legacy application services to the channel HTTP
+// NewHandler connects application services to the channel HTTP
 // transport. Conversion stays at the composition boundary so transport can
 // depend on narrow contracts only.
 func NewHandler(c *provider.Container) *channeltransport.Handler {
@@ -68,17 +72,17 @@ func (a identityAdapter) BindTelegramChannelByEmailCode(input channeltransport.B
 }
 
 type orderAdapter struct {
-	orders *service.OrderService
+	orders *orderapp.OrderService
 }
 
-func createOrderServiceInput(input channeltransport.CreateOrderInput) service.CreateOrderInput {
-	items := make([]service.CreateOrderItem, 0, len(input.Items))
+func createOrderServiceInput(input channeltransport.CreateOrderInput) orderapp.CreateOrderInput {
+	items := make([]orderapp.CreateOrderItem, 0, len(input.Items))
 	for _, item := range input.Items {
-		items = append(items, service.CreateOrderItem{
+		items = append(items, orderapp.CreateOrderItem{
 			ProductID: item.ProductID, SKUID: item.SKUID, Quantity: item.Quantity, FulfillmentType: item.FulfillmentType,
 		})
 	}
-	return service.CreateOrderInput{
+	return orderapp.CreateOrderInput{
 		UserID: input.UserID, Items: items, CouponCode: input.CouponCode,
 		AffiliateCode: input.AffiliateCode, AffiliateVisitorKey: input.AffiliateVisitorKey,
 		ClientIP: input.ClientIP, ManualFormData: input.ManualFormData, SkipIPRiskControl: input.SkipIPRiskControl,
@@ -110,28 +114,28 @@ func (a orderAdapter) PreviewOrder(input channeltransport.CreateOrderInput) (*ch
 	}, nil
 }
 
-func (a orderAdapter) CreateOrder(input channeltransport.CreateOrderInput) (*models.Order, error) {
+func (a orderAdapter) CreateOrder(input channeltransport.CreateOrderInput) (*orderdomain.Order, error) {
 	order, err := a.orders.CreateOrder(createOrderServiceInput(input))
 	return order, mapError(err)
 }
 
-func (a orderAdapter) GetOrderByUser(orderID, userID uint) (*models.Order, error) {
+func (a orderAdapter) GetOrderByUser(orderID, userID uint) (*orderdomain.Order, error) {
 	order, err := a.orders.GetOrderByUser(orderID, userID)
 	return order, mapError(err)
 }
 
-func (a orderAdapter) GetOrderByUserOrderNo(orderNo string, userID uint) (*models.Order, error) {
+func (a orderAdapter) GetOrderByUserOrderNo(orderNo string, userID uint) (*orderdomain.Order, error) {
 	order, err := a.orders.GetOrderByUserOrderNo(orderNo, userID)
 	return order, mapError(err)
 }
 
-func (a orderAdapter) CancelOrder(orderID, userID uint) (*models.Order, error) {
+func (a orderAdapter) CancelOrder(orderID, userID uint) (*orderdomain.Order, error) {
 	order, err := a.orders.CancelOrder(orderID, userID)
 	return order, mapError(err)
 }
 
-func (a orderAdapter) ListOrdersByUser(filter channeltransport.OrderListFilter) ([]models.Order, int64, error) {
-	return a.orders.ListOrdersByUser(repository.OrderListFilter{
+func (a orderAdapter) ListOrdersByUser(filter channeltransport.OrderListFilter) ([]orderdomain.Order, int64, error) {
+	return a.orders.ListOrdersByUser(ordercontract.ListFilter{
 		Page: filter.Page, PageSize: filter.PageSize, UserID: filter.UserID, Status: filter.Status,
 	})
 }
@@ -183,17 +187,17 @@ func mapError(err error) error {
 		{orderriskcontract.ErrEmailBlacklisted, channeltransport.ErrRiskEmailBlacklisted},
 		{orderriskcontract.ErrTooManyPendingOrders, channeltransport.ErrRiskTooManyPendingOrders},
 		{orderriskcontract.ErrOrderRateLimited, channeltransport.ErrRiskOrderRateLimited},
-		{service.ErrProductSKURequired, channeltransport.ErrProductSKURequired},
-		{service.ErrProductSKUInvalid, channeltransport.ErrProductSKUInvalid},
-		{service.ErrInvalidOrderItem, channeltransport.ErrInvalidOrderItem},
-		{service.ErrInvalidOrderAmount, channeltransport.ErrInvalidOrderAmount},
-		{service.ErrProductPurchaseNotAllowed, channeltransport.ErrProductPurchaseNotAllowed},
+		{orderapp.ErrProductSKURequired, channeltransport.ErrProductSKURequired},
+		{orderapp.ErrProductSKUInvalid, channeltransport.ErrProductSKUInvalid},
+		{orderapp.ErrInvalidOrderItem, channeltransport.ErrInvalidOrderItem},
+		{orderapp.ErrInvalidOrderAmount, channeltransport.ErrInvalidOrderAmount},
+		{orderapp.ErrProductPurchaseNotAllowed, channeltransport.ErrProductPurchaseNotAllowed},
 		{service.ErrProductMaxPurchaseExceeded, channeltransport.ErrProductMaxPurchaseExceeded},
 		{service.ErrProductMinPurchaseNotMet, channeltransport.ErrProductMinPurchaseNotMet},
-		{service.ErrProductNotAvailable, channeltransport.ErrProductNotAvailable},
-		{service.ErrManualStockInsufficient, channeltransport.ErrManualStockInsufficient},
-		{service.ErrCardSecretInsufficient, channeltransport.ErrCardSecretInsufficient},
-		{service.ErrOrderCurrencyMismatch, channeltransport.ErrOrderCurrencyMismatch},
+		{orderapp.ErrProductNotAvailable, channeltransport.ErrProductNotAvailable},
+		{orderapp.ErrManualStockInsufficient, channeltransport.ErrManualStockInsufficient},
+		{orderapp.ErrCardSecretInsufficient, channeltransport.ErrCardSecretInsufficient},
+		{orderapp.ErrOrderCurrencyMismatch, channeltransport.ErrOrderCurrencyMismatch},
 		{service.ErrProductPriceInvalid, channeltransport.ErrProductPriceInvalid},
 		{service.ErrManualFormSchemaInvalid, channeltransport.ErrManualFormSchemaInvalid},
 		{service.ErrManualFormRequiredMissing, channeltransport.ErrManualFormRequiredMissing},
@@ -201,8 +205,8 @@ func mapError(err error) error {
 		{service.ErrManualFormTypeInvalid, channeltransport.ErrManualFormTypeInvalid},
 		{service.ErrManualFormOptionInvalid, channeltransport.ErrManualFormOptionInvalid},
 		{service.ErrPaymentInvalid, channeltransport.ErrPaymentInvalid},
-		{service.ErrOrderNotFound, channeltransport.ErrOrderNotFound},
-		{service.ErrOrderStatusInvalid, channeltransport.ErrOrderStatusInvalid},
+		{orderapp.ErrOrderNotFound, channeltransport.ErrOrderNotFound},
+		{orderapp.ErrOrderStatusInvalid, channeltransport.ErrOrderStatusInvalid},
 		{service.ErrPaymentChannelNotFound, channeltransport.ErrPaymentChannelNotFound},
 		{service.ErrPaymentChannelInactive, channeltransport.ErrPaymentChannelInactive},
 		{service.ErrPaymentProviderNotSupported, channeltransport.ErrPaymentProviderUnsupported},

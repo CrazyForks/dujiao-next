@@ -7,10 +7,14 @@ import (
 	"fmt"
 	"strings"
 
+	fulfillmentapp "github.com/dujiao-next/internal/modules/fulfillment/application"
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/htmltext"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
@@ -54,7 +58,10 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 			return nil
 		}
 	}
-	order, err := c.OrderRepo.GetByID(payload.OrderID)
+	if c.orderReader == nil {
+		return fmt.Errorf("order reader unavailable")
+	}
+	order, err := c.orderReader.GetByID(payload.OrderID)
 	if err != nil {
 		logger.Warnw("worker_order_status_email_fetch_order_failed", "order_id", payload.OrderID, "error", err)
 		return err
@@ -148,7 +155,7 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 		SiteURL:      siteBrand.SiteURL,
 		IsGuest:      order.UserID == 0,
 	}
-	if models.ShouldAttachFulfillmentPayload(payloadText) {
+	if fulfillmentdomain.ShouldAttachFulfillmentPayload(payloadText) {
 		// 交付内容过大，正文不放交付内容，以附件形式发送
 		input.AttachmentName = fmt.Sprintf("order_%s_delivery.txt", order.OrderNo)
 		input.AttachmentContent = payloadText
@@ -217,16 +224,16 @@ func (c *Consumer) handleOrderAutoFulfill(_ context.Context, task *asynq.Task) e
 	_, err := c.FulfillmentService.CreateAuto(payload.OrderID)
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrFulfillmentExists):
+		case errors.Is(err, fulfillmentapp.ErrFulfillmentExists):
 			logger.Debugw("worker_order_auto_fulfill_skip_exists", "order_id", payload.OrderID)
 			return nil
-		case errors.Is(err, service.ErrFulfillmentNotAuto):
+		case errors.Is(err, fulfillmentapp.ErrFulfillmentNotAuto):
 			logger.Debugw("worker_order_auto_fulfill_skip_not_auto", "order_id", payload.OrderID)
 			return nil
-		case errors.Is(err, service.ErrOrderStatusInvalid):
+		case errors.Is(err, orderapp.ErrOrderStatusInvalid):
 			logger.Debugw("worker_order_auto_fulfill_skip_invalid_status", "order_id", payload.OrderID)
 			return nil
-		case errors.Is(err, service.ErrOrderNotFound):
+		case errors.Is(err, orderapp.ErrOrderNotFound):
 			logger.Debugw("worker_order_auto_fulfill_skip_order_not_found", "order_id", payload.OrderID)
 			return nil
 		default:
@@ -259,13 +266,13 @@ func (c *Consumer) handleOrderTimeoutCancel(_ context.Context, task *asynq.Task)
 	_, err := c.OrderService.CancelExpiredOrder(payload.OrderID)
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrOrderNotFound):
+		case errors.Is(err, orderapp.ErrOrderNotFound):
 			logger.Debugw("worker_order_timeout_cancel_skip_order_not_found", "order_id", payload.OrderID)
 			return nil
-		case errors.Is(err, service.ErrOrderFetchFailed):
+		case errors.Is(err, orderapp.ErrOrderFetchFailed):
 			logger.Warnw("worker_order_timeout_cancel_fetch_failed", "order_id", payload.OrderID, "error", err)
 			return nil
-		case errors.Is(err, service.ErrOrderUpdateFailed):
+		case errors.Is(err, orderapp.ErrOrderUpdateFailed):
 			logger.Warnw("worker_order_timeout_cancel_update_failed", "order_id", payload.OrderID, "error", err)
 			return err
 		default:
@@ -315,7 +322,7 @@ func (c *Consumer) handleWalletRechargeExpire(_ context.Context, task *asynq.Tas
 }
 
 // buildOrderInstructionsEmailText 收集订单项的交付使用说明（多语言选取 + HTML 去标签 + 去重）。
-func buildOrderInstructionsEmailText(order *models.Order, locale string) string {
+func buildOrderInstructionsEmailText(order *orderdomain.Order, locale string) string {
 	if order == nil {
 		return ""
 	}
@@ -368,7 +375,7 @@ func localizedInstructionsText(raw jsonmap.JSON, locale string) string {
 }
 
 // buildOrderFulfillmentEmailPayload 组装订单状态邮件中的交付内容文本。
-func buildOrderFulfillmentEmailPayload(order *models.Order) string {
+func buildOrderFulfillmentEmailPayload(order *orderdomain.Order) string {
 	if order == nil {
 		return ""
 	}

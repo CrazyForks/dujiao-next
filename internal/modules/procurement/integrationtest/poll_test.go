@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 )
 
@@ -64,7 +65,7 @@ func TestPollUpstreamStatus_Delivered(t *testing.T) {
 	}
 
 	// 验证本地订单状态 = delivered
-	var updatedOrder models.Order
+	var updatedOrder orderdomain.Order
 	db.First(&updatedOrder, order.ID)
 	if updatedOrder.Status != constants.OrderStatusDelivered {
 		t.Errorf("expected order status %q, got %q", constants.OrderStatusDelivered, updatedOrder.Status)
@@ -118,7 +119,7 @@ func TestPollUpstreamStatus_FulfilledMappedToDelivered(t *testing.T) {
 		t.Errorf("expected procurement status 'fulfilled', got %q", updatedProc.Status)
 	}
 
-	var updatedOrder models.Order
+	var updatedOrder orderdomain.Order
 	db.First(&updatedOrder, order.ID)
 	if updatedOrder.Status != constants.OrderStatusDelivered {
 		t.Errorf("expected order status %q, got %q", constants.OrderStatusDelivered, updatedOrder.Status)

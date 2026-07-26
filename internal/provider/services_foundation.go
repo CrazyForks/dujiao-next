@@ -8,7 +8,6 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
-	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
 	captchaturnstile "github.com/dujiao-next/internal/modules/captcha/infrastructure/turnstile"
 	complianceapp "github.com/dujiao-next/internal/modules/compliance/application"
@@ -17,6 +16,7 @@ import (
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
 	reseller "github.com/dujiao-next/internal/modules/reseller/application"
 	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
@@ -42,7 +42,7 @@ func (c *Container) initPolicyAndSettingServices() {
 
 	c.SettingService = settingsapp.NewService(c.SettingRepo, c.Config.Order)
 	c.ResellerDomainResolver = reseller.NewDomainResolver(c.ResellerStore, c.Config.Reseller)
-	c.ResellerPricingResolver = service.NewResellerPricingResolver(c.ResellerStore)
+	c.ResellerPricingResolver = orderapp.NewResellerPricingResolver(c.ResellerStore)
 	c.ResellerManagementService = reseller.NewManagementService(c.ResellerStore, c.Config.Reseller)
 	c.ResellerSiteConfigService = reseller.NewSiteConfigService(c.ResellerStore)
 	c.ResellerProductSettingService = reseller.NewProductSettingService(c.ResellerStore, c.ProductRepo)
@@ -101,8 +101,7 @@ func (c *Container) initIdentityAndCatalogServices() {
 		MaxWidth:          c.Config.Upload.MaxWidth,
 		MaxHeight:         c.Config.Upload.MaxHeight,
 	}, uploadlocal.New("uploads"))
-	c.AffiliateService = affiliateapp.NewService(c.AffiliateRepo, c.UserStore, c.OrderRepo, c.ProductRepo, c.SettingService)
-	c.AffiliateRefundHandler = affiliategormstore.NewRefundHandler(c.AffiliateService)
+	c.AffiliateService = affiliateapp.NewService(c.AffiliateRepo, c.UserStore, c.OrderStore, c.ProductRepo, c.SettingService)
 	productServices := catalogproductbootstrap.New(catalogproductbootstrap.Dependencies{
 		Products:          c.ProductRepo,
 		SKUs:              c.ProductSKURepo,
@@ -112,7 +111,7 @@ func (c *Container) initIdentityAndCatalogServices() {
 		MemberLevelPrices: c.MemberLevelPriceRepo,
 		Carts:             c.CartRepo,
 		ProductMappings:   c.ProductMappingRepo,
-		Orders:            c.OrderRepo,
+		Orders:            c.OrderStore,
 		PaymentChannels:   c.PaymentChannelRepo,
 	})
 	c.ProductReadService = productServices.Read

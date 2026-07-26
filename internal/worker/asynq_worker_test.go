@@ -5,11 +5,12 @@ import (
 	"errors"
 	"testing"
 
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
@@ -50,8 +51,8 @@ func TestBuildOrderInstructionsEmailText(t *testing.T) {
 	})
 
 	t.Run("locale preferred over fallback", func(t *testing.T) {
-		order := &models.Order{
-			Items: []models.OrderItem{
+		order := &orderdomain.Order{
+			Items: []orderdomain.OrderItem{
 				{InstructionsJSON: jsonmap.JSON{
 					"zh-CN": "<p>中文说明</p>",
 					"en-US": "<p>English</p>",
@@ -64,8 +65,8 @@ func TestBuildOrderInstructionsEmailText(t *testing.T) {
 	})
 
 	t.Run("falls back to zh-CN when locale missing", func(t *testing.T) {
-		order := &models.Order{
-			Items: []models.OrderItem{
+		order := &orderdomain.Order{
+			Items: []orderdomain.OrderItem{
 				{InstructionsJSON: jsonmap.JSON{"zh-CN": "fallback"}},
 			},
 		}
@@ -75,8 +76,8 @@ func TestBuildOrderInstructionsEmailText(t *testing.T) {
 	})
 
 	t.Run("dedupes identical items and joins distinct", func(t *testing.T) {
-		order := &models.Order{
-			Items: []models.OrderItem{
+		order := &orderdomain.Order{
+			Items: []orderdomain.OrderItem{
 				{InstructionsJSON: jsonmap.JSON{"zh-CN": "<p>A</p>"}},
 				{InstructionsJSON: jsonmap.JSON{"zh-CN": "<p>A</p>"}}, // 重复，应去重
 				{InstructionsJSON: jsonmap.JSON{"zh-CN": "<p>B</p>"}},
@@ -89,10 +90,10 @@ func TestBuildOrderInstructionsEmailText(t *testing.T) {
 	})
 
 	t.Run("collects from children items", func(t *testing.T) {
-		order := &models.Order{
-			Children: []models.Order{
-				{Items: []models.OrderItem{{InstructionsJSON: jsonmap.JSON{"zh-CN": "child1"}}}},
-				{Items: []models.OrderItem{{InstructionsJSON: jsonmap.JSON{"zh-CN": "child2"}}}},
+		order := &orderdomain.Order{
+			Children: []orderdomain.Order{
+				{Items: []orderdomain.OrderItem{{InstructionsJSON: jsonmap.JSON{"zh-CN": "child1"}}}},
+				{Items: []orderdomain.OrderItem{{InstructionsJSON: jsonmap.JSON{"zh-CN": "child2"}}}},
 			},
 		}
 		got := buildOrderInstructionsEmailText(order, "zh-CN")
@@ -102,8 +103,8 @@ func TestBuildOrderInstructionsEmailText(t *testing.T) {
 	})
 
 	t.Run("empty instructions yield empty result", func(t *testing.T) {
-		order := &models.Order{
-			Items: []models.OrderItem{{InstructionsJSON: nil}},
+		order := &orderdomain.Order{
+			Items: []orderdomain.OrderItem{{InstructionsJSON: nil}},
 		}
 		if got := buildOrderInstructionsEmailText(order, "zh-CN"); got != "" {
 			t.Fatalf("expected empty, got %q", got)
@@ -111,8 +112,8 @@ func TestBuildOrderInstructionsEmailText(t *testing.T) {
 	})
 
 	t.Run("strips HTML from instructions", func(t *testing.T) {
-		order := &models.Order{
-			Items: []models.OrderItem{
+		order := &orderdomain.Order{
+			Items: []orderdomain.OrderItem{
 				{InstructionsJSON: jsonmap.JSON{"zh-CN": "<p>步骤一</p><ul><li>登录</li><li>激活</li></ul>"}},
 			},
 		}
@@ -125,12 +126,12 @@ func TestBuildOrderInstructionsEmailText(t *testing.T) {
 }
 
 func TestBuildOrderFulfillmentEmailPayloadPreferOrderFulfillment(t *testing.T) {
-	order := &models.Order{
-		Fulfillment: &models.Fulfillment{Payload: "  MAIN-LINE-1\nMAIN-LINE-2  "},
-		Children: []models.Order{
+	order := &orderdomain.Order{
+		Fulfillment: &fulfillmentdomain.Fulfillment{Payload: "  MAIN-LINE-1\nMAIN-LINE-2  "},
+		Children: []orderdomain.Order{
 			{
 				OrderNo:     "CHILD-1",
-				Fulfillment: &models.Fulfillment{Payload: "SECRET-1"},
+				Fulfillment: &fulfillmentdomain.Fulfillment{Payload: "SECRET-1"},
 			},
 		},
 	}
@@ -143,25 +144,24 @@ func TestBuildOrderFulfillmentEmailPayloadPreferOrderFulfillment(t *testing.T) {
 }
 
 type orderStatusEmailWorkerOrderRepoStub struct {
-	repository.OrderRepository
-	order *models.Order
+	order *orderdomain.Order
 	err   error
 }
 
-func (s orderStatusEmailWorkerOrderRepoStub) GetByID(_ uint) (*models.Order, error) {
+func (s orderStatusEmailWorkerOrderRepoStub) GetByID(_ uint) (*orderdomain.Order, error) {
 	return s.order, s.err
 }
 
 func TestHandleOrderStatusEmailSkipsNonRetryableEmailErrors(t *testing.T) {
 	testCases := []struct {
 		name         string
-		order        *models.Order
+		order        *orderdomain.Order
 		emailConfig  config.EmailConfig
 		expectNilErr bool
 	}{
 		{
 			name: "smtp_disabled",
-			order: &models.Order{
+			order: &orderdomain.Order{
 				ID:          1,
 				OrderNo:     "DJ-ORDER-001",
 				GuestEmail:  "buyer@example.com",
@@ -173,7 +173,7 @@ func TestHandleOrderStatusEmailSkipsNonRetryableEmailErrors(t *testing.T) {
 		},
 		{
 			name: "smtp_not_configured",
-			order: &models.Order{
+			order: &orderdomain.Order{
 				ID:          2,
 				OrderNo:     "DJ-ORDER-002",
 				GuestEmail:  "buyer@example.com",
@@ -185,7 +185,7 @@ func TestHandleOrderStatusEmailSkipsNonRetryableEmailErrors(t *testing.T) {
 		},
 		{
 			name: "invalid_receiver_email",
-			order: &models.Order{
+			order: &orderdomain.Order{
 				ID:          3,
 				OrderNo:     "DJ-ORDER-003",
 				GuestEmail:  "invalid-email",
@@ -202,7 +202,7 @@ func TestHandleOrderStatusEmailSkipsNonRetryableEmailErrors(t *testing.T) {
 		},
 		{
 			name: "generic_send_failure_keeps_retryable_error",
-			order: &models.Order{
+			order: &orderdomain.Order{
 				ID:          4,
 				OrderNo:     "DJ-ORDER-004",
 				GuestEmail:  "buyer@example.com",
@@ -230,9 +230,9 @@ func TestHandleOrderStatusEmailSkipsNonRetryableEmailErrors(t *testing.T) {
 
 			consumer := &Consumer{
 				Container: &provider.Container{
-					OrderRepo:    orderStatusEmailWorkerOrderRepoStub{order: tc.order},
 					EmailService: service.NewEmailService(&tc.emailConfig),
 				},
+				orderReader: orderStatusEmailWorkerOrderRepoStub{order: tc.order},
 			}
 
 			err = consumer.handleOrderStatusEmail(context.Background(), task)
@@ -253,11 +253,11 @@ func TestHandleOrderStatusEmailSkipsNonRetryableEmailErrors(t *testing.T) {
 }
 
 func TestBuildOrderFulfillmentEmailPayloadFromChildren(t *testing.T) {
-	order := &models.Order{
-		Children: []models.Order{
+	order := &orderdomain.Order{
+		Children: []orderdomain.Order{
 			{
 				OrderNo:     "DJ-CHILD-01",
-				Fulfillment: &models.Fulfillment{Payload: "  SECRET-01  "},
+				Fulfillment: &fulfillmentdomain.Fulfillment{Payload: "  SECRET-01  "},
 			},
 			{
 				OrderNo:     "DJ-CHILD-02",
@@ -265,11 +265,11 @@ func TestBuildOrderFulfillmentEmailPayloadFromChildren(t *testing.T) {
 			},
 			{
 				OrderNo:     "DJ-CHILD-03",
-				Fulfillment: &models.Fulfillment{Payload: "    "},
+				Fulfillment: &fulfillmentdomain.Fulfillment{Payload: "    "},
 			},
 			{
 				OrderNo:     "DJ-CHILD-04",
-				Fulfillment: &models.Fulfillment{Payload: "SECRET-04-L1\nSECRET-04-L2"},
+				Fulfillment: &fulfillmentdomain.Fulfillment{Payload: "SECRET-04-L1\nSECRET-04-L2"},
 			},
 		},
 	}

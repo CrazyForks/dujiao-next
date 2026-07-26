@@ -5,6 +5,9 @@ import (
 	"testing"
 	"time"
 
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -91,7 +94,7 @@ func TestNormalizeChannelManualFormSchemaUsesLocaleText(t *testing.T) {
 
 func TestBuildChannelOrderDetailResponseUsesTotalPaidAmount(t *testing.T) {
 	now := time.Date(2026, 3, 10, 12, 0, 0, 0, time.UTC)
-	resp := buildChannelOrderDetailResponse(&models.Order{
+	resp := buildChannelOrderDetailResponse(&orderdomain.Order{
 		ID:                      7,
 		OrderNo:                 "DJ20260310001",
 		Status:                  "paid",
@@ -107,7 +110,7 @@ func TestBuildChannelOrderDetailResponseUsesTotalPaidAmount(t *testing.T) {
 		CreatedAt:               now,
 		UpdatedAt:               now,
 		PaidAt:                  &now,
-		Items: []models.OrderItem{{
+		Items: []orderdomain.OrderItem{{
 			ProductID:          1,
 			SKUID:              2,
 			TitleJSON:          jsonmap.JSON{"zh-CN": "测试商品"},
@@ -121,11 +124,11 @@ func TestBuildChannelOrderDetailResponseUsesTotalPaidAmount(t *testing.T) {
 			PromotionDiscount:  money.FromDecimal(decimal.RequireFromString("15.00")),
 			FulfillmentType:    "manual",
 		}},
-		Children: []models.Order{{
+		Children: []orderdomain.Order{{
 			ID:      8,
 			OrderNo: "DJ20260310001-01",
 			Status:  "completed",
-			Fulfillment: &models.Fulfillment{
+			Fulfillment: &fulfillmentdomain.Fulfillment{
 				Status:      "delivered",
 				Type:        "auto",
 				Payload:     "card-secret-demo",
@@ -186,7 +189,7 @@ func TestBuildChannelOrderDetailResponseUsesTotalPaidAmount(t *testing.T) {
 
 func TestBuildChannelPaymentResponseIncludesOrderSummary(t *testing.T) {
 	now := time.Date(2026, 3, 10, 12, 30, 0, 0, time.UTC)
-	order := &models.Order{
+	order := &orderdomain.Order{
 		ID:               9,
 		OrderNo:          "DJ20260310002",
 		TotalAmount:      money.FromDecimal(decimal.RequireFromString("99.00")),

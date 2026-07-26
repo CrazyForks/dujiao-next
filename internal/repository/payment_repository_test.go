@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -28,7 +30,7 @@ func setupPaymentRepositoryTest(t *testing.T) (*GormPaymentRepository, *gorm.DB)
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.Order{},
+		&orderdomain.Order{},
 		&models.Payment{},
 		&walletdomain.RechargeOrder{},
 	); err != nil {
@@ -62,7 +64,7 @@ func TestPaymentRepositoryListAdminByUserIncludesWalletRechargePayments(t *testi
 		t.Fatalf("create user2 failed: %v", err)
 	}
 
-	order := models.Order{
+	order := orderdomain.Order{
 		OrderNo:                 "DJPAYREPO001",
 		UserID:                  user1.ID,
 		Status:                  constants.OrderStatusPendingPayment,
@@ -224,7 +226,7 @@ func TestPaymentRepositoryListAdminLightweightSkipCount(t *testing.T) {
 		t.Fatalf("create user failed: %v", err)
 	}
 
-	order := models.Order{
+	order := orderdomain.Order{
 		OrderNo:                 "DJLIGHTWEIGHT001",
 		UserID:                  user.ID,
 		Status:                  constants.OrderStatusPendingPayment,

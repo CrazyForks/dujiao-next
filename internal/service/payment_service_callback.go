@@ -4,6 +4,11 @@ import (
 	"strings"
 	"time"
 
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
+	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 
 	"github.com/dujiao-next/internal/constants"
@@ -64,11 +69,11 @@ func (s *PaymentService) HandleCallback(input PaymentCallbackInput) (*models.Pay
 	order, err := s.orderRepo.GetByID(payment.OrderID)
 	if err != nil {
 		log.Errorw("payment_callback_order_fetch_failed", "order_id", payment.OrderID, "error", err)
-		return nil, ErrOrderFetchFailed
+		return nil, orderapp.ErrOrderFetchFailed
 	}
 	if order == nil {
 		log.Warnw("payment_callback_order_not_found", "order_id", payment.OrderID)
-		return nil, ErrOrderNotFound
+		return nil, orderapp.ErrOrderNotFound
 	}
 
 	if input.ChannelID != 0 && input.ChannelID != payment.ChannelID {
@@ -169,7 +174,7 @@ func (s *PaymentService) updateCallbackMeta(payment *models.Payment, status stri
 	return payment, nil
 }
 
-func (s *PaymentService) applyPaymentUpdate(payment *models.Payment, order *models.Order, status string, input PaymentCallbackInput, now time.Time) (*models.Payment, bool, error) {
+func (s *PaymentService) applyPaymentUpdate(payment *models.Payment, order *orderdomain.Order, status string, input PaymentCallbackInput, now time.Time) (*models.Payment, bool, error) {
 	returnVal := payment
 	orderPaid := false
 
@@ -213,7 +218,7 @@ func (s *PaymentService) applyPaymentUpdate(payment *models.Payment, order *mode
 			orderPaid = true
 		}
 		if (status == constants.PaymentStatusFailed || status == constants.PaymentStatusExpired) && order.Status == constants.OrderStatusPendingPayment && s.walletSvc != nil {
-			if _, err := releaseOrderWalletBalance(s.walletSvc, s.orderRepo, tx, order, constants.WalletTxnTypeOrderRefund, "在线支付失败，退回余额"); err != nil {
+			if _, err := orderapp.ReleaseWalletBalance(s.walletSvc, ordergormstore.UseTransaction(tx), order, constants.WalletTxnTypeOrderRefund, "在线支付失败，退回余额"); err != nil {
 				return err
 			}
 		}
@@ -243,14 +248,14 @@ func mergeProviderPayload(existing jsonmap.JSON, incoming jsonmap.JSON) jsonmap.
 }
 
 // markOrderPaid 在事务内将订单更新为已支付并处理库存
-func (s *PaymentService) markOrderPaid(tx *gorm.DB, order *models.Order, now time.Time) error {
+func (s *PaymentService) markOrderPaid(tx *gorm.DB, order *orderdomain.Order, now time.Time) error {
 	if order == nil {
-		return ErrOrderNotFound
+		return orderapp.ErrOrderNotFound
 	}
-	if !isTransitionAllowed(order.Status, constants.OrderStatusPaid) {
-		return ErrOrderStatusInvalid
+	if !orderapp.IsTransitionAllowed(order.Status, constants.OrderStatusPaid) {
+		return orderapp.ErrOrderStatusInvalid
 	}
-	orderRepo := s.orderRepo.WithTx(tx)
+	orderRepo := ordergormstore.UseTransaction(tx).Orders()
 	productRepo := s.productRepo.BindTx(tx)
 	var productSKURepo productcontract.SKURepository
 	if s.productSKURepo != nil {
@@ -264,7 +269,7 @@ func (s *PaymentService) markOrderPaid(tx *gorm.DB, order *models.Order, now tim
 		"updated_at":         now,
 	}
 	if err := orderRepo.UpdateStatus(order.ID, constants.OrderStatusPaid, orderUpdates); err != nil {
-		return ErrOrderUpdateFailed
+		return orderapp.ErrOrderUpdateFailed
 	}
 	order.Status = constants.OrderStatusPaid
 	order.PaidAt = &now
@@ -282,29 +287,29 @@ func (s *PaymentService) markOrderPaid(tx *gorm.DB, order *models.Order, now tim
 				"paid_at":    now,
 				"updated_at": now,
 			}); err != nil {
-				return ErrOrderUpdateFailed
+				return orderapp.ErrOrderUpdateFailed
 			}
-			if err := consumeManualStockByItems(productRepo, productSKURepo, child.Items); err != nil {
+			if err := orderapp.ConsumeManualStockByItems(productRepo, productSKURepo, child.Items); err != nil {
 				return err
 			}
 			child.Status = childStatus
 			child.PaidAt = &now
 			child.UpdatedAt = now
 		}
-		parentStatus := calcParentStatus(order.Children, constants.OrderStatusPaid)
+		parentStatus := orderapp.CalcParentStatus(order.Children, constants.OrderStatusPaid)
 		if parentStatus != "" && parentStatus != constants.OrderStatusPaid {
 			if err := orderRepo.UpdateStatus(order.ID, parentStatus, map[string]interface{}{
 				"online_paid_amount": money.FromDecimal(onlineAmount),
 				"updated_at":         now,
 			}); err != nil {
-				return ErrOrderUpdateFailed
+				return orderapp.ErrOrderUpdateFailed
 			}
 			order.Status = parentStatus
 		}
 		return nil
 	}
 
-	if err := consumeManualStockByItems(productRepo, productSKURepo, order.Items); err != nil {
+	if err := orderapp.ConsumeManualStockByItems(productRepo, productSKURepo, order.Items); err != nil {
 		return err
 	}
 	return nil

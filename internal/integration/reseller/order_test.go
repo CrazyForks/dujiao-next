@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
 
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
@@ -13,7 +15,6 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
@@ -29,8 +30,8 @@ func openResellerOrderServiceTestDB(t *testing.T) *gorm.DB {
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.Order{},
-		&models.OrderItem{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
 		&resellerdomain.Profile{},
 		&resellerdomain.OrderSnapshot{},
 		&resellerdomain.LedgerEntry{},
@@ -40,7 +41,7 @@ func openResellerOrderServiceTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (resellerdomain.Profile, models.Order, resellerdomain.OrderSnapshot) {
+func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (resellerdomain.Profile, orderdomain.Order, resellerdomain.OrderSnapshot) {
 	t.Helper()
 	user := userdomain.User{Email: email, PasswordHash: "hash", Status: constants.UserStatusActive}
 	if err := db.Create(&user).Error; err != nil {
@@ -55,7 +56,7 @@ func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (reseller
 		t.Fatalf("create profile failed: %v", err)
 	}
 	paidAt := time.Now().Add(-time.Hour)
-	order := models.Order{
+	order := orderdomain.Order{
 		OrderNo:              fmt.Sprintf("DJ-RES-%d", time.Now().UnixNano()),
 		UserID:               999,
 		Status:               constants.OrderStatusPaid,
@@ -69,7 +70,7 @@ func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (reseller
 	if err := db.Create(&order).Error; err != nil {
 		t.Fatalf("create order failed: %v", err)
 	}
-	item := models.OrderItem{
+	item := orderdomain.OrderItem{
 		OrderID:         order.ID,
 		ProductID:       10,
 		SKUID:           20,
@@ -120,7 +121,7 @@ func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (reseller
 	return profile, order, snapshot
 }
 
-func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email string) (resellerdomain.Profile, models.Order, []models.OrderItem) {
+func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email string) (resellerdomain.Profile, orderdomain.Order, []orderdomain.OrderItem) {
 	t.Helper()
 	user := userdomain.User{Email: email, PasswordHash: "hash", Status: constants.UserStatusActive}
 	if err := db.Create(&user).Error; err != nil {
@@ -135,7 +136,7 @@ func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email str
 		t.Fatalf("create profile failed: %v", err)
 	}
 	paidAt := time.Now().Add(-time.Hour)
-	parent := models.Order{
+	parent := orderdomain.Order{
 		OrderNo:              fmt.Sprintf("DJ-RES-PARENT-%d", time.Now().UnixNano()),
 		UserID:               user.ID,
 		Status:               constants.OrderStatusPaid,
@@ -149,10 +150,10 @@ func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email str
 	if err := db.Create(&parent).Error; err != nil {
 		t.Fatalf("create parent order failed: %v", err)
 	}
-	var items []models.OrderItem
+	var items []orderdomain.OrderItem
 	childAmounts := []string{"70.00", "80.00"}
 	for idx, amount := range childAmounts {
-		child := models.Order{
+		child := orderdomain.Order{
 			OrderNo:              fmt.Sprintf("%s-%d", parent.OrderNo, idx+1),
 			ParentID:             &parent.ID,
 			UserID:               user.ID,
@@ -167,7 +168,7 @@ func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email str
 		if err := db.Create(&child).Error; err != nil {
 			t.Fatalf("create child order failed: %v", err)
 		}
-		item := models.OrderItem{
+		item := orderdomain.OrderItem{
 			OrderID:         child.ID,
 			ProductID:       uint(100 + idx),
 			SKUID:           uint(200 + idx),
@@ -254,7 +255,7 @@ func TestResellerOrderServiceBuyerLabelMasksMemberEmail(t *testing.T) {
 	if err := db.Create(&buyer).Error; err != nil {
 		t.Fatalf("create buyer user failed: %v", err)
 	}
-	if err := db.Model(&models.Order{}).Where("id = ?", order.ID).Update("user_id", buyer.ID).Error; err != nil {
+	if err := db.Model(&orderdomain.Order{}).Where("id = ?", order.ID).Update("user_id", buyer.ID).Error; err != nil {
 		t.Fatalf("update order buyer failed: %v", err)
 	}
 	if err := db.Model(&resellerdomain.OrderSnapshot{}).Where("order_id = ?", order.ID).Update("buyer_user_id", buyer.ID).Error; err != nil {
@@ -342,7 +343,7 @@ func TestResellerOrderServicePartiallyRefundedOrderIsNeutralUnavailable(t *testi
 	}).Error; err != nil {
 		t.Fatalf("update snapshot failed: %v", err)
 	}
-	if err := db.Model(&models.Order{}).Where("id = ?", order.ID).Update("status", constants.OrderStatusPartiallyRefunded).Error; err != nil {
+	if err := db.Model(&orderdomain.Order{}).Where("id = ?", order.ID).Update("status", constants.OrderStatusPartiallyRefunded).Error; err != nil {
 		t.Fatalf("update order failed: %v", err)
 	}
 	orderID := order.ID

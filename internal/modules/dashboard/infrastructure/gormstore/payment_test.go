@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
@@ -132,7 +134,7 @@ func TestGetPaymentOrderAlertCountsExcludesChildOrdersAndWalletPayments(t *testi
 	repo, db := setupDashboardRepositoryTest(t)
 	now := time.Now().UTC().Truncate(time.Second)
 
-	parentOrder := &models.Order{
+	parentOrder := &orderdomain.Order{
 		OrderNo:        "DJ-PENDING-001",
 		Status:         constants.OrderStatusPendingPayment,
 		Currency:       "CNY",
@@ -146,7 +148,7 @@ func TestGetPaymentOrderAlertCountsExcludesChildOrdersAndWalletPayments(t *testi
 		t.Fatalf("create parent pending order failed: %v", err)
 	}
 
-	childOrder := &models.Order{
+	childOrder := &orderdomain.Order{
 		OrderNo:        "DJ-PENDING-001-01",
 		ParentID:       &parentOrder.ID,
 		Status:         constants.OrderStatusPendingPayment,

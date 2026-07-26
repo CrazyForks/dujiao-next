@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
@@ -30,7 +32,7 @@ func openResellerAccountingRepoTestDB(t *testing.T) *gorm.DB {
 	if err := db.AutoMigrate(
 		&admindomain.Admin{},
 		&userdomain.User{},
-		&models.Order{},
+		&orderdomain.Order{},
 		&models.Payment{},
 		&resellerdomain.Profile{},
 		&resellerdomain.Domain{},
@@ -79,9 +81,9 @@ func seedResellerAccountingProfileWithEmail(t *testing.T, db *gorm.DB, email str
 	return profile
 }
 
-func seedResellerAccountingOrder(t *testing.T, db *gorm.DB, orderNo string) models.Order {
+func seedResellerAccountingOrder(t *testing.T, db *gorm.DB, orderNo string) orderdomain.Order {
 	t.Helper()
-	order := models.Order{
+	order := orderdomain.Order{
 		OrderNo:     orderNo,
 		Status:      constants.OrderStatusPaid,
 		TotalAmount: money.FromDecimal(decimal.NewFromInt(100)),

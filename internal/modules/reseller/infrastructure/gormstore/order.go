@@ -4,13 +4,14 @@ import (
 	"errors"
 	"strings"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -95,8 +96,10 @@ func (r *Store) ListOrderSnapshotsByReseller(filter resellercontract.OrderSnapsh
 	}
 	if err := applyPagination(query.Session(&gorm.Session{}), filter.Page, filter.PageSize).
 		Select("reseller_order_snapshots.*").
-		Preload("Order.Items").
-		Preload("Order.Children.Items").
+		Preload("Order", "deleted_at IS NULL").
+		Preload("Order.Items", "deleted_at IS NULL").
+		Preload("Order.Children", "deleted_at IS NULL").
+		Preload("Order.Children.Items", "deleted_at IS NULL").
 		Order("orders.id DESC").
 		Find(&rows).Error; err != nil {
 		return nil, 0, err
@@ -162,8 +165,10 @@ func (r *Store) GetOrderSnapshotByResellerOrderNo(resellerID uint, orderNo strin
 		Where("orders.parent_id IS NULL").
 		Where("orders.reseller_id = reseller_order_snapshots.reseller_id").
 		Where("orders.order_no = ?", orderNo).
-		Preload("Order.Items").
-		Preload("Order.Children.Items").
+		Preload("Order", "deleted_at IS NULL").
+		Preload("Order.Items", "deleted_at IS NULL").
+		Preload("Order.Children", "deleted_at IS NULL").
+		Preload("Order.Children.Items", "deleted_at IS NULL").
 		First(&snapshot).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -236,11 +241,11 @@ func (r *Store) buildResellerOrderSnapshotRows(resellerID uint, snapshots []rese
 	return out, nil
 }
 
-func resellerOrderItemsFromParentOrChildren(order models.Order) []models.OrderItem {
+func resellerOrderItemsFromParentOrChildren(order orderdomain.Order) []orderdomain.OrderItem {
 	if len(order.Items) > 0 {
 		return order.Items
 	}
-	items := make([]models.OrderItem, 0)
+	items := make([]orderdomain.OrderItem, 0)
 	for i := range order.Children {
 		items = append(items, order.Children[i].Items...)
 	}

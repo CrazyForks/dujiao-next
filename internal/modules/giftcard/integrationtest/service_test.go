@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -51,9 +54,9 @@ func setupGiftCardServiceTest(t *testing.T) (*giftcardapp.Service, *walletapp.Se
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.Order{},
-		&models.OrderItem{},
-		&models.Fulfillment{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
+		&fulfillmentdomain.Fulfillment{},
 		&walletdomain.Account{},
 		&walletdomain.Transaction{},
 		&settingsstore.SettingRecord{},

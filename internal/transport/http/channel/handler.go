@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -183,11 +185,11 @@ type Settings interface {
 
 type Orders interface {
 	PreviewOrder(input CreateOrderInput) (*OrderPreview, error)
-	CreateOrder(input CreateOrderInput) (*models.Order, error)
-	GetOrderByUser(orderID, userID uint) (*models.Order, error)
-	GetOrderByUserOrderNo(orderNo string, userID uint) (*models.Order, error)
-	CancelOrder(orderID, userID uint) (*models.Order, error)
-	ListOrdersByUser(filter OrderListFilter) ([]models.Order, int64, error)
+	CreateOrder(input CreateOrderInput) (*orderdomain.Order, error)
+	GetOrderByUser(orderID, userID uint) (*orderdomain.Order, error)
+	GetOrderByUserOrderNo(orderNo string, userID uint) (*orderdomain.Order, error)
+	CancelOrder(orderID, userID uint) (*orderdomain.Order, error)
+	ListOrdersByUser(filter OrderListFilter) ([]orderdomain.Order, int64, error)
 }
 
 type Payments interface {

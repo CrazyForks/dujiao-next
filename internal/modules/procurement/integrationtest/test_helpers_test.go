@@ -5,6 +5,10 @@ import (
 	"testing"
 	"time"
 
+	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
@@ -21,7 +25,6 @@ import (
 	procurementupstream "github.com/dujiao-next/internal/modules/procurement/infrastructure/upstreamgateway"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -51,10 +54,10 @@ func setupProcurementTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
 	if err := db.AutoMigrate(
-		&models.Order{},
-		&models.OrderItem{},
-		&models.OrderRefundRecord{},
-		&models.Fulfillment{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
+		&orderdomain.OrderRefundRecord{},
+		&fulfillmentdomain.Fulfillment{},
 		&procurementdomain.Order{},
 		&siteconnectiondomain.Connection{},
 		&mappingdomain.Mapping{},
@@ -66,9 +69,9 @@ func setupProcurementTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func createProcTestOrder(t *testing.T, db *gorm.DB, orderNo, status, fulfillmentType string) *models.Order {
+func createProcTestOrder(t *testing.T, db *gorm.DB, orderNo, status, fulfillmentType string) *orderdomain.Order {
 	t.Helper()
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo:        orderNo,
 		UserID:         1,
 		Status:         status,
@@ -79,7 +82,7 @@ func createProcTestOrder(t *testing.T, db *gorm.DB, orderNo, status, fulfillment
 	if err := db.Create(order).Error; err != nil {
 		t.Fatalf("create order failed: %v", err)
 	}
-	item := &models.OrderItem{
+	item := &orderdomain.OrderItem{
 		OrderID:         order.ID,
 		ProductID:       1,
 		SKUID:           1,
@@ -92,7 +95,7 @@ func createProcTestOrder(t *testing.T, db *gorm.DB, orderNo, status, fulfillment
 	if err := db.Create(item).Error; err != nil {
 		t.Fatalf("create order item failed: %v", err)
 	}
-	var loaded models.Order
+	var loaded orderdomain.Order
 	if err := db.Preload("Items").First(&loaded, order.ID).Error; err != nil {
 		t.Fatalf("reload order failed: %v", err)
 	}
@@ -117,7 +120,7 @@ func createTestProcurementOrder(t *testing.T, db *gorm.DB, connID, localOrderID 
 }
 
 func newTestProcurementService(db *gorm.DB, connections *siteconnectionapp.Service) *procurementapp.Service {
-	orders := repository.NewOrderRepository(db)
+	orders := ordergormstore.New(db)
 	return procurementapp.NewService(procurementapp.Options{
 		Repository:      procurementgormstore.New(db),
 		Orders:          procurementorder.New(orders),

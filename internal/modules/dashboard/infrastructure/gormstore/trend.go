@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
 )
 
@@ -21,9 +22,9 @@ func (r *Store) GetOrderTrends(startAt, endAt time.Time) ([]dashboard.OrderTrend
 		COALESCE(SUM(CASE WHEN status IN (%s) THEN 1 ELSE 0 END), 0) as orders_paid
 	`, dayExpr, paidIn)
 
-	if err := r.db.Model(&models.Order{}).
+	if err := r.db.Model(&orderdomain.Order{}).
 		Select(selectSQL).
-		Where("parent_id IS NULL AND created_at >= ? AND created_at < ?", startAt, endAt).
+		Where("deleted_at IS NULL AND parent_id IS NULL AND created_at >= ? AND created_at < ?", startAt, endAt).
 		Group(dayExpr).
 		Order("day ASC").
 		Scan(&rows).Error; err != nil {

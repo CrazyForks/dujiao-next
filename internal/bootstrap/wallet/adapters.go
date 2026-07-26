@@ -7,6 +7,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
@@ -133,8 +134,8 @@ func mapWalletTransportError(err error) error {
 		{walletcontract.ErrRechargeNotFound, wallettransport.ErrRechargeNotFound},
 		{service.ErrPaymentInvalid, wallettransport.ErrPaymentInvalid},
 		{service.ErrPaymentNotFound, wallettransport.ErrPaymentNotFound},
-		{service.ErrOrderNotFound, wallettransport.ErrOrderNotFound},
-		{service.ErrOrderStatusInvalid, wallettransport.ErrOrderStatusInvalid},
+		{orderapp.ErrOrderNotFound, wallettransport.ErrOrderNotFound},
+		{orderapp.ErrOrderStatusInvalid, wallettransport.ErrOrderStatusInvalid},
 		{service.ErrPaymentChannelNotFound, wallettransport.ErrPaymentChannelNotFound},
 		{service.ErrPaymentChannelInactive, wallettransport.ErrPaymentChannelInactive},
 		{service.ErrPaymentProviderNotSupported, wallettransport.ErrPaymentProviderNotSupported},

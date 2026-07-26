@@ -34,8 +34,8 @@ import (
 	adminauthtransport "github.com/dujiao-next/internal/transport/http/adminauth"
 	adminauthztransport "github.com/dujiao-next/internal/transport/http/adminauthz"
 	adminusertransport "github.com/dujiao-next/internal/transport/http/adminuser"
-	fulfillmenttransport "github.com/dujiao-next/internal/transport/http/fulfillment"
-	ordertransport "github.com/dujiao-next/internal/transport/http/order"
+	fulfillmenttransport "github.com/dujiao-next/internal/modules/fulfillment/transport/http"
+	ordertransport "github.com/dujiao-next/internal/modules/order/transport/http"
 	paymenttransport "github.com/dujiao-next/internal/transport/http/payment"
 	systemtransport "github.com/dujiao-next/internal/transport/http/system"
 

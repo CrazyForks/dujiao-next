@@ -3,10 +3,13 @@ package service
 import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/logger"
+	"github.com/dujiao-next/internal/models"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
+	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
@@ -21,7 +24,7 @@ import (
 
 // PaymentService 支付服务
 type PaymentService struct {
-	orderRepo               repository.OrderRepository
+	orderRepo               ordercontract.Store
 	productRepo             paymentProductStore
 	productSKURepo          paymentSKUStore
 	paymentRepo             repository.PaymentRepository
@@ -72,6 +75,10 @@ type AffiliatePaymentLifecycle interface {
 	HandleOrderPaid(orderID uint) error
 }
 
+type resellerAccountingTransactions interface {
+	PostOrderProfitTx(tx *gorm.DB, order *orderdomain.Order, payment *models.Payment) error
+}
+
 // SetProcurementService 设置采购单服务（解决循环依赖）
 func (s *PaymentService) SetProcurementService(svc ProcurementCreator) {
 	s.procurementSvc = svc
@@ -89,7 +96,7 @@ func (s *PaymentService) SetMemberLevelService(svc MemberLevelProgressor) {
 
 // PaymentServiceOptions 支付服务构造参数
 type PaymentServiceOptions struct {
-	OrderRepo               repository.OrderRepository
+	OrderStore              ordercontract.Store
 	ProductRepo             paymentProductStore
 	ProductSKURepo          paymentSKUStore
 	PaymentRepo             repository.PaymentRepository
@@ -111,7 +118,7 @@ type PaymentServiceOptions struct {
 // NewPaymentService 创建支付服务
 func NewPaymentService(opts PaymentServiceOptions) *PaymentService {
 	return &PaymentService{
-		orderRepo:               opts.OrderRepo,
+		orderRepo:               opts.OrderStore,
 		productRepo:             opts.ProductRepo,
 		productSKURepo:          opts.ProductSKURepo,
 		paymentRepo:             opts.PaymentRepo,

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
 
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
@@ -23,7 +25,6 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	auditlogdomain "github.com/dujiao-next/internal/modules/auditlog/domain"
 	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/infrastructure/gormstore"
@@ -61,8 +62,8 @@ func setupAdminResellerManagementHandlerTest(t *testing.T) (*adminResellerFixtur
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.Order{},
-		&models.OrderItem{},
+		&orderdomain.Order{},
+		&orderdomain.OrderItem{},
 		&resellerdomain.Profile{},
 		&resellerdomain.Domain{},
 		&resellerdomain.SiteConfig{},
@@ -289,7 +290,7 @@ func TestAdminResellerManagementGetProfileDetailAggregatesOperationalData(t *tes
 	}); err != nil {
 		t.Fatalf("upsert setting failed: %v", err)
 	}
-	order := models.Order{
+	order := orderdomain.Order{
 		OrderNo:              "R202606190001",
 		Status:               constants.OrderStatusPaid,
 		Currency:             "CNY",
@@ -304,7 +305,7 @@ func TestAdminResellerManagementGetProfileDetailAggregatesOperationalData(t *tes
 	if err := db.Create(&order).Error; err != nil {
 		t.Fatalf("create order failed: %v", err)
 	}
-	orderItem := models.OrderItem{
+	orderItem := orderdomain.OrderItem{
 		OrderID:         order.ID,
 		ProductID:       product.ID,
 		SKUID:           skus[0].ID,

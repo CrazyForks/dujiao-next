@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 
 	"github.com/dujiao-next/internal/constants"
@@ -23,14 +25,14 @@ var (
 
 // GuestOrderLookup 游客订单查询端口。
 type GuestOrderLookup interface {
-	GetOrderByGuestOrderNoForTenant(tenant reseller.TenantContext, orderNo, email, password string) (*models.Order, error)
-	GetOrderByGuestForTenant(tenant reseller.TenantContext, orderID uint, email, password string) (*models.Order, error)
+	GetOrderByGuestOrderNoForTenant(tenant reseller.TenantContext, orderNo, email, password string) (*orderdomain.Order, error)
+	GetOrderByGuestForTenant(tenant reseller.TenantContext, orderID uint, email, password string) (*orderdomain.Order, error)
 }
 
 // UserOrderLookup 用户订单查询端口。
 type UserOrderLookup interface {
-	GetOrderByUserOrderNoForTenant(tenant reseller.TenantContext, orderNo string, userID uint) (*models.Order, error)
-	GetOrderByUserForTenant(tenant reseller.TenantContext, orderID, userID uint) (*models.Order, error)
+	GetOrderByUserOrderNoForTenant(tenant reseller.TenantContext, orderNo string, userID uint) (*orderdomain.Order, error)
+	GetOrderByUserForTenant(tenant reseller.TenantContext, orderID, userID uint) (*orderdomain.Order, error)
 }
 
 // PendingPaymentLookup 待支付记录查询端口。
@@ -128,7 +130,7 @@ func (h *LatestHandler) GetLatestPayment(c *gin.Context) {
 	h.respondLatestPayment(c, order)
 }
 
-func (h *LatestHandler) respondLatestPayment(c *gin.Context, order *models.Order) {
+func (h *LatestHandler) respondLatestPayment(c *gin.Context, order *orderdomain.Order) {
 	if order.ParentID != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
 		return

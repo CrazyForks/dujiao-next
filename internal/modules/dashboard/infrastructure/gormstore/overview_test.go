@@ -4,8 +4,9 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -16,7 +17,7 @@ func TestGetOverviewUsesOrderCreationWindowForPaidGMV(t *testing.T) {
 	now := time.Now().UTC().Truncate(time.Second)
 
 	paidOutsideWindow := now.Add(24 * time.Hour)
-	inWindowOrder := &models.Order{
+	inWindowOrder := &orderdomain.Order{
 		OrderNo:        "DJ-GMV-IN-WINDOW",
 		UserID:         1,
 		Status:         constants.OrderStatusPaid,
@@ -32,7 +33,7 @@ func TestGetOverviewUsesOrderCreationWindowForPaidGMV(t *testing.T) {
 	}
 
 	paidInsideWindow := now
-	outOfWindowOrder := &models.Order{
+	outOfWindowOrder := &orderdomain.Order{
 		OrderNo:        "DJ-GMV-OUT-WINDOW",
 		UserID:         1,
 		Status:         constants.OrderStatusPaid,
@@ -45,6 +46,23 @@ func TestGetOverviewUsesOrderCreationWindowForPaidGMV(t *testing.T) {
 	}
 	if err := db.Create(outOfWindowOrder).Error; err != nil {
 		t.Fatalf("create out-of-window order failed: %v", err)
+	}
+
+	deletedAt := now.Add(time.Minute)
+	deletedInWindowOrder := &orderdomain.Order{
+		OrderNo:        "DJ-GMV-DELETED-IN-WINDOW",
+		UserID:         1,
+		Status:         constants.OrderStatusPaid,
+		Currency:       "CNY",
+		OriginalAmount: money.FromDecimal(decimal.NewFromInt(999)),
+		DiscountAmount: money.FromDecimal(decimal.Zero),
+		TotalAmount:    money.FromDecimal(decimal.NewFromInt(999)),
+		CreatedAt:      now,
+		PaidAt:         &paidInsideWindow,
+		DeletedAt:      &deletedAt,
+	}
+	if err := db.Create(deletedInWindowOrder).Error; err != nil {
+		t.Fatalf("create deleted in-window order failed: %v", err)
 	}
 
 	overview, err := repo.GetOverview(now.Add(-time.Hour), now.Add(time.Hour))

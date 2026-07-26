@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/payment/provider"
@@ -140,7 +142,7 @@ func TestApplyProviderPaymentFallsBackToWechatGatewayOrderNoWhenProviderRefEmpty
 	svc, db := setupPaymentServiceWalletTest(t)
 	now := time.Now()
 
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo:                 "DJTESTWECHAT001",
 		UserID:                  1,
 		Status:                  constants.OrderStatusPendingPayment,
@@ -227,7 +229,7 @@ func TestApplyProviderPaymentStoresDisplayChannelType(t *testing.T) {
 	svc, db := setupPaymentServiceWalletTest(t)
 	now := time.Now()
 
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo:                 "DJTESTDISPLAY001",
 		UserID:                  1,
 		Status:                  constants.OrderStatusPendingPayment,
@@ -302,7 +304,7 @@ func TestPaymentDisplayChannelTypeLifecycle(t *testing.T) {
 	svc, db := setupPaymentServiceWalletTest(t)
 	now := time.Now()
 
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo:                 "DJTESTDISPLAYLIFECYCLE001",
 		UserID:                  1,
 		Status:                  constants.OrderStatusPendingPayment,
@@ -423,7 +425,7 @@ func TestApplyProviderPaymentUsesGatewayOrderNoForBepusdt(t *testing.T) {
 	svc, db := setupPaymentServiceWalletTest(t)
 	now := time.Now()
 
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo:                 "DJTESTGATEWAY001",
 		UserID:                  1,
 		Status:                  constants.OrderStatusPendingPayment,
@@ -521,7 +523,7 @@ func TestApplyProviderPaymentUsesGatewayOrderNoForOkpay(t *testing.T) {
 	svc, db := setupPaymentServiceWalletTest(t)
 	now := time.Now()
 
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo:                 "DJTESTOKPAY001",
 		UserID:                  1,
 		Status:                  constants.OrderStatusPendingPayment,
@@ -622,7 +624,7 @@ func TestApplyProviderPaymentBuildsRedirectURLForEpay(t *testing.T) {
 	svc, db := setupPaymentServiceWalletTest(t)
 	now := time.Now()
 
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo:                 "DJTESTEPAYREDIRECT001",
 		UserID:                  1,
 		Status:                  constants.OrderStatusPendingPayment,
@@ -766,7 +768,7 @@ func TestHandleCallbackAcceptsGatewayOrderNoForOrderPayment(t *testing.T) {
 	svc, db := setupPaymentServiceWalletTest(t)
 	now := time.Now()
 
-	order := &models.Order{
+	order := &orderdomain.Order{
 		OrderNo:                 "DJTESTCALLBACK001",
 		UserID:                  1,
 		Status:                  constants.OrderStatusPendingPayment,

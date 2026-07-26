@@ -15,9 +15,14 @@ import (
 	contentapp "github.com/dujiao-next/internal/modules/content/application"
 	"github.com/dujiao-next/internal/modules/content/infrastructure/gormstore"
 	couponapp "github.com/dujiao-next/internal/modules/coupon/application"
+	fulfillmentapp "github.com/dujiao-next/internal/modules/fulfillment/application"
+	fulfillmentqueue "github.com/dujiao-next/internal/modules/fulfillment/infrastructure/queueadapter"
 	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
 	giftcardsettingscurrency "github.com/dujiao-next/internal/modules/giftcard/infrastructure/settingscurrency"
 	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
+	orderrefund "github.com/dujiao-next/internal/modules/order/application/refund"
+	orderqueue "github.com/dujiao-next/internal/modules/order/infrastructure/queueadapter"
 	orderriskapp "github.com/dujiao-next/internal/modules/orderrisk/application"
 	orderrisklimiter "github.com/dujiao-next/internal/modules/orderrisk/infrastructure/redislimiter"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
@@ -26,7 +31,6 @@ import (
 	sitemapcache "github.com/dujiao-next/internal/modules/sitemap/infrastructure/cacheadapter"
 	sitemapcatalog "github.com/dujiao-next/internal/modules/sitemap/infrastructure/catalogreader"
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
-	"github.com/dujiao-next/internal/service"
 )
 
 // initApplicationServices 装配内容、购物车、订单、履约和营销用例。
@@ -73,48 +77,48 @@ func (c *Container) initApplicationServices() {
 	c.WalletService = walletapp.NewService(walletapp.Options{
 		Repository: c.WalletRepo, Transactions: c.WalletRepo,
 	})
-	c.OrderRefundService = service.NewOrderRefundService(
-		c.OrderRepo,
+	c.OrderRefundService = orderrefund.New(
+		c.OrderStore,
 		c.UserStore,
-		c.OrderRefundRecordRepo,
-		c.AffiliateRefundHandler,
+		c.AffiliateService,
 		c.SettingService,
 		c.WalletService,
 	)
 	c.MemberLevelService = memberlevelapp.NewService(c.MemberLevelRepo, c.MemberLevelPriceRepo, c.MemberLevelUserRepo)
 	c.OrderRiskControlService = orderriskapp.NewService(orderriskapp.Options{
 		Settings:    c.SettingService,
-		Orders:      c.OrderRepo,
+		Orders:      c.OrderStore,
 		RateLimiter: orderrisklimiter.New(),
 	})
-	c.OrderService = service.NewOrderService(service.OrderServiceOptions{
-		OrderRepo:               c.OrderRepo,
-		OrderRefundRecordRepo:   c.OrderRefundRecordRepo,
-		PaymentRepo:             c.PaymentRepo,
+	orderQueue := orderqueue.New(c.QueueClient)
+	c.OrderService = orderapp.NewOrderService(orderapp.OrderServiceOptions{
+		OrderStore:              c.OrderStore,
 		UserStore:               c.UserStore,
-		ProductRepo:             c.ProductRepo,
-		ProductSKURepo:          c.ProductSKURepo,
-		CardSecretRepo:          c.CardSecretRepo,
-		ResellerStore:           c.ResellerStore,
-		CouponRepo:              c.CouponRepo,
-		CouponUsageRepo:         c.CouponUsageRepo,
+		ProductStore:            c.ProductRepo,
+		ProductSKUStore:         c.ProductSKURepo,
+		CouponStore:             c.CouponRepo,
+		CouponUsageStore:        c.CouponUsageRepo,
 		PromotionRepo:           c.PromotionRepo,
-		QueueClient:             c.QueueClient,
+		Queue:                   orderQueue,
 		SettingService:          c.SettingService,
 		DefaultEmailConfig:      c.Config.Email,
 		WalletService:           c.WalletService,
 		AffiliateService:        c.AffiliateService,
 		MemberLevelService:      c.MemberLevelService,
 		ResellerPricingResolver: c.ResellerPricingResolver,
-		ResellerAccounting:      c.ResellerAccountingTransactions,
+		ResellerAccounting:      c.ResellerAccountingLedger,
 		RiskControlService:      c.OrderRiskControlService,
 		ExpireMinutes:           c.Config.Order.PaymentExpireMinutes,
 	})
-	c.FulfillmentService = service.NewFulfillmentService(
-		c.OrderRepo, c.FulfillmentRepo, c.CardSecretRepo, c.QueueClient,
-		c.SettingService, c.Config.Email,
-		c.ExternalIdentityStore,
-	)
+	c.FulfillmentService = fulfillmentapp.New(fulfillmentapp.Options{
+		OrderStore:            c.OrderStore,
+		FulfillmentStore:      c.FulfillmentStore,
+		OrderQueue:            orderQueue,
+		BotNotifier:           fulfillmentqueue.NewBotNotifier(c.QueueClient),
+		SettingService:        c.SettingService,
+		DefaultEmailConfig:    c.Config.Email,
+		ExternalIdentityStore: c.ExternalIdentityStore,
+	})
 	c.CardSecretService = cardsecretapp.NewService(cardsecretapp.ServiceOptions{
 		Secrets:      c.CardSecretRepo,
 		Batches:      c.CardSecretBatchRepo,

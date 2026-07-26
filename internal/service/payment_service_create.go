@@ -5,6 +5,11 @@ import (
 	"strings"
 	"time"
 
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
+	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
+
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
@@ -56,7 +61,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 	)
 
 	var payment *models.Payment
-	var order *models.Order
+	var order *orderdomain.Order
 	var channel *models.PaymentChannel
 	feeRate := decimal.Zero
 	reusedPending := false
@@ -73,22 +78,22 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 	}
 
 	err := s.paymentRepo.Transaction(func(tx *gorm.DB) error {
-		preloaded, err := s.orderRepo.WithTx(tx).GetByIDForUpdateWithChildren(input.OrderID)
+		preloaded, err := ordergormstore.UseTransaction(tx).Orders().GetByIDForUpdateWithChildren(input.OrderID)
 		if err != nil {
-			return ErrOrderFetchFailed
+			return orderapp.ErrOrderFetchFailed
 		}
 		if preloaded == nil {
-			return ErrOrderNotFound
+			return orderapp.ErrOrderNotFound
 		}
 		lockedOrder := *preloaded
 		if lockedOrder.ParentID != nil {
 			return ErrPaymentInvalid
 		}
 		if lockedOrder.Status != constants.OrderStatusPendingPayment {
-			return ErrOrderStatusInvalid
+			return orderapp.ErrOrderStatusInvalid
 		}
 		if lockedOrder.ExpiresAt != nil && !lockedOrder.ExpiresAt.After(time.Now()) {
-			return ErrOrderStatusInvalid
+			return orderapp.ErrOrderStatusInvalid
 		}
 
 		paymentRepo := s.paymentRepo.WithTx(tx)
@@ -137,11 +142,11 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 
 		if s.walletSvc != nil {
 			if input.UseBalance {
-				if _, err := applyOrderWalletBalance(s.walletSvc, s.orderRepo, tx, &lockedOrder, true); err != nil {
+				if _, err := orderapp.ApplyWalletBalance(s.walletSvc, ordergormstore.UseTransaction(tx), &lockedOrder, true); err != nil {
 					return err
 				}
 			} else if lockedOrder.WalletPaidAmount.Decimal.GreaterThan(decimal.Zero) {
-				if _, err := releaseOrderWalletBalance(s.walletSvc, s.orderRepo, tx, &lockedOrder, constants.WalletTxnTypeOrderRefund, "用户改为在线支付，退回余额"); err != nil {
+				if _, err := orderapp.ReleaseWalletBalance(s.walletSvc, ordergormstore.UseTransaction(tx), &lockedOrder, constants.WalletTxnTypeOrderRefund, "用户改为在线支付，退回余额"); err != nil {
 					return err
 				}
 			}
@@ -222,11 +227,11 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 		if err := paymentRepo.Create(payment); err != nil {
 			return ErrPaymentCreateFailed
 		}
-		if err := s.orderRepo.WithTx(tx).UpdateFields(lockedOrder.ID, map[string]interface{}{
+		if err := ordergormstore.UseTransaction(tx).Orders().UpdateFields(lockedOrder.ID, map[string]interface{}{
 			"online_paid_amount": money.FromDecimal(onlineAmount),
 			"updated_at":         time.Now(),
 		}); err != nil {
-			return ErrOrderUpdateFailed
+			return orderapp.ErrOrderUpdateFailed
 		}
 		lockedOrder.OnlinePaidAmount = money.FromDecimal(onlineAmount)
 		lockedOrder.UpdatedAt = time.Now()
@@ -238,7 +243,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 	}
 
 	if order == nil {
-		return nil, ErrOrderFetchFailed
+		return nil, orderapp.ErrOrderFetchFailed
 	}
 
 	if reusedPending {
@@ -291,15 +296,15 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 			if s.walletSvc == nil {
 				return nil
 			}
-			preloaded, findErr := s.orderRepo.WithTx(tx).GetByIDForUpdate(order.ID)
+			preloaded, findErr := ordergormstore.UseTransaction(tx).Orders().GetByIDForUpdate(order.ID)
 			if findErr != nil {
 				return findErr
 			}
 			if preloaded == nil {
-				return ErrOrderNotFound
+				return orderapp.ErrOrderNotFound
 			}
 			lockedOrder := *preloaded
-			_, refundErr := releaseOrderWalletBalance(s.walletSvc, s.orderRepo, tx, &lockedOrder, constants.WalletTxnTypeOrderRefund, "在线支付创建失败，退回余额")
+			_, refundErr := orderapp.ReleaseWalletBalance(s.walletSvc, ordergormstore.UseTransaction(tx), &lockedOrder, constants.WalletTxnTypeOrderRefund, "在线支付创建失败，退回余额")
 			return refundErr
 		})
 		if rollbackErr != nil {

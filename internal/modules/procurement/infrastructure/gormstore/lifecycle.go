@@ -134,7 +134,7 @@ func (l *Lifecycle) SyncParentStatus(parentID uint, now time.Time) (string, erro
 	if newStatus == "" || newStatus == parent.Status {
 		return parent.Status, nil
 	}
-	if err := l.db.Table(parent.TableName()).Where("id = ?", parent.ID).Updates(map[string]interface{}{
+	if err := l.db.Table(parent.TableName()).Where("id = ? AND deleted_at IS NULL", parent.ID).Updates(map[string]interface{}{
 		"status": newStatus, "updated_at": now,
 	}).Error; err != nil {
 		return "", err

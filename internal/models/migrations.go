@@ -11,6 +11,7 @@ import (
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
@@ -88,13 +89,13 @@ func ensureOrderItemOriginalPriceMigration() error {
 	}
 
 	return DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&OrderItem{}).
+		if err := tx.Model(&orderdomain.OrderItem{}).
 			Where("original_unit_price = 0").
 			Update("original_unit_price", gorm.Expr("unit_price")).
 			Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&OrderItem{}).
+		if err := tx.Model(&orderdomain.OrderItem{}).
 			Where("original_total_price = 0").
 			Update("original_total_price", gorm.Expr("total_price")).
 			Error; err != nil {
@@ -274,7 +275,7 @@ func backfillLegacySKUID(productToSKU map[uint]uint) error {
 				continue
 			}
 
-			if err := tx.Unscoped().Model(&OrderItem{}).
+			if err := tx.Unscoped().Model(&orderdomain.OrderItem{}).
 				Where("product_id = ? AND sku_id = 0", productID).
 				Update("sku_id", skuID).Error; err != nil {
 				return err
@@ -311,7 +312,7 @@ func validateSKUMigrationIntegrity() error {
 			name: "order_items",
 			query: func() (int64, error) {
 				var count int64
-				err := DB.Model(&OrderItem{}).Where("sku_id = 0").Count(&count).Error
+				err := DB.Model(&orderdomain.OrderItem{}).Where("sku_id = 0").Count(&count).Error
 				return count, err
 			},
 		},

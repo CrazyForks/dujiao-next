@@ -4,18 +4,19 @@ import (
 	"testing"
 	"time"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
-func seedResellerOperationsOrder(t *testing.T, db *gorm.DB, profile resellerdomain.Profile, orderNo string, status string, amount string, createdAt time.Time) models.Order {
+func seedResellerOperationsOrder(t *testing.T, db *gorm.DB, profile resellerdomain.Profile, orderNo string, status string, amount string, createdAt time.Time) orderdomain.Order {
 	t.Helper()
-	order := models.Order{
+	order := orderdomain.Order{
 		OrderNo:              orderNo,
 		Status:               status,
 		Currency:             "USD",

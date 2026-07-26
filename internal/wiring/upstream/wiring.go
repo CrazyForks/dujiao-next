@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
-	"github.com/dujiao-next/internal/models"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/provider"
@@ -16,7 +18,7 @@ import (
 	upstreamtransport "github.com/dujiao-next/internal/transport/http/upstream"
 )
 
-// NewHandler connects the legacy application services to the upstream HTTP
+// NewHandler connects application services to the upstream HTTP
 // transport without leaking concrete implementations into transport.
 func NewHandler(c *provider.Container) *upstreamtransport.Handler {
 	return upstreamtransport.New(upstreamtransport.Dependencies{
@@ -60,34 +62,34 @@ func (a productServiceAdapter) GetAdminByID(id string) (*productdomain.Product, 
 }
 
 type orderServiceAdapter struct {
-	orders *service.OrderService
+	orders *orderapp.OrderService
 }
 
-func (a orderServiceAdapter) CreateOrder(input upstreamtransport.CreateOrderInput) (*models.Order, error) {
-	items := make([]service.CreateOrderItem, 0, len(input.Items))
+func (a orderServiceAdapter) CreateOrder(input upstreamtransport.CreateOrderInput) (*orderdomain.Order, error) {
+	items := make([]orderapp.CreateOrderItem, 0, len(input.Items))
 	for _, item := range input.Items {
-		items = append(items, service.CreateOrderItem{
+		items = append(items, orderapp.CreateOrderItem{
 			ProductID: item.ProductID, SKUID: item.SKUID, Quantity: item.Quantity, FulfillmentType: item.FulfillmentType,
 		})
 	}
-	order, err := a.orders.CreateOrder(service.CreateOrderInput{
+	order, err := a.orders.CreateOrder(orderapp.CreateOrderInput{
 		UserID: input.UserID, Items: items, ClientIP: input.ClientIP,
 		ManualFormData: input.ManualFormData, SkipRiskControl: input.SkipRiskControl,
 	})
 	return order, mapOrderError(err)
 }
 
-func (a orderServiceAdapter) GetOrderByUser(orderID, userID uint) (*models.Order, error) {
+func (a orderServiceAdapter) GetOrderByUser(orderID, userID uint) (*orderdomain.Order, error) {
 	order, err := a.orders.GetOrderByUser(orderID, userID)
 	return order, mapOrderError(err)
 }
 
-func (a orderServiceAdapter) CancelOrder(orderID, userID uint) (*models.Order, error) {
+func (a orderServiceAdapter) CancelOrder(orderID, userID uint) (*orderdomain.Order, error) {
 	order, err := a.orders.CancelOrder(orderID, userID)
 	return order, mapOrderError(err)
 }
 
-func (a orderServiceAdapter) BuildLocalRefundRecordsForOrder(order *models.Order) ([]jsonmap.JSON, error) {
+func (a orderServiceAdapter) BuildLocalRefundRecordsForOrder(order *orderdomain.Order) ([]jsonmap.JSON, error) {
 	return a.orders.BuildLocalRefundRecordsForOrder(order)
 }
 
@@ -113,13 +115,13 @@ func mapOrderError(err error) error {
 		sources []error
 		target  error
 	}{
-		{[]error{service.ErrOrderNotFound}, upstreamtransport.ErrOrderNotFound},
-		{[]error{service.ErrOrderCancelNotAllowed}, upstreamtransport.ErrOrderCancelNotAllowed},
+		{[]error{orderapp.ErrOrderNotFound}, upstreamtransport.ErrOrderNotFound},
+		{[]error{orderapp.ErrOrderCancelNotAllowed}, upstreamtransport.ErrOrderCancelNotAllowed},
 		{[]error{walletcontract.ErrInsufficientBalance}, upstreamtransport.ErrWalletInsufficient},
-		{[]error{service.ErrCardSecretInsufficient, service.ErrManualStockInsufficient}, upstreamtransport.ErrStockInsufficient},
-		{[]error{service.ErrProductNotAvailable, service.ErrProductNotFound}, upstreamtransport.ErrProductUnavailable},
-		{[]error{service.ErrProductSKUInvalid, service.ErrProductSKURequired}, upstreamtransport.ErrSKUUnavailable},
-		{[]error{service.ErrInvalidOrderItem}, upstreamtransport.ErrInvalidOrderItem},
+		{[]error{orderapp.ErrCardSecretInsufficient, orderapp.ErrManualStockInsufficient}, upstreamtransport.ErrStockInsufficient},
+		{[]error{orderapp.ErrProductNotAvailable, service.ErrProductNotFound}, upstreamtransport.ErrProductUnavailable},
+		{[]error{orderapp.ErrProductSKUInvalid, orderapp.ErrProductSKURequired}, upstreamtransport.ErrSKUUnavailable},
+		{[]error{orderapp.ErrInvalidOrderItem}, upstreamtransport.ErrInvalidOrderItem},
 		{[]error{service.ErrManualFormRequiredMissing, service.ErrManualFormFieldInvalid, service.ErrManualFormTypeInvalid, service.ErrManualFormOptionInvalid}, upstreamtransport.ErrManualFormInvalid},
 	} {
 		for _, source := range mapping.sources {

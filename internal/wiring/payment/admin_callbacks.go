@@ -3,6 +3,9 @@ package paymentwiring
 import (
 	"time"
 
+	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
@@ -50,10 +53,10 @@ func (a adminChannelLookupAdapter) ListByIDs(ids []uint) ([]models.PaymentChanne
 }
 
 type adminOrderLookupAdapter struct {
-	orders repository.OrderRepository
+	orders ordercontract.Store
 }
 
-func (a adminOrderLookupAdapter) GetByIDs(ids []uint) ([]models.Order, error) {
+func (a adminOrderLookupAdapter) GetByIDs(ids []uint) ([]orderdomain.Order, error) {
 	return a.orders.GetByIDs(ids)
 }
 

@@ -6,7 +6,6 @@ import (
 	adproxyapp "github.com/dujiao-next/internal/modules/adproxy/application"
 	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
-	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	apicredentialapp "github.com/dujiao-next/internal/modules/apicredential/application"
 	apicredentialcontract "github.com/dujiao-next/internal/modules/apicredential/contract"
 	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
@@ -34,6 +33,8 @@ import (
 	dashboardcontract "github.com/dujiao-next/internal/modules/dashboard/contract"
 	downstreamcallbackapp "github.com/dujiao-next/internal/modules/downstreamcallback/application"
 	downstreamcallbackcontract "github.com/dujiao-next/internal/modules/downstreamcallback/contract"
+	fulfillmentapp "github.com/dujiao-next/internal/modules/fulfillment/application"
+	fulfillmentcontract "github.com/dujiao-next/internal/modules/fulfillment/contract"
 	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/infrastructure/gormstore"
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
@@ -50,6 +51,9 @@ import (
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	notificationapp "github.com/dujiao-next/internal/modules/notification/application"
 	notificationgormstore "github.com/dujiao-next/internal/modules/notification/infrastructure/gormstore"
+	orderapp "github.com/dujiao-next/internal/modules/order/application"
+	orderrefund "github.com/dujiao-next/internal/modules/order/application/refund"
+	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
 	orderriskapp "github.com/dujiao-next/internal/modules/orderrisk/application"
 	procurementapp "github.com/dujiao-next/internal/modules/procurement/application"
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/infrastructure/gormstore"
@@ -85,13 +89,13 @@ type Container struct {
 	UserStore              usercontract.Store
 	ExternalIdentityStore  externalidentitycontract.Store
 	EmailVerificationStore emailverificationcontract.Store
-	OrderRepo              repository.OrderRepository
+	OrderStore             ordercontract.Store
 	PaymentRepo            repository.PaymentRepository
 	PaymentChannelRepo     repository.PaymentChannelRepository
 	CardSecretRepo         *cardsecretgormstore.Store
 	CardSecretBatchRepo    *cardsecretgormstore.BatchStore
 	GiftCardRepo           *giftcardgormstore.Store
-	FulfillmentRepo        repository.FulfillmentRepository
+	FulfillmentStore       fulfillmentcontract.Store
 	ProductRepo            *productgormstore.ProductStore
 	ProductSKURepo         *productgormstore.SKUStore
 	CartRepo               *cartgormstore.Store
@@ -99,7 +103,6 @@ type Container struct {
 	CouponUsageRepo        *coupongormstore.UsageStore
 	PromotionRepo          *promotiongormstore.Store
 	WalletRepo             *walletgormstore.Store
-	OrderRefundRecordRepo  repository.OrderRefundRecordRepository
 	CategoryRepo           categorycontract.Repository
 	SettingRepo            settingscontract.Store
 	UserLoginLogRepo       auditlogcontract.UserLoginRepository
@@ -145,9 +148,9 @@ type Container struct {
 	SitemapService                 *sitemapapp.Service
 	CartService                    *cartapp.Service
 	WalletService                  *walletapp.Service
-	OrderRefundService             *service.OrderRefundService
-	OrderService                   *service.OrderService
-	FulfillmentService             *service.FulfillmentService
+	OrderRefundService             *orderrefund.Service
+	OrderService                   *orderapp.OrderService
+	FulfillmentService             *fulfillmentapp.Service
 	CouponAdminService             *couponapp.AdminService
 	PromotionAdminService          *promotionapp.AdminService
 	PaymentService                 *service.PaymentService
@@ -160,9 +163,8 @@ type Container struct {
 	DashboardService               *dashboardapp.Service
 	NotificationService            *notificationapp.Service
 	AffiliateService               *affiliateapp.Service
-	AffiliateRefundHandler         *affiliategormstore.RefundHandler
 	ResellerDomainResolver         *reseller.DomainResolver
-	ResellerPricingResolver        *service.ResellerPricingResolver
+	ResellerPricingResolver        *orderapp.ResellerPricingResolver
 	ResellerManagementService      *reseller.ManagementService
 	ResellerSiteConfigService      *reseller.SiteConfigService
 	ResellerProductSettingService  *reseller.ProductSettingService

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
@@ -11,7 +13,6 @@ import (
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/shopspring/decimal"
 )
@@ -151,7 +152,7 @@ func buildOrderListItem(row resellercontract.OrderSnapshotRow) resellercontract.
 	}
 }
 
-func neutralProfitStatus(snapshot resellerdomain.OrderSnapshot, order models.Order, ledgerEntries []resellerdomain.LedgerEntry) string {
+func neutralProfitStatus(snapshot resellerdomain.OrderSnapshot, order orderdomain.Order, ledgerEntries []resellerdomain.LedgerEntry) string {
 	if !snapshot.ProfitEligible || snapshot.ProfitAmount.Decimal.LessThanOrEqual(decimal.Zero) {
 		return resellercontract.ProfitStatusUnavailable
 	}
@@ -178,7 +179,7 @@ func neutralProfitStatus(snapshot resellerdomain.OrderSnapshot, order models.Ord
 	return resellercontract.ProfitStatusPending
 }
 
-func maskBuyerLabel(order models.Order, buyerEmail string) string {
+func maskBuyerLabel(order orderdomain.Order, buyerEmail string) string {
 	if order.UserID > 0 {
 		if label := maskBuyerEmail(buyerEmail); label != "" {
 			return label
