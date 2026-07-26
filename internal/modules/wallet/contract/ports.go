@@ -4,6 +4,7 @@ import (
 	"time"
 
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 // Repository owns all wallet aggregate persistence. Transactional callers
@@ -49,14 +50,14 @@ type UseCase interface {
 	StatsUserRechargeOrders(userID uint, rechargeNo string) (map[string]int64, error)
 	GetRechargeOrderByRechargeNo(userID uint, rechargeNo string) (*walletdomain.RechargeOrder, error)
 	GetRechargeOrderByPaymentIDAndUser(paymentID, userID uint) (*walletdomain.RechargeOrder, error)
-	GetBalancesByUserIDs(userIDs []uint) (map[uint]Balance, error)
+	GetBalancesByUserIDs(userIDs []uint) (map[uint]money.Amount, error)
 
 	Recharge(input RechargeInput) (*walletdomain.Account, *walletdomain.Transaction, error)
 	AdminAdjustBalance(input AdjustBalanceInput) (*walletdomain.Account, *walletdomain.Transaction, error)
 	CreditInTransaction(tx Transaction, input CreditInput) (*walletdomain.Account, *walletdomain.Transaction, error)
 	ApplyRechargePayment(tx Transaction, recharge *walletdomain.RechargeOrder) (*walletdomain.Transaction, error)
-	ApplyOrderBalance(tx Transaction, input OrderBalanceInput) (Balance, error)
-	ReleaseOrderBalance(tx Transaction, input OrderReleaseInput, claim ReleaseClaim) (Balance, error)
+	ApplyOrderBalance(tx Transaction, input OrderBalanceInput) (money.Amount, error)
+	ReleaseOrderBalance(tx Transaction, input OrderReleaseInput, claim ReleaseClaim) (money.Amount, error)
 }
 
 // ReleaseClaim atomically clears the order-side wallet allocation before the

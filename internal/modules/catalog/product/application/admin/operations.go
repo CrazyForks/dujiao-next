@@ -3,6 +3,7 @@ package productadmin
 import (
 	"strconv"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 )
 
@@ -13,7 +14,7 @@ func (s *AdminService) Delete(id string) error {
 		return err
 	}
 	if product == nil {
-		return s.errors.NotFound
+		return productcontract.ErrNotFound
 	}
 
 	// 事务前校验，避免 SQLite 在读后写场景中发生自锁。
@@ -22,14 +23,14 @@ func (s *AdminService) Delete(id string) error {
 		return err
 	}
 	if available > 0 {
-		return s.errors.ProductHasStock
+		return productcontract.ErrProductHasStock
 	}
 	reserved, err := s.cardSecrets.CountReserved(product.ID, 0)
 	if err != nil {
 		return err
 	}
 	if reserved > 0 {
-		return s.errors.ProductHasStock
+		return productcontract.ErrProductHasStock
 	}
 
 	orderCount, err := s.orders.CountOrderItemsByProduct(product.ID)
@@ -37,7 +38,7 @@ func (s *AdminService) Delete(id string) error {
 		return err
 	}
 	if orderCount > 0 {
-		return s.errors.ProductHasOrderRecord
+		return productcontract.ErrProductHasOrderRecord
 	}
 
 	return s.transactions.WithinTransaction(func(repositories DeleteRepositories) error {
@@ -70,18 +71,18 @@ func (s *AdminService) QuickUpdate(id string, fields map[string]interface{}) (*p
 		return nil, err
 	}
 	if product == nil {
-		return nil, s.errors.NotFound
+		return nil, productcontract.ErrNotFound
 	}
 	if isActivatingProduct(fields) {
 		categoryID := product.CategoryID
 		if rawCategoryID, ok := fields["category_id"]; ok {
-			parsedCategoryID, parseErr := categoryIDFromValue(rawCategoryID, s.errors.ProductCategoryInvalid)
+			parsedCategoryID, parseErr := categoryIDFromValue(rawCategoryID, productcontract.ErrProductCategoryInvalid)
 			if parseErr != nil {
 				return nil, parseErr
 			}
 			categoryID = parsedCategoryID
 		}
-		if err := validateActivationCategory(s.categories, categoryID, s.errors.ProductCategoryInvalid); err != nil {
+		if err := validateActivationCategory(s.categories, categoryID, productcontract.ErrProductCategoryInvalid); err != nil {
 			return nil, err
 		}
 	}
@@ -98,7 +99,7 @@ func (s *AdminService) UpdateWholesalePrices(id string, inputs []productdomain.W
 		return nil, err
 	}
 	if product == nil {
-		return nil, s.errors.NotFound
+		return nil, productcontract.ErrNotFound
 	}
 
 	wholesalePrices, err := productdomain.NormalizeWholesalePricesForSKUs(inputs, product.SKUs)

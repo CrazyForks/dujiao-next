@@ -13,10 +13,6 @@ import (
 	"github.com/dujiao-next/internal/shared/money"
 )
 
-type NotificationCenterSetting = settingsmessaging.NotificationCenterSetting
-type DashboardSetting = settingsstorefront.DashboardSetting
-type DashboardAlertSetting = settingsstorefront.DashboardAlertSetting
-
 type SettingsReader interface {
 	GetNotificationCenterSetting() (settingsmessaging.NotificationCenterSetting, error)
 	GetDashboardSetting() (settingsstorefront.DashboardSetting, error)

@@ -6,11 +6,11 @@ import (
 
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/modules/notification/application/format"
-	"github.com/dujiao-next/internal/modules/notification/contract"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	"github.com/dujiao-next/internal/queue"
 )
 
-func (s *Service) dispatchExceptionAlertCheck(ctx context.Context, setting contract.NotificationCenterSetting, payload queue.NotificationDispatchPayload) error {
+func (s *Service) dispatchExceptionAlertCheck(ctx context.Context, setting settingsmessaging.NotificationCenterSetting, payload queue.NotificationDispatchPayload) error {
 	if s.dashboardSvc == nil || s.settingService == nil {
 		return nil
 	}

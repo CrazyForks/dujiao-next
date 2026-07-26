@@ -36,7 +36,7 @@ type ProductWriter interface {
 
 // ProductAdminCommands 是商品管理与删除用例。
 type ProductAdminCommands interface {
-	UpdateWholesalePrices(id string, prices []productwrite.WholesalePriceInput) (*productdomain.Product, error)
+	UpdateWholesalePrices(id string, prices []productdomain.WholesalePriceInput) (*productdomain.Product, error)
 	QuickUpdate(id string, fields map[string]interface{}) (*productdomain.Product, error)
 	Delete(id string) error
 }
@@ -233,13 +233,13 @@ type CreateProductRequest struct {
 
 // toWholesalePriceInputs 透传「是否提供」语义：请求未携带 wholesale_prices 时返回 nil
 // （Update 保留原配置），携带（含空数组）时返回非 nil 指针以整体覆盖。
-func toWholesalePriceInputs(items *[]WholesalePriceRequest) *[]productwrite.WholesalePriceInput {
+func toWholesalePriceInputs(items *[]WholesalePriceRequest) *[]productdomain.WholesalePriceInput {
 	if items == nil {
 		return nil
 	}
-	result := make([]productwrite.WholesalePriceInput, 0, len(*items))
+	result := make([]productdomain.WholesalePriceInput, 0, len(*items))
 	for _, item := range *items {
-		result = append(result, productwrite.WholesalePriceInput{
+		result = append(result, productdomain.WholesalePriceInput{
 			SKUID:       item.SKUID,
 			SKUCode:     strings.TrimSpace(item.SKUCode),
 			MinQuantity: item.MinQuantity,

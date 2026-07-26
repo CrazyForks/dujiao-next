@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/modules/notification/contract"
+	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 )
 
-func thresholdValueByAlertType(setting contract.DashboardAlertSetting, alertType string) int64 {
+func thresholdValueByAlertType(setting settingsstorefront.DashboardAlertSetting, alertType string) int64 {
 	switch alertType {
 	case constants.NotificationAlertTypeOutOfStockProducts:
 		return setting.OutOfStockProductsThreshold

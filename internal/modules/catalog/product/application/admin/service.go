@@ -1,10 +1,6 @@
 package productadmin
 
-import (
-	"errors"
-
-	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-)
+import productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 // ProductRepository 是商品管理用例所需的最小商品端口。
 type ProductRepository interface {
@@ -73,21 +69,12 @@ type UnitOfWork interface {
 	WithinTransaction(fn func(DeleteRepositories) error) error
 }
 
-// ErrorSet 保留旧服务层公开错误的 errors.Is 身份。
-type ErrorSet struct {
-	NotFound               error
-	ProductCategoryInvalid error
-	ProductHasStock        error
-	ProductHasOrderRecord  error
-}
-
 type Options struct {
 	Products     ProductRepository
 	Categories   CategoryRepository
 	CardSecrets  CardSecretStockRepository
 	Orders       OrderHistoryRepository
 	Transactions UnitOfWork
-	Errors       ErrorSet
 }
 
 // AdminService 承载商品删除、快速更新和批发价管理用例。
@@ -97,7 +84,6 @@ type AdminService struct {
 	cardSecrets  CardSecretStockRepository
 	orders       OrderHistoryRepository
 	transactions UnitOfWork
-	errors       ErrorSet
 }
 
 func NewAdminService(options Options) *AdminService {
@@ -107,22 +93,5 @@ func NewAdminService(options Options) *AdminService {
 		cardSecrets:  options.CardSecrets,
 		orders:       options.Orders,
 		transactions: options.Transactions,
-		errors:       resolveErrorSet(options.Errors),
 	}
-}
-
-func resolveErrorSet(values ErrorSet) ErrorSet {
-	return ErrorSet{
-		NotFound:               errorOrDefault(values.NotFound, "not found"),
-		ProductCategoryInvalid: errorOrDefault(values.ProductCategoryInvalid, "product category invalid"),
-		ProductHasStock:        errorOrDefault(values.ProductHasStock, "product has stock"),
-		ProductHasOrderRecord:  errorOrDefault(values.ProductHasOrderRecord, "product has order record"),
-	}
-}
-
-func errorOrDefault(value error, message string) error {
-	if value != nil {
-		return value
-	}
-	return errors.New(message)
 }

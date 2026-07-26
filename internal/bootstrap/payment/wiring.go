@@ -17,7 +17,7 @@ type Handlers struct {
 	Callback     *paymentcallbacktransport.Handler
 }
 
-// New assembles payment transports without exposing legacy adapters to router.
+// New assembles payment transports from application services and HTTP handlers.
 func New(c *container.Container) Handlers {
 	guestOrders := guestOrderLookupAdapter{orders: c.OrderService}
 	userOrders := userOrderLookupAdapter{orders: c.OrderService}

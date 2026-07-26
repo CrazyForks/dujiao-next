@@ -56,8 +56,6 @@ type GatewayCallbackResult struct {
 	Payload     jsonmap.JSON
 }
 
-type GatewayWebhookResult = GatewayCallbackResult
-
 // GatewayProvider 是所有支付网关适配器必须实现的最小能力。
 type GatewayProvider interface {
 	Type() string
@@ -72,7 +70,7 @@ type GatewayCapturer interface {
 
 type GatewayWebhooker interface {
 	GatewayProvider
-	ParseWebhook(ctx context.Context, cfg jsonmap.JSON, headers map[string]string, body []byte, now time.Time) (*GatewayWebhookResult, error)
+	ParseWebhook(ctx context.Context, cfg jsonmap.JSON, headers map[string]string, body []byte, now time.Time) (*GatewayCallbackResult, error)
 }
 
 type GatewayCallbackVerifier interface {

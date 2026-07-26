@@ -14,11 +14,6 @@ import (
 	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
 )
 
-var (
-	ErrNotFound                 = productcontract.ErrNotFound
-	ErrResellerProductNotListed = productcontract.ErrResellerProductNotListed
-)
-
 // ProductRepository 是读取应用服务所需的最小商品持久化端口。
 type ProductRepository interface {
 	List(filter productcontract.ListFilter) ([]productdomain.Product, int64, error)
@@ -42,43 +37,26 @@ type StockCounter interface {
 	CountStockByProductIDs(productIDs []uint) ([]cardsecretcontract.SKUStockCount, error)
 }
 
-// TenantContext 商品读取用例关心的租户上下文；值对象归属 modules/reseller。
-type TenantContext = reseller.TenantContext
-
-// Options 描述 Product 读取应用服务的端口和兼容错误。
+// Options 描述 Product 读取应用服务的端口和领域错误。
 type Options struct {
-	Products                      ProductRepository
-	Categories                    CategoryRepository
-	Stock                         StockCounter
-	NotFoundError                 error
-	ResellerProductNotListedError error
+	Products   ProductRepository
+	Categories CategoryRepository
+	Stock      StockCounter
 }
 
 // Service 编排商品查询、租户可见性和库存聚合。
 type Service struct {
-	products                      ProductRepository
-	categories                    CategoryRepository
-	stock                         StockCounter
-	notFoundError                 error
-	resellerProductNotListedError error
+	products   ProductRepository
+	categories CategoryRepository
+	stock      StockCounter
 }
 
 // NewService 创建 Product 读取应用服务。
 func NewService(options Options) *Service {
-	notFoundError := options.NotFoundError
-	if notFoundError == nil {
-		notFoundError = ErrNotFound
-	}
-	resellerProductNotListedError := options.ResellerProductNotListedError
-	if resellerProductNotListedError == nil {
-		resellerProductNotListedError = ErrResellerProductNotListed
-	}
 	return &Service{
-		products:                      options.Products,
-		categories:                    options.Categories,
-		stock:                         options.Stock,
-		notFoundError:                 notFoundError,
-		resellerProductNotListedError: resellerProductNotListedError,
+		products:   options.Products,
+		categories: options.Categories,
+		stock:      options.Stock,
 	}
 }
 
@@ -102,12 +80,12 @@ func (s *Service) ListPublic(categoryID, search string, page, pageSize int) ([]p
 }
 
 // ListPublicForTenant 获取当前租户上下文的公开商品列表。
-func (s *Service) ListPublicForTenant(tenant TenantContext, resellerRepo HiddenProductRepository, categoryID, search string, page, pageSize int) ([]productdomain.Product, int64, error) {
+func (s *Service) ListPublicForTenant(tenant reseller.TenantContext, resellerRepo HiddenProductRepository, categoryID, search string, page, pageSize int) ([]productdomain.Product, int64, error) {
 	if !tenant.IsReseller() {
 		return s.ListPublic(categoryID, search, page, pageSize)
 	}
 	if tenant.ResellerID == nil || resellerRepo == nil {
-		return nil, 0, s.resellerProductNotListedError
+		return nil, 0, productcontract.ErrResellerProductNotListed
 	}
 	categoryIDs, err := expandPublicCategoryIDs(s.categories, categoryID)
 	if err != nil {
@@ -162,13 +140,13 @@ func (s *Service) GetPublicBySlug(slug string) (*productdomain.Product, error) {
 		return nil, err
 	}
 	if item == nil {
-		return nil, s.notFoundError
+		return nil, productcontract.ErrNotFound
 	}
 	return item, nil
 }
 
 // GetPublicBySlugForTenant 获取当前租户上下文的公开商品详情。
-func (s *Service) GetPublicBySlugForTenant(tenant TenantContext, resellerRepo HiddenProductRepository, slug string) (*productdomain.Product, error) {
+func (s *Service) GetPublicBySlugForTenant(tenant reseller.TenantContext, resellerRepo HiddenProductRepository, slug string) (*productdomain.Product, error) {
 	item, err := s.GetPublicBySlug(slug)
 	if err != nil {
 		return nil, err
@@ -177,7 +155,7 @@ func (s *Service) GetPublicBySlugForTenant(tenant TenantContext, resellerRepo Hi
 		return item, nil
 	}
 	if tenant.ResellerID == nil || resellerRepo == nil {
-		return nil, s.notFoundError
+		return nil, productcontract.ErrNotFound
 	}
 	hiddenIDs, err := resellerRepo.ListHiddenProductIDs(*tenant.ResellerID)
 	if err != nil {
@@ -185,7 +163,7 @@ func (s *Service) GetPublicBySlugForTenant(tenant TenantContext, resellerRepo Hi
 	}
 	for _, id := range hiddenIDs {
 		if id == item.ID {
-			return nil, s.notFoundError
+			return nil, productcontract.ErrNotFound
 		}
 	}
 	return item, nil
@@ -215,7 +193,7 @@ func (s *Service) GetAdminByID(id string) (*productdomain.Product, error) {
 		return nil, err
 	}
 	if item == nil {
-		return nil, s.notFoundError
+		return nil, productcontract.ErrNotFound
 	}
 	return item, nil
 }

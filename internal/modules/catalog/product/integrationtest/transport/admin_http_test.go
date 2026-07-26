@@ -18,7 +18,6 @@ import (
 
 	mappingdomain "github.com/dujiao-next/internal/modules/catalog/mapping/domain"
 
-	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -152,11 +151,9 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 
 	facade := &productHandlerFacade{
 		Service: productapplication.NewService(productapplication.Options{
-			Products:                      productStore,
-			Categories:                    categoryStore,
-			Stock:                         cardSecretStore,
-			NotFoundError:                 productcontract.ErrNotFound,
-			ResellerProductNotListedError: productcontract.ErrResellerProductNotListed,
+			Products:   productStore,
+			Categories: categoryStore,
+			Stock:      cardSecretStore,
 		}),
 		AdminService: productadmin.NewAdminService(productadmin.Options{
 			Products:    productStore,
@@ -172,12 +169,6 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 				carts:             cartStore,
 				productMappings:   mappingStore,
 			},
-			Errors: productadmin.ErrorSet{
-				NotFound:               productcontract.ErrNotFound,
-				ProductCategoryInvalid: productcontract.ErrProductCategoryInvalid,
-				ProductHasStock:        productcontract.ErrProductHasStock,
-				ProductHasOrderRecord:  productcontract.ErrProductHasOrderRecord,
-			},
 		}),
 		WriteService: productwrite.NewWriteService(productwrite.Options{
 			Products:        productStore,
@@ -188,19 +179,6 @@ func setupAdminProductHandlerTest(t *testing.T) (*producthttp.AdminProductHandle
 				products:    productStore,
 				skus:        skuStore,
 				cardSecrets: cardSecretStore,
-			},
-			Errors: productwrite.ErrorSet{
-				NotFound:                     productcontract.ErrNotFound,
-				SlugExists:                   productcontract.ErrSlugExists,
-				ProductCategoryInvalid:       productcontract.ErrProductCategoryInvalid,
-				ProductPurchaseInvalid:       productcontract.ErrProductPurchaseInvalid,
-				FulfillmentInvalid:           productcontract.ErrFulfillmentInvalid,
-				ProductPriceInvalid:          productcontract.ErrProductPriceInvalid,
-				ManualStockInvalid:           productcontract.ErrManualStockInvalid,
-				ProductPurchaseLimitInvalid:  productcontract.ErrProductPurchaseLimitInvalid,
-				ProductStockDisplayInvalid:   productcontract.ErrProductStockDisplayInvalid,
-				ProductSKUInvalid:            productcontract.ErrProductSKUInvalid,
-				ProductSKUHasCardSecretStock: productcontract.ErrProductSKUHasCardSecretStock,
 			},
 		}),
 	}

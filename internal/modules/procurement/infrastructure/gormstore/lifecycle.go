@@ -20,7 +20,7 @@ import (
 
 // Lifecycle owns the procurement-side persistence operations that span
 // fulfillments and parent/child order status. It deliberately uses private
-// records instead of the legacy repository package.
+// records through the procurement-owned store.
 type Lifecycle struct {
 	db                 *gorm.DB
 	queue              StatusEmailQueue

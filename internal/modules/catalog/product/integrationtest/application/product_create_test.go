@@ -132,7 +132,7 @@ func TestProductServiceCreateRollsBackProductAndSKUWhenWholesaleValidationFails(
 		PriceAmount:     decimal.NewFromInt(10),
 		PurchaseType:    constants.ProductPurchaseMember,
 		FulfillmentType: constants.FulfillmentTypeAuto,
-		WholesalePrices: &[]productwrite.WholesalePriceInput{{
+		WholesalePrices: &[]productdomain.WholesalePriceInput{{
 			MinQuantity: 0,
 			UnitPrice:   decimal.NewFromInt(8),
 		}},

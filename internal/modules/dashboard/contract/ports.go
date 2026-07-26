@@ -22,7 +22,7 @@ type Repository interface {
 	GetTotalUserBalance() (float64, error)
 }
 
-// SettingReader keeps the dashboard core independent from the legacy setting service.
+// SettingReader keeps the dashboard core independent from settings persistence.
 type SettingReader interface {
 	GetDashboardSetting() (settingsstorefront.DashboardSetting, error)
 }

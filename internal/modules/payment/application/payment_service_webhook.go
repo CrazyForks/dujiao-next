@@ -264,7 +264,7 @@ func (s *PaymentService) handleWebhookByCandidateIteration(
 func (s *PaymentService) tryParseWebhookWithChannel(
 	channel *paymentdomain.PaymentChannel,
 	input WebhookCallbackInput,
-) (*paymentcontract.GatewayWebhookResult, error) {
+) (*paymentcontract.GatewayCallbackResult, error) {
 	if s.paymentProviderRegistry == nil {
 		return nil, ErrPaymentProviderNotSupported
 	}
@@ -291,7 +291,7 @@ func (s *PaymentService) tryParseWebhookWithChannel(
 // 反查 payment 并落库。任何错误都是真实的业务/DB 错误,不再 retry 其他 channel。
 func (s *PaymentService) commitVerifiedWebhook(
 	channel *paymentdomain.PaymentChannel,
-	result *paymentcontract.GatewayWebhookResult,
+	result *paymentcontract.GatewayCallbackResult,
 	log *zap.SugaredLogger,
 ) (*paymentdomain.Payment, string, error) {
 	log.Infow("payment_webhook_parsed",
@@ -387,7 +387,7 @@ func supportsBlindWebhookCandidateMatching(channelType string) bool {
 
 // findWebhookPayment 通过 webhook result 反查 payment。
 // 优先用 OrderNo（= GatewayOrderNo，商户单号），次选 ProviderRef（网关流水号）。
-func (s *PaymentService) findWebhookPayment(channelID uint, result *paymentcontract.GatewayWebhookResult) (*paymentdomain.Payment, error) {
+func (s *PaymentService) findWebhookPayment(channelID uint, result *paymentcontract.GatewayCallbackResult) (*paymentdomain.Payment, error) {
 	if result == nil {
 		return nil, ErrPaymentNotFound
 	}

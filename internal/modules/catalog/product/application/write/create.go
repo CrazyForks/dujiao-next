@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/dujiao-next/internal/constants"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -15,7 +16,7 @@ import (
 
 // Create 创建商品
 func (s *WriteService) Create(input CreateProductInput) (*productdomain.Product, error) {
-	if err := productdomain.ValidateCategoryAssignment(s.categories, input.CategoryID, 0, s.errors.ProductCategoryInvalid); err != nil {
+	if err := productdomain.ValidateCategoryAssignment(s.categories, input.CategoryID, 0, productcontract.ErrProductCategoryInvalid); err != nil {
 		return nil, err
 	}
 
@@ -24,7 +25,7 @@ func (s *WriteService) Create(input CreateProductInput) (*productdomain.Product,
 		return nil, err
 	}
 	if count > 0 {
-		return nil, s.errors.SlugExists
+		return nil, productcontract.ErrSlugExists
 	}
 
 	isActive := true
@@ -37,16 +38,16 @@ func (s *WriteService) Create(input CreateProductInput) (*productdomain.Product,
 	}
 	purchaseType := productdomain.NormalizePurchaseType(input.PurchaseType)
 	if purchaseType == "" {
-		return nil, s.errors.ProductPurchaseInvalid
+		return nil, productcontract.ErrProductPurchaseInvalid
 	}
 	fulfillmentType := productdomain.NormalizeFulfillmentType(input.FulfillmentType)
 	if fulfillmentType == "" {
-		return nil, s.errors.FulfillmentInvalid
+		return nil, productcontract.ErrFulfillmentInvalid
 	}
 
 	priceAmount := input.PriceAmount.Round(2)
 	if len(input.SKUs) == 0 && priceAmount.LessThanOrEqual(decimal.Zero) {
-		return nil, s.errors.ProductPriceInvalid
+		return nil, productcontract.ErrProductPriceInvalid
 	}
 
 	manualStockTotal := 0
@@ -54,7 +55,7 @@ func (s *WriteService) Create(input CreateProductInput) (*productdomain.Product,
 		manualStockTotal = *input.ManualStockTotal
 	}
 	if manualStockTotal < constants.ManualStockUnlimited {
-		return nil, s.errors.ManualStockInvalid
+		return nil, productcontract.ErrManualStockInvalid
 	}
 	maxPurchaseQuantity := 0
 	if input.MaxPurchaseQuantity != nil {
@@ -65,15 +66,15 @@ func (s *WriteService) Create(input CreateProductInput) (*productdomain.Product,
 		minPurchaseQuantity = productdomain.NormalizePurchaseQuantityLimit(*input.MinPurchaseQuantity)
 	}
 	if minPurchaseQuantity > 0 && maxPurchaseQuantity > 0 && minPurchaseQuantity > maxPurchaseQuantity {
-		return nil, s.errors.ProductPurchaseLimitInvalid
+		return nil, productcontract.ErrProductPurchaseLimitInvalid
 	}
 	stockDisplayMode := productdomain.NormalizeStockDisplayMode(input.StockDisplayMode)
 	if stockDisplayMode == "" {
-		return nil, s.errors.ProductStockDisplayInvalid
+		return nil, productcontract.ErrProductStockDisplayInvalid
 	}
 
 	costPriceAmount := input.CostPriceAmount.Round(2)
-	var wholesaleInputs []WholesalePriceInput
+	var wholesaleInputs []productdomain.WholesalePriceInput
 	if input.WholesalePrices != nil {
 		wholesaleInputs = *input.WholesalePrices
 	}
@@ -81,7 +82,7 @@ func (s *WriteService) Create(input CreateProductInput) (*productdomain.Product,
 	var normalizedSKUs []normalizedProductSKU
 	if len(input.SKUs) > 0 {
 		if s.skus == nil {
-			return nil, s.errors.ProductSKUInvalid
+			return nil, productcontract.ErrProductSKUInvalid
 		}
 		var normalizeErr error
 		normalizedSKUs, priceAmount, manualStockTotal, normalizeErr = s.normalizeProductSKUInputs(input.SKUs, fulfillmentType, nil)

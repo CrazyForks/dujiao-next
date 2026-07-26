@@ -6,6 +6,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/constants"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -39,7 +40,7 @@ func (s *WriteService) syncSingleProductSKU(skuRepo SKURepository, productID uin
 	}
 	targetIndex := pickSingleModeTargetSKUIndex(skus)
 	if targetIndex < 0 || targetIndex >= len(skus) {
-		return s.errors.ProductSKUInvalid
+		return productcontract.ErrProductSKUInvalid
 	}
 
 	target := skus[targetIndex]
@@ -105,7 +106,7 @@ type normalizedProductSKU struct {
 
 func (s *WriteService) normalizeProductSKUInputs(inputs []ProductSKUInput, fulfillmentType string, existingSKUMap map[uint]productdomain.ProductSKU) ([]normalizedProductSKU, decimal.Decimal, int, error) {
 	if len(inputs) == 0 {
-		return nil, decimal.Zero, 0, s.errors.ProductSKUInvalid
+		return nil, decimal.Zero, 0, productcontract.ErrProductSKUInvalid
 	}
 	seenCode := make(map[string]struct{}, len(inputs))
 	normalized := make([]normalizedProductSKU, 0, len(inputs))
@@ -117,26 +118,26 @@ func (s *WriteService) normalizeProductSKUInputs(inputs []ProductSKUInput, fulfi
 	for _, input := range inputs {
 		skuCode := strings.TrimSpace(input.SKUCode)
 		if skuCode == "" {
-			return nil, decimal.Zero, 0, s.errors.ProductSKUInvalid
+			return nil, decimal.Zero, 0, productcontract.ErrProductSKUInvalid
 		}
 		codeKey := strings.ToLower(skuCode)
 		if _, exists := seenCode[codeKey]; exists {
-			return nil, decimal.Zero, 0, s.errors.ProductSKUInvalid
+			return nil, decimal.Zero, 0, productcontract.ErrProductSKUInvalid
 		}
 		seenCode[codeKey] = struct{}{}
 
 		priceAmount := input.PriceAmount.Round(2)
 		if priceAmount.LessThanOrEqual(decimal.Zero) {
-			return nil, decimal.Zero, 0, s.errors.ProductPriceInvalid
+			return nil, decimal.Zero, 0, productcontract.ErrProductPriceInvalid
 		}
 		costPriceAmount := input.CostPriceAmount.Round(2)
 		if costPriceAmount.LessThan(decimal.Zero) {
-			return nil, decimal.Zero, 0, s.errors.ProductPriceInvalid
+			return nil, decimal.Zero, 0, productcontract.ErrProductPriceInvalid
 		}
 
 		manualTotal := input.ManualStockTotal
 		if manualTotal < constants.ManualStockUnlimited {
-			return nil, decimal.Zero, 0, s.errors.ManualStockInvalid
+			return nil, decimal.Zero, 0, productcontract.ErrManualStockInvalid
 		}
 		if fulfillmentType != constants.FulfillmentTypeManual {
 			manualTotal = 0
@@ -144,7 +145,7 @@ func (s *WriteService) normalizeProductSKUInputs(inputs []ProductSKUInput, fulfi
 		if existingSKUMap != nil && input.ID > 0 {
 			_, ok := existingSKUMap[input.ID]
 			if !ok {
-				return nil, decimal.Zero, 0, s.errors.ProductSKUInvalid
+				return nil, decimal.Zero, 0, productcontract.ErrProductSKUInvalid
 			}
 		}
 
@@ -184,7 +185,7 @@ func (s *WriteService) normalizeProductSKUInputs(inputs []ProductSKUInput, fulfi
 	}
 
 	if !hasActive {
-		return nil, decimal.Zero, 0, s.errors.ProductSKUInvalid
+		return nil, decimal.Zero, 0, productcontract.ErrProductSKUInvalid
 	}
 	if fulfillmentType != constants.FulfillmentTypeManual {
 		manualStockTotal = 0
@@ -219,7 +220,7 @@ func (s *WriteService) applyProductSKUsWithStockGuard(
 	rows []normalizedProductSKU,
 ) error {
 	if skuRepo == nil || productID == 0 || len(rows) == 0 {
-		return s.errors.ProductSKUInvalid
+		return productcontract.ErrProductSKUInvalid
 	}
 	existingRows, err := skuRepo.ListByProduct(productID, false)
 	if err != nil {
@@ -240,7 +241,7 @@ func (s *WriteService) applyProductSKUsWithStockGuard(
 		if row.ID > 0 {
 			existing, ok := existingByID[row.ID]
 			if !ok {
-				return s.errors.ProductSKUInvalid
+				return productcontract.ErrProductSKUInvalid
 			}
 			existing.SKUCode = row.SKUCode
 			existing.SpecValuesJSON = row.SpecValuesJSON
@@ -324,7 +325,7 @@ func (s *WriteService) ensureAutoSKUCardSecretStockSafe(
 		if row.ID > 0 {
 			existing, ok := existingByID[row.ID]
 			if !ok {
-				return s.errors.ProductSKUInvalid
+				return productcontract.ErrProductSKUInvalid
 			}
 			nextActive[existing.ID] = row.IsActive
 			kept[existing.ID] = struct{}{}
@@ -354,7 +355,7 @@ func (s *WriteService) ensureAutoSKUCardSecretStockSafe(
 		}
 		outstanding := total - used
 		if available > 0 || outstanding > 0 {
-			return s.errors.ProductSKUHasCardSecretStock
+			return productcontract.ErrProductSKUHasCardSecretStock
 		}
 	}
 	return nil

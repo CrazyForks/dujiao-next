@@ -10,6 +10,7 @@ import (
 	"github.com/dujiao-next/internal/modules/cart/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
+	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 )
 
 // Service 购物车服务。
@@ -17,12 +18,12 @@ type Service struct {
 	cartRepo       contract.Repository
 	productRepo    contract.ProductReader
 	productSKURepo contract.SKUReader
-	promotionRepo  contract.PromotionRepository
+	promotionRepo  promotioncontract.Repository
 	currencyReader contract.CurrencyReader
 }
 
 // NewService 创建购物车服务。
-func NewService(cartRepo contract.Repository, productRepo contract.ProductReader, productSKURepo contract.SKUReader, promotionRepo contract.PromotionRepository, currencyReader contract.CurrencyReader) *Service {
+func NewService(cartRepo contract.Repository, productRepo contract.ProductReader, productSKURepo contract.SKUReader, promotionRepo promotioncontract.Repository, currencyReader contract.CurrencyReader) *Service {
 	return &Service{
 		cartRepo:       cartRepo,
 		productRepo:    productRepo,

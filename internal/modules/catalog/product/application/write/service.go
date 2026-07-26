@@ -1,8 +1,6 @@
 package productwrite
 
 import (
-	"errors"
-
 	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -55,21 +53,6 @@ type UnitOfWork interface {
 	WithinTransaction(fn func(repositories TransactionRepositories) error) error
 }
 
-// ErrorSet 保留旧 Service 错误哨兵身份，保证 errors.Is 与 HTTP 映射兼容。
-type ErrorSet struct {
-	NotFound                     error
-	SlugExists                   error
-	ProductCategoryInvalid       error
-	ProductPurchaseInvalid       error
-	FulfillmentInvalid           error
-	ProductPriceInvalid          error
-	ManualStockInvalid           error
-	ProductPurchaseLimitInvalid  error
-	ProductStockDisplayInvalid   error
-	ProductSKUInvalid            error
-	ProductSKUHasCardSecretStock error
-}
-
 // Options 描述商品写入应用服务依赖。
 type Options struct {
 	Products        ProductRepository
@@ -77,7 +60,6 @@ type Options struct {
 	Categories      CategoryRepository
 	PaymentChannels PaymentChannelStoresitory
 	Transactions    UnitOfWork
-	Errors          ErrorSet
 }
 
 // WriteService 编排商品创建、更新和 SKU 同步。
@@ -87,7 +69,6 @@ type WriteService struct {
 	categories      CategoryRepository
 	paymentChannels PaymentChannelStoresitory
 	transactions    UnitOfWork
-	errors          ErrorSet
 }
 
 // NewWriteService 创建商品写入应用服务。
@@ -98,7 +79,6 @@ func NewWriteService(options Options) *WriteService {
 		categories:      options.Categories,
 		paymentChannels: options.PaymentChannels,
 		transactions:    options.Transactions,
-		errors:          resolveErrorSet(options.Errors),
 	}
 }
 
@@ -115,7 +95,7 @@ type CreateProductInput struct {
 	PriceAmount          decimal.Decimal
 	CostPriceAmount      decimal.Decimal
 	// WholesalePrices 为可选字段：nil 表示更新时保留，非 nil 表示整体覆盖。
-	WholesalePrices     *[]WholesalePriceInput
+	WholesalePrices     *[]productdomain.WholesalePriceInput
 	Images              []string
 	Tags                []string
 	PurchaseType        string
@@ -131,8 +111,6 @@ type CreateProductInput struct {
 	SortOrder           int
 }
 
-type WholesalePriceInput = productdomain.WholesalePriceInput
-
 // ProductSKUInput 描述商品 SKU 的完整写入值。
 type ProductSKUInput struct {
 	ID               uint
@@ -143,32 +121,6 @@ type ProductSKUInput struct {
 	ManualStockTotal int
 	IsActive         *bool
 	SortOrder        int
-}
-
-func resolveErrorSet(values ErrorSet) ErrorSet {
-	return ErrorSet{
-		NotFound:                    errorOrDefault(values.NotFound, "not found"),
-		SlugExists:                  errorOrDefault(values.SlugExists, "slug exists"),
-		ProductCategoryInvalid:      errorOrDefault(values.ProductCategoryInvalid, "product category invalid"),
-		ProductPurchaseInvalid:      errorOrDefault(values.ProductPurchaseInvalid, "product purchase invalid"),
-		FulfillmentInvalid:          errorOrDefault(values.FulfillmentInvalid, "fulfillment invalid"),
-		ProductPriceInvalid:         errorOrDefault(values.ProductPriceInvalid, "product price invalid"),
-		ManualStockInvalid:          errorOrDefault(values.ManualStockInvalid, "manual stock invalid"),
-		ProductPurchaseLimitInvalid: errorOrDefault(values.ProductPurchaseLimitInvalid, "product purchase limit invalid"),
-		ProductStockDisplayInvalid:  errorOrDefault(values.ProductStockDisplayInvalid, "product stock display invalid"),
-		ProductSKUInvalid:           errorOrDefault(values.ProductSKUInvalid, "product sku invalid"),
-		ProductSKUHasCardSecretStock: errorOrDefault(
-			values.ProductSKUHasCardSecretStock,
-			"product sku has card secret stock",
-		),
-	}
-}
-
-func errorOrDefault(value error, message string) error {
-	if value != nil {
-		return value
-	}
-	return errors.New(message)
 }
 
 func (s *WriteService) filterAvailablePaymentChannelIDs(ids []uint) ([]uint, error) {

@@ -3,7 +3,6 @@ package contract
 import (
 	"github.com/dujiao-next/internal/modules/cart/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
-	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 )
 
 // StoredItem 是购物车持久化端口返回的条目及其商品快照。
@@ -35,6 +34,3 @@ type SKUReader interface {
 type CurrencyReader interface {
 	GetSiteCurrency(defaultCurrency string) (string, error)
 }
-
-// PromotionRepository 是购物车价格计算所需的活动价端口。
-type PromotionRepository = promotioncontract.Repository

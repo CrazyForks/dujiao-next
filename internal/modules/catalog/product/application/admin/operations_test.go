@@ -6,24 +6,21 @@ import (
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/shopspring/decimal"
 )
 
 func TestAdminServiceDeleteStopsBeforeTransactionWhenStockExists(t *testing.T) {
-	hasStock := errors.New("product has stock")
 	transactions := &unitOfWorkStub{}
 	service := NewAdminService(Options{
 		Products:     &productRepositoryStub{product: &productdomain.Product{ID: 7}},
 		CardSecrets:  stockRepositoryStub{available: 1},
 		Orders:       orderRepositoryStub{},
 		Transactions: transactions,
-		Errors: ErrorSet{
-			ProductHasStock: hasStock,
-		},
 	})
 
-	if err := service.Delete("7"); !errors.Is(err, hasStock) {
+	if err := service.Delete("7"); !errors.Is(err, productcontract.ErrProductHasStock) {
 		t.Fatalf("expected product stock error, got %v", err)
 	}
 	if transactions.called {
@@ -64,14 +61,10 @@ func TestAdminServiceDeleteUsesAllCascadePorts(t *testing.T) {
 }
 
 func TestAdminServiceQuickUpdateValidatesActivationCategory(t *testing.T) {
-	invalidCategory := errors.New("invalid product category")
 	products := &productRepositoryStub{product: &productdomain.Product{ID: 11, CategoryID: 3}}
 	service := NewAdminService(Options{
 		Products:   products,
 		Categories: categoryRepositoryStub{categories: map[string]*categorydomain.Category{"5": {ID: 5, IsActive: true}}},
-		Errors: ErrorSet{
-			ProductCategoryInvalid: invalidCategory,
-		},
 	})
 
 	updated, err := service.QuickUpdate("11", map[string]interface{}{
@@ -89,7 +82,7 @@ func TestAdminServiceQuickUpdateValidatesActivationCategory(t *testing.T) {
 		"category_id": 5.5,
 		"is_active":   true,
 	})
-	if !errors.Is(err, invalidCategory) {
+	if !errors.Is(err, productcontract.ErrProductCategoryInvalid) {
 		t.Fatalf("expected invalid category error, got %v", err)
 	}
 	if products.quickUpdates != 1 {

@@ -158,7 +158,7 @@ func (a *paypalAdapter) QueryPayment(ctx context.Context, raw jsonmap.JSON, prov
 }
 
 // ParseWebhook 合并 paypal 的 VerifyWebhookSignature + ParseWebhookEvent 两步（stripe 是一步）。
-func (a *paypalAdapter) ParseWebhook(ctx context.Context, raw jsonmap.JSON, headers map[string]string, body []byte, _ time.Time) (*paymentcontract.GatewayWebhookResult, error) {
+func (a *paypalAdapter) ParseWebhook(ctx context.Context, raw jsonmap.JSON, headers map[string]string, body []byte, _ time.Time) (*paymentcontract.GatewayCallbackResult, error) {
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
@@ -195,7 +195,7 @@ func (a *paypalAdapter) ParseWebhook(ctx context.Context, raw jsonmap.JSON, head
 		}
 	}
 
-	return &paymentcontract.GatewayWebhookResult{
+	return &paymentcontract.GatewayCallbackResult{
 		OrderNo:     parsed.RelatedInvoiceID(),
 		ProviderRef: parsed.RelatedOrderID(),
 		Status:      status,

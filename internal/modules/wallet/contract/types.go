@@ -6,8 +6,6 @@ import (
 	"github.com/dujiao-next/internal/shared/money"
 )
 
-type Balance = money.Amount
-
 type AccountListFilter struct {
 	Page     int
 	PageSize int

@@ -6,14 +6,15 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
-	"github.com/dujiao-next/internal/modules/notification/contract"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 	"github.com/dujiao-next/internal/queue"
 )
 
 // BuildPaymentOrderAlertDispatchPayloads 构建支付订单告警通知载荷。
 func BuildPaymentOrderAlertDispatchPayloads(
-	setting contract.NotificationCenterSetting,
-	dashboardSetting contract.DashboardSetting,
+	setting settingsmessaging.NotificationCenterSetting,
+	dashboardSetting settingsstorefront.DashboardSetting,
 	payload queue.NotificationDispatchPayload,
 	counts dashboard.PaymentOrderAlertCountsRow,
 ) []queue.NotificationDispatchPayload {
@@ -41,7 +42,7 @@ func BuildPaymentOrderAlertDispatchPayloads(
 
 // buildPaymentOrderAlertDispatchPayload 构建单个支付订单告警通知载荷
 func buildPaymentOrderAlertDispatchPayload(
-	setting contract.NotificationCenterSetting,
+	setting settingsmessaging.NotificationCenterSetting,
 	payload queue.NotificationDispatchPayload,
 	alertType string,
 	value int64,

@@ -9,13 +9,14 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	dashboard "github.com/dujiao-next/internal/modules/dashboard/contract"
-	"github.com/dujiao-next/internal/modules/notification/contract"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 	"github.com/dujiao-next/internal/queue"
 )
 
 func BuildInventoryAlertDispatchPayloads(
-	setting contract.NotificationCenterSetting,
-	dashboardSetting contract.DashboardSetting,
+	setting settingsmessaging.NotificationCenterSetting,
+	dashboardSetting settingsstorefront.DashboardSetting,
 	payload queue.NotificationDispatchPayload,
 	rows []dashboard.InventoryAlertRow,
 ) []queue.NotificationDispatchPayload {

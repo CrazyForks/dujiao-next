@@ -192,11 +192,9 @@ func (adapter memberLevelPriceDeleteAdapter) DeleteByProduct(productID uint) err
 // New 显式装配 Product 查询、管理和写入用例。
 func New(dependencies Dependencies) Services {
 	read := productapplication.NewService(productapplication.Options{
-		Products:                      dependencies.Products,
-		Categories:                    dependencies.Categories,
-		Stock:                         dependencies.CardSecrets,
-		NotFoundError:                 productcontract.ErrNotFound,
-		ResellerProductNotListedError: productcontract.ErrResellerProductNotListed,
+		Products:   dependencies.Products,
+		Categories: dependencies.Categories,
+		Stock:      dependencies.CardSecrets,
 	})
 	admin := productadmin.NewAdminService(productadmin.Options{
 		Products:     dependencies.Products,
@@ -204,12 +202,6 @@ func New(dependencies Dependencies) Services {
 		CardSecrets:  dependencies.CardSecrets,
 		Orders:       dependencies.Orders,
 		Transactions: newProductAdminUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.CardSecrets, dependencies.CardSecretBatches, dependencies.MemberLevelPrices, dependencies.Carts, dependencies.ProductMappings),
-		Errors: productadmin.ErrorSet{
-			NotFound:               productcontract.ErrNotFound,
-			ProductCategoryInvalid: productcontract.ErrProductCategoryInvalid,
-			ProductHasStock:        productcontract.ErrProductHasStock,
-			ProductHasOrderRecord:  productcontract.ErrProductHasOrderRecord,
-		},
 	})
 	write := productwrite.NewWriteService(productwrite.Options{
 		Products:        dependencies.Products,
@@ -217,19 +209,6 @@ func New(dependencies Dependencies) Services {
 		Categories:      dependencies.Categories,
 		PaymentChannels: dependencies.PaymentChannels,
 		Transactions:    newProductWriteUnitOfWork(dependencies.Products, dependencies.SKUs, dependencies.CardSecrets),
-		Errors: productwrite.ErrorSet{
-			NotFound:                     productcontract.ErrNotFound,
-			SlugExists:                   productcontract.ErrSlugExists,
-			ProductCategoryInvalid:       productcontract.ErrProductCategoryInvalid,
-			ProductPurchaseInvalid:       productcontract.ErrProductPurchaseInvalid,
-			FulfillmentInvalid:           productcontract.ErrFulfillmentInvalid,
-			ProductPriceInvalid:          productcontract.ErrProductPriceInvalid,
-			ManualStockInvalid:           productcontract.ErrManualStockInvalid,
-			ProductPurchaseLimitInvalid:  productcontract.ErrProductPurchaseLimitInvalid,
-			ProductStockDisplayInvalid:   productcontract.ErrProductStockDisplayInvalid,
-			ProductSKUInvalid:            productcontract.ErrProductSKUInvalid,
-			ProductSKUHasCardSecretStock: productcontract.ErrProductSKUHasCardSecretStock,
-		},
 	})
 	return Services{Read: read, Admin: admin, Write: write}
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/modules/notification/application/format"
 	"github.com/dujiao-next/internal/modules/notification/contract"
+	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/outboundctx"
@@ -97,7 +98,7 @@ func (s *Service) SendTest(ctx context.Context, input contract.TestSendInput) er
 	}
 }
 
-func (s *Service) dispatchSingleEvent(ctx context.Context, setting contract.NotificationCenterSetting, payload queue.NotificationDispatchPayload) error {
+func (s *Service) dispatchSingleEvent(ctx context.Context, setting settingsmessaging.NotificationCenterSetting, payload queue.NotificationDispatchPayload) error {
 	if !payload.Force {
 		ok, err := acquireNotificationDedupe(ctx, setting.DedupeTTLSeconds, payload)
 		if err != nil {

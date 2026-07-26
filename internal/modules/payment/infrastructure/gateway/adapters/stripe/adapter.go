@@ -162,7 +162,7 @@ func (a *stripeAdapter) QueryPayment(ctx context.Context, raw jsonmap.JSON, prov
 }
 
 // ParseWebhook 验签并解析 webhook(实现 paymentcontract.GatewayWebhooker)。
-func (a *stripeAdapter) ParseWebhook(_ context.Context, raw jsonmap.JSON, headers map[string]string, body []byte, now time.Time) (*paymentcontract.GatewayWebhookResult, error) {
+func (a *stripeAdapter) ParseWebhook(_ context.Context, raw jsonmap.JSON, headers map[string]string, body []byte, now time.Time) (*paymentcontract.GatewayCallbackResult, error) {
 	cfg, err := a.parseConfig(raw)
 	if err != nil {
 		return nil, err
@@ -182,7 +182,7 @@ func (a *stripeAdapter) ParseWebhook(_ context.Context, raw jsonmap.JSON, header
 		}
 	}
 
-	return &paymentcontract.GatewayWebhookResult{
+	return &paymentcontract.GatewayCallbackResult{
 		OrderNo:     result.OrderNo,
 		ProviderRef: gatewaycommon.PickFirstNonEmpty(result.ProviderRef, result.SessionID, result.PaymentIntentID),
 		Status:      result.Status,

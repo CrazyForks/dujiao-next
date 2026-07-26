@@ -177,7 +177,7 @@ func (a *wechatpayAdapter) QueryPayment(ctx context.Context, raw jsonmap.JSON, p
 }
 
 // ParseWebhook 验签并解析 webhook(实现 paymentcontract.GatewayWebhooker)。
-func (a *wechatpayAdapter) ParseWebhook(ctx context.Context, raw jsonmap.JSON, headers map[string]string, body []byte, _ time.Time) (*paymentcontract.GatewayWebhookResult, error) {
+func (a *wechatpayAdapter) ParseWebhook(ctx context.Context, raw jsonmap.JSON, headers map[string]string, body []byte, _ time.Time) (*paymentcontract.GatewayCallbackResult, error) {
 	cfg, err := a.parseConfig(raw, "")
 	if err != nil {
 		return nil, err
@@ -197,7 +197,7 @@ func (a *wechatpayAdapter) ParseWebhook(ctx context.Context, raw jsonmap.JSON, h
 		}
 	}
 
-	return &paymentcontract.GatewayWebhookResult{
+	return &paymentcontract.GatewayCallbackResult{
 		OrderNo:     result.OrderNo,
 		ProviderRef: result.TransactionID,
 		Status:      result.Status,

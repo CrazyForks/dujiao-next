@@ -170,7 +170,7 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 	}
 	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "query.go"), []string{
 		"ProductRepository", "CategoryRepository", "HiddenProductRepository", "StockCounter",
-		"TenantContext", "Options", "Service",
+		"Options", "Service",
 	})
 	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "query.go"), []string{
 		"NewService", "ListPublic", "ListPublicForTenant", "ListForUpstreamSync", "ListPublicExact",
@@ -183,7 +183,7 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 		"ProductRepository", "CategoryRepository", "CardSecretStockRepository", "OrderHistoryRepository",
 		"ProductDeleteRepository", "CardSecretDeleteRepository", "CardSecretBatchDeleteRepository",
 		"SKUDeleteRepository", "MemberLevelPriceDeleteRepository", "CartDeleteRepository",
-		"ProductMappingDeleteRepository", "DeleteRepositories", "UnitOfWork", "ErrorSet", "Options", "AdminService",
+		"ProductMappingDeleteRepository", "DeleteRepositories", "UnitOfWork", "Options", "AdminService",
 	})
 	assertFileDeclaresFunctions(t, filepath.Join(adminRoot, "service.go"), []string{"NewAdminService"})
 	assertFileDeclaresFunctions(t, filepath.Join(adminRoot, "operations.go"), []string{
@@ -198,8 +198,8 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 	})
 	assertFileDeclaresTypes(t, filepath.Join(writeRoot, "service.go"), []string{
 		"ProductRepository", "SKURepository", "CategoryRepository", "PaymentChannelStoresitory",
-		"CardSecretStockRepository", "TransactionRepositories", "UnitOfWork", "ErrorSet", "Options",
-		"WriteService", "CreateProductInput", "WholesalePriceInput", "ProductSKUInput",
+		"CardSecretStockRepository", "TransactionRepositories", "UnitOfWork", "Options",
+		"WriteService", "CreateProductInput", "ProductSKUInput",
 	})
 	assertFileDeclaresFunctions(t, filepath.Join(writeRoot, "service.go"), []string{"NewWriteService"})
 	assertFileDeclaresFunctions(t, filepath.Join(writeRoot, "create.go"), []string{"Create"})

@@ -13,6 +13,7 @@ import (
 	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 )
 
 type productRepositoryStub struct {
@@ -81,7 +82,7 @@ func TestListPublicForTenantBuildsVisibilityFilterBeforePagination(t *testing.T)
 	resellerID := uint(9)
 
 	_, total, err := service.ListPublicForTenant(
-		TenantContext{ResellerID: &resellerID},
+		resellercontract.TenantContext{ResellerID: &resellerID},
 		hiddenProductRepositoryStub{ids: []uint{7, 8}},
 		"10",
 		"keyword",
@@ -105,21 +106,17 @@ func TestListPublicForTenantBuildsVisibilityFilterBeforePagination(t *testing.T)
 	}
 }
 
-func TestQueryServicePreservesInjectedCompatibilityErrors(t *testing.T) {
-	notFound := errors.New("legacy not found")
-	notListed := errors.New("legacy reseller product not listed")
+func TestQueryServiceUsesProductContractErrors(t *testing.T) {
 	service := NewService(Options{
-		Products:                      &productRepositoryStub{},
-		NotFoundError:                 notFound,
-		ResellerProductNotListedError: notListed,
+		Products: &productRepositoryStub{},
 	})
 
-	if _, err := service.GetPublicBySlug("missing"); !errors.Is(err, notFound) {
-		t.Fatalf("GetPublicBySlug want injected not-found error, got %v", err)
+	if _, err := service.GetPublicBySlug("missing"); !errors.Is(err, productcontract.ErrNotFound) {
+		t.Fatalf("GetPublicBySlug want contract not-found error, got %v", err)
 	}
 	resellerID := uint(9)
-	if _, _, err := service.ListPublicForTenant(TenantContext{ResellerID: &resellerID}, nil, "", "", 1, 20); !errors.Is(err, notListed) {
-		t.Fatalf("ListPublicForTenant want injected not-listed error, got %v", err)
+	if _, _, err := service.ListPublicForTenant(resellercontract.TenantContext{ResellerID: &resellerID}, nil, "", "", 1, 20); !errors.Is(err, productcontract.ErrResellerProductNotListed) {
+		t.Fatalf("ListPublicForTenant want contract not-listed error, got %v", err)
 	}
 }
 

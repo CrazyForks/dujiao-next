@@ -166,7 +166,7 @@ func (a *dujiaoPayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, 
 }
 
 // ParseWebhook 验签并解析 DujiaoPay webhook。
-func (a *dujiaoPayAdapter) ParseWebhook(_ context.Context, raw jsonmap.JSON, headers map[string]string, body []byte, now time.Time) (*paymentcontract.GatewayWebhookResult, error) {
+func (a *dujiaoPayAdapter) ParseWebhook(_ context.Context, raw jsonmap.JSON, headers map[string]string, body []byte, now time.Time) (*paymentcontract.GatewayCallbackResult, error) {
 	cfg, err := dujiaopay.ParseConfig(raw)
 	if err != nil {
 		return nil, mapDujiaoPayError(err)
@@ -184,7 +184,7 @@ func (a *dujiaoPayAdapter) ParseWebhook(_ context.Context, raw jsonmap.JSON, hea
 		payload["tx_hash"] = event.TxHash
 	}
 
-	return &paymentcontract.GatewayWebhookResult{
+	return &paymentcontract.GatewayCallbackResult{
 		OrderNo:     event.MerchantOrderID,
 		ProviderRef: event.OrderID,
 		Status:      event.Status,

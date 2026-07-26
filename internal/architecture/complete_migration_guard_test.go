@@ -1,6 +1,7 @@
 package architecture
 
 import (
+	"go/ast"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -16,7 +17,7 @@ type packageFileBudget struct {
 // Test-only architecture assertions intentionally share one package so they can
 // reuse AST helpers. Production packages have no file-budget exceptions.
 var packageFileBudgetOverrides = map[string]packageFileBudget{
-	"internal/architecture": {production: 0, total: 55},
+	"internal/architecture": {production: 0, total: 51},
 }
 
 // completedMigrationPaths are deleted compatibility-free entry points. Once a
@@ -627,6 +628,41 @@ func TestNoNewCompatibilityOrLegacyProductionFiles(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("inspect production Go files: %v", err)
+	}
+}
+
+func TestProductionCodeContainsNoTypeAliases(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	internalRoot := filepath.Join(repositoryRoot, "internal")
+
+	err := filepath.WalkDir(internalRoot, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || filepath.Ext(path) != ".go" || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+
+		parsed := parseProductionGoFile(t, path)
+		ast.Inspect(parsed, func(node ast.Node) bool {
+			typeSpec, ok := node.(*ast.TypeSpec)
+			if ok && typeSpec.Assign.IsValid() {
+				relativePath, err := filepath.Rel(repositoryRoot, path)
+				if err != nil {
+					t.Fatalf("resolve type alias path: %v", err)
+				}
+				t.Errorf(
+					"production type alias %s is forbidden; depend on its owning package or declare an owned type: %s",
+					typeSpec.Name.Name,
+					filepath.ToSlash(relativePath),
+				)
+			}
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("inspect production Go aliases: %v", err)
 	}
 }
 
