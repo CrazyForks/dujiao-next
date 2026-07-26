@@ -1,6 +1,7 @@
 import i18n from '@/i18n'
 import type { ApiResponse } from './types'
 import { notifyError } from '@/utils/notify'
+import { adminUrl } from '@/utils/adminBase'
 
 export type { ApiResponse }
 
@@ -19,11 +20,10 @@ const createNotifiedError = (message: string): NotifiedError => {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 const API_PREFIX = '/api/v1'
-const ADMIN_PATH = import.meta.env.VITE_ADMIN_PATH || ''
 
 const redirectToLogin = () => {
   localStorage.removeItem('admin_token')
-  window.location.href = `${ADMIN_PATH}/login`
+  window.location.href = adminUrl('/login')
 }
 
 const isLoginEndpoint = (url: string) => /\/admin\/login\b/.test(url)

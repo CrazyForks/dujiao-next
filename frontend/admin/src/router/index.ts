@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAdminAuthStore } from '@/stores/auth'
+import { ADMIN_BASE } from '@/utils/adminBase'
 
 const routes = [
   {
@@ -377,10 +378,10 @@ const routes = [
   },
 ]
 
+// base 由 utils/adminBase 统一解析：fullstack 模式下读后端注入的 <base href>，
+// 否则退回构建期的 import.meta.env.BASE_URL。原生 <a href> 走同一份前缀（adminUrl）。
 const router = createRouter({
-  history: createWebHistory(
-    document.querySelector('base')?.getAttribute('href') ?? import.meta.env.BASE_URL,
-  ),
+  history: createWebHistory(ADMIN_BASE || '/'),
   routes,
 })
 

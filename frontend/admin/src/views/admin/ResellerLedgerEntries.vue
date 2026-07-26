@@ -27,6 +27,7 @@ import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefr
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { formatDate, toRFC3339 } from '@/utils/format'
 import ComplianceGuardWrapper from '@/components/ComplianceGuardWrapper.vue'
+import { adminUrl } from '@/utils/adminBase'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -39,7 +40,6 @@ const pagination = ref({
   total: 0,
   total_page: 1,
 })
-const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
 
 const filters = reactive({
   keyword: '',
@@ -62,8 +62,8 @@ const initFiltersFromQuery = () => {
 
 const normalizeFilterValue = (value: string) => (value === '__all__' ? '' : value)
 const pageSizeOptions = [10, 20, 50, 100]
-const userDetailLink = (userId: number) => `${adminPath}/users/${userId}`
-const orderLink = (orderNo: string) => `${adminPath}/orders?order_no=${encodeURIComponent(orderNo)}`
+const userDetailLink = (userId: number) => adminUrl(`/users/${userId}`)
+const orderLink = (orderNo: string) => adminUrl(`/orders?order_no=${encodeURIComponent(orderNo)}`)
 
 const fetchRows = async (page = 1, options: ListFetchOptions = {}) => {
   if (!options.preserveRows) loading.value = true

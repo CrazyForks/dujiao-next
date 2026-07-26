@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { confirmAction } from '@/utils/confirm'
 import { notifyError, notifySuccess } from '@/utils/notify'
+import { adminUrl } from '@/utils/adminBase'
 
 const { t } = useI18n()
 const loading = ref(true)
@@ -30,8 +31,7 @@ const jumpPage = ref('')
 
 const filterStatus = ref('__all__')
 const searchQuery = ref('')
-const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
-const userDetailLink = (userId: number) => `${adminPath}/users/${userId}`
+const userDetailLink = (userId: number) => adminUrl(`/users/${userId}`)
 
 const statusOptions = [
   { value: '__all__', key: 'apiCredentials.filters.allStatus' },

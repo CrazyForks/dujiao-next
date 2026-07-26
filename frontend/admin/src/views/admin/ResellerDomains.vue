@@ -26,6 +26,7 @@ import { confirmAction } from '@/utils/confirm'
 import { notifyError, notifySuccess } from '@/utils/notify'
 import { formatDate, toRFC3339 } from '@/utils/format'
 import { getResellerDomainActionState } from '@/utils/resellerManagement'
+import { adminUrl } from '@/utils/adminBase'
 
 const { t } = useI18n()
 const loading = ref(true)
@@ -51,10 +52,9 @@ const filters = reactive({
   createdTo: '',
 })
 
-const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
 const pageSizeOptions = [10, 20, 50, 100]
 const normalizeFilterValue = (value: string) => (value === '__all__' ? '' : value)
-const userDetailLink = (userId: number) => `${adminPath}/users/${userId}`
+const userDetailLink = (userId: number) => adminUrl(`/users/${userId}`)
 const resolveResellerUserID = (item: AdminResellerDomain) => Number(item.profile?.user_id || item.profile?.user?.id || 0)
 
 const fetchRows = async (page = 1, options: ListFetchOptions = {}) => {

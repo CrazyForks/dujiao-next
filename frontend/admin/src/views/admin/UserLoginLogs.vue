@@ -13,12 +13,12 @@ import TableSkeleton from '@/components/TableSkeleton.vue'
 import ListPagination from '@/components/ListPagination.vue'
 import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefresh'
 import { formatDate, toRFC3339 } from '@/utils/format'
+import { adminUrl } from '@/utils/adminBase'
 
 const { t } = useI18n()
 const loading = ref(true)
 const { refreshing, refreshList } = useListRefresh()
 const logs = ref<AdminUserLoginLog[]>([])
-const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
 const pagination = ref({
   page: 1,
   page_size: 20,
@@ -95,7 +95,7 @@ const changePageSize = (size: number) => {
   fetchLogs(1)
 }
 
-const userDetailLink = (userId: number) => `${adminPath}/users/${userId}`
+const userDetailLink = (userId: number) => adminUrl(`/users/${userId}`)
 
 const statusLabel = (status: string) => t(`admin.userLoginLogs.status.${status || 'failed'}`)
 

@@ -10,6 +10,7 @@ import { Dialog, DialogScrollContent, DialogHeader, DialogTitle } from '@/compon
 import { copyText } from '@/utils/clipboard'
 import { formatDate, getLocalizedText } from '@/utils/format'
 import { formatSkuDisplayLabel } from '@/utils/sku'
+import { adminUrl } from '@/utils/adminBase'
 
 const props = defineProps<{
   modelValue: boolean
@@ -24,7 +25,6 @@ const { t, locale } = useI18n()
 
 const entrySkuLabel = (entry: Record<string, unknown>) =>
   formatSkuDisplayLabel(entry?.sku_snapshot, locale.value)
-const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
 
 const detailLoading = ref(false)
 const detailError = ref('')
@@ -38,7 +38,7 @@ const resetDetail = () => {
 
 const resolveOrderDetailLink = (refund: AdminOrderRefund | null) => {
   if (!refund || !refund.order_id) return ''
-  return `${adminPath}/orders?order_id=${refund.order_id}`
+  return adminUrl(`/orders?order_id=${refund.order_id}`)
 }
 
 const refundTypeLabel = (item: AdminOrderRefund | null) => {

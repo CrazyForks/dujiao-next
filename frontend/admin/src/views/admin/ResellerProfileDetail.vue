@@ -29,11 +29,11 @@ import { formatDate, formatMoney, getLocalizedText } from '@/utils/format'
 import { getImageUrl } from '@/utils/image'
 import { notifyError, notifySuccess } from '@/utils/notify'
 import { getResellerProfileStatusKey } from '@/utils/resellerManagement'
+import { adminUrl } from '@/utils/adminBase'
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
-const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
 
 const loading = ref(true)
 const saving = ref(false)
@@ -210,11 +210,11 @@ const verificationLabel = (status?: string) => {
   return status || '-'
 }
 
-const userDetailLink = computed(() => (profile.value?.user_id ? `${adminPath}/users/${profile.value.user_id}` : ''))
-const siteConfigLink = computed(() => `${adminPath}/resellers/site-configs?reseller_id=${profileId.value}`)
-const productSettingsLink = computed(() => `${adminPath}/resellers/product-settings?reseller_id=${profileId.value}`)
-const ledgerLink = computed(() => `${adminPath}/resellers/ledger-entries?reseller_id=${profileId.value}`)
-const withdrawLink = computed(() => `${adminPath}/resellers/withdraws?reseller_id=${profileId.value}`)
+const userDetailLink = computed(() => (profile.value?.user_id ? adminUrl(`/users/${profile.value.user_id}`) : ''))
+const siteConfigLink = computed(() => adminUrl(`/resellers/site-configs?reseller_id=${profileId.value}`))
+const productSettingsLink = computed(() => adminUrl(`/resellers/product-settings?reseller_id=${profileId.value}`))
+const ledgerLink = computed(() => adminUrl(`/resellers/ledger-entries?reseller_id=${profileId.value}`))
+const withdrawLink = computed(() => adminUrl(`/resellers/withdraws?reseller_id=${profileId.value}`))
 
 onMounted(fetchDetail)
 </script>

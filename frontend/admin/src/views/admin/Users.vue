@@ -27,7 +27,6 @@ const loading = ref(true)
 const { refreshing, refreshList } = useListRefresh()
 const users = ref<AdminUser[]>([])
 const selectedIds = ref<number[]>([])
-const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
 const pagination = ref({
   page: 1,
   page_size: 20,
@@ -167,7 +166,8 @@ const resetFilters = () => {
   fetchUsers(1)
 }
 
-const userDetailLink = (userId: number) => `${adminPath}/users/${userId}`
+// router-link 的 :to 走 vue-router，base 前缀由 router 自己带上，这里不能再拼
+const userDetailLink = (userId: number) => `/users/${userId}`
 
 const allSelected = computed(() => {
   if (users.value.length === 0) return false

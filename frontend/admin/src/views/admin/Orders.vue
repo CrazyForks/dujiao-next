@@ -23,6 +23,7 @@ import { formatDate, formatMoney, getLocalizedText, toRFC3339 } from '@/utils/fo
 import { formatSkuDisplayLabel } from '@/utils/sku'
 import OrderDetailDialog from './components/OrderDetailDialog.vue'
 import OrderFulfillmentModal from './components/OrderFulfillmentModal.vue'
+import { adminUrl } from '@/utils/adminBase'
 
 const loading = ref(true)
 const { refreshing, refreshList } = useListRefresh()
@@ -57,8 +58,7 @@ const fulfillmentParentId = ref<number | null>(null)
 const maxRefundDays = ref(30)
 const route = useRoute()
 const { t, locale } = useI18n()
-const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
-const userDetailLink = (userId: number) => `${adminPath}/users/${userId}`
+const userDetailLink = (userId: number) => adminUrl(`/users/${userId}`)
 
 const itemSkuLabel = (item: AdminOrderItem & Record<string, unknown>) =>
   formatSkuDisplayLabel((item as any)?.sku_snapshot, locale.value)

@@ -11,9 +11,9 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { getLocalizedText } from '@/utils/format'
 import CardSecretBatchCreateModal from './components/CardSecretBatchCreateModal.vue'
+import { adminUrl } from '@/utils/adminBase'
 
 const { t } = useI18n()
-const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
 
 const productKeyword = ref('')
 const productOptions = ref<AdminProduct[]>([])
@@ -220,7 +220,7 @@ const handleImportSuccess = async () => {
   await loadProductInfo()
 }
 
-const productLink = (productId: number) => `${adminPath}/products?product_id=${productId}`
+const productLink = (productId: number) => adminUrl(`/products?product_id=${productId}`)
 
 onMounted(async () => {
   await loadProductOptions()

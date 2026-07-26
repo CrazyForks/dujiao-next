@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { formatDate } from '@/utils/format'
 import { confirmAction } from '@/utils/confirm'
 import { notifyError, notifySuccess } from '@/utils/notify'
+import { adminUrl } from '@/utils/adminBase'
 
 const { t } = useI18n()
 const loading = ref(true)
@@ -38,8 +39,7 @@ const filters = reactive({
 })
 
 const normalizeFilterValue = (value: string) => (value === '__all__' ? '' : value)
-const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
-const userDetailLink = (userId: number) => `${adminPath}/users/${userId}`
+const userDetailLink = (userId: number) => adminUrl(`/users/${userId}`)
 
 const parseNumber = (value: unknown, fallback = 0) => {
   const parsed = Number(value)

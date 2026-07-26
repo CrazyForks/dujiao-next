@@ -27,6 +27,7 @@ import { confirmAction } from '@/utils/confirm'
 import { notifyError, notifySuccess } from '@/utils/notify'
 import { formatDate, toRFC3339 } from '@/utils/format'
 import { getResellerProfileActionState, getResellerProfileStatusKey } from '@/utils/resellerManagement'
+import { adminUrl } from '@/utils/adminBase'
 
 const { t } = useI18n()
 const loading = ref(true)
@@ -54,11 +55,10 @@ const filters = reactive({
   createdTo: '',
 })
 
-const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
 const pageSizeOptions = [10, 20, 50, 100]
 const normalizeFilterValue = (value: string) => (value === '__all__' ? '' : value)
-const userDetailLink = (userId: number) => `${adminPath}/users/${userId}`
-const profileDetailLink = (profileId: number) => `${adminPath}/resellers/profiles/${profileId}`
+const userDetailLink = (userId: number) => adminUrl(`/users/${userId}`)
+const profileDetailLink = (profileId: number) => adminUrl(`/resellers/profiles/${profileId}`)
 
 const approveForm = reactive({
   defaultMarkup: '0.00',

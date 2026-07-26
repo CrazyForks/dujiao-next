@@ -15,6 +15,7 @@ import ListPagination from '@/components/ListPagination.vue'
 import { useListRefresh, type ListFetchOptions } from '@/composables/useListRefresh'
 import { formatDate, getLocalizedText, toRFC3339 } from '@/utils/format'
 import { formatSkuDisplayLabel } from '@/utils/sku'
+import { adminUrl } from '@/utils/adminBase'
 
 const loading = ref(true)
 const { refreshing, refreshList } = useListRefresh()
@@ -25,7 +26,6 @@ const pagination = ref({
   total: 0,
   total_page: 1,
 })
-const adminPath = import.meta.env.VITE_ADMIN_PATH || ''
 const route = useRoute()
 const { t, locale } = useI18n()
 
@@ -47,9 +47,9 @@ const selectedRefundId = ref<number | null>(null)
 
 const orderLink = (orderId?: number) => {
   if (!orderId) return ''
-  return `${adminPath}/orders?order_id=${orderId}`
+  return adminUrl(`/orders?order_id=${orderId}`)
 }
-const userDetailLink = (userId: number) => `${adminPath}/users/${userId}`
+const userDetailLink = (userId: number) => adminUrl(`/users/${userId}`)
 
 const refundTypeLabel = (item: AdminOrderRefund | null) => {
   if (!item) return '-'
