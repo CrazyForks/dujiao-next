@@ -4,13 +4,18 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
+	"github.com/dujiao-next/internal/i18n"
 	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
+	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
+	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
+	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 )
 
 type mappedChannelError struct {
@@ -79,14 +84,43 @@ var channelPaymentCreateErrorRules = []mappedChannelError{
 }
 
 func respondChannelSuccess(c *gin.Context, data interface{}) {
-	shared.ChannelSuccess(c, data)
+	response.ChannelSuccess(c, data)
 }
 
 func respondChannelError(c *gin.Context, httpCode, code int, errorCode, key string, err error) {
-	shared.ChannelError(c, httpCode, code, errorCode, key, err)
+	locale := i18n.ResolveLocale(c)
+	message := i18n.T(locale, key)
+	if err != nil {
+		ginutil.RequestLog(c).Errorw(
+			"channel_handler_error",
+			"http_code", httpCode,
+			"code", code,
+			"error_code", errorCode,
+			"message", message,
+			"error", err,
+		)
+	}
+	response.ChannelError(c, httpCode, code, message, errorCode)
 }
 
-func respondChannelBindError(c *gin.Context, err error) { shared.ChannelBindError(c, err) }
+func respondChannelBindError(c *gin.Context, err error) {
+	locale := i18n.ResolveLocale(c)
+	var validationErrors validator.ValidationErrors
+	if errors.As(err, &validationErrors) {
+		details := make([]string, 0, len(validationErrors))
+		for _, fieldError := range validationErrors {
+			details = append(details, formatChannelFieldError(locale, fieldError))
+		}
+		message := strings.Join(details, "; ")
+		ginutil.RequestLog(c).Warnw("channel_bind_validation_error", "details", message, "error", err)
+		response.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, message, "validation_error")
+		return
+	}
+
+	message := i18n.T(locale, "error.bad_request")
+	ginutil.RequestLog(c).Warnw("channel_bind_error", "message", message, "error", err)
+	response.ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, message, "validation_error")
+}
 
 func respondChannelMappedError(c *gin.Context, err error, rules []mappedChannelError, fallbackHTTPCode, fallbackCode int, fallbackErrorCode, fallbackKey string) {
 	if seconds := retryAfter(err); seconds > 0 {
@@ -114,11 +148,35 @@ func respondChannelOrderPreviewError(c *gin.Context, err error) {
 }
 
 func respondChannelIdentityServiceError(c *gin.Context, err error) {
-	shared.ChannelIdentityError(c, err)
+	switch {
+	case errors.Is(err, telegramauthapp.ErrTelegramAuthPayloadInvalid):
+		respondChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
+	case errors.Is(err, userauthapp.ErrInvalidEmail):
+		respondChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.email_invalid", nil)
+	case errors.Is(err, userauthapp.ErrNotFound):
+		respondChannelError(c, http.StatusNotFound, response.CodeNotFound, "user_not_found", "error.user_not_found", nil)
+	case errors.Is(err, userauthapp.ErrVerifyCodeInvalid):
+		respondChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "verify_code_invalid", "error.verify_code_invalid", nil)
+	case errors.Is(err, userauthapp.ErrVerifyCodeExpired):
+		respondChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "verify_code_expired", "error.verify_code_expired", nil)
+	case errors.Is(err, userauthapp.ErrVerifyCodeAttemptsExceeded):
+		respondChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "verify_code_invalid", "error.verify_code_attempts_exceeded", nil)
+	case errors.Is(err, userauthapp.ErrUserDisabled):
+		respondChannelError(c, http.StatusUnauthorized, response.CodeUnauthorized, "user_disabled", "error.user_disabled", nil)
+	case errors.Is(err, userauthapp.ErrUserOAuthIdentityExists):
+		respondChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "channel_identity_conflict", "error.telegram_bind_conflict", nil)
+	case errors.Is(err, userauthapp.ErrUserOAuthAlreadyBound):
+		respondChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "channel_identity_conflict", "error.telegram_already_bound", nil)
+	default:
+		respondChannelError(c, http.StatusInternalServerError, response.CodeInternal, "internal_error", "error.internal_error", err)
+	}
 }
 
 func channelUserIDValue(primary, legacy string) string {
-	return shared.ChannelUserIDValue(primary, legacy)
+	if value := strings.TrimSpace(primary); value != "" {
+		return value
+	}
+	return strings.TrimSpace(legacy)
 }
 
 func channelUserIDFromQuery(c *gin.Context) string {
@@ -126,4 +184,28 @@ func channelUserIDFromQuery(c *gin.Context) string {
 		return ""
 	}
 	return channelUserIDValue(c.Query("channel_user_id"), c.Query("telegram_user_id"))
+}
+
+func formatChannelFieldError(locale string, fieldError validator.FieldError) string {
+	field := fieldError.Field()
+	tag := fieldError.Tag()
+	param := fieldError.Param()
+
+	customKey := "validation." + field + "." + tag
+	if message := i18n.T(locale, customKey); message != customKey {
+		return message
+	}
+
+	ruleKey := "validation.rule." + tag
+	if ruleMessage := i18n.T(locale, ruleKey); ruleMessage != ruleKey {
+		if param != "" {
+			return field + ": " + i18n.Sprintf(locale, ruleKey, param)
+		}
+		return field + ": " + ruleMessage
+	}
+
+	if param != "" {
+		return field + ": " + tag + "=" + param
+	}
+	return field + ": " + tag
 }

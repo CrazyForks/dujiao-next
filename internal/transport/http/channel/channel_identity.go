@@ -3,7 +3,8 @@ package channelhttp
 import (
 	"strings"
 
-	"github.com/dujiao-next/internal/http/handlers/shared"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/gin-gonic/gin"
 )
@@ -56,7 +57,7 @@ func (h *Handler) ResolveTelegramIdentity(c *gin.Context) {
 		return
 	}
 
-	respondChannelSuccess(c, shared.BuildChannelIdentityResponse(true, false, user, identity))
+	respondChannelSuccess(c, buildChannelIdentityResponse(true, false, user, identity))
 }
 
 // ProvisionTelegramIdentity POST /api/v1/channel/identities/telegram/provision
@@ -79,7 +80,7 @@ func (h *Handler) ProvisionTelegramIdentity(c *gin.Context) {
 		return
 	}
 
-	respondChannelSuccess(c, shared.BuildChannelIdentityResponse(true, created, user, identity))
+	respondChannelSuccess(c, buildChannelIdentityResponse(true, created, user, identity))
 }
 
 // BindTelegramIdentity POST /api/v1/channel/identities/telegram/bind
@@ -112,7 +113,7 @@ func (h *Handler) BindTelegramIdentity(c *gin.Context) {
 		return
 	}
 
-	resp := shared.BuildChannelIdentityResponse(true, false, user, identity)
+	resp := buildChannelIdentityResponse(true, false, user, identity)
 	resp["bound"] = true
 	if previousUserID != 0 {
 		resp["previous_user_id"] = previousUserID
@@ -142,7 +143,7 @@ func (h *Handler) GetCurrentIdentity(c *gin.Context) {
 		return
 	}
 
-	respondChannelSuccess(c, shared.BuildChannelIdentityResponse(true, false, user, identity))
+	respondChannelSuccess(c, buildChannelIdentityResponse(true, false, user, identity))
 }
 
 func buildTelegramChannelIdentityInput(req telegramIdentityRequest) TelegramIdentityInput {
@@ -178,4 +179,31 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func buildChannelIdentityResponse(bound, created bool, user *userdomain.User, identity *externalidentitydomain.Identity) gin.H {
+	resp := gin.H{"bound": bound}
+	if identity != nil {
+		resp["identity"] = gin.H{
+			"provider":         identity.Provider,
+			"provider_user_id": identity.ProviderUserID,
+			"username":         identity.Username,
+			"avatar_url":       identity.AvatarURL,
+		}
+	}
+	if user != nil {
+		resp["user"] = gin.H{
+			"id":                      user.ID,
+			"email":                   user.Email,
+			"display_name":            user.DisplayName,
+			"status":                  user.Status,
+			"locale":                  user.Locale,
+			"email_verified":          user.EmailVerifiedAt != nil,
+			"password_setup_required": user.PasswordSetupRequired,
+		}
+	}
+	if bound {
+		resp["created"] = created
+	}
+	return resp
 }

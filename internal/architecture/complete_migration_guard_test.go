@@ -14,7 +14,6 @@ import (
 // or moving files is allowed, adding files below these roots is not. The map is
 // removed together with the roots when the migration is complete.
 var legacyRootGoFileBudgets = map[string]int{
-	"internal/http":           17,
 	"internal/provider":       10,
 	"internal/router":         23,
 	"internal/transport/http": 184,
@@ -45,6 +44,7 @@ var transitionalPackageFileBudgets = map[string]packageFileBudget{
 // is an architecture regression rather than an allowed transitional change.
 var completedMigrationPaths = []string{
 	"internal/dto",
+	"internal/http",
 	"internal/integration",
 	"internal/models",
 	"internal/repository",
