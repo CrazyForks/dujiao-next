@@ -8,7 +8,10 @@ import (
 
 func TestAdminAuthHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "adminauth")
+	transportRoot := filepath.Join(
+		repositoryRoot,
+		"internal", "modules", "identity", "adminauth", "transport", "http",
+	)
 
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{
 		"RegisterAdminLoginAuthRoutes",
@@ -52,11 +55,11 @@ func TestAdminAuthHTTPLivesInTransport(t *testing.T) {
 		}
 	}
 	if _, err := os.Stat(filepath.Join(repositoryRoot, "internal", "router", "adminauth_adapter.go")); err == nil {
-		t.Fatal("adminauth composition adapters belong in internal/wiring/adminauth")
+		t.Fatal("adminauth composition adapters belong in internal/bootstrap/adminauth")
 	} else if !os.IsNotExist(err) {
 		t.Fatalf("stat legacy adminauth router adapter: %v", err)
 	}
-	assertDirectoryGoFileBudget(t, filepath.Join(repositoryRoot, "internal", "wiring", "adminauth"), 4)
+	assertDirectoryGoFileBudget(t, filepath.Join(repositoryRoot, "internal", "bootstrap", "adminauth"), 4)
 }
 
 func TestAdminIdentityPersistenceLivesInVerticalModule(t *testing.T) {

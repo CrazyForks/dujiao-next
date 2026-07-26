@@ -2,7 +2,7 @@ package publicconfigwiring
 
 import (
 	"github.com/dujiao-next/internal/provider"
-	publicconfigtransport "github.com/dujiao-next/internal/transport/http/publicconfig"
+	publicconfigtransport "github.com/dujiao-next/internal/modules/settings/transport/http/public"
 )
 
 func NewHandler(c *provider.Container) *publicconfigtransport.Handler {

@@ -2,7 +2,7 @@ package adminuserwiring
 
 import (
 	"github.com/dujiao-next/internal/provider"
-	adminusertransport "github.com/dujiao-next/internal/transport/http/adminuser"
+	adminusertransport "github.com/dujiao-next/internal/modules/identity/user/transport/http/admin"
 )
 
 func NewHandler(c *provider.Container) *adminusertransport.AdminHandler {

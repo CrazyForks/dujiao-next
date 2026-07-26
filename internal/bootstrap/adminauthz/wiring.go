@@ -2,7 +2,7 @@ package adminauthzwiring
 
 import (
 	"github.com/dujiao-next/internal/provider"
-	adminauthztransport "github.com/dujiao-next/internal/transport/http/adminauthz"
+	adminauthztransport "github.com/dujiao-next/internal/modules/identity/adminauthorization/transport/http"
 )
 
 func NewHandler(c *provider.Container) *adminauthztransport.AdminHandler {

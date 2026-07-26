@@ -17,7 +17,7 @@ func TestRouterContainsRoutesAndMiddlewareOnly(t *testing.T) {
 		t.Fatalf("list router adapters: %v", err)
 	}
 	if len(adapters) != 0 {
-		t.Fatalf("composition adapters belong in internal/wiring, not internal/router: %v", adapters)
+		t.Fatalf("composition adapters belong in internal/bootstrap, not internal/router: %v", adapters)
 	}
 
 	entries, err := os.ReadDir(routerRoot)
@@ -37,19 +37,19 @@ func TestRouterContainsRoutesAndMiddlewareOnly(t *testing.T) {
 	}
 }
 
-func TestWiringPackagesStayFocused(t *testing.T) {
+func TestBootstrapPackagesStayFocused(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	wiringRoot := filepath.Join(repositoryRoot, "internal", "wiring")
-	entries, err := os.ReadDir(wiringRoot)
+	bootstrapRoot := filepath.Join(repositoryRoot, "internal", "bootstrap")
+	entries, err := os.ReadDir(bootstrapRoot)
 	if err != nil {
-		t.Fatalf("read wiring directory: %v", err)
+		t.Fatalf("read bootstrap directory: %v", err)
 	}
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 		t.Run(entry.Name(), func(t *testing.T) {
-			assertDirectoryGoFileBudget(t, filepath.Join(wiringRoot, entry.Name()), 4)
+			assertDirectoryGoFileBudget(t, filepath.Join(bootstrapRoot, entry.Name()), 4)
 		})
 	}
 }

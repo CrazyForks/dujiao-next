@@ -22,7 +22,7 @@ import (
 	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/provider"
-	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
+	channeltransport "github.com/dujiao-next/internal/modules/channelapi/transport/http"
 )
 
 // NewHandler connects application services to the channel HTTP

@@ -8,7 +8,10 @@ import (
 
 func TestChannelOrderHandlerIsSplitByResponsibility(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	handlerDirectory := filepath.Join(repositoryRoot, "internal", "transport", "http", "channel")
+	handlerDirectory := filepath.Join(
+		repositoryRoot,
+		"internal", "modules", "channelapi", "transport", "http",
+	)
 	legacyPath := filepath.Join(handlerDirectory, "channel_order.go")
 	if _, err := os.Stat(legacyPath); err == nil {
 		t.Fatalf("channel_order.go must be replaced by responsibility-focused handler files")
@@ -82,7 +85,7 @@ func TestChannelOrderHandlerIsSplitByResponsibility(t *testing.T) {
 			t.Errorf("%s ownership mismatch: want [%s], got %v", typeName, wantFile, gotFiles)
 		}
 	}
-	assertDirectoryGoFileBudget(t, handlerDirectory, 11)
+	assertDirectoryGoFileBudget(t, handlerDirectory, 10)
 	legacyFiles, err := filepath.Glob(filepath.Join(repositoryRoot, "internal", "http", "handlers", "channel", "*.go"))
 	if err != nil {
 		t.Fatalf("list legacy channel handlers: %v", err)
@@ -91,11 +94,11 @@ func TestChannelOrderHandlerIsSplitByResponsibility(t *testing.T) {
 		t.Fatalf("legacy channel handlers must stay removed: %v", legacyFiles)
 	}
 	if _, err := os.Stat(filepath.Join(repositoryRoot, "internal", "router", "channel_adapter.go")); err == nil {
-		t.Fatal("channel composition adapters belong in internal/wiring/channel, not internal/router")
+		t.Fatal("channel composition adapters belong in internal/bootstrap/channelapi, not internal/router")
 	} else if !os.IsNotExist(err) {
 		t.Fatalf("stat legacy channel router adapter: %v", err)
 	}
-	wiringDirectory := filepath.Join(repositoryRoot, "internal", "wiring", "channel")
+	wiringDirectory := filepath.Join(repositoryRoot, "internal", "bootstrap", "channelapi")
 	if _, err := os.Stat(filepath.Join(wiringDirectory, "wiring.go")); err != nil {
 		t.Fatalf("channel wiring missing: %v", err)
 	}

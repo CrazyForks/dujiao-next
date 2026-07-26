@@ -24,7 +24,7 @@ import (
 	"github.com/dujiao-next/internal/modules/identity/userauth/challenge"
 	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
-	userauthtransport "github.com/dujiao-next/internal/transport/http/userauth"
+	userauthtransport "github.com/dujiao-next/internal/modules/identity/userauth/transport/http"
 )
 
 // userProfileTransportAdapter 将用户认证服务适配为用户资料 transport 端口。

@@ -1,4 +1,4 @@
-package channelhttp_test
+package integrationtest
 
 import (
 	"encoding/json"
@@ -23,7 +23,7 @@ import (
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
-	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
+	channeltransport "github.com/dujiao-next/internal/modules/channelapi/transport/http"
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"

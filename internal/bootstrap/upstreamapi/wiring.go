@@ -18,7 +18,7 @@ import (
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/shared/jsonmap"
-	upstreamtransport "github.com/dujiao-next/internal/transport/http/upstream"
+	upstreamtransport "github.com/dujiao-next/internal/modules/upstreamapi/transport/http"
 )
 
 // NewHandler connects application services to the upstream HTTP

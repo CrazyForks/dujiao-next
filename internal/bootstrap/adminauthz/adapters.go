@@ -12,7 +12,7 @@ import (
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
 	"github.com/dujiao-next/internal/shared/passwordpolicy"
-	adminauthztransport "github.com/dujiao-next/internal/transport/http/adminauthz"
+	adminauthztransport "github.com/dujiao-next/internal/modules/identity/adminauthorization/transport/http"
 )
 
 type adminAuthzRolePolicyAdapter struct {

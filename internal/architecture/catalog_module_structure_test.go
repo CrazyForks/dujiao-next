@@ -15,8 +15,8 @@ func TestCatalogStockConsumersUseSharedPolicy(t *testing.T) {
 	consumers := []string{
 		"internal/modules/catalog/product/transport/http/public_view.go",
 		"internal/modules/catalog/product/transport/http/public_stock.go",
-		"internal/transport/http/channel/channel_catalog.go",
-		"internal/transport/http/upstream/upstream_catalog.go",
+		"internal/modules/channelapi/transport/http/channel_catalog.go",
+		"internal/modules/upstreamapi/transport/http/upstream_catalog.go",
 	}
 	forbiddenFunctions := map[string]struct{}{
 		"normalizePublicStockDisplayMode":    {},

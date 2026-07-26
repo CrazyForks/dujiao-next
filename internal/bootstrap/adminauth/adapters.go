@@ -17,7 +17,7 @@ import (
 	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
 	adminchallenge "github.com/dujiao-next/internal/modules/identity/adminauth/challenge"
 	admintotpapp "github.com/dujiao-next/internal/modules/identity/adminauth/totp/application"
-	adminauthtransport "github.com/dujiao-next/internal/transport/http/adminauth"
+	adminauthtransport "github.com/dujiao-next/internal/modules/identity/adminauth/transport/http"
 )
 
 type admin2FATOTPTransportAdapter struct {

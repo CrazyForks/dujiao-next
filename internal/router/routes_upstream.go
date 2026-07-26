@@ -1,8 +1,8 @@
 package router
 
 import (
+	upstreamtransport "github.com/dujiao-next/internal/modules/upstreamapi/transport/http"
 	"github.com/dujiao-next/internal/provider"
-	upstreamtransport "github.com/dujiao-next/internal/transport/http/upstream"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"

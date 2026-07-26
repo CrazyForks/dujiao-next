@@ -124,7 +124,10 @@ func TestSharedTOTPApplicationLivesInIdentityModule(t *testing.T) {
 
 func TestUserProfileHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "userauth")
+	transportRoot := filepath.Join(
+		repositoryRoot,
+		"internal", "modules", "identity", "userauth", "transport", "http",
+	)
 	presenterRoot := filepath.Join(
 		repositoryRoot,
 		"internal", "modules", "identity", "userauth", "transport", "presenter",
@@ -227,12 +230,12 @@ func TestUserProfileHTTPLivesInTransport(t *testing.T) {
 
 	for _, legacy := range []string{"userauth_adapter.go", "giftcard_captcha_adapter.go"} {
 		if _, err := os.Stat(filepath.Join(repositoryRoot, "internal", "router", legacy)); err == nil {
-			t.Fatalf("%s belongs in internal/wiring, not internal/router", legacy)
+			t.Fatalf("%s belongs in internal/bootstrap/userauth, not internal/router", legacy)
 		} else if !os.IsNotExist(err) {
 			t.Fatalf("stat legacy router adapter %s: %v", legacy, err)
 		}
 	}
-	userAuthWiringRoot := filepath.Join(repositoryRoot, "internal", "wiring", "userauth")
+	userAuthWiringRoot := filepath.Join(repositoryRoot, "internal", "bootstrap", "userauth")
 	for _, file := range []string{"wiring.go", "adapters.go"} {
 		if _, err := os.Stat(filepath.Join(userAuthWiringRoot, file)); err != nil {
 			t.Fatalf("userauth wiring file %s missing: %v", file, err)

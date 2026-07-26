@@ -9,7 +9,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	paymenttransport "github.com/dujiao-next/internal/modules/payment/transport/http"
 	paymentcallbacktransport "github.com/dujiao-next/internal/modules/payment/transport/http/callback"
-	upstreamtransport "github.com/dujiao-next/internal/transport/http/upstream"
+	upstreamtransport "github.com/dujiao-next/internal/modules/upstreamapi/transport/http"
 
 	"github.com/gin-gonic/gin"
 )

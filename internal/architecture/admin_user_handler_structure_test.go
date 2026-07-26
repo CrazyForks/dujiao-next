@@ -8,7 +8,10 @@ import (
 
 func TestAdminUserHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "adminuser")
+	transportRoot := filepath.Join(
+		repositoryRoot,
+		"internal", "modules", "identity", "user", "transport", "http", "admin",
+	)
 
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{"RegisterAdminRoutes"})
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "admin_handler.go"), []string{
@@ -27,9 +30,9 @@ func TestAdminUserHTTPLivesInTransport(t *testing.T) {
 		t.Fatalf("stat legacy admin user handler: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(repositoryRoot, "internal", "router", "adminuser_adapter.go")); err == nil {
-		t.Fatal("adminuser composition adapters belong in internal/wiring/adminuser")
+		t.Fatal("adminuser composition adapters belong in internal/bootstrap/adminuser")
 	} else if !os.IsNotExist(err) {
 		t.Fatalf("stat legacy adminuser router adapter: %v", err)
 	}
-	assertDirectoryGoFileBudget(t, filepath.Join(repositoryRoot, "internal", "wiring", "adminuser"), 4)
+	assertDirectoryGoFileBudget(t, filepath.Join(repositoryRoot, "internal", "bootstrap", "adminuser"), 4)
 }

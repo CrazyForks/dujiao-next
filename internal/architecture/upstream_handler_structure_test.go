@@ -10,7 +10,10 @@ import (
 
 func TestUpstreamHandlerImplementationIsSplitByResource(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	handlerDirectory := filepath.Join(repositoryRoot, "internal", "transport", "http", "upstream")
+	handlerDirectory := filepath.Join(
+		repositoryRoot,
+		"internal", "modules", "upstreamapi", "transport", "http",
+	)
 	expected := map[string][]string{
 		"upstream_handler.go": {
 			"New", "getUpstreamUserID", "getUpstreamCredentialID", "successResponse", "errorResponse",
@@ -45,11 +48,11 @@ func TestUpstreamHandlerImplementationIsSplitByResource(t *testing.T) {
 		t.Fatalf("upstream transport routes missing: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(repositoryRoot, "internal", "router", "upstream_adapter.go")); err == nil {
-		t.Fatal("upstream composition adapters belong in internal/wiring/upstream, not internal/router")
+		t.Fatal("upstream composition adapters belong in internal/bootstrap/upstreamapi, not internal/router")
 	} else if !os.IsNotExist(err) {
 		t.Fatalf("stat legacy upstream router adapter: %v", err)
 	}
-	wiringDirectory := filepath.Join(repositoryRoot, "internal", "wiring", "upstream")
+	wiringDirectory := filepath.Join(repositoryRoot, "internal", "bootstrap", "upstreamapi")
 	if _, err := os.Stat(filepath.Join(wiringDirectory, "wiring.go")); err != nil {
 		t.Fatalf("upstream wiring missing: %v", err)
 	}
@@ -58,7 +61,10 @@ func TestUpstreamHandlerImplementationIsSplitByResource(t *testing.T) {
 
 func TestUpstreamHandlerTypesLiveWithTheirResources(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	handlerDirectory := filepath.Join(repositoryRoot, "internal", "transport", "http", "upstream")
+	handlerDirectory := filepath.Join(
+		repositoryRoot,
+		"internal", "modules", "upstreamapi", "transport", "http",
+	)
 	expectedOwner := map[string]string{
 		"Handler":            "upstream_handler.go",
 		"upstreamCategory":   "upstream_catalog.go",

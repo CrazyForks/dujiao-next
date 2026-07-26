@@ -8,7 +8,7 @@ import (
 
 func TestSystemHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "system")
+	transportRoot := filepath.Join(repositoryRoot, "internal", "platform", "http", "system")
 
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{"RegisterAdminRoutes"})
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "admin_handler.go"), []string{

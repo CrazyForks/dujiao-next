@@ -29,7 +29,6 @@ func TestDependencyRules(t *testing.T) {
 		filepath.Join(repositoryRoot, "internal", "workflows"),
 		filepath.Join(repositoryRoot, "internal", "platform"),
 		filepath.Join(repositoryRoot, "internal", "shared"),
-		filepath.Join(repositoryRoot, "internal", "transport", "http"),
 	}
 
 	var violations []importViolation

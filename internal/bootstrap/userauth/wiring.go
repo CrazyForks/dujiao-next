@@ -3,7 +3,7 @@ package userauthwiring
 import (
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	"github.com/dujiao-next/internal/provider"
-	userauthtransport "github.com/dujiao-next/internal/transport/http/userauth"
+	userauthtransport "github.com/dujiao-next/internal/modules/identity/userauth/transport/http"
 )
 
 // Handlers contains the complete user authentication HTTP entrypoint set.

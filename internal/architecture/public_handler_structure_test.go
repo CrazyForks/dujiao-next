@@ -20,7 +20,10 @@ func TestLegacyPublicHandlerPackageIsRemoved(t *testing.T) {
 
 func TestPublicConfigHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
-	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "publicconfig")
+	transportRoot := filepath.Join(
+		repositoryRoot,
+		"internal", "modules", "settings", "transport", "http", "public",
+	)
 
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{"RegisterPublicRoutes"})
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "handler.go"), []string{
@@ -38,9 +41,9 @@ func TestPublicConfigHTTPLivesInTransport(t *testing.T) {
 		t.Fatalf("stat legacy public config handler: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(repositoryRoot, "internal", "router", "publicconfig_adapter.go")); err == nil {
-		t.Fatal("public config composition adapters belong in internal/wiring/publicconfig")
+		t.Fatal("public config composition adapters belong in internal/bootstrap/publicconfig")
 	} else if !os.IsNotExist(err) {
 		t.Fatalf("stat legacy public config router adapter: %v", err)
 	}
-	assertDirectoryGoFileBudget(t, filepath.Join(repositoryRoot, "internal", "wiring", "publicconfig"), 4)
+	assertDirectoryGoFileBudget(t, filepath.Join(repositoryRoot, "internal", "bootstrap", "publicconfig"), 4)
 }

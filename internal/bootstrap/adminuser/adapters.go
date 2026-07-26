@@ -22,7 +22,7 @@ import (
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	"github.com/dujiao-next/internal/shared/money"
-	adminusertransport "github.com/dujiao-next/internal/transport/http/adminuser"
+	adminusertransport "github.com/dujiao-next/internal/modules/identity/user/transport/http/admin"
 )
 
 type adminUserDirectoryAdapter struct {
