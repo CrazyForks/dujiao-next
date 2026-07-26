@@ -272,53 +272,142 @@ func CaptureOrder(ctx context.Context, cfg *Config, orderID string) (*CaptureRes
 }
 
 // VerifyWebhookSignature 校验 PayPal Webhook 签名。
-func VerifyWebhookSignature(ctx context.Context, cfg *Config, headers http.Header, event map[string]interface{}) error {
+func VerifyWebhookSignature(
+	ctx context.Context,
+	cfg *Config,
+	headers http.Header,
+	rawEvent []byte,
+) error {
 	if cfg == nil {
 		return fmt.Errorf("%w: config is nil", ErrConfigInvalid)
 	}
+
 	if strings.TrimSpace(cfg.WebhookID) == "" {
 		return fmt.Errorf("%w: webhook_id is required", ErrConfigInvalid)
 	}
+
+	if len(rawEvent) == 0 {
+		return fmt.Errorf(
+			"%w: webhook event is empty",
+			ErrWebhookVerifyFailed,
+		)
+	}
+
+	if !json.Valid(rawEvent) {
+		return fmt.Errorf(
+			"%w: webhook event is invalid JSON",
+			ErrWebhookVerifyFailed,
+		)
+	}
+
 	token, err := getAccessToken(ctx, cfg)
 	if err != nil {
 		return err
 	}
 
-	payload := map[string]interface{}{
-		"transmission_id":   strings.TrimSpace(headers.Get("Paypal-Transmission-Id")),
-		"transmission_time": strings.TrimSpace(headers.Get("Paypal-Transmission-Time")),
-		"cert_url":          strings.TrimSpace(headers.Get("Paypal-Cert-Url")),
-		"auth_algo":         strings.TrimSpace(headers.Get("Paypal-Auth-Algo")),
-		"transmission_sig":  strings.TrimSpace(headers.Get("Paypal-Transmission-Sig")),
-		"webhook_id":        strings.TrimSpace(cfg.WebhookID),
-		"webhook_event":     event,
+	fields := map[string]string{
+		"transmission_id": strings.TrimSpace(
+			headers.Get("Paypal-Transmission-Id"),
+		),
+		"transmission_time": strings.TrimSpace(
+			headers.Get("Paypal-Transmission-Time"),
+		),
+		"cert_url": strings.TrimSpace(
+			headers.Get("Paypal-Cert-Url"),
+		),
+		"auth_algo": strings.TrimSpace(
+			headers.Get("Paypal-Auth-Algo"),
+		),
+		"transmission_sig": strings.TrimSpace(
+			headers.Get("Paypal-Transmission-Sig"),
+		),
+		"webhook_id": strings.TrimSpace(cfg.WebhookID),
 	}
 
-	for _, key := range []string{"transmission_id", "transmission_time", "cert_url", "auth_algo", "transmission_sig"} {
-		if strings.TrimSpace(readString(payload, key)) == "" {
-			return fmt.Errorf("%w: missing %s", ErrWebhookVerifyFailed, key)
+	for key, value := range fields {
+		if strings.TrimSpace(value) == "" {
+			return fmt.Errorf(
+				"%w: missing %s",
+				ErrWebhookVerifyFailed,
+				key,
+			)
 		}
 	}
 
-	body, err := json.Marshal(payload)
+	prefix, err := json.Marshal(fields)
 	if err != nil {
-		return fmt.Errorf("%w: marshal verify payload failed", ErrWebhookVerifyFailed)
+		return fmt.Errorf(
+			"%w: marshal verify metadata failed",
+			ErrWebhookVerifyFailed,
+		)
 	}
 
-	respBody, statusCode, err := doJSONRequest(ctx, cfg, http.MethodPost, "/v1/notifications/verify-webhook-signature", token, body)
+	if len(prefix) == 0 || prefix[len(prefix)-1] != '}' {
+		return fmt.Errorf(
+			"%w: invalid verify metadata",
+			ErrWebhookVerifyFailed,
+		)
+	}
+
+	// 去掉元数据 JSON 最后的 }，直接嵌入 PayPal 原始事件内容。
+	verifyBody := make(
+		[]byte,
+		0,
+		len(prefix)+len(rawEvent)+20,
+	)
+
+	verifyBody = append(
+		verifyBody,
+		prefix[:len(prefix)-1]...,
+	)
+	verifyBody = append(
+		verifyBody,
+		[]byte(`,"webhook_event":`)...,
+	)
+	verifyBody = append(verifyBody, rawEvent...)
+	verifyBody = append(verifyBody, '}')
+
+	respBody, statusCode, err := doJSONRequest(
+		ctx,
+		cfg,
+		http.MethodPost,
+		"/v1/notifications/verify-webhook-signature",
+		token,
+		verifyBody,
+	)
 	if err != nil {
 		return err
 	}
+
 	if statusCode < 200 || statusCode >= 300 {
-		return fmt.Errorf("%w: verify status %d", ErrWebhookVerifyFailed, statusCode)
+		return fmt.Errorf(
+			"%w: verify status %d",
+			ErrWebhookVerifyFailed,
+			statusCode,
+		)
 	}
+
 	var resp map[string]interface{}
 	if err := json.Unmarshal(respBody, &resp); err != nil {
-		return fmt.Errorf("%w: decode verify response failed", ErrWebhookVerifyFailed)
+		return fmt.Errorf(
+			"%w: decode verify response failed",
+			ErrWebhookVerifyFailed,
+		)
 	}
-	if strings.ToUpper(strings.TrimSpace(readString(resp, "verification_status"))) != paypalWebhookVerifyStatusSuccess {
-		return fmt.Errorf("%w: verify result is not success", ErrWebhookVerifyFailed)
+
+	status := strings.ToUpper(
+		strings.TrimSpace(
+			readString(resp, "verification_status"),
+		),
+	)
+
+	if status != paypalWebhookVerifyStatusSuccess {
+		return fmt.Errorf(
+			"%w: verify result is not success",
+			ErrWebhookVerifyFailed,
+		)
 	}
+
 	return nil
 }
 

@@ -45,7 +45,7 @@ func TestVerifyWebhookSignatureRequiresWebhookID(t *testing.T) {
 		CancelURL:    "https://example.com/payment?order_id=1",
 	}
 
-	err := VerifyWebhookSignature(context.Background(), cfg, http.Header{}, map[string]interface{}{})
+	err := VerifyWebhookSignature(context.Background(), cfg, http.Header{}, []byte(`{}`))
 	if !errors.Is(err, ErrConfigInvalid) {
 		t.Fatalf("VerifyWebhookSignature should require webhook_id, got: %v", err)
 	}
