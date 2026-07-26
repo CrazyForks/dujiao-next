@@ -1,8 +1,8 @@
 package router
 
 import (
+	"github.com/dujiao-next/internal/app/container"
 	upstreamtransport "github.com/dujiao-next/internal/modules/upstreamapi/transport/http"
-	"github.com/dujiao-next/internal/provider"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -10,7 +10,7 @@ import (
 
 func registerUpstreamRoutes(
 	apiV1 *gin.RouterGroup,
-	c *provider.Container,
+	c *container.Container,
 	upstreamHandler *upstreamtransport.Handler,
 	redisClient *redis.Client,
 	upstreamAPIRule RateLimitRule,

@@ -120,6 +120,12 @@ func TestValidateImportRules(t *testing.T) {
 			wantViolation: true,
 		},
 		{
+			name:          "content transport cannot import app container",
+			file:          "internal/modules/content/transport/http/public_handler.go",
+			importPath:    moduleImportPath + "/internal/app/container",
+			wantViolation: true,
+		},
+		{
 			name:          "dashboard application cannot import legacy service",
 			file:          "internal/modules/dashboard/application/service.go",
 			importPath:    moduleImportPath + "/internal/service",
@@ -439,6 +445,7 @@ func forbiddenLegacyImport(importPath string) bool {
 		moduleImportPath + "/internal/http",
 		moduleImportPath + "/internal/router",
 		moduleImportPath + "/internal/provider",
+		moduleImportPath + "/internal/app/container",
 	} {
 		if importMatches(importPath, forbidden) {
 			return true

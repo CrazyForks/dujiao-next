@@ -1,20 +1,20 @@
 package router
 
 import (
+	"github.com/dujiao-next/internal/app/container"
 	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	channeltransport "github.com/dujiao-next/internal/modules/channelapi/transport/http"
 	giftcardtransport "github.com/dujiao-next/internal/modules/giftcard/transport/http"
 	memberleveltransport "github.com/dujiao-next/internal/modules/memberlevel/transport/http"
 	telegramtransport "github.com/dujiao-next/internal/modules/telegram/channelbot/transport/http"
 	wallettransport "github.com/dujiao-next/internal/modules/wallet/transport/http"
-	"github.com/dujiao-next/internal/provider"
 
 	"github.com/gin-gonic/gin"
 )
 
 func registerChannelRoutes(
 	apiV1 *gin.RouterGroup,
-	c *provider.Container,
+	c *container.Container,
 	channelHandler *channeltransport.Handler,
 	channelMemberLevelHandler *memberleveltransport.ChannelHandler,
 	channelGiftCardHandler *giftcardtransport.ChannelHandler,

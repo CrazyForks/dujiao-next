@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/dujiao-next/internal/app/container"
 	"github.com/dujiao-next/internal/authz"
 	adminauthwiring "github.com/dujiao-next/internal/bootstrap/adminauth"
 	adminauthzwiring "github.com/dujiao-next/internal/bootstrap/adminauthz"
@@ -46,14 +47,13 @@ import (
 	sitemapbrand "github.com/dujiao-next/internal/modules/sitemap/infrastructure/settingsbrand"
 	sitemaptransport "github.com/dujiao-next/internal/modules/sitemap/transport/http"
 	telegramchanneltransport "github.com/dujiao-next/internal/modules/telegram/channelbot/transport/http"
-	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/web"
 
 	"github.com/gin-gonic/gin"
 )
 
 // SetupRouter 初始化路由。
-func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
+func SetupRouter(cfg *config.Config, c *container.Container) *gin.Engine {
 	log := logger.L
 	if log == nil {
 		log = logger.Init(cfg.Server.Mode, cfg.Log.ToLoggerOptions())

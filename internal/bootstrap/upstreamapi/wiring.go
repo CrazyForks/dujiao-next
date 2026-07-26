@@ -12,18 +12,18 @@ import (
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
+	"github.com/dujiao-next/internal/app/container"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
-	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
-	"github.com/dujiao-next/internal/provider"
-	"github.com/dujiao-next/internal/shared/jsonmap"
 	upstreamtransport "github.com/dujiao-next/internal/modules/upstreamapi/transport/http"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
+	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 // NewHandler connects application services to the upstream HTTP
 // transport without leaking concrete implementations into transport.
-func NewHandler(c *provider.Container) *upstreamtransport.Handler {
+func NewHandler(c *container.Container) *upstreamtransport.Handler {
 	return upstreamtransport.New(upstreamtransport.Dependencies{
 		Categories:        c.CategoryRepo,
 		Products:          productServiceAdapter{products: c.ProductReadService},

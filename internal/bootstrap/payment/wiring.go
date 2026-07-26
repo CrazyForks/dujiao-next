@@ -1,9 +1,9 @@
 package paymentbootstrap
 
 import (
+	"github.com/dujiao-next/internal/app/container"
 	paymenttransport "github.com/dujiao-next/internal/modules/payment/transport/http"
 	paymentcallbacktransport "github.com/dujiao-next/internal/modules/payment/transport/http/callback"
-	"github.com/dujiao-next/internal/provider"
 )
 
 // Handlers is the complete payment HTTP entrypoint set assembled at the
@@ -18,7 +18,7 @@ type Handlers struct {
 }
 
 // New assembles payment transports without exposing legacy adapters to router.
-func New(c *provider.Container) Handlers {
+func New(c *container.Container) Handlers {
 	guestOrders := guestOrderLookupAdapter{orders: c.OrderService}
 	userOrders := userOrderLookupAdapter{orders: c.OrderService}
 	alerter := exceptionAlerterAdapter{notifications: c.NotificationService}

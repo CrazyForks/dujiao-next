@@ -1,4 +1,4 @@
-package provider
+package container
 
 import (
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"

@@ -1,4 +1,4 @@
-package provider
+package container
 
 import (
 	"os"
@@ -9,7 +9,7 @@ import (
 )
 
 func TestContainerAssemblyIsSplitByResponsibility(t *testing.T) {
-	directory := currentProviderDirectory(t)
+	directory := currentContainerDirectory(t)
 	tests := []struct {
 		file     string
 		required []string
@@ -29,7 +29,7 @@ func TestContainerAssemblyIsSplitByResponsibility(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.file, func(t *testing.T) {
-			source := readProviderSource(t, filepath.Join(directory, test.file))
+			source := readContainerSource(t, filepath.Join(directory, test.file))
 			for _, required := range test.required {
 				if !strings.Contains(source, required) {
 					t.Errorf("%s must contain %q", test.file, required)
@@ -38,7 +38,7 @@ func TestContainerAssemblyIsSplitByResponsibility(t *testing.T) {
 		})
 	}
 
-	containerSource := readProviderSource(t, filepath.Join(directory, "container.go"))
+	containerSource := readContainerSource(t, filepath.Join(directory, "container.go"))
 	for _, forbidden := range []string{
 		"func NewContainer(",
 		"func (c *Container) initRepositories()",
@@ -51,8 +51,8 @@ func TestContainerAssemblyIsSplitByResponsibility(t *testing.T) {
 }
 
 func TestServiceAssemblyDeclaresDependencyOrder(t *testing.T) {
-	directory := currentProviderDirectory(t)
-	source := readProviderSource(t, filepath.Join(directory, "services.go"))
+	directory := currentContainerDirectory(t)
+	source := readContainerSource(t, filepath.Join(directory, "services.go"))
 	orderedCalls := []string{
 		"c.initPolicyAndSettingServices()",
 		"c.loadRuntimeSettings()",
@@ -75,20 +75,20 @@ func TestServiceAssemblyDeclaresDependencyOrder(t *testing.T) {
 	}
 }
 
-func currentProviderDirectory(t *testing.T) string {
+func currentContainerDirectory(t *testing.T) string {
 	t.Helper()
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
-		t.Fatal("resolve provider test filename")
+		t.Fatal("resolve container test filename")
 	}
 	return filepath.Dir(filename)
 }
 
-func readProviderSource(t *testing.T, path string) string {
+func readContainerSource(t *testing.T, path string) string {
 	t.Helper()
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("read provider source %s: %v", path, err)
+		t.Fatalf("read container source %s: %v", path, err)
 	}
 	return string(raw)
 }

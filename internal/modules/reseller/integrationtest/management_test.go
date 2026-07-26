@@ -23,6 +23,7 @@ import (
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
+	"github.com/dujiao-next/internal/app/container"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
@@ -32,7 +33,6 @@ import (
 	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
 	resellerhttp "github.com/dujiao-next/internal/modules/reseller/transport/http/admin"
 	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -43,7 +43,7 @@ import (
 )
 
 type adminResellerFixture struct {
-	*provider.Container
+	*container.Container
 }
 
 func setupAdminResellerManagementHandlerTest(t *testing.T) (*adminResellerFixture, *gorm.DB) {
@@ -82,7 +82,7 @@ func setupAdminResellerManagementHandlerTest(t *testing.T) (*adminResellerFixtur
 	resellerStore := resellergormstore.New(db)
 	productRepo := productgormstore.NewProductStore(db)
 	auditRepo := auditloggormstore.NewAuthzStore(db)
-	return &adminResellerFixture{Container: &provider.Container{
+	return &adminResellerFixture{Container: &container.Container{
 		ResellerStore: resellerStore,
 		ProductRepo:   productRepo,
 		ResellerManagementService: resellermodule.NewManagementService(resellerStore, config.ResellerConfig{

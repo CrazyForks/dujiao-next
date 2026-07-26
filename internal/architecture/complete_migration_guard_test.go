@@ -14,9 +14,8 @@ import (
 // or moving files is allowed, adding files below these roots is not. The map is
 // removed together with the roots when the migration is complete.
 var legacyRootGoFileBudgets = map[string]int{
-	"internal/provider": 10,
-	"internal/router":   23,
-	"internal/worker":   10,
+	"internal/router": 23,
+	"internal/worker": 10,
 }
 
 // These are the only production compatibility shims that existed at the
@@ -45,6 +44,7 @@ var completedMigrationPaths = []string{
 	"internal/http",
 	"internal/integration",
 	"internal/models",
+	"internal/provider",
 	"internal/repository",
 	"internal/service",
 	"internal/transport",

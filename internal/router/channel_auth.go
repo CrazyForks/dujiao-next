@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dujiao-next/internal/app/container"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/logger"
 	channelclientapp "github.com/dujiao-next/internal/modules/channelclient/application"
 	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/upstream"
 
 	"github.com/gin-gonic/gin"
@@ -26,7 +26,7 @@ const (
 )
 
 // ChannelAPIAuthMiddleware 渠道 API 签名鉴权中间件
-func ChannelAPIAuthMiddleware(container *provider.Container) gin.HandlerFunc {
+func ChannelAPIAuthMiddleware(container *container.Container) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		channelKey := c.GetHeader(channelHeaderKey)
 		timestampStr := c.GetHeader(channelHeaderTimestamp)

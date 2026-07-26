@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/dujiao-next/internal/app/container"
 	affiliatebootstrap "github.com/dujiao-next/internal/bootstrap/affiliate"
 	"github.com/dujiao-next/internal/config"
 	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
@@ -20,7 +21,6 @@ import (
 	resellertransport "github.com/dujiao-next/internal/modules/reseller/transport/http/user"
 	publicconfigtransport "github.com/dujiao-next/internal/modules/settings/transport/http/public"
 	wallettransport "github.com/dujiao-next/internal/modules/wallet/transport/http"
-	"github.com/dujiao-next/internal/provider"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -29,7 +29,7 @@ import (
 func registerStorefrontRoutes(
 	apiV1 *gin.RouterGroup,
 	cfg *config.Config,
-	c *provider.Container,
+	c *container.Container,
 	publicContentHandler *contenttransport.PublicHandler,
 	publicCatalogHandler *producthttp.PublicHandler,
 	publicCategoryHandler *categoryhttp.PublicHandler,

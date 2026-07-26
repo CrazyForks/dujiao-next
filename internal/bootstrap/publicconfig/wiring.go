@@ -1,11 +1,11 @@
 package publicconfigwiring
 
 import (
-	"github.com/dujiao-next/internal/provider"
+	"github.com/dujiao-next/internal/app/container"
 	publicconfigtransport "github.com/dujiao-next/internal/modules/settings/transport/http/public"
 )
 
-func NewHandler(c *provider.Container) *publicconfigtransport.Handler {
+func NewHandler(c *container.Container) *publicconfigtransport.Handler {
 	var captcha publicconfigtransport.CaptchaPublic
 	if c.CaptchaService != nil {
 		captcha = publicConfigCaptchaAdapter{svc: c.CaptchaService}

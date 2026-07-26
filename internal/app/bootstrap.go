@@ -3,8 +3,8 @@ package app
 import (
 	"errors"
 
+	"github.com/dujiao-next/internal/app/container"
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/router"
 	"github.com/dujiao-next/internal/worker"
 )
@@ -15,13 +15,13 @@ func BuildRunner(cfg *config.Config, mode string) (*Runner, error) {
 		return nil, errors.New("config is nil")
 	}
 
-	container := provider.NewContainer(cfg)
+	dependencies := container.NewContainer(cfg)
 
 	var services []Service
 
 	// 初始化 HTTP 服务
 	if mode == ModeAll || mode == ModeAPI {
-		engine := router.SetupRouter(cfg, container)
+		engine := router.SetupRouter(cfg, dependencies)
 		addr := cfg.Server.Host + ":" + cfg.Server.Port
 		httpService := NewHTTPService(addr, engine)
 		services = append(services, httpService)
@@ -29,7 +29,7 @@ func BuildRunner(cfg *config.Config, mode string) (*Runner, error) {
 
 	// 初始化 Worker 服务
 	if mode == ModeAll || mode == ModeWorker {
-		consumer := worker.NewConsumer(container)
+		consumer := worker.NewConsumer(dependencies)
 		workerService, err := worker.NewService(&cfg.Queue, consumer)
 		if err != nil {
 			return nil, err

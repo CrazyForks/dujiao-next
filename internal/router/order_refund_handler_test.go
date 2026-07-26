@@ -23,11 +23,11 @@ import (
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
+	"github.com/dujiao-next/internal/app/container"
 	orderwiring "github.com/dujiao-next/internal/bootstrap/order"
 	"github.com/dujiao-next/internal/constants"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	ordertransport "github.com/dujiao-next/internal/modules/order/transport/http"
-	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -75,7 +75,7 @@ func setupAdminOrderRefundHandlerTest(t *testing.T) (*ordertransport.AdminRefund
 	affiliateSvc := affiliateapp.NewService(affiliategormstore.New(db), nil, nil, nil, nil)
 	orderRefundService := orderrefund.New(orderRepo, userRepo, affiliateSvc, nil, nil)
 
-	return orderwiring.NewAdminRefundHandler(&provider.Container{
+	return orderwiring.NewAdminRefundHandler(&container.Container{
 		OrderStore:         orderRepo,
 		OrderRefundService: orderRefundService,
 	}), db

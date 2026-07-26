@@ -8,10 +8,10 @@ import (
 	fulfillmentdomain "github.com/dujiao-next/internal/modules/fulfillment/domain"
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
+	"github.com/dujiao-next/internal/app/container"
 	"github.com/dujiao-next/internal/config"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	notificationsmtp "github.com/dujiao-next/internal/modules/notification/infrastructure/smtp"
-	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
@@ -230,7 +230,7 @@ func TestHandleOrderStatusEmailSkipsNonRetryableEmailErrors(t *testing.T) {
 			}
 
 			consumer := &Consumer{
-				Container: &provider.Container{
+				Container: &container.Container{
 					EmailSender: notificationsmtp.New(&tc.emailConfig),
 				},
 				orderReader: orderStatusEmailWorkerOrderRepoStub{order: tc.order},

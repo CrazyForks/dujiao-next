@@ -1,8 +1,8 @@
 package userauthwiring
 
 import (
+	"github.com/dujiao-next/internal/app/container"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
-	"github.com/dujiao-next/internal/provider"
 	userauthtransport "github.com/dujiao-next/internal/modules/identity/userauth/transport/http"
 )
 
@@ -19,7 +19,7 @@ type Handlers struct {
 }
 
 // New assembles user authentication transports at the application boundary.
-func New(c *provider.Container) Handlers {
+func New(c *container.Container) Handlers {
 	verify := userVerifyTransportAdapter{auth: c.UserAuthService, settings: c.SettingService}
 	login := userLoginTransportAdapter{auth: c.UserAuthService, settings: c.SettingService}
 	recorder := userLoginRecorderAdapter{logs: c.UserLoginLogService}

@@ -1,11 +1,11 @@
 package adminuserwiring
 
 import (
-	"github.com/dujiao-next/internal/provider"
+	"github.com/dujiao-next/internal/app/container"
 	adminusertransport "github.com/dujiao-next/internal/modules/identity/user/transport/http/admin"
 )
 
-func NewHandler(c *provider.Container) *adminusertransport.AdminHandler {
+func NewHandler(c *container.Container) *adminusertransport.AdminHandler {
 	return adminusertransport.NewAdminHandler(
 		adminUserDirectoryAdapter{users: c.UserStore},
 		adminUserEmailAdapter{},

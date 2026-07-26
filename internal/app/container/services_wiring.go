@@ -1,4 +1,4 @@
-package provider
+package container
 
 // wireServiceDependencies 收口构造后才能建立的双向或延迟依赖。
 func (c *Container) wireServiceDependencies() {

@@ -1,4 +1,4 @@
-package provider
+package container
 
 import (
 	catalogmappingbootstrap "github.com/dujiao-next/internal/bootstrap/catalogmapping"

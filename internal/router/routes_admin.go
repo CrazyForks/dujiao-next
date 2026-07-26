@@ -1,6 +1,7 @@
 package router
 
 import (
+	"github.com/dujiao-next/internal/app/container"
 	affiliatebootstrap "github.com/dujiao-next/internal/bootstrap/affiliate"
 	settingsbootstrap "github.com/dujiao-next/internal/bootstrap/settingshttp"
 	"github.com/dujiao-next/internal/config"
@@ -37,7 +38,6 @@ import (
 	wallettransport "github.com/dujiao-next/internal/modules/wallet/transport/http"
 	"github.com/dujiao-next/internal/platform/http/response"
 	systemtransport "github.com/dujiao-next/internal/platform/http/system"
-	"github.com/dujiao-next/internal/provider"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -47,7 +47,7 @@ func registerAdminRoutes(
 	engine *gin.Engine,
 	apiV1 *gin.RouterGroup,
 	cfg *config.Config,
-	c *provider.Container,
+	c *container.Container,
 	adminLoginHandler *adminauthtransport.AdminLoginHandler,
 	admin2FAHandler *adminauthtransport.Admin2FAHandler,
 	adminUser2FAHandler *adminauthtransport.AdminUser2FAHandler,

@@ -1,8 +1,8 @@
 package orderwiring
 
 import (
+	"github.com/dujiao-next/internal/app/container"
 	ordertransport "github.com/dujiao-next/internal/modules/order/transport/http"
-	"github.com/dujiao-next/internal/provider"
 )
 
 // Handlers contains every order HTTP entrypoint required by the router.
@@ -16,7 +16,7 @@ type Handlers struct {
 }
 
 // New assembles order transports and their composition-boundary adapters.
-func New(c *provider.Container) Handlers {
+func New(c *container.Container) Handlers {
 	return Handlers{
 		Admin: ordertransport.NewAdminHandler(
 			orderAdminQueryAdapter{orders: c.OrderService},
@@ -52,7 +52,7 @@ func New(c *provider.Container) Handlers {
 
 // NewAdminRefundHandler exposes the focused refund composition for integration
 // tests and command surfaces that do not need the complete order handler set.
-func NewAdminRefundHandler(c *provider.Container) *ordertransport.AdminRefundHandler {
+func NewAdminRefundHandler(c *container.Container) *ordertransport.AdminRefundHandler {
 	refunds := orderAdminRefundAdapter{refunds: c.OrderRefundService}
 	return ordertransport.NewAdminRefundHandler(
 		refunds,

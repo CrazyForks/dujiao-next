@@ -1,8 +1,8 @@
 package adminauthwiring
 
 import (
+	"github.com/dujiao-next/internal/app/container"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
-	"github.com/dujiao-next/internal/provider"
 	adminauthtransport "github.com/dujiao-next/internal/modules/identity/adminauth/transport/http"
 )
 
@@ -12,7 +12,7 @@ type Handlers struct {
 	UserTwoFA *adminauthtransport.AdminUser2FAHandler
 }
 
-func New(c *provider.Container) Handlers {
+func New(c *container.Container) Handlers {
 	recorder := adminLoginRecorderAdapter{logs: c.AdminLoginLogService}
 	return Handlers{
 		Login: adminauthtransport.NewAdminLoginHandler(

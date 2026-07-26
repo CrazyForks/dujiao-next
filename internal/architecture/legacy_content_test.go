@@ -46,7 +46,7 @@ func TestLegacyContentVerticalStaysRemoved(t *testing.T) {
 		"BannerService":       {},
 		"MediaService":        {},
 	})
-	assertContainerFieldsAbsent(t, filepath.Join(repositoryRoot, "internal", "provider", "container.go"), map[string]struct{}{
+	assertContainerFieldsAbsent(t, filepath.Join(repositoryRoot, "internal", "app", "container", "container.go"), map[string]struct{}{
 		"PostRepo":            {},
 		"PostCategoryRepo":    {},
 		"BannerRepo":          {},
@@ -120,19 +120,19 @@ func assertContainerFieldsAbsent(t *testing.T, path string, forbidden map[string
 			}
 			container, ok := typeSpec.Type.(*ast.StructType)
 			if !ok {
-				t.Fatal("provider.Container is not a struct")
+				t.Fatal("app/container.Container is not a struct")
 			}
 			for _, field := range container.Fields.List {
 				for _, name := range field.Names {
 					if _, blocked := forbidden[name.Name]; blocked {
-						t.Errorf("provider.Container must not expose legacy Content field %s", name.Name)
+						t.Errorf("app/container.Container must not expose legacy Content field %s", name.Name)
 					}
 				}
 			}
 			return
 		}
 	}
-	t.Fatal("provider.Container declaration not found")
+	t.Fatal("app/container.Container declaration not found")
 }
 
 func assertHandlerMethodsAbsent(t *testing.T, directory string, forbidden map[string]struct{}) {

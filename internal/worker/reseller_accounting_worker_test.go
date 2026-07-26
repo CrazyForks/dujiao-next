@@ -10,7 +10,7 @@ import (
 
 	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
 
-	"github.com/dujiao-next/internal/provider"
+	"github.com/dujiao-next/internal/app/container"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
@@ -41,7 +41,7 @@ func TestResellerConfirmLedgerWorkerMarksDueEntriesAvailable(t *testing.T) {
 		t.Fatalf("seed ledger failed: %v", err)
 	}
 	repo := resellergormstore.New(db)
-	c := NewConsumer(&provider.Container{
+	c := NewConsumer(&container.Container{
 		ResellerAccountingLedger: resellerapplication.NewAccountingLedgerService(repo, 0),
 	})
 	if err := c.handleResellerConfirmLedger(context.Background(), queue.NewResellerConfirmLedgerTask()); err != nil {
@@ -67,7 +67,7 @@ func TestResellerConfirmLedgerTaskType(t *testing.T) {
 }
 
 func TestResellerConfirmLedgerWorkerSkipNilService(t *testing.T) {
-	c := NewConsumer(&provider.Container{})
+	c := NewConsumer(&container.Container{})
 	if err := c.handleResellerConfirmLedger(context.Background(), asynq.NewTask(queue.TaskResellerConfirmLedger, nil)); err != nil {
 		t.Fatalf("nil service should be skipped, got %v", err)
 	}

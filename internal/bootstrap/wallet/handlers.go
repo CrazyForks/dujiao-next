@@ -1,9 +1,9 @@
 package walletbootstrap
 
 import (
+	"github.com/dujiao-next/internal/app/container"
 	channeluserwiring "github.com/dujiao-next/internal/bootstrap/channeluser"
 	wallettransport "github.com/dujiao-next/internal/modules/wallet/transport/http"
-	"github.com/dujiao-next/internal/provider"
 )
 
 type Handlers struct {
@@ -12,7 +12,7 @@ type Handlers struct {
 	Channel *wallettransport.ChannelHandler
 }
 
-func New(c *provider.Container) Handlers {
+func New(c *container.Container) Handlers {
 	wallets := walletTransportAdapter{wallets: c.WalletService, payments: c.PaymentService}
 	return Handlers{
 		User: wallettransport.NewUserHandler(

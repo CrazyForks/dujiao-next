@@ -1,9 +1,9 @@
 package resellerbootstrap
 
 import (
+	"github.com/dujiao-next/internal/app/container"
 	adminhttp "github.com/dujiao-next/internal/modules/reseller/transport/http/admin"
 	userhttp "github.com/dujiao-next/internal/modules/reseller/transport/http/user"
-	"github.com/dujiao-next/internal/provider"
 )
 
 type Handlers struct {
@@ -19,7 +19,7 @@ type Handlers struct {
 	AdminFinance        *adminhttp.AdminFinanceHandler
 }
 
-func New(c *provider.Container) Handlers {
+func New(c *container.Container) Handlers {
 	return Handlers{
 		User: userhttp.NewUserHandler(
 			c.ResellerManagementService,
