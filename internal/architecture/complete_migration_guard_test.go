@@ -18,11 +18,8 @@ var legacyRootGoFileBudgets = map[string]int{
 	"internal/http":           17,
 	"internal/integration":    25,
 	"internal/models":         59,
-	"internal/persistence":    3,
 	"internal/provider":       10,
-	"internal/repository":     54,
 	"internal/router":         23,
-	"internal/service":        141,
 	"internal/transport/http": 184,
 	"internal/wiring":         51,
 	"internal/worker":         10,
@@ -45,15 +42,15 @@ var transitionalPackageFileBudgets = map[string]packageFileBudget{
 	"internal/architecture": {production: 0, total: 55},
 	"internal/dto":          {production: 15, total: 24},
 	"internal/models":       {production: 54, total: 59},
-	"internal/repository":   {production: 36, total: 54},
 	"internal/router":       {production: 13, total: 23},
-	"internal/service":      {production: 81, total: 141},
 }
 
 // completedMigrationPaths are deleted compatibility-free entry points. Once a
 // bounded context reaches this list, recreating its former horizontal package
 // is an architecture regression rather than an allowed transitional change.
 var completedMigrationPaths = []string{
+	"internal/repository",
+	"internal/service",
 	"internal/models/payment.go",
 	"internal/models/payment_channel.go",
 	"internal/repository/payment_repository.go",

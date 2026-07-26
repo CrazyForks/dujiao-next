@@ -10,7 +10,6 @@ import (
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
-	"github.com/dujiao-next/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -65,7 +64,7 @@ func ChannelIdentityError(c *gin.Context, err error) {
 		ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.bad_request", nil)
 	case errors.Is(err, userauthapp.ErrInvalidEmail):
 		ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "validation_error", "error.email_invalid", nil)
-	case errors.Is(err, service.ErrNotFound):
+	case errors.Is(err, userauthapp.ErrNotFound):
 		ChannelError(c, http.StatusNotFound, response.CodeNotFound, "user_not_found", "error.user_not_found", nil)
 	case errors.Is(err, userauthapp.ErrVerifyCodeInvalid):
 		ChannelError(c, http.StatusBadRequest, response.CodeBadRequest, "verify_code_invalid", "error.verify_code_invalid", nil)

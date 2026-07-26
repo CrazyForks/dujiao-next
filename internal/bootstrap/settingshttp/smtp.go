@@ -3,18 +3,19 @@ package settingsbootstrap
 import (
 	"errors"
 
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
+	notificationsmtp "github.com/dujiao-next/internal/modules/notification/infrastructure/smtp"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 
 	"github.com/dujiao-next/internal/config"
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
-	"github.com/dujiao-next/internal/service"
 )
 
 type settingsSMTPAdapter struct {
 	settings *settingsapp.Service
 	cfg      *config.Config
-	email    *service.EmailService
+	email    *notificationsmtp.Service
 }
 
 func (a settingsSMTPAdapter) GetSMTPSetting() (settingsmessaging.SMTPSetting, error) {
@@ -35,17 +36,17 @@ func (a settingsSMTPAdapter) ApplyRuntime(setting settingsmessaging.SMTPSetting)
 func (a settingsSMTPAdapter) SendTest(setting settingsmessaging.SMTPSetting, toEmail, subject, body string) error {
 	configForSend := settingsmessaging.SMTPSettingToConfig(setting)
 	configForSend.Enabled = true
-	err := service.NewEmailService(&configForSend).SendCustomEmail(toEmail, subject, body)
+	err := notificationsmtp.New(&configForSend).SendCustomEmail(toEmail, subject, body)
 	switch {
 	case err == nil:
 		return nil
-	case errors.Is(err, service.ErrInvalidEmail):
+	case errors.Is(err, notificationcontract.ErrInvalidEmail):
 		return settingstransport.ErrSMTPTestInvalidEmail
-	case errors.Is(err, service.ErrEmailRecipientRejected):
+	case errors.Is(err, notificationcontract.ErrEmailRecipientRejected):
 		return settingstransport.ErrSMTPTestRecipientRejected
-	case errors.Is(err, service.ErrEmailServiceDisabled):
+	case errors.Is(err, notificationcontract.ErrEmailServiceDisabled):
 		return settingstransport.ErrSMTPTestServiceDisabled
-	case errors.Is(err, service.ErrEmailServiceNotConfigured):
+	case errors.Is(err, notificationcontract.ErrEmailNotConfigured):
 		return settingstransport.ErrSMTPTestServiceNotConfigured
 	default:
 		return err

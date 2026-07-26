@@ -36,7 +36,6 @@ import (
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -63,7 +62,7 @@ func (p giftCardChannelUserProvisioner) ProvisionUserID(channelUserID string) (u
 		return 0, err
 	}
 	if user == nil {
-		return 0, service.ErrNotFound
+		return 0, userauthapp.ErrNotFound
 	}
 	return user.ID, nil
 }

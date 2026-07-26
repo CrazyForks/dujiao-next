@@ -1,4 +1,4 @@
-package service
+package smtp
 
 import (
 	"bytes"
@@ -17,8 +17,8 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/logger"
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
-	"github.com/dujiao-next/internal/shared/money"
 	"github.com/dujiao-next/internal/telegramidentity"
 )
 
@@ -45,18 +45,18 @@ func generateMessageID(from string) string {
 	return fmt.Sprintf("<%s@%s>", hex.EncodeToString(b[:]), domain)
 }
 
-// EmailService 邮件发送服务
-type EmailService struct {
+// Service 邮件发送服务
+type Service struct {
 	cfg *config.EmailConfig
 }
 
-// NewEmailService 创建邮件服务
-func NewEmailService(cfg *config.EmailConfig) *EmailService {
-	return &EmailService{cfg: cfg}
+// New 创建邮件服务
+func New(cfg *config.EmailConfig) *Service {
+	return &Service{cfg: cfg}
 }
 
 // SetConfig 更新运行时邮件配置
-func (s *EmailService) SetConfig(cfg *config.EmailConfig) {
+func (s *Service) SetConfig(cfg *config.EmailConfig) {
 	if cfg == nil {
 		return
 	}
@@ -64,30 +64,13 @@ func (s *EmailService) SetConfig(cfg *config.EmailConfig) {
 }
 
 // SendVerifyCode 发送邮箱验证码
-func (s *EmailService) SendVerifyCode(toEmail, code, purpose, locale string) error {
+func (s *Service) SendVerifyCode(toEmail, code, purpose, locale string) error {
 	subject, body := buildVerifyCodeContent(code, purpose, locale)
 	return s.sendTextEmail(toEmail, subject, body)
 }
 
-// OrderStatusEmailInput 订单状态邮件输入
-type OrderStatusEmailInput struct {
-	OrderNo           string
-	Status            string
-	Amount            money.Amount
-	RefundAmount      money.Amount
-	RefundReason      string
-	Currency          string
-	SiteName          string
-	SiteURL           string
-	FulfillmentInfo   string
-	Instructions      string // 交付使用说明（纯文本，已去 HTML）
-	IsGuest           bool
-	AttachmentName    string // 非空时表示交付内容以附件形式发送
-	AttachmentContent string // 附件内容
-}
-
 // SendOrderStatusEmail 发送订单状态通知
-func (s *EmailService) SendOrderStatusEmail(toEmail string, input OrderStatusEmailInput, locale string) error {
+func (s *Service) SendOrderStatusEmail(toEmail string, input notificationcontract.OrderStatusEmailInput, locale string) error {
 	subject, body := buildOrderStatusContent(input, locale)
 	if input.AttachmentName != "" && input.AttachmentContent != "" {
 		return s.sendEmailWithAttachment(toEmail, subject, body, input.AttachmentName, input.AttachmentContent)
@@ -96,7 +79,7 @@ func (s *EmailService) SendOrderStatusEmail(toEmail string, input OrderStatusEma
 }
 
 // SendOrderStatusEmailWithTemplate 使用可配置模板发送订单状态通知
-func (s *EmailService) SendOrderStatusEmailWithTemplate(toEmail string, input OrderStatusEmailInput, locale string, tmplSetting *settingsmessaging.OrderEmailTemplateSetting) error {
+func (s *Service) SendOrderStatusEmailWithTemplate(toEmail string, input notificationcontract.OrderStatusEmailInput, locale string, tmplSetting *settingsmessaging.OrderEmailTemplateSetting) error {
 	if tmplSetting == nil {
 		return s.SendOrderStatusEmail(toEmail, input, locale)
 	}
@@ -107,7 +90,7 @@ func (s *EmailService) SendOrderStatusEmailWithTemplate(toEmail string, input Or
 	return s.sendTextEmail(toEmail, subject, body)
 }
 
-func buildOrderStatusContentFromTemplate(input OrderStatusEmailInput, locale string, tmplSetting settingsmessaging.OrderEmailTemplateSetting) (string, string) {
+func buildOrderStatusContentFromTemplate(input notificationcontract.OrderStatusEmailInput, locale string, tmplSetting settingsmessaging.OrderEmailTemplateSetting) (string, string) {
 	normalized := normalizeLocale(locale)
 
 	// 根据订单状态选择场景模板
@@ -187,7 +170,7 @@ func buildOrderStatusContentFromTemplate(input OrderStatusEmailInput, locale str
 }
 
 // SendCustomEmail 发送测试邮件或自定义邮件
-func (s *EmailService) SendCustomEmail(toEmail, subject, body string) error {
+func (s *Service) SendCustomEmail(toEmail, subject, body string) error {
 	subject = strings.TrimSpace(subject)
 	if subject == "" {
 		subject = "SMTP 配置测试邮件"
@@ -199,7 +182,7 @@ func (s *EmailService) SendCustomEmail(toEmail, subject, body string) error {
 	return s.sendTextEmail(toEmail, subject, body)
 }
 
-func (s *EmailService) sendTextEmail(toEmail, subject, body string) error {
+func (s *Service) sendTextEmail(toEmail, subject, body string) error {
 	if telegramidentity.IsPlaceholderEmail(toEmail) {
 		return nil
 	}
@@ -211,7 +194,7 @@ func (s *EmailService) sendTextEmail(toEmail, subject, body string) error {
 	return s.sendSMTPMessage(addr, toEmail, []byte(msg))
 }
 
-func (s *EmailService) sendEmailWithAttachment(toEmail, subject, body, attachName, attachContent string) error {
+func (s *Service) sendEmailWithAttachment(toEmail, subject, body, attachName, attachContent string) error {
 	if telegramidentity.IsPlaceholderEmail(toEmail) {
 		return nil
 	}
@@ -224,15 +207,15 @@ func (s *EmailService) sendEmailWithAttachment(toEmail, subject, body, attachNam
 }
 
 // prepareSMTPEnvelope 校验配置与收件人，并返回发件地址与 SMTP 服务器地址。
-func (s *EmailService) prepareSMTPEnvelope(toEmail string) (string, string, error) {
+func (s *Service) prepareSMTPEnvelope(toEmail string) (string, string, error) {
 	if s.cfg == nil || !s.cfg.Enabled {
-		return "", "", ErrEmailServiceDisabled
+		return "", "", notificationcontract.ErrEmailServiceDisabled
 	}
 	if s.cfg.Host == "" || s.cfg.Port == 0 || s.cfg.From == "" {
-		return "", "", ErrEmailServiceNotConfigured
+		return "", "", notificationcontract.ErrEmailNotConfigured
 	}
 	if _, err := mail.ParseAddress(toEmail); err != nil {
-		return "", "", ErrInvalidEmail
+		return "", "", notificationcontract.ErrInvalidEmail
 	}
 	from := buildFromAddress(s.cfg.From, s.cfg.FromName)
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
@@ -240,7 +223,7 @@ func (s *EmailService) prepareSMTPEnvelope(toEmail string) (string, string, erro
 }
 
 // sendSMTPMessage 根据配置选择 SSL/STARTTLS/明文通道发送邮件。
-func (s *EmailService) sendSMTPMessage(addr, toEmail string, msg []byte) error {
+func (s *Service) sendSMTPMessage(addr, toEmail string, msg []byte) error {
 	recipients := []string{toEmail}
 	if s.cfg.UseSSL {
 		return normalizeEmailSendError(sendMailWithSSL(addr, s.cfg.Host, s.cfg.From, recipients, msg, s.cfg.Username, s.cfg.Password))
@@ -346,7 +329,7 @@ func buildVerifyCodeContent(code, purpose, locale string) (string, string) {
 	}
 }
 
-func buildOrderStatusContent(input OrderStatusEmailInput, locale string) (string, string) {
+func buildOrderStatusContent(input notificationcontract.OrderStatusEmailInput, locale string) (string, string) {
 	normalized := normalizeLocale(locale)
 	statusKey := "order.status." + strings.ToLower(strings.TrimSpace(input.Status))
 	statusLabel := i18n.T(normalized, statusKey)
@@ -388,7 +371,7 @@ func buildOrderStatusContent(input OrderStatusEmailInput, locale string) (string
 	}
 }
 
-func appendFulfillmentAttachmentTip(locale string, input OrderStatusEmailInput, body string) string {
+func appendFulfillmentAttachmentTip(locale string, input notificationcontract.OrderStatusEmailInput, body string) string {
 	if input.AttachmentName == "" {
 		return body
 	}
@@ -400,7 +383,7 @@ func appendFulfillmentAttachmentTip(locale string, input OrderStatusEmailInput, 
 	return body + "\n\n" + tip
 }
 
-func appendGuestTip(locale string, input OrderStatusEmailInput, body string) string {
+func appendGuestTip(locale string, input notificationcontract.OrderStatusEmailInput, body string) string {
 	if !input.IsGuest {
 		return body
 	}
@@ -505,7 +488,7 @@ const (
 )
 
 // authenticateSMTPClient 根据服务端 AUTH 能力选择并执行认证。
-// EmailService 认证策略：优先 LOGIN，回退 PLAIN。
+// Service 认证策略：优先 LOGIN，回退 PLAIN。
 // 对 smtp.office365.com 的 SMTP Basic/LOGIN 场景，通常需要开启 MFA 并使用应用密码。
 func authenticateSMTPClient(client *smtp.Client, host, username, password string) error {
 	if client == nil {
@@ -677,7 +660,7 @@ func normalizeEmailSendError(err error) error {
 		return nil
 	}
 	if isEmailRecipientRejected(err) {
-		return ErrEmailRecipientRejected
+		return notificationcontract.ErrEmailRecipientRejected
 	}
 	return err
 }

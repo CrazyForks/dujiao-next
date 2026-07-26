@@ -10,6 +10,7 @@ import (
 	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
 )
 
 type NotificationCenterSetting = settingsmessaging.NotificationCenterSetting
@@ -23,6 +24,23 @@ type SettingsReader interface {
 
 type EmailSender interface {
 	SendCustomEmail(toEmail, subject, body string) error
+}
+
+// OrderStatusEmailInput carries the order facts required to render an email.
+type OrderStatusEmailInput struct {
+	OrderNo           string
+	Status            string
+	Amount            money.Amount
+	RefundAmount      money.Amount
+	RefundReason      string
+	Currency          string
+	SiteName          string
+	SiteURL           string
+	FulfillmentInfo   string
+	Instructions      string
+	IsGuest           bool
+	AttachmentName    string
+	AttachmentContent string
 }
 
 type DispatchQueue interface {

@@ -18,7 +18,7 @@ func TestNotificationImplementationLivesInBoundedContextDirectories(t *testing.T
 	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "log.go"), []string{"NotificationLog"})
 	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "ports.go"), []string{
 		"SettingsReader", "EmailSender", "DispatchQueue", "DashboardAlertReader", "TelegramSender",
-		"LogRepository", "LogListFilter", "EnqueueInput", "NotificationEnqueuer", "TestSendInput", "TestSender",
+		"OrderStatusEmailInput", "LogRepository", "LogListFilter", "EnqueueInput", "NotificationEnqueuer", "TestSendInput", "TestSender",
 	})
 	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "service.go"), []string{"Service"})
 	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "log_service.go"), []string{"LogRecordInput", "LogService"})

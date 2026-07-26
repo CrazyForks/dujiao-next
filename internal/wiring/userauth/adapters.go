@@ -23,7 +23,7 @@ import (
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	"github.com/dujiao-next/internal/modules/identity/userauth/challenge"
 	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
-	"github.com/dujiao-next/internal/service"
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	userauthtransport "github.com/dujiao-next/internal/transport/http/userauth"
 )
 
@@ -479,10 +479,10 @@ func mapUserAuthTransportError(err error) error {
 		{userauthapp.ErrVerifyCodeExpired, userauthtransport.ErrVerifyCodeExpired},
 		{userauthapp.ErrVerifyCodeTooFrequent, userauthtransport.ErrVerifyCodeTooFrequent},
 		{userauthapp.ErrVerifyCodeAttemptsExceeded, userauthtransport.ErrVerifyCodeAttemptsExceeded},
-		{service.ErrEmailServiceDisabled, userauthtransport.ErrEmailServiceDisabled},
+		{notificationcontract.ErrEmailServiceDisabled, userauthtransport.ErrEmailServiceDisabled},
 		{userauthapp.ErrEmailServiceNotConfigured, userauthtransport.ErrEmailServiceNotConfigured},
-		{service.ErrEmailServiceNotConfigured, userauthtransport.ErrEmailServiceNotConfigured},
-		{service.ErrEmailRecipientRejected, userauthtransport.ErrEmailRecipientRejected},
+		{notificationcontract.ErrEmailNotConfigured, userauthtransport.ErrEmailServiceNotConfigured},
+		{notificationcontract.ErrEmailRecipientRejected, userauthtransport.ErrEmailRecipientRejected},
 		{userauthapp.ErrInvalidPassword, userauthtransport.ErrInvalidPassword},
 		{userauthapp.ErrInvalidVerifyPurpose, userauthtransport.ErrInvalidVerifyPurpose},
 		{userauthapp.ErrEmailExists, userauthtransport.ErrEmailExists},

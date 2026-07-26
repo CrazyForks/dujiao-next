@@ -49,7 +49,7 @@ func (c *Container) initIntegrationServices() {
 	telegramNotifyService := notifyapp.NewService(c.SettingService, c.Config.TelegramAuth, notifybotapi.New())
 	c.NotificationService = notificationapp.NewService(
 		c.SettingService,
-		c.EmailService,
+		c.EmailSender,
 		notificationasyncqueue.New(c.QueueClient),
 		c.DashboardService,
 		c.NotificationLogService,

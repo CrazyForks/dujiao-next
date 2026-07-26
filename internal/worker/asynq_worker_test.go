@@ -9,9 +9,10 @@ import (
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	"github.com/dujiao-next/internal/config"
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
+	notificationsmtp "github.com/dujiao-next/internal/modules/notification/infrastructure/smtp"
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
@@ -230,7 +231,7 @@ func TestHandleOrderStatusEmailSkipsNonRetryableEmailErrors(t *testing.T) {
 
 			consumer := &Consumer{
 				Container: &provider.Container{
-					EmailService: service.NewEmailService(&tc.emailConfig),
+					EmailSender: notificationsmtp.New(&tc.emailConfig),
 				},
 				orderReader: orderStatusEmailWorkerOrderRepoStub{order: tc.order},
 			}
@@ -245,7 +246,7 @@ func TestHandleOrderStatusEmailSkipsNonRetryableEmailErrors(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected retryable send error, got nil")
 			}
-			if errors.Is(err, service.ErrEmailServiceDisabled) || errors.Is(err, service.ErrEmailServiceNotConfigured) || errors.Is(err, service.ErrInvalidEmail) {
+			if errors.Is(err, notificationcontract.ErrEmailServiceDisabled) || errors.Is(err, notificationcontract.ErrEmailNotConfigured) || errors.Is(err, notificationcontract.ErrInvalidEmail) {
 				t.Fatalf("expected generic retryable error, got %v", err)
 			}
 		})

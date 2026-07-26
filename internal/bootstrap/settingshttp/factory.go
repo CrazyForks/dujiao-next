@@ -8,7 +8,7 @@ import (
 
 func NewSMTPHandler(c *provider.Container, cfg *config.Config) *settingstransport.SMTPHandler {
 	return settingstransport.NewSMTPHandler(settingsSMTPAdapter{
-		settings: c.SettingService, cfg: cfg, email: c.EmailService,
+		settings: c.SettingService, cfg: cfg, email: c.EmailSender,
 	})
 }
 

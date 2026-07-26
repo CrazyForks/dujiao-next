@@ -16,6 +16,7 @@ import (
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
+	notificationsmtp "github.com/dujiao-next/internal/modules/notification/infrastructure/smtp"
 	orderapp "github.com/dujiao-next/internal/modules/order/application"
 	reseller "github.com/dujiao-next/internal/modules/reseller/application"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
@@ -23,7 +24,6 @@ import (
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 	uploadapp "github.com/dujiao-next/internal/modules/upload/application"
 	uploadlocal "github.com/dujiao-next/internal/modules/upload/infrastructure/localstore"
-	"github.com/dujiao-next/internal/service"
 )
 
 // initPolicyAndSettingServices 装配授权、动态设置、分销商基础能力与合规服务。
@@ -82,13 +82,13 @@ func (c *Container) loadRuntimeSettings() {
 
 // initIdentityAndCatalogServices 装配身份认证、上传、推广与商品读取能力。
 func (c *Container) initIdentityAndCatalogServices() {
-	c.EmailService = service.NewEmailService(&c.Config.Email)
+	c.EmailSender = notificationsmtp.New(&c.Config.Email)
 	c.CaptchaService = captchaapp.NewService(c.SettingService, c.Config.Captcha, captchaturnstile.New())
 	c.AuthService = adminauthapp.NewService(c.Config, c.AdminStore)
 	c.TOTPService = admintotpapp.NewService(c.Config, c.AdminStore, cache.Client())
 	c.UserTOTPService = usertotpapp.NewService(c.Config, c.UserStore, cache.Client())
 	c.TelegramAuthService = telegramauthapp.NewService(c.Config.TelegramAuth, telegramauthcache.Options()...)
-	c.UserAuthService = userauthapp.NewService(c.Config, c.UserStore, c.ExternalIdentityStore, c.EmailVerificationStore, c.SettingService, c.EmailService, c.TelegramAuthService)
+	c.UserAuthService = userauthapp.NewService(c.Config, c.UserStore, c.ExternalIdentityStore, c.EmailVerificationStore, c.SettingService, c.EmailSender, c.TelegramAuthService)
 	c.UploadService = uploadapp.NewService(uploadapp.Policy{
 		MaxSize:           c.Config.Upload.MaxSize,
 		AllowedTypes:      c.Config.Upload.AllowedTypes,

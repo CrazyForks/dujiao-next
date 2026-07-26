@@ -1,4 +1,4 @@
-package repository
+package gormutil
 
 import (
 	"strings"
@@ -6,7 +6,7 @@ import (
 )
 
 func TestJSONTextExprByDialectSQLite(t *testing.T) {
-	got := jsonTextExprByDialect("sqlite", "title_json", "zh-CN")
+	got := JSONTextExprByDialect("sqlite", "title_json", "zh-CN")
 	want := "json_extract(title_json, '$.\"zh-CN\"')"
 	if got != want {
 		t.Fatalf("sqlite json expr mismatch, want %s got %s", want, got)
@@ -14,7 +14,7 @@ func TestJSONTextExprByDialectSQLite(t *testing.T) {
 }
 
 func TestJSONTextExprByDialectPostgres(t *testing.T) {
-	got := jsonTextExprByDialect("postgres", "title_json", "zh-CN")
+	got := JSONTextExprByDialect("postgres", "title_json", "zh-CN")
 	want := "(title_json::jsonb ->> 'zh-CN')"
 	if got != want {
 		t.Fatalf("postgres json expr mismatch, want %s got %s", want, got)
@@ -22,16 +22,16 @@ func TestJSONTextExprByDialectPostgres(t *testing.T) {
 }
 
 func TestJSONArrayLengthExprByDialect(t *testing.T) {
-	if got, want := jsonArrayLengthExprByDialect("sqlite", "wholesale_prices"), "json_array_length(COALESCE(wholesale_prices, '[]'))"; got != want {
+	if got, want := JSONArrayLengthExprByDialect("sqlite", "wholesale_prices"), "json_array_length(COALESCE(wholesale_prices, '[]'))"; got != want {
 		t.Fatalf("sqlite json array length expr mismatch, want %s got %s", want, got)
 	}
-	if got, want := jsonArrayLengthExprByDialect("postgres", "wholesale_prices"), "jsonb_array_length(COALESCE(wholesale_prices::jsonb, '[]'::jsonb))"; got != want {
+	if got, want := JSONArrayLengthExprByDialect("postgres", "wholesale_prices"), "jsonb_array_length(COALESCE(wholesale_prices::jsonb, '[]'::jsonb))"; got != want {
 		t.Fatalf("postgres json array length expr mismatch, want %s got %s", want, got)
 	}
 }
 
 func TestBuildLocalizedLikeCondition(t *testing.T) {
-	condition, argCount := buildLocalizedLikeCondition(nil, []string{"slug"}, []string{"title_json", "description_json"})
+	condition, argCount := BuildLocalizedLikeCondition(nil, []string{"slug"}, []string{"title_json", "description_json"})
 	if argCount != 7 {
 		t.Fatalf("arg count want 7 got %d", argCount)
 	}
@@ -47,7 +47,7 @@ func TestBuildLocalizedLikeCondition(t *testing.T) {
 }
 
 func TestBuildLocalizedLikeConditionByDialectPostgres(t *testing.T) {
-	condition, argCount := buildLocalizedLikeConditionByDialect("postgres", []string{"slug"}, []string{"title_json"})
+	condition, argCount := BuildLocalizedLikeConditionByDialect("postgres", []string{"slug"}, []string{"title_json"})
 	if argCount != 4 {
 		t.Fatalf("arg count want 4 got %d", argCount)
 	}
@@ -60,7 +60,7 @@ func TestBuildLocalizedLikeConditionByDialectPostgres(t *testing.T) {
 }
 
 func TestRepeatLikeArgs(t *testing.T) {
-	args := repeatLikeArgs("%test%", 3)
+	args := RepeatLikeArgs("%test%", 3)
 	if len(args) != 3 {
 		t.Fatalf("args len want 3 got %d", len(args))
 	}

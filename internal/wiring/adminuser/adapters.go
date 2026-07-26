@@ -21,7 +21,6 @@ import (
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/money"
 	adminusertransport "github.com/dujiao-next/internal/transport/http/adminuser"
 )
@@ -142,7 +141,7 @@ func mapAdminUserTransportError(err error) error {
 		source error
 		target error
 	}{
-		{service.ErrNotFound, adminusertransport.ErrNotFound},
+		{userauthapp.ErrNotFound, adminusertransport.ErrNotFound},
 		{userauthapp.ErrUserDisabled, adminusertransport.ErrUserDisabled},
 		{userauthapp.ErrUserOAuthNotBound, adminusertransport.ErrUserOAuthNotBound},
 		{userauthapp.ErrTelegramUnbindRequiresEmail, adminusertransport.ErrTelegramUnbindRequiresEmail},

@@ -15,12 +15,13 @@ import (
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/provider"
-	"github.com/dujiao-next/internal/service"
 	channeltransport "github.com/dujiao-next/internal/transport/http/channel"
 )
 
@@ -195,18 +196,18 @@ func mapError(err error) error {
 		{orderapp.ErrInvalidOrderItem, channeltransport.ErrInvalidOrderItem},
 		{orderapp.ErrInvalidOrderAmount, channeltransport.ErrInvalidOrderAmount},
 		{orderapp.ErrProductPurchaseNotAllowed, channeltransport.ErrProductPurchaseNotAllowed},
-		{service.ErrProductMaxPurchaseExceeded, channeltransport.ErrProductMaxPurchaseExceeded},
-		{service.ErrProductMinPurchaseNotMet, channeltransport.ErrProductMinPurchaseNotMet},
+		{orderapp.ErrProductMaxPurchaseExceeded, channeltransport.ErrProductMaxPurchaseExceeded},
+		{orderapp.ErrProductMinPurchaseNotMet, channeltransport.ErrProductMinPurchaseNotMet},
 		{orderapp.ErrProductNotAvailable, channeltransport.ErrProductNotAvailable},
 		{orderapp.ErrManualStockInsufficient, channeltransport.ErrManualStockInsufficient},
 		{orderapp.ErrCardSecretInsufficient, channeltransport.ErrCardSecretInsufficient},
 		{orderapp.ErrOrderCurrencyMismatch, channeltransport.ErrOrderCurrencyMismatch},
-		{service.ErrProductPriceInvalid, channeltransport.ErrProductPriceInvalid},
-		{service.ErrManualFormSchemaInvalid, channeltransport.ErrManualFormSchemaInvalid},
-		{service.ErrManualFormRequiredMissing, channeltransport.ErrManualFormRequiredMissing},
-		{service.ErrManualFormFieldInvalid, channeltransport.ErrManualFormFieldInvalid},
-		{service.ErrManualFormTypeInvalid, channeltransport.ErrManualFormTypeInvalid},
-		{service.ErrManualFormOptionInvalid, channeltransport.ErrManualFormOptionInvalid},
+		{productcontract.ErrProductPriceInvalid, channeltransport.ErrProductPriceInvalid},
+		{manualform.ErrSchemaInvalid, channeltransport.ErrManualFormSchemaInvalid},
+		{manualform.ErrRequiredMissing, channeltransport.ErrManualFormRequiredMissing},
+		{manualform.ErrFieldInvalid, channeltransport.ErrManualFormFieldInvalid},
+		{manualform.ErrTypeInvalid, channeltransport.ErrManualFormTypeInvalid},
+		{manualform.ErrOptionInvalid, channeltransport.ErrManualFormOptionInvalid},
 		{paymentapp.ErrPaymentInvalid, channeltransport.ErrPaymentInvalid},
 		{orderapp.ErrOrderNotFound, channeltransport.ErrOrderNotFound},
 		{orderapp.ErrOrderStatusInvalid, channeltransport.ErrOrderStatusInvalid},

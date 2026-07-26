@@ -13,9 +13,10 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
+	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
+	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/provider"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	upstreamtransport "github.com/dujiao-next/internal/transport/http/upstream"
 )
@@ -57,7 +58,7 @@ func (a productServiceAdapter) ApplyAutoStockCounts(products []productdomain.Pro
 
 func (a productServiceAdapter) GetAdminByID(id string) (*productdomain.Product, error) {
 	product, err := a.products.GetAdminByID(id)
-	if errors.Is(err, service.ErrNotFound) {
+	if errors.Is(err, productcontract.ErrNotFound) {
 		return nil, fmt.Errorf("%w: %v", upstreamtransport.ErrProductNotFound, err)
 	}
 	return product, err
@@ -121,10 +122,10 @@ func mapOrderError(err error) error {
 		{[]error{orderapp.ErrOrderCancelNotAllowed}, upstreamtransport.ErrOrderCancelNotAllowed},
 		{[]error{walletcontract.ErrInsufficientBalance}, upstreamtransport.ErrWalletInsufficient},
 		{[]error{orderapp.ErrCardSecretInsufficient, orderapp.ErrManualStockInsufficient}, upstreamtransport.ErrStockInsufficient},
-		{[]error{orderapp.ErrProductNotAvailable, service.ErrProductNotFound}, upstreamtransport.ErrProductUnavailable},
+		{[]error{orderapp.ErrProductNotAvailable, productcontract.ErrNotFound}, upstreamtransport.ErrProductUnavailable},
 		{[]error{orderapp.ErrProductSKUInvalid, orderapp.ErrProductSKURequired}, upstreamtransport.ErrSKUUnavailable},
 		{[]error{orderapp.ErrInvalidOrderItem}, upstreamtransport.ErrInvalidOrderItem},
-		{[]error{service.ErrManualFormRequiredMissing, service.ErrManualFormFieldInvalid, service.ErrManualFormTypeInvalid, service.ErrManualFormOptionInvalid}, upstreamtransport.ErrManualFormInvalid},
+		{[]error{manualform.ErrRequiredMissing, manualform.ErrFieldInvalid, manualform.ErrTypeInvalid, manualform.ErrOptionInvalid}, upstreamtransport.ErrManualFormInvalid},
 	} {
 		for _, source := range mapping.sources {
 			if errors.Is(err, source) {

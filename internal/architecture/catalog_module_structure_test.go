@@ -266,7 +266,7 @@ func TestCatalogProductImplementationLivesInNestedBoundedContext(t *testing.T) {
 	assertDirectoryGoFileBudget(t, integrationRoot, 0)
 	assertDirectoryGoFileBudget(t, integrationApplicationRoot, 9)
 	assertDirectoryGoFileBudget(t, integrationTransportRoot, 2)
-	assertDirectoryGoFileBudget(t, sharedGORMRoot, 2)
+	assertDirectoryGoFileBudget(t, sharedGORMRoot, 3)
 }
 
 func TestCatalogMappingImplementationLivesInBoundedContext(t *testing.T) {

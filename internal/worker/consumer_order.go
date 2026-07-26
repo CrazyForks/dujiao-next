@@ -17,11 +17,11 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/htmltext"
 	"github.com/dujiao-next/internal/logger"
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/telegramidentity"
 
@@ -111,7 +111,7 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 		logger.Debugw("worker_order_status_email_skip_placeholder_receiver", "order_id", order.ID, "order_no", order.OrderNo)
 		return nil
 	}
-	if c.EmailService == nil {
+	if c.EmailSender == nil {
 		logger.Warnw("worker_order_status_email_skip_email_service_nil", "order_id", order.ID, "order_no", order.OrderNo)
 		return nil
 	}
@@ -146,7 +146,7 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 			"error", refundDetailsErr,
 		)
 	}
-	input := service.OrderStatusEmailInput{
+	input := notificationcontract.OrderStatusEmailInput{
 		OrderNo:      order.OrderNo,
 		Status:       status,
 		Amount:       order.TotalAmount,
@@ -168,9 +168,9 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 	if status == constants.OrderStatusDelivered || status == constants.OrderStatusCompleted {
 		input.Instructions = buildOrderInstructionsEmailText(order, locale)
 	}
-	if err := c.EmailService.SendOrderStatusEmailWithTemplate(receiverEmail, input, locale, tmplSetting); err != nil {
+	if err := c.EmailSender.SendOrderStatusEmailWithTemplate(receiverEmail, input, locale, tmplSetting); err != nil {
 		switch {
-		case errors.Is(err, service.ErrEmailServiceDisabled):
+		case errors.Is(err, notificationcontract.ErrEmailServiceDisabled):
 			logger.Debugw("worker_order_status_email_skip_email_disabled",
 				"order_id", order.ID,
 				"order_no", order.OrderNo,
@@ -178,7 +178,7 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 				"status", status,
 			)
 			return nil
-		case errors.Is(err, service.ErrEmailServiceNotConfigured):
+		case errors.Is(err, notificationcontract.ErrEmailNotConfigured):
 			logger.Debugw("worker_order_status_email_skip_email_not_configured",
 				"order_id", order.ID,
 				"order_no", order.OrderNo,
@@ -186,7 +186,7 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 				"status", status,
 			)
 			return nil
-		case errors.Is(err, service.ErrInvalidEmail):
+		case errors.Is(err, notificationcontract.ErrInvalidEmail):
 			logger.Debugw("worker_order_status_email_skip_invalid_email",
 				"order_id", order.ID,
 				"order_no", order.OrderNo,

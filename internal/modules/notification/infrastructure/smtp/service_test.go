@@ -1,4 +1,4 @@
-package service
+package smtp
 
 import (
 	"crypto/tls"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/i18n"
+	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -127,7 +128,7 @@ func TestBuildOrderStatusContent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			input := OrderStatusEmailInput{
+			input := notificationcontract.OrderStatusEmailInput{
 				OrderNo:         pickOrderNo(tt.status),
 				Status:          tt.status,
 				Amount:          money.FromDecimal(decimal.NewFromFloat(19.8)),
@@ -218,7 +219,7 @@ func TestIsEmailRecipientRejected(t *testing.T) {
 
 func TestNormalizeEmailSendError(t *testing.T) {
 	rejected := errors.New("550 No such recipient here")
-	if got := normalizeEmailSendError(rejected); !errors.Is(got, ErrEmailRecipientRejected) {
+	if got := normalizeEmailSendError(rejected); !errors.Is(got, notificationcontract.ErrEmailRecipientRejected) {
 		t.Fatalf("normalizeEmailSendError() expected ErrEmailRecipientRejected, got %v", got)
 	}
 
@@ -233,7 +234,7 @@ func TestNormalizeEmailSendError(t *testing.T) {
 }
 
 func TestSendTextEmailSkipTelegramPlaceholder(t *testing.T) {
-	service := &EmailService{}
+	service := &Service{}
 	if err := service.sendTextEmail("telegram_6059928735@login.local", "subject", "body"); err != nil {
 		t.Fatalf("sendTextEmail() should skip telegram placeholder email, got %v", err)
 	}
@@ -244,7 +245,7 @@ func TestBuildOrderStatusContentFromTemplateIncludesSiteBrand(t *testing.T) {
 	tmpl.Templates.Paid.ZHCN.Subject = "订单通知 {{site_name}}"
 	tmpl.Templates.Paid.ZHCN.Body = "订单号：{{order_no}}\n站点：{{site_name}} {{site_url}}"
 
-	input := OrderStatusEmailInput{
+	input := notificationcontract.OrderStatusEmailInput{
 		OrderNo:         "DJ-SITE-001",
 		Status:          "paid",
 		Amount:          money.FromDecimal(decimal.NewFromInt(10)),
@@ -405,7 +406,7 @@ func newSMTPTestClient(addr, host string, port int, useStartTLS, insecureSkipVer
 	}, nil
 }
 
-// 仅是针对 Office365 SMTP 服务器的集成测试，确保 EmailService 能够成功发送邮件并正确处理服务器的响应。
+// 仅是针对 Office365 SMTP 服务器的集成测试，确保 Service 能够成功发送邮件并正确处理服务器的响应。
 // 需要在环境变量中设置 TEST_OFFICE365_SEND=1 和有效的 TEST_OFFICE365_PASSWORD 来运行此测试。
 func TestEmailServiceSendOffice365Integration(t *testing.T) {
 	if strings.TrimSpace(os.Getenv("TEST_OFFICE365_SEND")) != "1" {
@@ -432,7 +433,7 @@ func TestEmailServiceSendOffice365Integration(t *testing.T) {
 		from = username
 	}
 
-	svc := NewEmailService(&config.EmailConfig{
+	svc := New(&config.EmailConfig{
 		Enabled:  true,
 		Host:     "smtp.office365.com",
 		Port:     587,
@@ -444,7 +445,7 @@ func TestEmailServiceSendOffice365Integration(t *testing.T) {
 		UseSSL:   false,
 	})
 
-	if err := svc.SendCustomEmail(to, "Office365 SMTP integration test", "This is a real email sent by EmailService integration test."); err != nil {
+	if err := svc.SendCustomEmail(to, "Office365 SMTP integration test", "This is a real email sent by Service integration test."); err != nil {
 		t.Fatalf("SendCustomEmail() failed: %v", err)
 	}
 

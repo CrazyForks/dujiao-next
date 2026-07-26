@@ -51,6 +51,7 @@ import (
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	notificationapp "github.com/dujiao-next/internal/modules/notification/application"
 	notificationgormstore "github.com/dujiao-next/internal/modules/notification/infrastructure/gormstore"
+	notificationsmtp "github.com/dujiao-next/internal/modules/notification/infrastructure/smtp"
 	orderapp "github.com/dujiao-next/internal/modules/order/application"
 	orderrefund "github.com/dujiao-next/internal/modules/order/application/refund"
 	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
@@ -77,7 +78,6 @@ import (
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/service"
 )
 
 // Container 声明应用运行期共享的依赖表面；具体构造过程按职责拆分在同包装配文件中。
@@ -134,7 +134,7 @@ type Container struct {
 	UserTOTPService               *usertotpapp.Service
 	UserAuthService               *userauthapp.Service
 	TelegramAuthService           *telegramauthapp.Service
-	EmailService                  *service.EmailService
+	EmailSender                   *notificationsmtp.Service
 	CaptchaService                *captchaapp.Service
 	UploadService                 *uploadapp.Service
 	ProductReadService            *productapplication.Service
