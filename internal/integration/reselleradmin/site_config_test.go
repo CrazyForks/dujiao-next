@@ -6,19 +6,21 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+
+	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+
 	auditlogdomain "github.com/dujiao-next/internal/modules/auditlog/domain"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller"
-	"github.com/dujiao-next/internal/repository"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
 
 	"github.com/gin-gonic/gin"
 )
 
 func TestAdminResellerSiteConfigUpdateAndAudit(t *testing.T) {
 	h, db := setupAdminResellerManagementHandlerTest(t)
-	resellerRepo := repository.NewResellerRepository(db)
+	resellerRepo := resellergormstore.New(db)
 	h.ResellerSiteConfigService = resellermodule.NewSiteConfigService(resellerRepo)
-	profile := seedAdminResellerManagementProfile(t, db, models.ResellerProfileStatusActive)
+	profile := seedAdminResellerManagementProfile(t, db, resellerdomain.ProfileStatusActive)
 	body := strings.NewReader(`{"site_name":"Admin Edited","support":{"telegram":"https://t.me/admin"}}`)
 	c, recorder := newAdminResellerManagementContext(http.MethodPut, fmt.Sprintf("/admin/resellers/site-configs/%d", profile.ID), body)
 	c.Params = gin.Params{{Key: "reseller_id", Value: fmt.Sprintf("%d", profile.ID)}}
@@ -27,7 +29,7 @@ func TestAdminResellerSiteConfigUpdateAndAudit(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", recorder.Code, recorder.Body.String())
 	}
-	var row models.ResellerSiteConfig
+	var row resellerdomain.SiteConfig
 	if err := db.Where("reseller_id = ?", profile.ID).First(&row).Error; err != nil {
 		t.Fatalf("expected saved config: %v", err)
 	}
@@ -45,10 +47,10 @@ func TestAdminResellerSiteConfigUpdateAndAudit(t *testing.T) {
 
 func TestAdminResellerSiteConfigResetAndList(t *testing.T) {
 	h, db := setupAdminResellerManagementHandlerTest(t)
-	resellerRepo := repository.NewResellerRepository(db)
+	resellerRepo := resellergormstore.New(db)
 	h.ResellerSiteConfigService = resellermodule.NewSiteConfigService(resellerRepo)
-	profile := seedAdminResellerManagementProfile(t, db, models.ResellerProfileStatusActive)
-	if _, err := resellerRepo.UpsertSiteConfig(models.ResellerSiteConfig{ResellerID: profile.ID, SiteName: "Reset Me"}); err != nil {
+	profile := seedAdminResellerManagementProfile(t, db, resellerdomain.ProfileStatusActive)
+	if _, err := resellerRepo.UpsertSiteConfig(resellerdomain.SiteConfig{ResellerID: profile.ID, SiteName: "Reset Me"}); err != nil {
 		t.Fatalf("create site config failed: %v", err)
 	}
 

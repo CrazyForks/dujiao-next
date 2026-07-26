@@ -40,7 +40,7 @@ type PaymentService struct {
 	downstreamCallbackSvc   DownstreamCallbackEnqueuer
 	memberLevelSvc          MemberLevelProgressor
 	paymentProviderRegistry *provider.Registry
-	resellerAccountingSvc   *ResellerAccountingService
+	resellerAccounting      resellerAccountingTransactions
 }
 
 type MemberLevelProgressor interface {
@@ -89,23 +89,23 @@ func (s *PaymentService) SetMemberLevelService(svc MemberLevelProgressor) {
 
 // PaymentServiceOptions 支付服务构造参数
 type PaymentServiceOptions struct {
-	OrderRepo                 repository.OrderRepository
-	ProductRepo               paymentProductStore
-	ProductSKURepo            paymentSKUStore
-	PaymentRepo               repository.PaymentRepository
-	ChannelRepo               repository.PaymentChannelRepository
-	WalletRepo                walletcontract.Repository
-	UserStore                 usercontract.Store
-	ExternalIdentityStore     externalidentitycontract.Store
-	QueueClient               *queue.Client
-	WalletService             *walletapp.Service
-	SettingService            *settingsapp.Service
-	DefaultEmailConfig        config.EmailConfig
-	ExpireMinutes             int
-	AffiliateService          AffiliatePaymentLifecycle
-	NotificationService       notificationcontract.NotificationEnqueuer
-	PaymentProviderRegistry   *provider.Registry
-	ResellerAccountingService *ResellerAccountingService
+	OrderRepo               repository.OrderRepository
+	ProductRepo             paymentProductStore
+	ProductSKURepo          paymentSKUStore
+	PaymentRepo             repository.PaymentRepository
+	ChannelRepo             repository.PaymentChannelRepository
+	WalletRepo              walletcontract.Repository
+	UserStore               usercontract.Store
+	ExternalIdentityStore   externalidentitycontract.Store
+	QueueClient             *queue.Client
+	WalletService           *walletapp.Service
+	SettingService          *settingsapp.Service
+	DefaultEmailConfig      config.EmailConfig
+	ExpireMinutes           int
+	AffiliateService        AffiliatePaymentLifecycle
+	NotificationService     notificationcontract.NotificationEnqueuer
+	PaymentProviderRegistry *provider.Registry
+	ResellerAccounting      resellerAccountingTransactions
 }
 
 // NewPaymentService 创建支付服务
@@ -127,7 +127,7 @@ func NewPaymentService(opts PaymentServiceOptions) *PaymentService {
 		affiliateSvc:            opts.AffiliateService,
 		notificationSvc:         opts.NotificationService,
 		paymentProviderRegistry: opts.PaymentProviderRegistry,
-		resellerAccountingSvc:   opts.ResellerAccountingService,
+		resellerAccounting:      opts.ResellerAccounting,
 	}
 }
 

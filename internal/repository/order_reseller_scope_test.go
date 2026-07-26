@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -9,9 +10,23 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
+	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
+
+func openOrderTenantScopeTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	dsn := fmt.Sprintf("file:order_tenant_scope_%d?mode=memory&cache=shared", time.Now().UnixNano())
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite failed: %v", err)
+	}
+	if err := db.AutoMigrate(&userdomain.User{}, &models.Order{}, &models.OrderItem{}, &models.Fulfillment{}); err != nil {
+		t.Fatalf("migrate failed: %v", err)
+	}
+	return db
+}
 
 func seedScopedOrder(t *testing.T, db *gorm.DB, orderNo string, userID uint, guestEmail string, guestPassword string, status string, resellerID *uint, parentID *uint) models.Order {
 	t.Helper()
@@ -54,7 +69,7 @@ func assertOrderMissing(t *testing.T, order *models.Order) {
 }
 
 func TestOrderRepositoryTenantScopePointQueriesAndLists(t *testing.T) {
-	db := openResellerPricingRepoTestDB(t)
+	db := openOrderTenantScopeTestDB(t)
 	repo := NewOrderRepository(db)
 	user := userdomain.User{Email: "scope-user@example.com", PasswordHash: "hash"}
 	if err := db.Create(&user).Error; err != nil {
@@ -62,9 +77,9 @@ func TestOrderRepositoryTenantScopePointQueriesAndLists(t *testing.T) {
 	}
 	resellerOne := uint(101)
 	resellerTwo := uint(202)
-	mainScope := ResellerOrderScope{}
-	resellerOneScope := ResellerOrderScope{ResellerID: &resellerOne}
-	resellerTwoScope := ResellerOrderScope{ResellerID: &resellerTwo}
+	mainScope := OrderTenantScope{}
+	resellerOneScope := OrderTenantScope{ResellerID: &resellerOne}
+	resellerTwoScope := OrderTenantScope{ResellerID: &resellerTwo}
 
 	mainOrder := seedScopedOrder(t, db, "SCOPE-MAIN", user.ID, "", "", constants.OrderStatusPendingPayment, nil, nil)
 	resellerOrder := seedScopedOrder(t, db, "SCOPE-R1", user.ID, "", "", constants.OrderStatusPaid, &resellerOne, nil)

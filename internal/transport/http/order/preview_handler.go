@@ -14,7 +14,7 @@ import (
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
 	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/jsonmap"

@@ -5,17 +5,19 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/dujiao-next/internal/models"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller"
-	"github.com/dujiao-next/internal/repository"
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+
+	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+
+	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestResellerSiteConfigServiceUserUpdateRequiresActiveProfile(t *testing.T) {
 	db := openResellerManagementServiceTestDB(t)
-	repo := repository.NewResellerRepository(db)
+	repo := resellergormstore.New(db)
 	user := seedResellerManagementUser(t, db, "site-config-pending@example.test")
-	profile := models.ResellerProfile{UserID: user.ID, Status: models.ResellerProfileStatusPendingReview, SettlementStatus: models.ResellerSettlementStatusNormal}
+	profile := resellerdomain.Profile{UserID: user.ID, Status: resellerdomain.ProfileStatusPendingReview, SettlementStatus: resellerdomain.SettlementStatusNormal}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
@@ -28,9 +30,9 @@ func TestResellerSiteConfigServiceUserUpdateRequiresActiveProfile(t *testing.T) 
 
 func TestResellerSiteConfigServiceNormalizesAndStoresSafeFields(t *testing.T) {
 	db := openResellerManagementServiceTestDB(t)
-	repo := repository.NewResellerRepository(db)
+	repo := resellergormstore.New(db)
 	user := seedResellerManagementUser(t, db, "site-config-active@example.test")
-	profile := models.ResellerProfile{UserID: user.ID, Status: models.ResellerProfileStatusActive, SettlementStatus: models.ResellerSettlementStatusNormal}
+	profile := resellerdomain.Profile{UserID: user.ID, Status: resellerdomain.ProfileStatusActive, SettlementStatus: resellerdomain.SettlementStatusNormal}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
@@ -75,9 +77,9 @@ func TestResellerSiteConfigServiceNormalizesAndStoresSafeFields(t *testing.T) {
 
 func TestResellerSiteConfigServiceRejectsUnsafeURLs(t *testing.T) {
 	db := openResellerManagementServiceTestDB(t)
-	repo := repository.NewResellerRepository(db)
+	repo := resellergormstore.New(db)
 	user := seedResellerManagementUser(t, db, "site-config-unsafe@example.test")
-	profile := models.ResellerProfile{UserID: user.ID, Status: models.ResellerProfileStatusActive, SettlementStatus: models.ResellerSettlementStatusNormal}
+	profile := resellerdomain.Profile{UserID: user.ID, Status: resellerdomain.ProfileStatusActive, SettlementStatus: resellerdomain.SettlementStatusNormal}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
@@ -93,9 +95,9 @@ func TestResellerSiteConfigServiceRejectsUnsafeURLs(t *testing.T) {
 
 func TestResellerSiteConfigServiceReturnsFieldErrorForInvalidSupport(t *testing.T) {
 	db := openResellerManagementServiceTestDB(t)
-	repo := repository.NewResellerRepository(db)
+	repo := resellergormstore.New(db)
 	user := seedResellerManagementUser(t, db, "site-config-field@example.test")
-	profile := models.ResellerProfile{UserID: user.ID, Status: models.ResellerProfileStatusActive, SettlementStatus: models.ResellerSettlementStatusNormal}
+	profile := resellerdomain.Profile{UserID: user.ID, Status: resellerdomain.ProfileStatusActive, SettlementStatus: resellerdomain.SettlementStatusNormal}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
@@ -128,9 +130,9 @@ func TestNormalizeResellerSupportAcceptsTelegramMe(t *testing.T) {
 
 func TestResellerSiteConfigServiceApplyPublicConfigOverlay(t *testing.T) {
 	db := openResellerManagementServiceTestDB(t)
-	repo := repository.NewResellerRepository(db)
+	repo := resellergormstore.New(db)
 	user := seedResellerManagementUser(t, db, "site-config-overlay@example.test")
-	profile := models.ResellerProfile{UserID: user.ID, Status: models.ResellerProfileStatusActive, SettlementStatus: models.ResellerSettlementStatusNormal}
+	profile := resellerdomain.Profile{UserID: user.ID, Status: resellerdomain.ProfileStatusActive, SettlementStatus: resellerdomain.SettlementStatusNormal}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
@@ -188,9 +190,9 @@ func TestResellerSiteConfigServiceApplyPublicConfigOverlay(t *testing.T) {
 
 func TestResellerSiteConfigServiceOverlayEmitsActiveAnnouncement(t *testing.T) {
 	db := openResellerManagementServiceTestDB(t)
-	repo := repository.NewResellerRepository(db)
+	repo := resellergormstore.New(db)
 	user := seedResellerManagementUser(t, db, "site-config-announcement@example.test")
-	profile := models.ResellerProfile{UserID: user.ID, Status: models.ResellerProfileStatusActive, SettlementStatus: models.ResellerSettlementStatusNormal}
+	profile := resellerdomain.Profile{UserID: user.ID, Status: resellerdomain.ProfileStatusActive, SettlementStatus: resellerdomain.SettlementStatusNormal}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}

@@ -49,7 +49,7 @@ func (s *OrderRefundService) AdminRefundToWallet(
 	}
 	reference := fmt.Sprintf("order:%d:admin_refund:%d", input.OrderID, time.Now().UnixNano())
 	var (
-		transactionResult *walletdomain.Transaction
+		transactionResult  *walletdomain.Transaction
 		refundRecordResult *models.OrderRefundRecord
 	)
 
@@ -162,8 +162,8 @@ func (s *OrderRefundService) AdminRefundToWallet(
 		if err := s.orderRefundRecordRepo.WithTx(tx).Create(record); err != nil {
 			return ErrRefundRecordCreateFailed
 		}
-		if s.resellerAccountingSvc != nil {
-			if err := s.resellerAccountingSvc.HandleRefundDeductTx(tx, &order, record, refundedBefore); err != nil {
+		if s.resellerAccounting != nil {
+			if err := s.resellerAccounting.HandleRefundDeductTx(tx, &order, record, refundedBefore); err != nil {
 				return err
 			}
 		}

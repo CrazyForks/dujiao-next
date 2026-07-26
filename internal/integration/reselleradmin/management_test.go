@@ -9,6 +9,10 @@ import (
 	"testing"
 	"time"
 
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+
+	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -24,15 +28,12 @@ import (
 	auditlogdomain "github.com/dujiao-next/internal/modules/auditlog/domain"
 	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/infrastructure/gormstore"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller"
-	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
+	resellerhttp "github.com/dujiao-next/internal/modules/reseller/transport/http/admin"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/provider"
-	"github.com/dujiao-next/internal/repository"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
-	resellerhttp "github.com/dujiao-next/internal/transport/http/reseller"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -62,14 +63,14 @@ func setupAdminResellerManagementHandlerTest(t *testing.T) (*adminResellerFixtur
 		&productdomain.ProductSKU{},
 		&models.Order{},
 		&models.OrderItem{},
-		&models.ResellerProfile{},
-		&models.ResellerDomain{},
-		&models.ResellerSiteConfig{},
-		&models.ResellerProductSetting{},
-		&models.ResellerOrderSnapshot{},
-		&models.ResellerLedgerEntry{},
-		&models.ResellerWithdrawRequest{},
-		&models.ResellerBalanceAccount{},
+		&resellerdomain.Profile{},
+		&resellerdomain.Domain{},
+		&resellerdomain.SiteConfig{},
+		&resellerdomain.ProductSetting{},
+		&resellerdomain.OrderSnapshot{},
+		&resellerdomain.LedgerEntry{},
+		&resellerdomain.WithdrawRequest{},
+		&resellerdomain.BalanceAccount{},
 	); err != nil {
 		t.Fatalf("migrate failed: %v", err)
 	}
@@ -77,23 +78,23 @@ func setupAdminResellerManagementHandlerTest(t *testing.T) (*adminResellerFixtur
 		t.Fatalf("create domain index failed: %v", err)
 	}
 
-	resellerRepo := repository.NewResellerRepository(db)
-	settingRepo := repository.NewResellerProductSettingRepository(db)
+	resellerStore := resellergormstore.New(db)
 	productRepo := productgormstore.NewProductStore(db)
 	auditRepo := auditloggormstore.NewAuthzStore(db)
 	return &adminResellerFixture{Container: &provider.Container{
-		ResellerRepo:               resellerRepo,
-		ResellerProductSettingRepo: settingRepo,
-		ProductRepo:                productRepo,
-		ResellerManagementService: resellermodule.NewManagementService(resellerpersistence.NewManagementStore(resellerRepo), config.ResellerConfig{
+		ResellerStore: resellerStore,
+		ProductRepo:   productRepo,
+		ResellerManagementService: resellermodule.NewManagementService(resellerStore, config.ResellerConfig{
 			Enabled:          true,
 			SelfApplyEnabled: true,
 			SubdomainBase:    "shop.example.test",
 			MainHosts:        []string{"main.example.test"},
 		}),
-		ResellerProductSettingService: resellermodule.NewProductSettingService(resellerpersistence.NewProductSettingStore(settingRepo, resellerRepo), productRepo),
-		ResellerAccountingService:     service.NewResellerAccountingService(resellerRepo, service.ResellerAccountingOptions{ConfirmDays: 7}),
-		ResellerOrderService:          resellermodule.NewOrderQueryService(resellerRepo),
+		ResellerProductSettingService: resellermodule.NewProductSettingService(resellerStore, productRepo),
+		ResellerAccountingQuery:       resellermodule.NewAccountingQueryService(resellerStore),
+		ResellerAccountingWithdraw:    resellermodule.NewAccountingWithdrawService(resellerStore),
+		ResellerAccountingLedger:      resellermodule.NewAccountingLedgerService(resellerStore, 7),
+		ResellerOrderService:          resellermodule.NewOrderQueryService(resellerStore),
 		AuthzAuditService:             auditlogapp.NewAuthzService(auditRepo),
 	}}, db
 }
@@ -112,69 +113,30 @@ func newAdminResellerManagementContext(method, target string, body *strings.Read
 	return c, recorder
 }
 
-type adminResellerTestDirectory struct {
-	repo repository.ResellerRepository
-}
-
-func (a adminResellerTestDirectory) ListProfiles(filter resellerhttp.ProfileListFilter) ([]models.ResellerProfile, int64, error) {
-	return a.repo.ListProfiles(repository.ResellerProfileListFilter{
-		Page: filter.Page, PageSize: filter.PageSize, UserID: filter.UserID,
-		Status: filter.Status, SettlementStatus: filter.SettlementStatus, Keyword: filter.Keyword,
-		CreatedFrom: filter.CreatedFrom, CreatedTo: filter.CreatedTo,
-	})
-}
-
-func (a adminResellerTestDirectory) ListDomains(filter resellerhttp.DomainListFilter) ([]models.ResellerDomain, int64, error) {
-	return a.repo.ListDomains(repository.ResellerDomainListFilter{
-		Page: filter.Page, PageSize: filter.PageSize, ResellerID: filter.ResellerID, UserID: filter.UserID,
-		Domain: filter.Domain, Type: filter.Type, Status: filter.Status, VerificationStatus: filter.VerificationStatus,
-		Keyword: filter.Keyword, CreatedFrom: filter.CreatedFrom, CreatedTo: filter.CreatedTo,
-	})
-}
-
-func (a adminResellerTestDirectory) ListSiteConfigs(filter resellerhttp.SiteConfigListFilter) ([]models.ResellerSiteConfig, int64, error) {
-	return a.repo.ListSiteConfigs(repository.ResellerSiteConfigListFilter{
-		Page: filter.Page, PageSize: filter.PageSize, ResellerID: filter.ResellerID, Keyword: filter.Keyword,
-		CreatedFrom: filter.CreatedFrom, CreatedTo: filter.CreatedTo,
-	})
-}
-
-func (a adminResellerTestDirectory) GetSiteConfigByResellerID(resellerID uint) (*models.ResellerSiteConfig, error) {
-	return a.repo.GetSiteConfigByResellerID(resellerID)
-}
-
-func (a adminResellerTestDirectory) GetProfileByID(id uint) (*models.ResellerProfile, error) {
-	return a.repo.GetProfileByID(id)
-}
-
-func (a adminResellerTestDirectory) ListDomainsByResellerID(resellerID uint) ([]models.ResellerDomain, error) {
-	return a.repo.ListDomainsByResellerID(resellerID)
-}
-
 func adminResellerManagementHTTP(h *adminResellerFixture) *resellerhttp.AdminManagementHandler {
-	return resellerhttp.NewAdminManagementHandler(h.ResellerManagementService, adminResellerTestDirectory{repo: h.ResellerRepo}, h.AuthzAuditService)
+	return resellerhttp.NewAdminManagementHandler(h.ResellerManagementService, h.ResellerStore, h.AuthzAuditService)
 }
 
 func adminResellerProfileDetailHTTP(h *adminResellerFixture) *resellerhttp.AdminProfileDetailHandler {
 	return resellerhttp.NewAdminProfileDetailHandler(
-		adminResellerTestDirectory{repo: h.ResellerRepo},
+		h.ResellerStore,
 		h.ResellerProductSettingService,
-		h.ResellerAccountingService,
+		h.ResellerAccountingQuery,
 		h.ResellerOrderService,
 	)
 }
 
 func adminResellerSiteConfigHTTP(h *adminResellerFixture) *resellerhttp.AdminSiteConfigHandler {
-	return resellerhttp.NewAdminSiteConfigHandler(h.ResellerSiteConfigService, adminResellerTestDirectory{repo: h.ResellerRepo}, h.AuthzAuditService)
+	return resellerhttp.NewAdminSiteConfigHandler(h.ResellerSiteConfigService, h.ResellerStore, h.AuthzAuditService)
 }
 
-func seedAdminResellerManagementProfile(t *testing.T, db *gorm.DB, status string) models.ResellerProfile {
+func seedAdminResellerManagementProfile(t *testing.T, db *gorm.DB, status string) resellerdomain.Profile {
 	t.Helper()
 	user := userdomain.User{Email: fmt.Sprintf("reseller-management-%d@example.test", time.Now().UnixNano()), PasswordHash: "hash", DisplayName: "Reseller Management"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	profile := models.ResellerProfile{UserID: user.ID, Status: status, ApplyReason: "please approve", SettlementStatus: models.ResellerSettlementStatusNormal}
+	profile := resellerdomain.Profile{UserID: user.ID, Status: status, ApplyReason: "please approve", SettlementStatus: resellerdomain.SettlementStatusNormal}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
@@ -183,7 +145,7 @@ func seedAdminResellerManagementProfile(t *testing.T, db *gorm.DB, status string
 
 func TestAdminResellerManagementApproveProfileActivatesWithoutAutoDomain(t *testing.T) {
 	h, db := setupAdminResellerManagementHandlerTest(t)
-	profile := seedAdminResellerManagementProfile(t, db, models.ResellerProfileStatusPendingReview)
+	profile := seedAdminResellerManagementProfile(t, db, resellerdomain.ProfileStatusPendingReview)
 	c, recorder := newAdminResellerManagementContext(http.MethodPost, fmt.Sprintf("/admin/resellers/profiles/%d/approve", profile.ID), strings.NewReader(`{"default_markup_percent":"8.00","max_markup_percent":"40.00"}`))
 	c.Params = gin.Params{{Key: "id", Value: fmt.Sprintf("%d", profile.ID)}}
 
@@ -192,7 +154,7 @@ func TestAdminResellerManagementApproveProfileActivatesWithoutAutoDomain(t *test
 		t.Fatalf("expected 200, got %d body=%s", recorder.Code, recorder.Body.String())
 	}
 	var domainCount int64
-	if err := db.Model(&models.ResellerDomain{}).Where("reseller_id = ?", profile.ID).Count(&domainCount).Error; err != nil {
+	if err := db.Model(&resellerdomain.Domain{}).Where("reseller_id = ?", profile.ID).Count(&domainCount).Error; err != nil {
 		t.Fatalf("count domains failed: %v", err)
 	}
 	if domainCount != 0 {
@@ -209,7 +171,7 @@ func TestAdminResellerManagementApproveProfileActivatesWithoutAutoDomain(t *test
 
 func TestAdminResellerManagementAssignSystemSubdomainCreatesDomainAndAudit(t *testing.T) {
 	h, db := setupAdminResellerManagementHandlerTest(t)
-	profile := seedAdminResellerManagementProfile(t, db, models.ResellerProfileStatusActive)
+	profile := seedAdminResellerManagementProfile(t, db, resellerdomain.ProfileStatusActive)
 	c, recorder := newAdminResellerManagementContext(http.MethodPut, fmt.Sprintf("/admin/resellers/profiles/%d/system-domain", profile.ID), strings.NewReader(`{"subdomain":"hello"}`))
 	c.Params = gin.Params{{Key: "id", Value: fmt.Sprintf("%d", profile.ID)}}
 
@@ -217,11 +179,11 @@ func TestAdminResellerManagementAssignSystemSubdomainCreatesDomainAndAudit(t *te
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", recorder.Code, recorder.Body.String())
 	}
-	var domain models.ResellerDomain
-	if err := db.Where("reseller_id = ? AND type = ?", profile.ID, models.ResellerDomainTypeSubdomain).First(&domain).Error; err != nil {
+	var domain resellerdomain.Domain
+	if err := db.Where("reseller_id = ? AND type = ?", profile.ID, resellerdomain.DomainTypeSubdomain).First(&domain).Error; err != nil {
 		t.Fatalf("expected system domain: %v", err)
 	}
-	if domain.Domain != "hello.shop.example.test" || domain.Status != models.ResellerDomainStatusActive || domain.VerificationStatus != models.ResellerDomainVerificationVerified || !domain.IsPrimary {
+	if domain.Domain != "hello.shop.example.test" || domain.Status != resellerdomain.DomainStatusActive || domain.VerificationStatus != resellerdomain.DomainVerificationVerified || !domain.IsPrimary {
 		t.Fatalf("unexpected system domain: %+v", domain)
 	}
 	var auditCount int64
@@ -235,11 +197,11 @@ func TestAdminResellerManagementAssignSystemSubdomainCreatesDomainAndAudit(t *te
 
 func TestAdminResellerManagementAssignSystemSubdomainReportsMissingSubdomainBase(t *testing.T) {
 	h, db := setupAdminResellerManagementHandlerTest(t)
-	h.ResellerManagementService = resellermodule.NewManagementService(resellerpersistence.NewManagementStore(h.ResellerRepo), config.ResellerConfig{
+	h.ResellerManagementService = resellermodule.NewManagementService(h.ResellerStore, config.ResellerConfig{
 		Enabled:          true,
 		SelfApplyEnabled: true,
 	})
-	profile := seedAdminResellerManagementProfile(t, db, models.ResellerProfileStatusActive)
+	profile := seedAdminResellerManagementProfile(t, db, resellerdomain.ProfileStatusActive)
 	c, recorder := newAdminResellerManagementContext(http.MethodPut, fmt.Sprintf("/admin/resellers/profiles/%d/system-domain", profile.ID), strings.NewReader(`{"subdomain":"hello"}`))
 	c.Params = gin.Params{{Key: "id", Value: fmt.Sprintf("%d", profile.ID)}}
 
@@ -264,8 +226,8 @@ func TestAdminResellerManagementAssignSystemSubdomainReportsMissingSubdomainBase
 
 func TestAdminResellerManagementListProfilesFilters(t *testing.T) {
 	h, db := setupAdminResellerManagementHandlerTest(t)
-	profile := seedAdminResellerManagementProfile(t, db, models.ResellerProfileStatusPendingReview)
-	activeProfile := seedAdminResellerManagementProfile(t, db, models.ResellerProfileStatusActive)
+	profile := seedAdminResellerManagementProfile(t, db, resellerdomain.ProfileStatusPendingReview)
+	activeProfile := seedAdminResellerManagementProfile(t, db, resellerdomain.ProfileStatusActive)
 	c, recorder := newAdminResellerManagementContext(http.MethodGet, "/admin/resellers/profiles?status=pending_review&page=1&page_size=20", nil)
 
 	adminResellerManagementHTTP(h).ListProfiles(c)
@@ -279,8 +241,8 @@ func TestAdminResellerManagementListProfilesFilters(t *testing.T) {
 
 func TestAdminResellerManagementApproveDomain(t *testing.T) {
 	h, db := setupAdminResellerManagementHandlerTest(t)
-	profile := seedAdminResellerManagementProfile(t, db, models.ResellerProfileStatusActive)
-	domain := models.ResellerDomain{ResellerID: profile.ID, Domain: "custom.example.test", Type: models.ResellerDomainTypeCustom, VerificationStatus: models.ResellerDomainVerificationPending, Status: models.ResellerDomainStatusPendingReview}
+	profile := seedAdminResellerManagementProfile(t, db, resellerdomain.ProfileStatusActive)
+	domain := resellerdomain.Domain{ResellerID: profile.ID, Domain: "custom.example.test", Type: resellerdomain.DomainTypeCustom, VerificationStatus: resellerdomain.DomainVerificationPending, Status: resellerdomain.DomainStatusPendingReview}
 	if err := db.Create(&domain).Error; err != nil {
 		t.Fatalf("create domain failed: %v", err)
 	}
@@ -291,37 +253,37 @@ func TestAdminResellerManagementApproveDomain(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", recorder.Code, recorder.Body.String())
 	}
-	var loaded models.ResellerDomain
+	var loaded resellerdomain.Domain
 	if err := db.First(&loaded, domain.ID).Error; err != nil {
 		t.Fatalf("load domain failed: %v", err)
 	}
-	if loaded.Status != models.ResellerDomainStatusActive || loaded.VerificationStatus != models.ResellerDomainVerificationVerified || loaded.VerifiedAt == nil {
+	if loaded.Status != resellerdomain.DomainStatusActive || loaded.VerificationStatus != resellerdomain.DomainVerificationVerified || loaded.VerifiedAt == nil {
 		t.Fatalf("unexpected approved domain: %+v", loaded)
 	}
 }
 
 func TestAdminResellerManagementGetProfileDetailAggregatesOperationalData(t *testing.T) {
 	h, db := setupAdminResellerManagementHandlerTest(t)
-	profile := seedAdminResellerManagementProfile(t, db, models.ResellerProfileStatusActive)
+	profile := seedAdminResellerManagementProfile(t, db, resellerdomain.ProfileStatusActive)
 	now := time.Now()
-	domains := []models.ResellerDomain{
-		{ResellerID: profile.ID, Domain: "r1.shop.example.test", Type: models.ResellerDomainTypeSubdomain, VerificationStatus: models.ResellerDomainVerificationVerified, Status: models.ResellerDomainStatusActive, IsPrimary: true, VerifiedAt: &now},
-		{ResellerID: profile.ID, Domain: "custom.example.test", Type: models.ResellerDomainTypeCustom, VerificationStatus: models.ResellerDomainVerificationPending, Status: models.ResellerDomainStatusPendingReview},
+	domains := []resellerdomain.Domain{
+		{ResellerID: profile.ID, Domain: "r1.shop.example.test", Type: resellerdomain.DomainTypeSubdomain, VerificationStatus: resellerdomain.DomainVerificationVerified, Status: resellerdomain.DomainStatusActive, IsPrimary: true, VerifiedAt: &now},
+		{ResellerID: profile.ID, Domain: "custom.example.test", Type: resellerdomain.DomainTypeCustom, VerificationStatus: resellerdomain.DomainVerificationPending, Status: resellerdomain.DomainStatusPendingReview},
 	}
 	if err := db.Create(&domains).Error; err != nil {
 		t.Fatalf("create domains failed: %v", err)
 	}
-	siteConfig := models.ResellerSiteConfig{ResellerID: profile.ID, SiteName: "运营分销站"}
+	siteConfig := resellerdomain.SiteConfig{ResellerID: profile.ID, SiteName: "运营分销站"}
 	if err := db.Create(&siteConfig).Error; err != nil {
 		t.Fatalf("create site config failed: %v", err)
 	}
 	product, skus := seedResellerProductSettingProductForAdminHandler(t, db)
-	if _, err := h.ResellerProductSettingRepo.UpsertSetting(models.ResellerProductSetting{
+	if _, err := h.ResellerStore.UpsertSetting(resellerdomain.ProductSetting{
 		ResellerID:        profile.ID,
 		ProductID:         product.ID,
 		SKUID:             skus[0].ID,
 		IsListed:          false,
-		PricingMode:       models.ResellerPricingModeFixedPrice,
+		PricingMode:       resellerdomain.PricingModeFixedPrice,
 		FixedPriceAmount:  money.FromDecimal(decimal.RequireFromString("129.00")),
 		FixedMarkupAmount: money.FromDecimal(decimal.Zero),
 	}); err != nil {
@@ -356,7 +318,7 @@ func TestAdminResellerManagementGetProfileDetailAggregatesOperationalData(t *tes
 	if err := db.Create(&orderItem).Error; err != nil {
 		t.Fatalf("create order item failed: %v", err)
 	}
-	snapshot := models.ResellerOrderSnapshot{
+	snapshot := resellerdomain.OrderSnapshot{
 		OrderID:        order.ID,
 		ResellerID:     profile.ID,
 		Domain:         "r1.shop.example.test",
@@ -370,15 +332,15 @@ func TestAdminResellerManagementGetProfileDetailAggregatesOperationalData(t *tes
 	if err := db.Create(&snapshot).Error; err != nil {
 		t.Fatalf("create snapshot failed: %v", err)
 	}
-	ledger := models.ResellerLedgerEntry{ResellerID: profile.ID, OrderID: &order.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.RequireFromString("29.00")), Currency: "CNY", IdempotencyKey: "ledger-detail-1", Status: models.ResellerLedgerStatusAvailable}
+	ledger := resellerdomain.LedgerEntry{ResellerID: profile.ID, OrderID: &order.ID, Type: resellerdomain.LedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.RequireFromString("29.00")), Currency: "CNY", IdempotencyKey: "ledger-detail-1", Status: resellerdomain.LedgerStatusAvailable}
 	if err := db.Create(&ledger).Error; err != nil {
 		t.Fatalf("create ledger failed: %v", err)
 	}
-	balance := models.ResellerBalanceAccount{ResellerID: profile.ID, Currency: "CNY", Status: models.ResellerBalanceStatusNormal, AvailableAmountCache: money.FromDecimal(decimal.RequireFromString("29.00"))}
+	balance := resellerdomain.BalanceAccount{ResellerID: profile.ID, Currency: "CNY", Status: resellerdomain.BalanceStatusNormal, AvailableAmountCache: money.FromDecimal(decimal.RequireFromString("29.00"))}
 	if err := db.Create(&balance).Error; err != nil {
 		t.Fatalf("create balance failed: %v", err)
 	}
-	withdraw := models.ResellerWithdrawRequest{ResellerID: profile.ID, Amount: money.FromDecimal(decimal.RequireFromString("10.00")), Currency: "CNY", Channel: "bank", Account: "**** 1234", Status: models.ResellerWithdrawStatusPending}
+	withdraw := resellerdomain.WithdrawRequest{ResellerID: profile.ID, Amount: money.FromDecimal(decimal.RequireFromString("10.00")), Currency: "CNY", Channel: "bank", Account: "**** 1234", Status: resellerdomain.WithdrawStatusPending}
 	if err := db.Create(&withdraw).Error; err != nil {
 		t.Fatalf("create withdraw failed: %v", err)
 	}
@@ -415,7 +377,7 @@ func TestAdminResellerManagementGetProfileDetailAggregatesOperationalData(t *tes
 
 func TestAdminResellerManagementUpdateProfileOperationalConfig(t *testing.T) {
 	h, db := setupAdminResellerManagementHandlerTest(t)
-	profile := seedAdminResellerManagementProfile(t, db, models.ResellerProfileStatusActive)
+	profile := seedAdminResellerManagementProfile(t, db, resellerdomain.ProfileStatusActive)
 	body := strings.NewReader(`{"default_markup_percent":"12.50","max_markup_percent":"0","settlement_status":"frozen","reason":"风控复核"}`)
 	c, recorder := newAdminResellerManagementContext(http.MethodPut, fmt.Sprintf("/admin/resellers/profiles/%d", profile.ID), body)
 	c.Params = gin.Params{{Key: "id", Value: fmt.Sprintf("%d", profile.ID)}}
@@ -425,13 +387,13 @@ func TestAdminResellerManagementUpdateProfileOperationalConfig(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", recorder.Code, recorder.Body.String())
 	}
-	var loaded models.ResellerProfile
+	var loaded resellerdomain.Profile
 	if err := db.First(&loaded, profile.ID).Error; err != nil {
 		t.Fatalf("load profile failed: %v", err)
 	}
 	if !loaded.DefaultMarkupPercent.Decimal.Equal(decimal.RequireFromString("12.50")) ||
 		!loaded.MaxMarkupPercent.Decimal.Equal(decimal.Zero) ||
-		loaded.SettlementStatus != models.ResellerSettlementStatusFrozen {
+		loaded.SettlementStatus != resellerdomain.SettlementStatusFrozen {
 		t.Fatalf("unexpected updated profile: %+v", loaded)
 	}
 	var auditCount int64
@@ -445,10 +407,10 @@ func TestAdminResellerManagementUpdateProfileOperationalConfig(t *testing.T) {
 
 func TestAdminResellerManagementSetPrimaryDomain(t *testing.T) {
 	h, db := setupAdminResellerManagementHandlerTest(t)
-	profile := seedAdminResellerManagementProfile(t, db, models.ResellerProfileStatusActive)
+	profile := seedAdminResellerManagementProfile(t, db, resellerdomain.ProfileStatusActive)
 	now := time.Now()
-	oldPrimary := models.ResellerDomain{ResellerID: profile.ID, Domain: "r1.shop.example.test", Type: models.ResellerDomainTypeSubdomain, VerificationStatus: models.ResellerDomainVerificationVerified, Status: models.ResellerDomainStatusActive, IsPrimary: true, VerifiedAt: &now}
-	nextPrimary := models.ResellerDomain{ResellerID: profile.ID, Domain: "custom.example.test", Type: models.ResellerDomainTypeCustom, VerificationStatus: models.ResellerDomainVerificationVerified, Status: models.ResellerDomainStatusActive, IsPrimary: false, VerifiedAt: &now}
+	oldPrimary := resellerdomain.Domain{ResellerID: profile.ID, Domain: "r1.shop.example.test", Type: resellerdomain.DomainTypeSubdomain, VerificationStatus: resellerdomain.DomainVerificationVerified, Status: resellerdomain.DomainStatusActive, IsPrimary: true, VerifiedAt: &now}
+	nextPrimary := resellerdomain.Domain{ResellerID: profile.ID, Domain: "custom.example.test", Type: resellerdomain.DomainTypeCustom, VerificationStatus: resellerdomain.DomainVerificationVerified, Status: resellerdomain.DomainStatusActive, IsPrimary: false, VerifiedAt: &now}
 	if err := db.Create(&oldPrimary).Error; err != nil {
 		t.Fatalf("create old domain failed: %v", err)
 	}
@@ -463,7 +425,7 @@ func TestAdminResellerManagementSetPrimaryDomain(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d body=%s", recorder.Code, recorder.Body.String())
 	}
-	var loadedOld, loadedNext models.ResellerDomain
+	var loadedOld, loadedNext resellerdomain.Domain
 	if err := db.First(&loadedOld, oldPrimary.ID).Error; err != nil {
 		t.Fatalf("load old domain failed: %v", err)
 	}
@@ -484,8 +446,8 @@ func TestAdminResellerManagementSetPrimaryDomain(t *testing.T) {
 
 func TestAdminResellerManagementSetPrimaryDomainRejectsUnverifiedDomain(t *testing.T) {
 	h, db := setupAdminResellerManagementHandlerTest(t)
-	profile := seedAdminResellerManagementProfile(t, db, models.ResellerProfileStatusActive)
-	domain := models.ResellerDomain{ResellerID: profile.ID, Domain: "pending.example.test", Type: models.ResellerDomainTypeCustom, VerificationStatus: models.ResellerDomainVerificationPending, Status: models.ResellerDomainStatusActive}
+	profile := seedAdminResellerManagementProfile(t, db, resellerdomain.ProfileStatusActive)
+	domain := resellerdomain.Domain{ResellerID: profile.ID, Domain: "pending.example.test", Type: resellerdomain.DomainTypeCustom, VerificationStatus: resellerdomain.DomainVerificationPending, Status: resellerdomain.DomainStatusActive}
 	if err := db.Create(&domain).Error; err != nil {
 		t.Fatalf("create domain failed: %v", err)
 	}

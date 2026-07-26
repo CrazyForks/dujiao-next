@@ -7,12 +7,14 @@ import (
 	"testing"
 	"time"
 
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+
+	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/models"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -24,7 +26,7 @@ func openResellerManagementServiceTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open db failed: %v", err)
 	}
-	if err := db.AutoMigrate(&userdomain.User{}, &admindomain.Admin{}, &models.ResellerProfile{}, &models.ResellerDomain{}, &models.ResellerSiteConfig{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &admindomain.Admin{}, &resellerdomain.Profile{}, &resellerdomain.Domain{}, &resellerdomain.SiteConfig{}); err != nil {
 		t.Fatalf("migrate failed: %v", err)
 	}
 	return db
@@ -40,7 +42,7 @@ func seedResellerManagementUser(t *testing.T, db *gorm.DB, email string) userdom
 }
 
 func newResellerManagementServiceForTest(db *gorm.DB) *ResellerManagementService {
-	return NewResellerManagementService(repository.NewResellerRepository(db), config.ResellerConfig{
+	return NewResellerManagementService(resellergormstore.New(db), config.ResellerConfig{
 		Enabled:          true,
 		SelfApplyEnabled: true,
 		SubdomainBase:    "shop.example.test",
@@ -57,11 +59,11 @@ func TestResellerManagementApplyCreatesPendingAndReapplyRejected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ApplyUserReseller failed: %v", err)
 	}
-	if profile.Status != models.ResellerProfileStatusPendingReview || profile.ApplyReason != "first application" {
+	if profile.Status != resellerdomain.ProfileStatusPendingReview || profile.ApplyReason != "first application" {
 		t.Fatalf("unexpected created profile: %+v", profile)
 	}
 
-	profile.Status = models.ResellerProfileStatusRejected
+	profile.Status = resellerdomain.ProfileStatusRejected
 	profile.RejectReason = "missing info"
 	reviewer := uint(7)
 	now := time.Now()
@@ -75,7 +77,7 @@ func TestResellerManagementApplyCreatesPendingAndReapplyRejected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reapply failed: %v", err)
 	}
-	if reapplied.Status != models.ResellerProfileStatusPendingReview || reapplied.ApplyReason != "second application" || reapplied.RejectReason != "" || reapplied.ReviewedBy != nil || reapplied.ReviewedAt != nil {
+	if reapplied.Status != resellerdomain.ProfileStatusPendingReview || reapplied.ApplyReason != "second application" || reapplied.RejectReason != "" || reapplied.ReviewedBy != nil || reapplied.ReviewedAt != nil {
 		t.Fatalf("unexpected reapplied profile: %+v", reapplied)
 	}
 }
@@ -83,7 +85,7 @@ func TestResellerManagementApplyCreatesPendingAndReapplyRejected(t *testing.T) {
 func TestResellerManagementApplyDisabledConfigRejects(t *testing.T) {
 	db := openResellerManagementServiceTestDB(t)
 	user := seedResellerManagementUser(t, db, "apply-disabled@example.test")
-	svc := NewResellerManagementService(repository.NewResellerRepository(db), config.ResellerConfig{Enabled: false, SelfApplyEnabled: true})
+	svc := NewResellerManagementService(resellergormstore.New(db), config.ResellerConfig{Enabled: false, SelfApplyEnabled: true})
 
 	_, err := svc.ApplyUserReseller(user.ID, ResellerApplyInput{Reason: "want access"})
 	if !errors.Is(err, ErrResellerApplyDisabled) {
@@ -107,14 +109,14 @@ func TestResellerManagementApproveActivatesProfileWithoutAutoSubdomain(t *testin
 	if err != nil {
 		t.Fatalf("ApproveProfile failed: %v", err)
 	}
-	if approved.Profile.Status != models.ResellerProfileStatusActive || approved.Profile.ReviewedBy == nil || *approved.Profile.ReviewedBy != 9 {
+	if approved.Profile.Status != resellerdomain.ProfileStatusActive || approved.Profile.ReviewedBy == nil || *approved.Profile.ReviewedBy != 9 {
 		t.Fatalf("unexpected approved profile: %+v", approved.Profile)
 	}
 	if approved.SystemDomain != nil {
 		t.Fatalf("expected approval to skip automatic system domain, got %+v", approved.SystemDomain)
 	}
 	var count int64
-	if err := db.Model(&models.ResellerDomain{}).Where("reseller_id = ?", profile.ID).Count(&count).Error; err != nil {
+	if err := db.Model(&resellerdomain.Domain{}).Where("reseller_id = ?", profile.ID).Count(&count).Error; err != nil {
 		t.Fatalf("count domains failed: %v", err)
 	}
 	if count != 0 {
@@ -149,7 +151,7 @@ func TestResellerManagementRejectsDefaultMarkupAboveMaxMarkup(t *testing.T) {
 	_, err = svc.UpdateProfileOperationalConfig(9, approved.Profile.ID, ResellerProfileUpdateInput{
 		DefaultMarkupPercent: decimal.NewFromInt(40),
 		MaxMarkupPercent:     decimal.NewFromInt(30),
-		SettlementStatus:     models.ResellerSettlementStatusNormal,
+		SettlementStatus:     resellerdomain.SettlementStatusNormal,
 	})
 	if !errors.Is(err, ErrResellerProfileStatusInvalid) {
 		t.Fatalf("expected ErrResellerProfileStatusInvalid on update, got %v", err)
@@ -172,7 +174,7 @@ func TestResellerManagementAssignSystemSubdomainCreatesAndEditsReadableDomain(t 
 	if err != nil {
 		t.Fatalf("AssignSystemSubdomain create failed: %v", err)
 	}
-	if created.Domain != "hello.shop.example.test" || created.Type != models.ResellerDomainTypeSubdomain || created.Status != models.ResellerDomainStatusActive || created.VerificationStatus != models.ResellerDomainVerificationVerified || !created.IsPrimary || created.VerifiedAt == nil {
+	if created.Domain != "hello.shop.example.test" || created.Type != resellerdomain.DomainTypeSubdomain || created.Status != resellerdomain.DomainStatusActive || created.VerificationStatus != resellerdomain.DomainVerificationVerified || !created.IsPrimary || created.VerifiedAt == nil {
 		t.Fatalf("unexpected created system domain: %+v", created)
 	}
 
@@ -183,8 +185,8 @@ func TestResellerManagementAssignSystemSubdomainCreatesAndEditsReadableDomain(t 
 	if updated.ID != created.ID || updated.Domain != "brand.shop.example.test" || !updated.IsPrimary {
 		t.Fatalf("unexpected updated system domain: created=%+v updated=%+v", created, updated)
 	}
-	var domains []models.ResellerDomain
-	if err := db.Where("reseller_id = ? AND type = ?", profile.ID, models.ResellerDomainTypeSubdomain).Find(&domains).Error; err != nil {
+	var domains []resellerdomain.Domain
+	if err := db.Where("reseller_id = ? AND type = ?", profile.ID, resellerdomain.DomainTypeSubdomain).Find(&domains).Error; err != nil {
 		t.Fatalf("list system domains failed: %v", err)
 	}
 	if len(domains) != 1 {
@@ -221,7 +223,7 @@ func TestResellerManagementSubmitAndApproveCustomDomain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SubmitUserCustomDomain failed: %v", err)
 	}
-	if domain.Domain != "shop.customer.example" || domain.Type != models.ResellerDomainTypeCustom || domain.VerificationStatus != models.ResellerDomainVerificationPending || domain.Status != models.ResellerDomainStatusPendingReview || domain.VerificationToken != "" {
+	if domain.Domain != "shop.customer.example" || domain.Type != resellerdomain.DomainTypeCustom || domain.VerificationStatus != resellerdomain.DomainVerificationPending || domain.Status != resellerdomain.DomainStatusPendingReview || domain.VerificationToken != "" {
 		t.Fatalf("unexpected submitted domain: %+v", domain)
 	}
 
@@ -229,7 +231,7 @@ func TestResellerManagementSubmitAndApproveCustomDomain(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ApproveDomain failed: %v", err)
 	}
-	if approved.Status != models.ResellerDomainStatusActive || approved.VerificationStatus != models.ResellerDomainVerificationVerified || approved.VerifiedAt == nil {
+	if approved.Status != resellerdomain.DomainStatusActive || approved.VerificationStatus != resellerdomain.DomainVerificationVerified || approved.VerifiedAt == nil {
 		t.Fatalf("unexpected approved domain: %+v", approved)
 	}
 }
@@ -247,21 +249,21 @@ func TestResellerManagementDisablePrimaryDomainPromotesNextActiveVerifiedDomain(
 		t.Fatalf("approve profile failed: %v", err)
 	}
 	now := time.Now()
-	primary := models.ResellerDomain{
+	primary := resellerdomain.Domain{
 		ResellerID:         approved.Profile.ID,
 		Domain:             "primary.shop.example.test",
-		Type:               models.ResellerDomainTypeSubdomain,
-		Status:             models.ResellerDomainStatusActive,
-		VerificationStatus: models.ResellerDomainVerificationVerified,
+		Type:               resellerdomain.DomainTypeSubdomain,
+		Status:             resellerdomain.DomainStatusActive,
+		VerificationStatus: resellerdomain.DomainVerificationVerified,
 		IsPrimary:          true,
 		VerifiedAt:         &now,
 	}
-	secondary := models.ResellerDomain{
+	secondary := resellerdomain.Domain{
 		ResellerID:         approved.Profile.ID,
 		Domain:             "secondary.shop.example.test",
-		Type:               models.ResellerDomainTypeSubdomain,
-		Status:             models.ResellerDomainStatusActive,
-		VerificationStatus: models.ResellerDomainVerificationVerified,
+		Type:               resellerdomain.DomainTypeSubdomain,
+		Status:             resellerdomain.DomainStatusActive,
+		VerificationStatus: resellerdomain.DomainVerificationVerified,
 		IsPrimary:          false,
 		VerifiedAt:         &now,
 	}
@@ -279,7 +281,7 @@ func TestResellerManagementDisablePrimaryDomainPromotesNextActiveVerifiedDomain(
 	if disabled.IsPrimary {
 		t.Fatalf("disabled domain should not remain primary: %+v", disabled)
 	}
-	var loadedSecondary models.ResellerDomain
+	var loadedSecondary resellerdomain.Domain
 	if err := db.First(&loadedSecondary, secondary.ID).Error; err != nil {
 		t.Fatalf("load secondary domain failed: %v", err)
 	}

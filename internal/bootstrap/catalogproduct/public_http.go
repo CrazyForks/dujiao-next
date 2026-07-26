@@ -6,7 +6,7 @@ import (
 	producthttp "github.com/dujiao-next/internal/modules/catalog/product/transport/http"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
 	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
-	"github.com/dujiao-next/internal/modules/reseller"
+	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
 )
 
 // PublicHTTPDependencies 是公开 Product HTTP 入口的显式装配依赖。

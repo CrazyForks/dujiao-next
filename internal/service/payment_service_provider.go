@@ -10,6 +10,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -217,7 +218,7 @@ func (s *PaymentService) ValidateChannel(channel *models.PaymentChannel) error {
 // 主站 tenant 返回空串，保持渠道配置 return_url/success_url 的固定值兜底行为；
 // 分销 tenant 若回跳到主站域名，游客订单会因 tenant 隔离查不到（见 order_reseller_snapshot_test.go）。
 func resolveTenantReturnURL(ctx context.Context, requestScheme string, channel *models.PaymentChannel) string {
-	tenant, ok := TenantFromContext(ctx)
+	tenant, ok := resellercontract.TenantFromContext(ctx)
 	if !ok || tenant.IsMain || tenant.Unavailable {
 		return ""
 	}

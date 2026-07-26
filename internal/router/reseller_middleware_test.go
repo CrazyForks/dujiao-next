@@ -7,19 +7,19 @@ import (
 	"strings"
 	"testing"
 
-	resellermodule "github.com/dujiao-next/internal/modules/reseller"
-	"github.com/dujiao-next/internal/service"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/gin-gonic/gin"
 )
 
 type middlewareResolverStub struct {
-	tenant service.TenantContext
+	tenant resellercontract.TenantContext
 	err    error
 }
 
-func (s middlewareResolverStub) ResolveRequest(ctx context.Context, req *http.Request) (service.TenantContext, error) {
+func (s middlewareResolverStub) ResolveRequest(ctx context.Context, req *http.Request) (resellercontract.TenantContext, error) {
 	if s.err != nil {
-		return service.TenantContext{}, s.err
+		return resellercontract.TenantContext{}, s.err
 	}
 	return s.tenant, nil
 }
@@ -27,11 +27,11 @@ func (s middlewareResolverStub) ResolveRequest(ctx context.Context, req *http.Re
 func TestResellerTenantMiddlewareSetsTenant(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	id := uint(9)
-	resolver := middlewareResolverStub{tenant: service.TenantContext{Host: "shop.example.test", ResellerID: &id, ResellerUserID: 100}}
+	resolver := middlewareResolverStub{tenant: resellercontract.TenantContext{Host: "shop.example.test", ResellerID: &id, ResellerUserID: 100}}
 	r := gin.New()
 	r.Use(ResellerTenantMiddleware(resolver))
 	r.GET("/probe", func(c *gin.Context) {
-		tenant, ok := service.TenantFromContext(c.Request.Context())
+		tenant, ok := resellercontract.TenantFromContext(c.Request.Context())
 		if !ok {
 			t.Fatal("tenant missing from request context")
 		}
@@ -51,7 +51,7 @@ func TestResellerTenantMiddlewareSetsTenant(t *testing.T) {
 
 func TestResellerTenantMiddlewareUnavailableReturns404(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resolver := middlewareResolverStub{tenant: service.UnavailableTenantContext("unknown.example.test", resellermodule.DomainUnavailableNotFound)}
+	resolver := middlewareResolverStub{tenant: resellercontract.UnavailableTenantContext("unknown.example.test", resellermodule.DomainUnavailableNotFound)}
 	r := gin.New()
 	r.Use(ResellerTenantMiddleware(resolver))
 	r.GET("/probe", func(c *gin.Context) {
@@ -68,7 +68,7 @@ func TestResellerTenantMiddlewareUnavailableReturns404(t *testing.T) {
 
 func TestResellerTenantMiddlewareOnlyBlocksStorefrontGroup(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	resolver := middlewareResolverStub{tenant: service.UnavailableTenantContext("unknown.example.test", resellermodule.DomainUnavailableNotFound)}
+	resolver := middlewareResolverStub{tenant: resellercontract.UnavailableTenantContext("unknown.example.test", resellermodule.DomainUnavailableNotFound)}
 	r := gin.New()
 
 	r.GET("/sitemap.xml", func(c *gin.Context) { c.String(http.StatusOK, "sitemap") })
@@ -123,8 +123,8 @@ func TestRequireMainTenantForResellerConsoleBlocksResellerTenant(t *testing.T) {
 	resellerID := uint(9)
 	r := gin.New()
 	r.Use(func(c *gin.Context) {
-		tenant := service.ResellerTenantContext("shop.example.test", resellerID, 100, "shop.example.test")
-		c.Request = c.Request.WithContext(service.WithTenantContext(c.Request.Context(), tenant))
+		tenant := resellercontract.ResellerTenantContext("shop.example.test", resellerID, 100, "shop.example.test")
+		c.Request = c.Request.WithContext(resellercontract.WithTenantContext(c.Request.Context(), tenant))
 		c.Next()
 	})
 	r.GET("/api/v1/user/reseller/profile", RequireMainTenantForResellerConsole(), func(c *gin.Context) {
@@ -150,8 +150,8 @@ func TestRequireMainTenantForResellerConsoleAllowsMainTenant(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(func(c *gin.Context) {
-		tenant := service.MainTenantContext("main.example.test")
-		c.Request = c.Request.WithContext(service.WithTenantContext(c.Request.Context(), tenant))
+		tenant := resellercontract.MainTenantContext("main.example.test")
+		c.Request = c.Request.WithContext(resellercontract.WithTenantContext(c.Request.Context(), tenant))
 		c.Next()
 	})
 	r.GET("/api/v1/user/reseller/profile", RequireMainTenantForResellerConsole(), func(c *gin.Context) {

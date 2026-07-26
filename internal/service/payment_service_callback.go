@@ -205,8 +205,8 @@ func (s *PaymentService) applyPaymentUpdate(payment *models.Payment, order *mode
 			if err := s.markOrderPaid(tx, order, now); err != nil {
 				return err
 			}
-			if s.resellerAccountingSvc != nil {
-				if err := s.resellerAccountingSvc.PostOrderProfitTx(tx, order, payment); err != nil {
+			if s.resellerAccounting != nil {
+				if err := s.resellerAccounting.PostOrderProfitTx(tx, order, payment); err != nil {
 					return err
 				}
 			}

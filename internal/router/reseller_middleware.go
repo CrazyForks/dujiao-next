@@ -4,14 +4,14 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/i18n"
-	"github.com/dujiao-next/internal/service"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
+	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/gin-gonic/gin"
 )
 
 type ResellerTenantResolver interface {
-	ResolveRequest(ctx context.Context, req *http.Request) (service.TenantContext, error)
+	ResolveRequest(ctx context.Context, req *http.Request) (resellercontract.TenantContext, error)
 }
 
 func ResellerTenantMiddleware(resolver ResellerTenantResolver) gin.HandlerFunc {
@@ -29,7 +29,7 @@ func ResellerTenantMiddleware(resolver ResellerTenantResolver) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"code": "not_found", "message": "site unavailable"})
 			return
 		}
-		ctx := service.WithTenantContext(c.Request.Context(), tenant)
+		ctx := resellercontract.WithTenantContext(c.Request.Context(), tenant)
 		c.Request = c.Request.WithContext(ctx)
 		c.Set("tenant", tenant)
 		c.Next()
@@ -38,7 +38,7 @@ func ResellerTenantMiddleware(resolver ResellerTenantResolver) gin.HandlerFunc {
 
 func RequireMainTenantForResellerConsole() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tenant, ok := service.TenantFromContext(c.Request.Context())
+		tenant, ok := resellercontract.TenantFromContext(c.Request.Context())
 		if ok && tenant.ResellerID != nil && !tenant.IsMain && !tenant.Unavailable {
 			msg := i18n.T(i18n.ResolveLocale(c), "error.forbidden")
 			response.Forbidden(c, msg)

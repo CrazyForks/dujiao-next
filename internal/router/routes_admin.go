@@ -23,6 +23,7 @@ import (
 	procurementtransport "github.com/dujiao-next/internal/modules/procurement/transport/http"
 	promotiontransport "github.com/dujiao-next/internal/modules/promotion/transport/http"
 	reconciliationtransport "github.com/dujiao-next/internal/modules/reconciliation/transport/http"
+	resellertransport "github.com/dujiao-next/internal/modules/reseller/transport/http/admin"
 	settingstransport "github.com/dujiao-next/internal/modules/settings/transport/http"
 	siteconnectiontransport "github.com/dujiao-next/internal/modules/siteconnection/transport/http"
 	broadcasthttp "github.com/dujiao-next/internal/modules/telegram/broadcast/transport/http"
@@ -36,7 +37,6 @@ import (
 	fulfillmenttransport "github.com/dujiao-next/internal/transport/http/fulfillment"
 	ordertransport "github.com/dujiao-next/internal/transport/http/order"
 	paymenttransport "github.com/dujiao-next/internal/transport/http/payment"
-	resellertransport "github.com/dujiao-next/internal/transport/http/reseller"
 	systemtransport "github.com/dujiao-next/internal/transport/http/system"
 
 	"github.com/gin-gonic/gin"
@@ -129,13 +129,13 @@ func registerAdminRoutes(
 	adminAffiliateHandler := affiliatebootstrap.NewAdminHandler(c)
 	affiliatetransport.RegisterAdminRoutes(authorized, adminAffiliateHandler)
 	affiliatetransport.RegisterAdminFinanceRoutes(paymentProtected, adminAffiliateHandler)
-	resellertransport.RegisterAdminOperationsOverviewRoutes(authorized, adminResellerOperationsHandler)
-	resellertransport.RegisterAdminManagementRoutes(authorized, adminResellerManagementHandler)
-	resellertransport.RegisterAdminProfileDetailRoutes(authorized, adminResellerProfileDetailHandler)
-	resellertransport.RegisterAdminSiteConfigRoutes(authorized, adminResellerSiteConfigHandler)
-	resellertransport.RegisterAdminProductSettingRoutes(authorized, adminResellerProductSettingHandler)
-	resellertransport.RegisterAdminOperationsFinanceRoutes(paymentProtected, adminResellerOperationsHandler)
-	resellertransport.RegisterAdminFinanceRoutes(paymentProtected, adminResellerFinanceHandler)
+	resellertransport.RegisterOperationsOverviewRoutes(authorized, adminResellerOperationsHandler)
+	resellertransport.RegisterManagementRoutes(authorized, adminResellerManagementHandler)
+	resellertransport.RegisterProfileDetailRoutes(authorized, adminResellerProfileDetailHandler)
+	resellertransport.RegisterSiteConfigRoutes(authorized, adminResellerSiteConfigHandler)
+	resellertransport.RegisterProductSettingRoutes(authorized, adminResellerProductSettingHandler)
+	resellertransport.RegisterOperationsFinanceRoutes(paymentProtected, adminResellerOperationsHandler)
+	resellertransport.RegisterFinanceRoutes(paymentProtected, adminResellerFinanceHandler)
 
 	// 权限管理
 	adminauthztransport.RegisterAdminRoutes(authorized, adminAuthzHandler)

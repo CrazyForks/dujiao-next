@@ -18,7 +18,7 @@ import (
 	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
 	promotionapp "github.com/dujiao-next/internal/modules/promotion/application"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/modules/reseller"
+	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/gin-gonic/gin"

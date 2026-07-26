@@ -11,7 +11,7 @@ import (
 
 	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	"github.com/dujiao-next/internal/modules/reseller"
+	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
 )
 
 var (

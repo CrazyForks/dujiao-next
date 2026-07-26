@@ -6,6 +6,12 @@ import (
 	"testing"
 	"time"
 
+	resellerapplication "github.com/dujiao-next/internal/modules/reseller/application"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+
+	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -20,6 +26,23 @@ import (
 	"gorm.io/gorm"
 )
 
+type resellerAccountingTestHarness struct {
+	query        *resellerapplication.AccountingQueryService
+	withdraw     *resellerapplication.AccountingWithdrawService
+	ledger       *resellerapplication.AccountingLedgerService
+	transactions *resellergormstore.AccountingTransactionBridge
+}
+
+func newResellerAccountingTestHarness(store *resellergormstore.Store, confirmDays int) resellerAccountingTestHarness {
+	ledger := resellerapplication.NewAccountingLedgerService(store, confirmDays)
+	return resellerAccountingTestHarness{
+		query:        resellerapplication.NewAccountingQueryService(store),
+		withdraw:     resellerapplication.NewAccountingWithdrawService(store),
+		ledger:       ledger,
+		transactions: resellergormstore.NewAccountingTransactionBridge(store, ledger),
+	}
+}
+
 func openResellerAccountingServiceTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	dsn := fmt.Sprintf("file:reseller_accounting_service_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -33,27 +56,27 @@ func openResellerAccountingServiceTestDB(t *testing.T) *gorm.DB {
 		&models.Payment{},
 		&models.PaymentChannel{},
 		&models.OrderRefundRecord{},
-		&models.ResellerProfile{},
-		&models.ResellerOrderSnapshot{},
-		&models.ResellerLedgerEntry{},
-		&models.ResellerWithdrawRequest{},
-		&models.ResellerBalanceAccount{},
+		&resellerdomain.Profile{},
+		&resellerdomain.OrderSnapshot{},
+		&resellerdomain.LedgerEntry{},
+		&resellerdomain.WithdrawRequest{},
+		&resellerdomain.BalanceAccount{},
 	); err != nil {
 		t.Fatalf("migrate failed: %v", err)
 	}
 	return db
 }
 
-func seedResellerAccountingProfile(t *testing.T, db *gorm.DB) models.ResellerProfile {
+func seedResellerAccountingProfile(t *testing.T, db *gorm.DB) resellerdomain.Profile {
 	t.Helper()
 	user := userdomain.User{Email: fmt.Sprintf("reseller-%d@example.test", time.Now().UnixNano()), PasswordHash: "x"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create reseller user failed: %v", err)
 	}
-	profile := models.ResellerProfile{
+	profile := resellerdomain.Profile{
 		UserID:           user.ID,
-		Status:           models.ResellerProfileStatusActive,
-		SettlementStatus: models.ResellerSettlementStatusNormal,
+		Status:           resellerdomain.ProfileStatusActive,
+		SettlementStatus: resellerdomain.SettlementStatusNormal,
 	}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create reseller profile failed: %v", err)
@@ -63,22 +86,22 @@ func seedResellerAccountingProfile(t *testing.T, db *gorm.DB) models.ResellerPro
 
 func TestResellerAccountingServiceListAdminWithdrawRequests(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 7})
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 7)
 	profile := seedResellerAccountingProfile(t, db)
-	req := models.ResellerWithdrawRequest{
+	req := resellerdomain.WithdrawRequest{
 		ResellerID: profile.ID,
 		Amount:     money.FromDecimal(decimal.NewFromInt(25)),
 		Currency:   "USD",
 		Channel:    "USDT",
 		Account:    "TserviceWithdraw",
-		Status:     models.ResellerWithdrawStatusPending,
+		Status:     resellerdomain.WithdrawStatusPending,
 	}
 	if err := db.Create(&req).Error; err != nil {
 		t.Fatalf("create withdraw failed: %v", err)
 	}
 
-	rows, total, err := svc.ListAdminWithdrawRequests(ResellerAdminWithdrawListFilter{
+	rows, total, err := svc.query.ListAdminWithdrawRequests(resellercontract.AdminWithdrawListFilter{
 		Page:       1,
 		PageSize:   20,
 		ResellerID: profile.ID,
@@ -95,28 +118,28 @@ func TestResellerAccountingServiceListAdminWithdrawRequests(t *testing.T) {
 
 func TestResellerAccountingServiceGetUserFinanceDashboardScopesToUserProfile(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{})
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
 	profile := seedResellerAccountingProfile(t, db)
 	other := seedResellerAccountingProfile(t, db)
-	if err := db.Create(&models.ResellerBalanceAccount{
+	if err := db.Create(&resellerdomain.BalanceAccount{
 		ResellerID:           profile.ID,
 		Currency:             "USD",
-		Status:               models.ResellerBalanceStatusNormal,
+		Status:               resellerdomain.BalanceStatusNormal,
 		AvailableAmountCache: money.FromDecimal(decimal.RequireFromString("18.50")),
 	}).Error; err != nil {
 		t.Fatalf("create balance failed: %v", err)
 	}
-	if err := db.Create(&models.ResellerBalanceAccount{
+	if err := db.Create(&resellerdomain.BalanceAccount{
 		ResellerID:           other.ID,
 		Currency:             "USD",
-		Status:               models.ResellerBalanceStatusNormal,
+		Status:               resellerdomain.BalanceStatusNormal,
 		AvailableAmountCache: money.FromDecimal(decimal.RequireFromString("99.00")),
 	}).Error; err != nil {
 		t.Fatalf("create other balance failed: %v", err)
 	}
 
-	dashboard, err := svc.GetUserFinanceDashboard(profile.UserID)
+	dashboard, err := svc.query.GetUserFinanceDashboard(profile.UserID)
 	if err != nil {
 		t.Fatalf("GetUserFinanceDashboard failed: %v", err)
 	}
@@ -133,64 +156,64 @@ func TestResellerAccountingServiceGetUserFinanceDashboardScopesToUserProfile(t *
 
 func TestResellerAccountingServiceGetUserFinanceDashboardMarksWithdrawUnavailable(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{})
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
 
 	inactive := seedResellerAccountingProfile(t, db)
-	inactive.Status = models.ResellerProfileStatusDisabled
+	inactive.Status = resellerdomain.ProfileStatusDisabled
 	if err := db.Save(&inactive).Error; err != nil {
 		t.Fatalf("disable profile failed: %v", err)
 	}
-	inactiveDashboard, err := svc.GetUserFinanceDashboard(inactive.UserID)
+	inactiveDashboard, err := svc.query.GetUserFinanceDashboard(inactive.UserID)
 	if err != nil {
 		t.Fatalf("GetUserFinanceDashboard inactive failed: %v", err)
 	}
-	if !inactiveDashboard.Opened || inactiveDashboard.WithdrawEnabled || inactiveDashboard.WithdrawDisabledReason != ResellerWithdrawDisabledReasonProfileInactive {
+	if !inactiveDashboard.Opened || inactiveDashboard.WithdrawEnabled || inactiveDashboard.WithdrawDisabledReason != resellercontract.WithdrawDisabledReasonProfileInactive {
 		t.Fatalf("expected inactive profile withdraw disabled, got %+v", inactiveDashboard)
 	}
 
 	frozen := seedResellerAccountingProfile(t, db)
-	frozen.SettlementStatus = models.ResellerSettlementStatusFrozen
+	frozen.SettlementStatus = resellerdomain.SettlementStatusFrozen
 	if err := db.Save(&frozen).Error; err != nil {
 		t.Fatalf("freeze settlement failed: %v", err)
 	}
-	frozenDashboard, err := svc.GetUserFinanceDashboard(frozen.UserID)
+	frozenDashboard, err := svc.query.GetUserFinanceDashboard(frozen.UserID)
 	if err != nil {
 		t.Fatalf("GetUserFinanceDashboard frozen failed: %v", err)
 	}
-	if !frozenDashboard.Opened || frozenDashboard.WithdrawEnabled || frozenDashboard.WithdrawDisabledReason != ResellerWithdrawDisabledReasonSettlementUnavailable {
+	if !frozenDashboard.Opened || frozenDashboard.WithdrawEnabled || frozenDashboard.WithdrawDisabledReason != resellercontract.WithdrawDisabledReasonSettlementUnavailable {
 		t.Fatalf("expected frozen settlement withdraw disabled, got %+v", frozenDashboard)
 	}
 }
 
 func TestResellerAccountingServiceApplyUserWithdrawRequiresActiveNormalProfile(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{})
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
 	profile := seedResellerAccountingProfile(t, db)
-	profile.Status = models.ResellerProfileStatusDisabled
+	profile.Status = resellerdomain.ProfileStatusDisabled
 	if err := db.Save(&profile).Error; err != nil {
 		t.Fatalf("disable profile failed: %v", err)
 	}
 
-	_, err := svc.ApplyUserWithdraw(profile.UserID, ResellerWithdrawApplyInput{
+	_, err := svc.withdraw.ApplyUserWithdraw(profile.UserID, resellercontract.WithdrawApplyInput{
 		Amount:   decimal.NewFromInt(10),
 		Currency: "USD",
 		Channel:  "USDT",
 		Account:  "T-address",
 	})
-	if !errors.Is(err, ErrResellerProfileInactive) {
-		t.Fatalf("expected ErrResellerProfileInactive, got %v", err)
+	if !errors.Is(err, resellercontract.ErrProfileInactive) {
+		t.Fatalf("expected ErrProfileInactive, got %v", err)
 	}
 }
 
-func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (models.Order, models.Payment, models.ResellerOrderSnapshot) {
+func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (models.Order, models.Payment, resellerdomain.OrderSnapshot) {
 	t.Helper()
 	user := userdomain.User{Email: fmt.Sprintf("buyer-%d@example.test", time.Now().UnixNano()), PasswordHash: "x"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	profile := models.ResellerProfile{UserID: user.ID, Status: models.ResellerProfileStatusActive, SettlementStatus: models.ResellerSettlementStatusNormal}
+	profile := resellerdomain.Profile{UserID: user.ID, Status: resellerdomain.ProfileStatusActive, SettlementStatus: resellerdomain.SettlementStatusNormal}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
@@ -237,7 +260,7 @@ func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (mo
 	if err := db.Create(&payment).Error; err != nil {
 		t.Fatalf("create payment failed: %v", err)
 	}
-	snapshot := models.ResellerOrderSnapshot{
+	snapshot := resellerdomain.OrderSnapshot{
 		OrderID:           order.ID,
 		ResellerID:        profile.ID,
 		Domain:            "shop.example.test",
@@ -287,21 +310,21 @@ func seedPaidResellerOrderSnapshot(t *testing.T, db *gorm.DB, eligible bool) (mo
 func TestResellerAccountingPostOrderProfitIdempotent(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	order, payment, snapshot := seedPaidResellerOrderSnapshot(t, db, true)
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 7})
-	err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.PostOrderProfitTx(tx, &order, &payment)
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 7)
+	err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.PostOrderProfitTx(tx, &order, &payment)
 	})
 	if err != nil {
 		t.Fatalf("first post failed: %v", err)
 	}
-	err = repo.Transaction(func(tx *gorm.DB) error {
-		return svc.PostOrderProfitTx(tx, &order, &payment)
+	err = db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.PostOrderProfitTx(tx, &order, &payment)
 	})
 	if err != nil {
 		t.Fatalf("second post failed: %v", err)
 	}
-	var rows []models.ResellerLedgerEntry
+	var rows []resellerdomain.LedgerEntry
 	if err := db.Find(&rows).Error; err != nil {
 		t.Fatalf("list ledger failed: %v", err)
 	}
@@ -311,7 +334,7 @@ func TestResellerAccountingPostOrderProfitIdempotent(t *testing.T) {
 	if rows[0].ResellerID != snapshot.ResellerID || rows[0].Amount.String() != "30.00" || rows[0].Currency != "USD" {
 		t.Fatalf("unexpected ledger row: %+v", rows[0])
 	}
-	if rows[0].Status != models.ResellerLedgerStatusPendingConfirm {
+	if rows[0].Status != resellerdomain.LedgerStatusPendingConfirm {
 		t.Fatalf("expected pending_confirm, got %s", rows[0].Status)
 	}
 	if rows[0].AvailableAt == nil || rows[0].AvailableAt.Before(time.Now().Add(6*24*time.Hour)) {
@@ -322,15 +345,15 @@ func TestResellerAccountingPostOrderProfitIdempotent(t *testing.T) {
 func TestResellerAccountingSkipsSelfDealingSnapshot(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	order, payment, _ := seedPaidResellerOrderSnapshot(t, db, false)
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 7})
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.PostOrderProfitTx(tx, &order, &payment)
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 7)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.PostOrderProfitTx(tx, &order, &payment)
 	}); err != nil {
 		t.Fatalf("post self-dealing order failed: %v", err)
 	}
 	var count int64
-	if err := db.Model(&models.ResellerLedgerEntry{}).Count(&count).Error; err != nil {
+	if err := db.Model(&resellerdomain.LedgerEntry{}).Count(&count).Error; err != nil {
 		t.Fatalf("count ledger failed: %v", err)
 	}
 	if count != 0 {
@@ -344,15 +367,15 @@ func TestResellerAccountingMissingSnapshotSkipsWithoutRollingBack(t *testing.T) 
 	if err := db.Delete(&snapshot).Error; err != nil {
 		t.Fatalf("delete snapshot failed: %v", err)
 	}
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 7})
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.PostOrderProfitTx(tx, &order, &payment)
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 7)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.PostOrderProfitTx(tx, &order, &payment)
 	}); err != nil {
 		t.Fatalf("post order profit with missing snapshot should skip, got %v", err)
 	}
 	var count int64
-	if err := db.Model(&models.ResellerLedgerEntry{}).Count(&count).Error; err != nil {
+	if err := db.Model(&resellerdomain.LedgerEntry{}).Count(&count).Error; err != nil {
 		t.Fatalf("count ledger failed: %v", err)
 	}
 	if count != 0 {
@@ -363,25 +386,25 @@ func TestResellerAccountingMissingSnapshotSkipsWithoutRollingBack(t *testing.T) 
 func TestResellerAccountingConfirmDueLedgerEntries(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	order, payment, _ := seedPaidResellerOrderSnapshot(t, db, true)
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.PostOrderProfitTx(tx, &order, &payment)
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.PostOrderProfitTx(tx, &order, &payment)
 	}); err != nil {
 		t.Fatalf("post order profit failed: %v", err)
 	}
-	affected, err := svc.ConfirmDueLedgerEntries(time.Now().Add(time.Second))
+	affected, err := svc.ledger.ConfirmDueLedgerEntries(time.Now().Add(time.Second))
 	if err != nil {
 		t.Fatalf("confirm due failed: %v", err)
 	}
 	if affected != 1 {
 		t.Fatalf("expected affected=1, got %d", affected)
 	}
-	var row models.ResellerLedgerEntry
+	var row resellerdomain.LedgerEntry
 	if err := db.First(&row).Error; err != nil {
 		t.Fatalf("load ledger failed: %v", err)
 	}
-	if row.Status != models.ResellerLedgerStatusAvailable {
+	if row.Status != resellerdomain.LedgerStatusAvailable {
 		t.Fatalf("expected available, got %s", row.Status)
 	}
 }
@@ -394,18 +417,18 @@ func TestPaymentSuccessTransactionPostsResellerLedger(t *testing.T) {
 	if err := db.Save(&order).Error; err != nil {
 		t.Fatalf("reset order failed: %v", err)
 	}
-	repo := repository.NewResellerRepository(db)
-	accounting := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
+	repo := resellergormstore.New(db)
+	accounting := newResellerAccountingTestHarness(repo, 0)
 	orderRepo := repository.NewOrderRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	productRepo := productgormstore.NewProductStore(db)
 	productSKURepo := productgormstore.NewSKUStore(db)
 	paymentSvc := NewPaymentService(PaymentServiceOptions{
-		OrderRepo:                 orderRepo,
-		PaymentRepo:               paymentRepo,
-		ProductRepo:               productRepo,
-		ProductSKURepo:            productSKURepo,
-		ResellerAccountingService: accounting,
+		OrderRepo:          orderRepo,
+		PaymentRepo:        paymentRepo,
+		ProductRepo:        productRepo,
+		ProductSKURepo:     productSKURepo,
+		ResellerAccounting: accounting.transactions,
 	})
 	_, orderPaid, err := paymentSvc.applyPaymentUpdate(&payment, &order, constants.PaymentStatusSuccess, PaymentCallbackInput{}, time.Now())
 	if err != nil {
@@ -415,7 +438,7 @@ func TestPaymentSuccessTransactionPostsResellerLedger(t *testing.T) {
 		t.Fatal("expected orderPaid=true")
 	}
 	var count int64
-	if err := db.Model(&models.ResellerLedgerEntry{}).Where("idempotency_key = ?", fmt.Sprintf("order_profit:%d", order.ID)).Count(&count).Error; err != nil {
+	if err := db.Model(&resellerdomain.LedgerEntry{}).Where("idempotency_key = ?", fmt.Sprintf("order_profit:%d", order.ID)).Count(&count).Error; err != nil {
 		t.Fatalf("count reseller ledger failed: %v", err)
 	}
 	if count != 1 {
@@ -426,10 +449,10 @@ func TestPaymentSuccessTransactionPostsResellerLedger(t *testing.T) {
 func TestResellerAccountingRefundDeductUsesSnapshotItems(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	order, payment, snapshot := seedPaidResellerOrderSnapshot(t, db, true)
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.PostOrderProfitTx(tx, &order, &payment)
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.PostOrderProfitTx(tx, &order, &payment)
 	}); err != nil {
 		t.Fatalf("post profit failed: %v", err)
 	}
@@ -445,16 +468,16 @@ func TestResellerAccountingRefundDeductUsesSnapshotItems(t *testing.T) {
 	if err := db.Create(&refundRecord).Error; err != nil {
 		t.Fatalf("create refund record failed: %v", err)
 	}
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.HandleRefundDeductTx(tx, &order, &refundRecord, decimal.Zero)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.HandleRefundDeductTx(tx, &order, &refundRecord, decimal.Zero)
 	}); err != nil {
 		t.Fatalf("refund deduct failed: %v", err)
 	}
-	var deduct models.ResellerLedgerEntry
+	var deduct resellerdomain.LedgerEntry
 	if err := db.Where("idempotency_key = ?", fmt.Sprintf("refund_deduct:%d", refundRecord.ID)).First(&deduct).Error; err != nil {
 		t.Fatalf("load deduct ledger failed: %v", err)
 	}
-	if deduct.ResellerID != snapshot.ResellerID || deduct.Type != models.ResellerLedgerTypeRefundDeduct || deduct.Currency != "USD" {
+	if deduct.ResellerID != snapshot.ResellerID || deduct.Type != resellerdomain.LedgerTypeRefundDeduct || deduct.Currency != "USD" {
 		t.Fatalf("unexpected deduct row: %+v", deduct)
 	}
 	if deduct.Amount.String() != "-15.00" {
@@ -468,10 +491,10 @@ func TestResellerAccountingRefundDeductUsesSnapshotItems(t *testing.T) {
 func TestResellerAccountingRefundDeductIsIdempotent(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	order, payment, _ := seedPaidResellerOrderSnapshot(t, db, true)
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.PostOrderProfitTx(tx, &order, &payment)
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.PostOrderProfitTx(tx, &order, &payment)
 	}); err != nil {
 		t.Fatalf("post profit failed: %v", err)
 	}
@@ -480,14 +503,14 @@ func TestResellerAccountingRefundDeductIsIdempotent(t *testing.T) {
 		t.Fatalf("create refund record failed: %v", err)
 	}
 	for i := 0; i < 2; i++ {
-		if err := repo.Transaction(func(tx *gorm.DB) error {
-			return svc.HandleRefundDeductTx(tx, &order, &refundRecord, decimal.Zero)
+		if err := db.Transaction(func(tx *gorm.DB) error {
+			return svc.transactions.HandleRefundDeductTx(tx, &order, &refundRecord, decimal.Zero)
 		}); err != nil {
 			t.Fatalf("refund deduct attempt %d failed: %v", i+1, err)
 		}
 	}
 	var count int64
-	if err := db.Model(&models.ResellerLedgerEntry{}).Where("type = ?", models.ResellerLedgerTypeRefundDeduct).Count(&count).Error; err != nil {
+	if err := db.Model(&resellerdomain.LedgerEntry{}).Where("type = ?", resellerdomain.LedgerTypeRefundDeduct).Count(&count).Error; err != nil {
 		t.Fatalf("count deduct failed: %v", err)
 	}
 	if count != 1 {
@@ -498,19 +521,19 @@ func TestResellerAccountingRefundDeductIsIdempotent(t *testing.T) {
 func TestResellerAccountingRefundDeductSkipsIneligibleSnapshot(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	order, _, _ := seedPaidResellerOrderSnapshot(t, db, false)
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
 	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
 	if err := db.Create(&refundRecord).Error; err != nil {
 		t.Fatalf("create refund record failed: %v", err)
 	}
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.HandleRefundDeductTx(tx, &order, &refundRecord, decimal.Zero)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.HandleRefundDeductTx(tx, &order, &refundRecord, decimal.Zero)
 	}); err != nil {
 		t.Fatalf("refund deduct for ineligible snapshot failed: %v", err)
 	}
 	var count int64
-	if err := db.Model(&models.ResellerLedgerEntry{}).Where("type = ?", models.ResellerLedgerTypeRefundDeduct).Count(&count).Error; err != nil {
+	if err := db.Model(&resellerdomain.LedgerEntry{}).Where("type = ?", resellerdomain.LedgerTypeRefundDeduct).Count(&count).Error; err != nil {
 		t.Fatalf("count refund deduct failed: %v", err)
 	}
 	if count != 0 {
@@ -524,19 +547,19 @@ func TestResellerAccountingRefundDeductMissingSnapshotSkipsWithoutRollingBack(t 
 	if err := db.Delete(&snapshot).Error; err != nil {
 		t.Fatalf("delete snapshot failed: %v", err)
 	}
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
 	refundRecord := models.OrderRefundRecord{UserID: order.UserID, OrderID: order.ID, Type: constants.OrderRefundTypeManual, Amount: money.FromDecimal(decimal.NewFromInt(65)), Currency: "USD"}
 	if err := db.Create(&refundRecord).Error; err != nil {
 		t.Fatalf("create refund record failed: %v", err)
 	}
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.HandleRefundDeductTx(tx, &order, &refundRecord, decimal.Zero)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.HandleRefundDeductTx(tx, &order, &refundRecord, decimal.Zero)
 	}); err != nil {
 		t.Fatalf("refund deduct with missing snapshot should skip, got %v", err)
 	}
 	var count int64
-	if err := db.Model(&models.ResellerLedgerEntry{}).Where("type = ?", models.ResellerLedgerTypeRefundDeduct).Count(&count).Error; err != nil {
+	if err := db.Model(&resellerdomain.LedgerEntry{}).Where("type = ?", resellerdomain.LedgerTypeRefundDeduct).Count(&count).Error; err != nil {
 		t.Fatalf("count refund deduct failed: %v", err)
 	}
 	if count != 0 {
@@ -548,17 +571,17 @@ func TestResellerAccountingApplyWithdrawLocksSameCurrencyLedgers(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	profile := seedResellerAccountingProfile(t, db)
 	now := time.Now()
-	rows := []models.ResellerLedgerEntry{
-		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:w-usd-1", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
-		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(15)), Currency: "USD", IdempotencyKey: "order_profit:w-usd-2", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
-		{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(20)), Currency: "CNY", IdempotencyKey: "order_profit:w-cny-1", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now},
+	rows := []resellerdomain.LedgerEntry{
+		{ResellerID: profile.ID, Type: resellerdomain.LedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:w-usd-1", Status: resellerdomain.LedgerStatusAvailable, AvailableAt: &now},
+		{ResellerID: profile.ID, Type: resellerdomain.LedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(15)), Currency: "USD", IdempotencyKey: "order_profit:w-usd-2", Status: resellerdomain.LedgerStatusAvailable, AvailableAt: &now},
+		{ResellerID: profile.ID, Type: resellerdomain.LedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(20)), Currency: "CNY", IdempotencyKey: "order_profit:w-cny-1", Status: resellerdomain.LedgerStatusAvailable, AvailableAt: &now},
 	}
 	if err := db.Create(&rows).Error; err != nil {
 		t.Fatalf("seed ledger rows failed: %v", err)
 	}
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
-	req, err := svc.ApplyWithdraw(profile.ID, ResellerWithdrawApplyInput{
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
+	req, err := svc.withdraw.ApplyWithdraw(profile.ID, resellercontract.WithdrawApplyInput{
 		Amount:   decimal.NewFromInt(12),
 		Currency: "USD",
 		Channel:  "usdt",
@@ -567,10 +590,10 @@ func TestResellerAccountingApplyWithdrawLocksSameCurrencyLedgers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("apply withdraw failed: %v", err)
 	}
-	if req.Status != models.ResellerWithdrawStatusPending || req.Currency != "USD" || req.Amount.String() != "12.00" {
+	if req.Status != resellerdomain.WithdrawStatusPending || req.Currency != "USD" || req.Amount.String() != "12.00" {
 		t.Fatalf("unexpected withdraw request: %+v", req)
 	}
-	var locked []models.ResellerLedgerEntry
+	var locked []resellerdomain.LedgerEntry
 	if err := db.Where("withdraw_request_id = ?", req.ID).Find(&locked).Error; err != nil {
 		t.Fatalf("load locked ledgers failed: %v", err)
 	}
@@ -578,12 +601,12 @@ func TestResellerAccountingApplyWithdrawLocksSameCurrencyLedgers(t *testing.T) {
 		t.Fatalf("expected split and locked two USD rows, got %+v", locked)
 	}
 	for _, row := range locked {
-		if row.Currency != "USD" || row.Status != models.ResellerLedgerStatusLocked {
+		if row.Currency != "USD" || row.Status != resellerdomain.LedgerStatusLocked {
 			t.Fatalf("unexpected locked row: %+v", row)
 		}
 	}
 	var cnyCount int64
-	if err := db.Model(&models.ResellerLedgerEntry{}).Where("currency = ? AND status = ?", "CNY", models.ResellerLedgerStatusAvailable).Count(&cnyCount).Error; err != nil {
+	if err := db.Model(&resellerdomain.LedgerEntry{}).Where("currency = ? AND status = ?", "CNY", resellerdomain.LedgerStatusAvailable).Count(&cnyCount).Error; err != nil {
 		t.Fatalf("count CNY available failed: %v", err)
 	}
 	if cnyCount != 1 {
@@ -595,28 +618,28 @@ func TestResellerAccountingRejectWithdrawUnlocksLedgers(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	profile := seedResellerAccountingProfile(t, db)
 	now := time.Now()
-	row := models.ResellerLedgerEntry{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:reject", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now}
+	row := resellerdomain.LedgerEntry{ResellerID: profile.ID, Type: resellerdomain.LedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:reject", Status: resellerdomain.LedgerStatusAvailable, AvailableAt: &now}
 	if err := db.Create(&row).Error; err != nil {
 		t.Fatalf("seed ledger failed: %v", err)
 	}
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
-	req, err := svc.ApplyWithdraw(profile.ID, ResellerWithdrawApplyInput{Amount: decimal.NewFromInt(10), Currency: "USD", Channel: "usdt", Account: "T-address"})
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
+	req, err := svc.withdraw.ApplyWithdraw(profile.ID, resellercontract.WithdrawApplyInput{Amount: decimal.NewFromInt(10), Currency: "USD", Channel: "usdt", Account: "T-address"})
 	if err != nil {
 		t.Fatalf("apply withdraw failed: %v", err)
 	}
-	reviewed, err := svc.ReviewWithdraw(99, req.ID, resellerWithdrawActionReject, "bad account")
+	reviewed, err := svc.withdraw.ReviewWithdraw(99, req.ID, resellercontract.WithdrawActionReject, "bad account")
 	if err != nil {
 		t.Fatalf("reject withdraw failed: %v", err)
 	}
-	if reviewed.Status != models.ResellerWithdrawStatusRejected {
+	if reviewed.Status != resellerdomain.WithdrawStatusRejected {
 		t.Fatalf("expected rejected, got %s", reviewed.Status)
 	}
-	var unlocked models.ResellerLedgerEntry
+	var unlocked resellerdomain.LedgerEntry
 	if err := db.First(&unlocked, row.ID).Error; err != nil {
 		t.Fatalf("load ledger failed: %v", err)
 	}
-	if unlocked.Status != models.ResellerLedgerStatusAvailable || unlocked.WithdrawRequestID != nil {
+	if unlocked.Status != resellerdomain.LedgerStatusAvailable || unlocked.WithdrawRequestID != nil {
 		t.Fatalf("expected unlocked available ledger, got %+v", unlocked)
 	}
 }
@@ -625,35 +648,35 @@ func TestResellerAccountingPayWithdrawMarksLedgersWithdrawn(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	profile := seedResellerAccountingProfile(t, db)
 	now := time.Now()
-	row := models.ResellerLedgerEntry{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:pay", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now}
+	row := resellerdomain.LedgerEntry{ResellerID: profile.ID, Type: resellerdomain.LedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(10)), Currency: "USD", IdempotencyKey: "order_profit:pay", Status: resellerdomain.LedgerStatusAvailable, AvailableAt: &now}
 	if err := db.Create(&row).Error; err != nil {
 		t.Fatalf("seed ledger failed: %v", err)
 	}
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
-	req, err := svc.ApplyWithdraw(profile.ID, ResellerWithdrawApplyInput{Amount: decimal.NewFromInt(10), Currency: "USD", Channel: "usdt", Account: "T-address"})
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
+	req, err := svc.withdraw.ApplyWithdraw(profile.ID, resellercontract.WithdrawApplyInput{Amount: decimal.NewFromInt(10), Currency: "USD", Channel: "usdt", Account: "T-address"})
 	if err != nil {
 		t.Fatalf("apply withdraw failed: %v", err)
 	}
-	reviewed, err := svc.ReviewWithdraw(99, req.ID, resellerWithdrawActionPay, "")
+	reviewed, err := svc.withdraw.ReviewWithdraw(99, req.ID, resellercontract.WithdrawActionPay, "")
 	if err != nil {
 		t.Fatalf("pay withdraw failed: %v", err)
 	}
-	if reviewed.Status != models.ResellerWithdrawStatusPaid {
+	if reviewed.Status != resellerdomain.WithdrawStatusPaid {
 		t.Fatalf("expected paid, got %s", reviewed.Status)
 	}
-	var withdrawn models.ResellerLedgerEntry
+	var withdrawn resellerdomain.LedgerEntry
 	if err := db.First(&withdrawn, row.ID).Error; err != nil {
 		t.Fatalf("load ledger failed: %v", err)
 	}
-	if withdrawn.Status != models.ResellerLedgerStatusWithdrawn || withdrawn.WithdrawRequestID == nil || *withdrawn.WithdrawRequestID != req.ID {
+	if withdrawn.Status != resellerdomain.LedgerStatusWithdrawn || withdrawn.WithdrawRequestID == nil || *withdrawn.WithdrawRequestID != req.ID {
 		t.Fatalf("expected withdrawn ledger, got %+v", withdrawn)
 	}
-	var balance models.ResellerBalanceAccount
+	var balance resellerdomain.BalanceAccount
 	if err := db.Where("reseller_id = ? AND currency = ?", profile.ID, "USD").First(&balance).Error; err != nil {
 		t.Fatalf("load balance failed: %v", err)
 	}
-	if balance.AvailableAmountCache.String() != "0.00" || balance.LockedAmountCache.String() != "0.00" || balance.NegativeAmountCache.String() != "0.00" || balance.Status != models.ResellerBalanceStatusNormal {
+	if balance.AvailableAmountCache.String() != "0.00" || balance.LockedAmountCache.String() != "0.00" || balance.NegativeAmountCache.String() != "0.00" || balance.Status != resellerdomain.BalanceStatusNormal {
 		t.Fatalf("expected zero normal balance after full paid withdraw, got %+v", balance)
 	}
 }
@@ -662,24 +685,24 @@ func TestResellerAccountingPayPartialWithdrawKeepsRemainingAvailableBalance(t *t
 	db := openResellerAccountingServiceTestDB(t)
 	profile := seedResellerAccountingProfile(t, db)
 	now := time.Now()
-	row := models.ResellerLedgerEntry{ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(60)), Currency: "USD", IdempotencyKey: "order_profit:pay-partial", Status: models.ResellerLedgerStatusAvailable, AvailableAt: &now}
+	row := resellerdomain.LedgerEntry{ResellerID: profile.ID, Type: resellerdomain.LedgerTypeOrderProfit, Amount: money.FromDecimal(decimal.NewFromInt(60)), Currency: "USD", IdempotencyKey: "order_profit:pay-partial", Status: resellerdomain.LedgerStatusAvailable, AvailableAt: &now}
 	if err := db.Create(&row).Error; err != nil {
 		t.Fatalf("seed ledger failed: %v", err)
 	}
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
-	req, err := svc.ApplyWithdraw(profile.ID, ResellerWithdrawApplyInput{Amount: decimal.NewFromInt(25), Currency: "USD", Channel: "usdt", Account: "T-address"})
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
+	req, err := svc.withdraw.ApplyWithdraw(profile.ID, resellercontract.WithdrawApplyInput{Amount: decimal.NewFromInt(25), Currency: "USD", Channel: "usdt", Account: "T-address"})
 	if err != nil {
 		t.Fatalf("apply withdraw failed: %v", err)
 	}
-	if _, err := svc.ReviewWithdraw(99, req.ID, resellerWithdrawActionPay, ""); err != nil {
+	if _, err := svc.withdraw.ReviewWithdraw(99, req.ID, resellercontract.WithdrawActionPay, ""); err != nil {
 		t.Fatalf("pay withdraw failed: %v", err)
 	}
-	var balance models.ResellerBalanceAccount
+	var balance resellerdomain.BalanceAccount
 	if err := db.Where("reseller_id = ? AND currency = ?", profile.ID, "USD").First(&balance).Error; err != nil {
 		t.Fatalf("load balance failed: %v", err)
 	}
-	if balance.AvailableAmountCache.String() != "35.00" || balance.LockedAmountCache.String() != "0.00" || balance.NegativeAmountCache.String() != "0.00" || balance.Status != models.ResellerBalanceStatusNormal {
+	if balance.AvailableAmountCache.String() != "35.00" || balance.LockedAmountCache.String() != "0.00" || balance.NegativeAmountCache.String() != "0.00" || balance.Status != resellerdomain.BalanceStatusNormal {
 		t.Fatalf("expected remaining available balance 35.00 after partial paid withdraw, got %+v", balance)
 	}
 }
@@ -687,12 +710,12 @@ func TestResellerAccountingPayPartialWithdrawKeepsRemainingAvailableBalance(t *t
 func TestResellerAccountingRefundDeductDefersWhileProfitPending(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	order, payment, snapshot := seedPaidResellerOrderSnapshot(t, db, true)
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 7})
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 7)
 
 	// 利润先入账，处于 pending_confirm（尚未到账）。
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.PostOrderProfitTx(tx, &order, &payment)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.PostOrderProfitTx(tx, &order, &payment)
 	}); err != nil {
 		t.Fatalf("post profit failed: %v", err)
 	}
@@ -702,18 +725,18 @@ func TestResellerAccountingRefundDeductDefersWhileProfitPending(t *testing.T) {
 	if err := db.Create(&refundRecord).Error; err != nil {
 		t.Fatalf("create refund record failed: %v", err)
 	}
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.HandleRefundDeductTx(tx, &order, &refundRecord, decimal.Zero)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.HandleRefundDeductTx(tx, &order, &refundRecord, decimal.Zero)
 	}); err != nil {
 		t.Fatalf("refund deduct failed: %v", err)
 	}
 
 	// 扣减流水应与待确认利润对齐：pending_confirm 且带到账时间。
-	var deduct models.ResellerLedgerEntry
+	var deduct resellerdomain.LedgerEntry
 	if err := db.Where("idempotency_key = ?", fmt.Sprintf("refund_deduct:%d", refundRecord.ID)).First(&deduct).Error; err != nil {
 		t.Fatalf("load deduct ledger failed: %v", err)
 	}
-	if deduct.Status != models.ResellerLedgerStatusPendingConfirm {
+	if deduct.Status != resellerdomain.LedgerStatusPendingConfirm {
 		t.Fatalf("expected deduct pending_confirm while profit pending, got %s", deduct.Status)
 	}
 	if deduct.AvailableAt == nil {
@@ -724,19 +747,19 @@ func TestResellerAccountingRefundDeductDefersWhileProfitPending(t *testing.T) {
 	}
 
 	// 关键回归：未到账利润的退款不得把账户算成负余额 / 冻结。
-	var balance models.ResellerBalanceAccount
+	var balance resellerdomain.BalanceAccount
 	if err := db.Where("reseller_id = ? AND currency = ?", snapshot.ResellerID, "USD").First(&balance).Error; err != nil {
 		t.Fatalf("load balance failed: %v", err)
 	}
-	if balance.AvailableAmountCache.String() != "0.00" || balance.NegativeAmountCache.String() != "0.00" || balance.Status != models.ResellerBalanceStatusNormal {
+	if balance.AvailableAmountCache.String() != "0.00" || balance.NegativeAmountCache.String() != "0.00" || balance.Status != resellerdomain.BalanceStatusNormal {
 		t.Fatalf("expected normal zero balance while profit pending, got %+v", balance)
 	}
 
 	// 到期确认后，利润与扣减同步转为可用，净额 30 - 15 = 15。
-	if _, err := svc.ConfirmDueLedgerEntries(time.Now().Add(8 * 24 * time.Hour)); err != nil {
+	if _, err := svc.ledger.ConfirmDueLedgerEntries(time.Now().Add(8 * 24 * time.Hour)); err != nil {
 		t.Fatalf("confirm due failed: %v", err)
 	}
-	available, err := repo.SumLedgerAmount(snapshot.ResellerID, "USD", []string{models.ResellerLedgerStatusAvailable})
+	available, err := repo.SumLedgerAmount(snapshot.ResellerID, "USD", []string{resellerdomain.LedgerStatusAvailable})
 	if err != nil {
 		t.Fatalf("sum available failed: %v", err)
 	}
@@ -745,22 +768,12 @@ func TestResellerAccountingRefundDeductDefersWhileProfitPending(t *testing.T) {
 	}
 
 	// 确认后余额缓存应同步刷新（此前 confirm 仅改状态、不刷新缓存，会长期停留在 0）。
-	var confirmed models.ResellerBalanceAccount
+	var confirmed resellerdomain.BalanceAccount
 	if err := db.Where("reseller_id = ? AND currency = ?", snapshot.ResellerID, "USD").First(&confirmed).Error; err != nil {
 		t.Fatalf("load confirmed balance failed: %v", err)
 	}
-	if confirmed.AvailableAmountCache.String() != "15.00" || confirmed.NegativeAmountCache.String() != "0.00" || confirmed.Status != models.ResellerBalanceStatusNormal {
+	if confirmed.AvailableAmountCache.String() != "15.00" || confirmed.NegativeAmountCache.String() != "0.00" || confirmed.Status != resellerdomain.BalanceStatusNormal {
 		t.Fatalf("expected refreshed available cache 15.00 after confirm, got %+v", confirmed)
-	}
-}
-
-func TestNewResellerAccountingServiceClampsConfirmDays(t *testing.T) {
-	repo := repository.NewResellerRepository(openResellerAccountingServiceTestDB(t))
-	if svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: -5}); svc.confirmDays != 0 {
-		t.Fatalf("expected negative confirm days clamped to 0, got %d", svc.confirmDays)
-	}
-	if svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 99999}); svc.confirmDays != 3650 {
-		t.Fatalf("expected over-max confirm days clamped to 3650, got %d", svc.confirmDays)
 	}
 }
 
@@ -769,10 +782,10 @@ func TestNewResellerAccountingServiceClampsConfirmDays(t *testing.T) {
 func TestResellerAccountingRefundDeductDoesNotOverDeductAcrossPartialRefunds(t *testing.T) {
 	db := openResellerAccountingServiceTestDB(t)
 	order, payment, _ := seedPaidResellerOrderSnapshot(t, db, true)
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{ConfirmDays: 0})
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.PostOrderProfitTx(tx, &order, &payment)
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.PostOrderProfitTx(tx, &order, &payment)
 	}); err != nil {
 		t.Fatalf("post profit failed: %v", err)
 	}
@@ -782,8 +795,8 @@ func TestResellerAccountingRefundDeductDoesNotOverDeductAcrossPartialRefunds(t *
 	if err := db.Create(&refund1).Error; err != nil {
 		t.Fatalf("create refund1 failed: %v", err)
 	}
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.HandleRefundDeductTx(tx, &order, &refund1, decimal.Zero)
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.HandleRefundDeductTx(tx, &order, &refund1, decimal.Zero)
 	}); err != nil {
 		t.Fatalf("refund deduct 1 failed: %v", err)
 	}
@@ -793,13 +806,13 @@ func TestResellerAccountingRefundDeductDoesNotOverDeductAcrossPartialRefunds(t *
 	if err := db.Create(&refund2).Error; err != nil {
 		t.Fatalf("create refund2 failed: %v", err)
 	}
-	if err := repo.Transaction(func(tx *gorm.DB) error {
-		return svc.HandleRefundDeductTx(tx, &order, &refund2, decimal.NewFromInt(52))
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		return svc.transactions.HandleRefundDeductTx(tx, &order, &refund2, decimal.NewFromInt(52))
 	}); err != nil {
 		t.Fatalf("refund deduct 2 failed: %v", err)
 	}
 
-	totalDeduct, err := repo.SumLedgerAmountByOrderAndType(order.ID, models.ResellerLedgerTypeRefundDeduct)
+	totalDeduct, err := repo.SumLedgerAmountByOrderAndType(order.ID, resellerdomain.LedgerTypeRefundDeduct)
 	if err != nil {
 		t.Fatalf("sum deduct failed: %v", err)
 	}
@@ -814,34 +827,34 @@ func TestResellerAccountingApplyWithdrawRejectsExceedingNetAvailable(t *testing.
 	db := openResellerAccountingServiceTestDB(t)
 	profile := seedResellerAccountingProfile(t, db)
 	now := time.Now()
-	if err := db.Create(&models.ResellerLedgerEntry{
-		ResellerID: profile.ID, Type: models.ResellerLedgerTypeOrderProfit,
+	if err := db.Create(&resellerdomain.LedgerEntry{
+		ResellerID: profile.ID, Type: resellerdomain.LedgerTypeOrderProfit,
 		Amount: money.FromDecimal(decimal.NewFromInt(100)), Currency: "USD",
-		IdempotencyKey: "test_profit_net", Status: models.ResellerLedgerStatusAvailable,
+		IdempotencyKey: "test_profit_net", Status: resellerdomain.LedgerStatusAvailable,
 		CreatedAt: now, UpdatedAt: now,
 	}).Error; err != nil {
 		t.Fatalf("create profit ledger failed: %v", err)
 	}
-	if err := db.Create(&models.ResellerLedgerEntry{
-		ResellerID: profile.ID, Type: models.ResellerLedgerTypeRefundDeduct,
+	if err := db.Create(&resellerdomain.LedgerEntry{
+		ResellerID: profile.ID, Type: resellerdomain.LedgerTypeRefundDeduct,
 		Amount: money.FromDecimal(decimal.NewFromInt(-50)), Currency: "USD",
-		IdempotencyKey: "test_refund_net", Status: models.ResellerLedgerStatusAvailable,
+		IdempotencyKey: "test_refund_net", Status: resellerdomain.LedgerStatusAvailable,
 		CreatedAt: now, UpdatedAt: now,
 	}).Error; err != nil {
 		t.Fatalf("create refund ledger failed: %v", err)
 	}
-	repo := repository.NewResellerRepository(db)
-	svc := NewResellerAccountingService(repo, ResellerAccountingOptions{})
+	repo := resellergormstore.New(db)
+	svc := newResellerAccountingTestHarness(repo, 0)
 
 	// 净可用 = 100 - 50 = 50，提现 80 必须被拒绝（旧逻辑仅看正数 100 会放行造成资损）。
-	if _, err := svc.ApplyWithdraw(profile.ID, ResellerWithdrawApplyInput{
+	if _, err := svc.withdraw.ApplyWithdraw(profile.ID, resellercontract.WithdrawApplyInput{
 		Amount: decimal.NewFromInt(80), Currency: "USD", Channel: "usdt", Account: "Txxx",
-	}); !errors.Is(err, ErrResellerWithdrawInsufficient) {
-		t.Fatalf("expected ErrResellerWithdrawInsufficient for over-net withdraw, got %v", err)
+	}); !errors.Is(err, resellercontract.ErrWithdrawInsufficient) {
+		t.Fatalf("expected ErrWithdrawInsufficient for over-net withdraw, got %v", err)
 	}
 
 	// 提现 50（恰好等于净可用）应成功。
-	req, err := svc.ApplyWithdraw(profile.ID, ResellerWithdrawApplyInput{
+	req, err := svc.withdraw.ApplyWithdraw(profile.ID, resellercontract.WithdrawApplyInput{
 		Amount: decimal.NewFromInt(50), Currency: "USD", Channel: "usdt", Account: "Txxx",
 	})
 	if err != nil {

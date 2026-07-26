@@ -9,7 +9,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	"github.com/dujiao-next/internal/modules/catalog/product/manualform"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller/contract"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 )

@@ -24,6 +24,7 @@ import (
 	procurementgormstore "github.com/dujiao-next/internal/modules/procurement/infrastructure/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
 	reconciliationgormstore "github.com/dujiao-next/internal/modules/reconciliation/infrastructure/gormstore"
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"
 	broadcaststore "github.com/dujiao-next/internal/modules/telegram/broadcast/infrastructure/gormstore"
@@ -60,9 +61,7 @@ func (c *Container) initRepositories() {
 	c.AdminLoginLogRepo = auditloggormstore.NewAdminLoginStore(db)
 	c.DashboardRepo = dashboardgormstore.New(db)
 	c.AffiliateRepo = affiliategormstore.New(db)
-	c.ResellerRepo = repository.NewResellerRepository(db)
-	c.ResellerProductSettingRepo = repository.NewResellerProductSettingRepository(db)
-	c.ResellerOperationsRepo = repository.NewResellerOperationsRepository(db)
+	c.ResellerStore = resellergormstore.New(db)
 	c.ApiCredentialRepo = apicredentialgormstore.New(db)
 	c.SiteConnectionRepo = siteconnectiongormstore.New(db)
 	c.ProductMappingRepo = mappinggormstore.NewMappingStore(db)

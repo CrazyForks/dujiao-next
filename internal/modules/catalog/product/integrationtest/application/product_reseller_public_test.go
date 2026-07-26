@@ -5,6 +5,10 @@ import (
 	"testing"
 	"time"
 
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+
+	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
@@ -28,7 +32,7 @@ import (
 	categorygormstore "github.com/dujiao-next/internal/modules/catalog/category/infrastructure/gormstore"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/modules/reseller"
+	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
@@ -37,7 +41,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstrap.Services, repository.ResellerRepository, *gorm.DB) {
+func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstrap.Services, *resellergormstore.Store, *gorm.DB) {
 	t.Helper()
 
 	dsn := fmt.Sprintf("file:product_reseller_public_%d?mode=memory&cache=shared", time.Now().UnixNano())
@@ -59,8 +63,8 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		&models.Order{},
 		&models.OrderItem{},
 		&models.PaymentChannel{},
-		&models.ResellerProfile{},
-		&models.ResellerProductSetting{},
+		&resellerdomain.Profile{},
+		&resellerdomain.ProductSetting{},
 	); err != nil {
 		t.Fatalf("auto migrate product reseller public tables failed: %v", err)
 	}
@@ -77,7 +81,7 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		Orders:            repository.NewOrderRepository(db),
 		PaymentChannels:   repository.NewPaymentChannelRepository(db),
 	})
-	return svc, repository.NewResellerRepository(db), db
+	return svc, resellergormstore.New(db), db
 }
 
 func seedResellerPublicProduct(t *testing.T, db *gorm.DB, categoryID uint, slug string, skuCount int) (productdomain.Product, []productdomain.ProductSKU) {
@@ -118,14 +122,14 @@ func seedResellerPublicProduct(t *testing.T, db *gorm.DB, categoryID uint, slug 
 	return product, skus
 }
 
-func createResellerPublicSetting(t *testing.T, db *gorm.DB, setting models.ResellerProductSetting) models.ResellerProductSetting {
+func createResellerPublicSetting(t *testing.T, db *gorm.DB, setting resellerdomain.ProductSetting) resellerdomain.ProductSetting {
 	t.Helper()
 	wantListed := setting.IsListed
 	if err := db.Create(&setting).Error; err != nil {
 		t.Fatalf("create reseller product setting failed: %v", err)
 	}
 	if !wantListed {
-		if err := db.Model(&models.ResellerProductSetting{}).
+		if err := db.Model(&resellerdomain.ProductSetting{}).
 			Where("id = ?", setting.ID).
 			Update("is_listed", false).Error; err != nil {
 			t.Fatalf("force reseller product setting hidden failed: %v", err)
@@ -145,7 +149,7 @@ func TestProductServiceListPublicForTenantExcludesResellerHiddenProductsBeforePa
 	if err := db.Create(&owner).Error; err != nil {
 		t.Fatalf("create owner failed: %v", err)
 	}
-	profile := models.ResellerProfile{UserID: owner.ID, Status: models.ResellerProfileStatusActive}
+	profile := resellerdomain.Profile{UserID: owner.ID, Status: resellerdomain.ProfileStatusActive}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
@@ -155,11 +159,11 @@ func TestProductServiceListPublicForTenantExcludesResellerHiddenProductsBeforePa
 	allSKUHidden, allHiddenSKUs := seedResellerPublicProduct(t, db, category.ID, "all-sku-hidden", 2)
 	partialSKUHidden, partialHiddenSKUs := seedResellerPublicProduct(t, db, category.ID, "partial-sku-hidden", 2)
 
-	createResellerPublicSetting(t, db, models.ResellerProductSetting{ResellerID: profile.ID, ProductID: productHidden.ID, SKUID: 0, IsListed: false, PricingMode: models.ResellerPricingModeInherit})
+	createResellerPublicSetting(t, db, resellerdomain.ProductSetting{ResellerID: profile.ID, ProductID: productHidden.ID, SKUID: 0, IsListed: false, PricingMode: resellerdomain.PricingModeInherit})
 	for _, sku := range allHiddenSKUs {
-		createResellerPublicSetting(t, db, models.ResellerProductSetting{ResellerID: profile.ID, ProductID: allSKUHidden.ID, SKUID: sku.ID, IsListed: false, PricingMode: models.ResellerPricingModeInherit})
+		createResellerPublicSetting(t, db, resellerdomain.ProductSetting{ResellerID: profile.ID, ProductID: allSKUHidden.ID, SKUID: sku.ID, IsListed: false, PricingMode: resellerdomain.PricingModeInherit})
 	}
-	createResellerPublicSetting(t, db, models.ResellerProductSetting{ResellerID: profile.ID, ProductID: partialSKUHidden.ID, SKUID: partialHiddenSKUs[0].ID, IsListed: false, PricingMode: models.ResellerPricingModeInherit})
+	createResellerPublicSetting(t, db, resellerdomain.ProductSetting{ResellerID: profile.ID, ProductID: partialSKUHidden.ID, SKUID: partialHiddenSKUs[0].ID, IsListed: false, PricingMode: resellerdomain.PricingModeInherit})
 
 	tenant := reseller.ResellerTenantContext("shop.example.test", profile.ID, owner.ID, "shop.example.test")
 	rows, total, err := svc.Read.ListPublicForTenant(tenant, resellerRepo, "", "", 1, 20)
@@ -188,12 +192,12 @@ func TestProductServiceGetPublicBySlugForTenantRejectsHiddenProduct(t *testing.T
 	if err := db.Create(&owner).Error; err != nil {
 		t.Fatalf("create owner failed: %v", err)
 	}
-	profile := models.ResellerProfile{UserID: owner.ID, Status: models.ResellerProfileStatusActive}
+	profile := resellerdomain.Profile{UserID: owner.ID, Status: resellerdomain.ProfileStatusActive}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
 	}
 	hidden, _ := seedResellerPublicProduct(t, db, category.ID, "hidden-detail", 1)
-	createResellerPublicSetting(t, db, models.ResellerProductSetting{ResellerID: profile.ID, ProductID: hidden.ID, SKUID: 0, IsListed: false, PricingMode: models.ResellerPricingModeInherit})
+	createResellerPublicSetting(t, db, resellerdomain.ProductSetting{ResellerID: profile.ID, ProductID: hidden.ID, SKUID: 0, IsListed: false, PricingMode: resellerdomain.PricingModeInherit})
 
 	tenant := reseller.ResellerTenantContext("shop.example.test", profile.ID, owner.ID, "shop.example.test")
 	_, err := svc.Read.GetPublicBySlugForTenant(tenant, resellerRepo, hidden.Slug)

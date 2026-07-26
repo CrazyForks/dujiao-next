@@ -5,6 +5,10 @@ import (
 	"testing"
 	"time"
 
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+
+	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
@@ -14,8 +18,6 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
@@ -35,26 +37,26 @@ func openResellerProductSettingServiceTestDB(t *testing.T) *gorm.DB {
 		&categorydomain.Category{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.ResellerProfile{},
-		&models.ResellerProductSetting{},
+		&resellerdomain.Profile{},
+		&resellerdomain.ProductSetting{},
 	); err != nil {
 		t.Fatalf("migrate failed: %v", err)
 	}
 	return db
 }
 
-func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (userdomain.User, models.ResellerProfile, productdomain.Product, []productdomain.ProductSKU) {
+func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (userdomain.User, resellerdomain.Profile, productdomain.Product, []productdomain.ProductSKU) {
 	t.Helper()
 	user := userdomain.User{Email: fmt.Sprintf("setting-service-%d@example.test", time.Now().UnixNano()), PasswordHash: "hash", Status: constants.UserStatusActive}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	profile := models.ResellerProfile{
+	profile := resellerdomain.Profile{
 		UserID:               user.ID,
-		Status:               models.ResellerProfileStatusActive,
+		Status:               resellerdomain.ProfileStatusActive,
 		DefaultMarkupPercent: money.FromDecimal(decimal.RequireFromString("10.00")),
 		MaxMarkupPercent:     money.FromDecimal(decimal.RequireFromString("40.00")),
-		SettlementStatus:     models.ResellerSettlementStatusNormal,
+		SettlementStatus:     resellerdomain.SettlementStatusNormal,
 	}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
@@ -86,8 +88,8 @@ func seedResellerProductSettingServiceData(t *testing.T, db *gorm.DB) (userdomai
 
 func newResellerProductSettingServiceForTest(db *gorm.DB) *ResellerProductSettingService {
 	return NewResellerProductSettingService(
-		repository.NewResellerProductSettingRepository(db),
-		repository.NewResellerRepository(db),
+		resellergormstore.New(db),
+		resellergormstore.New(db),
 		productgormstore.NewProductStore(db),
 	)
 }
@@ -99,8 +101,8 @@ func TestResellerProductSettingServiceUserSaveValidatesAndReturnsEffectivePrices
 
 	detail, err := svc.SaveUserProductSettings(user.ID, product.ID, ResellerProductSettingSaveInput{
 		Settings: []ResellerProductSettingInput{
-			{SKUID: 0, IsListed: true, PricingMode: models.ResellerPricingModeMarkupPercent, MarkupPercent: decimal.RequireFromString("20.00")},
-			{SKUID: skus[0].ID, IsListed: true, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("130.00")},
+			{SKUID: 0, IsListed: true, PricingMode: resellerdomain.PricingModeMarkupPercent, MarkupPercent: decimal.RequireFromString("20.00")},
+			{SKUID: skus[0].ID, IsListed: true, PricingMode: resellerdomain.PricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("130.00")},
 		},
 	})
 	if err != nil {
@@ -126,7 +128,7 @@ func TestResellerProductSettingServicePersistsFirstHiddenSKUSetting(t *testing.T
 
 	detail, err := svc.SaveUserProductSettings(user.ID, product.ID, ResellerProductSettingSaveInput{
 		Settings: []ResellerProductSettingInput{
-			{SKUID: skus[0].ID, IsListed: false, PricingMode: models.ResellerPricingModeInherit},
+			{SKUID: skus[0].ID, IsListed: false, PricingMode: resellerdomain.PricingModeInherit},
 		},
 	})
 	if err != nil {
@@ -136,7 +138,7 @@ func TestResellerProductSettingServicePersistsFirstHiddenSKUSetting(t *testing.T
 		t.Fatal("expected detail after hidden save")
 	}
 
-	var row models.ResellerProductSetting
+	var row resellerdomain.ProductSetting
 	if err := db.Where("reseller_id = ? AND product_id = ? AND sku_id = ?", profile.ID, product.ID, skus[0].ID).
 		First(&row).Error; err != nil {
 		t.Fatalf("fetch hidden sku setting failed: %v", err)
@@ -153,7 +155,7 @@ func TestResellerProductSettingServiceRejectsPriceBelowBase(t *testing.T) {
 
 	_, err := svc.SaveUserProductSettings(user.ID, product.ID, ResellerProductSettingSaveInput{
 		Settings: []ResellerProductSettingInput{
-			{SKUID: skus[0].ID, IsListed: true, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("99.99")},
+			{SKUID: skus[0].ID, IsListed: true, PricingMode: resellerdomain.PricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("99.99")},
 		},
 	})
 	if err != ErrResellerPriceBelowBase {
@@ -168,7 +170,7 @@ func TestResellerProductSettingServiceRejectsMarkupExceeded(t *testing.T) {
 
 	_, err := svc.SaveUserProductSettings(user.ID, product.ID, ResellerProductSettingSaveInput{
 		Settings: []ResellerProductSettingInput{
-			{SKUID: skus[0].ID, IsListed: true, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("150.00")},
+			{SKUID: skus[0].ID, IsListed: true, PricingMode: resellerdomain.PricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("150.00")},
 		},
 	})
 	if err != ErrResellerMarkupExceeded {
@@ -183,8 +185,8 @@ func TestResellerProductSettingServiceRejectsBatchWithoutPartialWrites(t *testin
 
 	_, err := svc.SaveUserProductSettings(user.ID, product.ID, ResellerProductSettingSaveInput{
 		Settings: []ResellerProductSettingInput{
-			{SKUID: skus[0].ID, IsListed: true, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("130.00")},
-			{SKUID: skus[1].ID, IsListed: true, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("99.99")},
+			{SKUID: skus[0].ID, IsListed: true, PricingMode: resellerdomain.PricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("130.00")},
+			{SKUID: skus[1].ID, IsListed: true, PricingMode: resellerdomain.PricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("99.99")},
 		},
 	})
 	if err != ErrResellerPriceBelowBase {
@@ -192,7 +194,7 @@ func TestResellerProductSettingServiceRejectsBatchWithoutPartialWrites(t *testin
 	}
 
 	var count int64
-	if err := db.Model(&models.ResellerProductSetting{}).
+	if err := db.Model(&resellerdomain.ProductSetting{}).
 		Where("reseller_id = ? AND product_id = ?", profile.ID, product.ID).
 		Count(&count).Error; err != nil {
 		t.Fatalf("count settings failed: %v", err)
@@ -218,9 +220,9 @@ func TestResellerProductSettingServicePreviewMatchesSaveSemantics(t *testing.T) 
 
 	items, err := svc.PreviewUserProductSettings(user.ID, product.ID, ResellerProductSettingSaveInput{
 		Settings: []ResellerProductSettingInput{
-			{SKUID: 0, IsListed: true, PricingMode: models.ResellerPricingModeMarkupPercent, MarkupPercent: decimal.RequireFromString("20.00")},
-			{SKUID: skus[0].ID, IsListed: true, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("130.00")},
-			{SKUID: skus[1].ID, IsListed: true, PricingMode: models.ResellerPricingModeInherit},
+			{SKUID: 0, IsListed: true, PricingMode: resellerdomain.PricingModeMarkupPercent, MarkupPercent: decimal.RequireFromString("20.00")},
+			{SKUID: skus[0].ID, IsListed: true, PricingMode: resellerdomain.PricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("130.00")},
+			{SKUID: skus[1].ID, IsListed: true, PricingMode: resellerdomain.PricingModeInherit},
 		},
 	})
 	if err != nil {
@@ -238,7 +240,7 @@ func TestResellerProductSettingServicePreviewMatchesSaveSemantics(t *testing.T) 
 
 	// 预览不得落库。
 	var count int64
-	if err := db.Model(&models.ResellerProductSetting{}).Where("reseller_id = ?", profile.ID).Count(&count).Error; err != nil {
+	if err := db.Model(&resellerdomain.ProductSetting{}).Where("reseller_id = ?", profile.ID).Count(&count).Error; err != nil {
 		t.Fatalf("count settings failed: %v", err)
 	}
 	if count != 0 {
@@ -254,8 +256,8 @@ func TestResellerProductSettingServicePreviewFlagsInvalidRules(t *testing.T) {
 	// 低于基准价 → price_invalid；超出封顶加价 → markup_exceeded。
 	items, err := svc.PreviewUserProductSettings(user.ID, product.ID, ResellerProductSettingSaveInput{
 		Settings: []ResellerProductSettingInput{
-			{SKUID: skus[0].ID, IsListed: true, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("99.99")},
-			{SKUID: skus[1].ID, IsListed: true, PricingMode: models.ResellerPricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("300.00")},
+			{SKUID: skus[0].ID, IsListed: true, PricingMode: resellerdomain.PricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("99.99")},
+			{SKUID: skus[1].ID, IsListed: true, PricingMode: resellerdomain.PricingModeFixedPrice, FixedPriceAmount: decimal.RequireFromString("300.00")},
 		},
 	})
 	if err != nil {
@@ -274,7 +276,7 @@ func TestResellerProductSettingServicePreviewFlagsInvalidRules(t *testing.T) {
 func TestResellerProductSettingServiceRequiresActiveProfile(t *testing.T) {
 	db := openResellerProductSettingServiceTestDB(t)
 	user, profile, product, _ := seedResellerProductSettingServiceData(t, db)
-	if err := db.Model(&models.ResellerProfile{}).Where("id = ?", profile.ID).Update("status", models.ResellerProfileStatusPendingReview).Error; err != nil {
+	if err := db.Model(&resellerdomain.Profile{}).Where("id = ?", profile.ID).Update("status", resellerdomain.ProfileStatusPendingReview).Error; err != nil {
 		t.Fatalf("update profile failed: %v", err)
 	}
 	svc := newResellerProductSettingServiceForTest(db)

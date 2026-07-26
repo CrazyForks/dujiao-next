@@ -3,41 +3,40 @@ package service
 import (
 	"sort"
 
+	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller"
-	"github.com/dujiao-next/internal/repository"
+	resellerapplication "github.com/dujiao-next/internal/modules/reseller/application"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/shopspring/decimal"
 )
 
 const (
-	resellerRuleSourceSKU     = resellermodule.RuleSourceSKU
-	resellerRuleSourceProduct = resellermodule.RuleSourceProduct
-	resellerRuleSourceProfile = resellermodule.RuleSourceProfile
-	resellerRuleSourceInherit = resellermodule.RuleSourceInherit
+	resellerRuleSourceSKU     = resellerapplication.RuleSourceSKU
+	resellerRuleSourceProduct = resellerapplication.RuleSourceProduct
+	resellerRuleSourceProfile = resellerapplication.RuleSourceProfile
+	resellerRuleSourceInherit = resellerapplication.RuleSourceInherit
 )
 
 // ResellerPricingResolver resolves reseller-facing prices before order transactions.
 type ResellerPricingResolver struct {
-	repo repository.ResellerRepository
+	repo resellerPricingStore
 }
 
-func NewResellerPricingResolver(repo repository.ResellerRepository) *ResellerPricingResolver {
+type resellerPricingStore interface {
+	GetProfileByID(id uint) (*resellerdomain.Profile, error)
+	ListProductSettingsForPricing(resellerID uint, productIDs, skuIDs []uint) ([]resellerdomain.ProductSetting, error)
+	IsActiveRelatedAccount(resellerID, userID uint) (bool, error)
+}
+
+func NewResellerPricingResolver(repo resellerPricingStore) *ResellerPricingResolver {
 	return &ResellerPricingResolver{repo: repo}
 }
 
-type ResellerOrderPricingContext = resellermodule.OrderPricingContext
-type ResellerOrderPricingItem = resellermodule.OrderPricingItem
-type ResellerDisplayPriceResult = resellermodule.DisplayPriceResult
-type ResellerDisplayPricingBatch = resellermodule.DisplayPricingBatch
-
-type resellerPricingRule = resellermodule.PricingRule
-type resellerSettingKey = resellermodule.SettingKey
-
-func (r *ResellerPricingResolver) ApplyToOrderBuildResult(tenant TenantContext, buyerUserID uint, result *orderBuildResult) (*ResellerOrderPricingContext, error) {
+func (r *ResellerPricingResolver) ApplyToOrderBuildResult(tenant resellercontract.TenantContext, buyerUserID uint, result *orderBuildResult) (*resellercontract.OrderPricingContext, error) {
 	if !isResellerOrderContext(tenant) {
 		return nil, nil
 	}
@@ -55,14 +54,14 @@ func (r *ResellerPricingResolver) ApplyToOrderBuildResult(tenant TenantContext, 
 	}
 	settingsByProduct, settingsBySKU := buildSettingIndexes(settings)
 
-	ctx := &ResellerOrderPricingContext{
+	ctx := &resellercontract.OrderPricingContext{
 		ResellerID:     *tenant.ResellerID,
 		Domain:         resellerSnapshotDomain(tenant),
 		Currency:       result.Currency,
 		ResellerUserID: profile.UserID,
 		BuyerUserID:    buyerUserID,
 		ProfitEligible: true,
-		Items:          make([]ResellerOrderPricingItem, 0, len(result.Plans)),
+		Items:          make([]resellercontract.OrderPricingItem, 0, len(result.Plans)),
 	}
 
 	for i := range result.Plans {
@@ -71,7 +70,7 @@ func (r *ResellerPricingResolver) ApplyToOrderBuildResult(tenant TenantContext, 
 			return nil, ErrProductSKUInvalid
 		}
 		productSetting := settingsByProduct[plan.Product.ID]
-		skuSetting := settingsBySKU[resellerSettingKey{ProductID: plan.Product.ID, SKUID: plan.SKU.ID}]
+		skuSetting := settingsBySKU[resellercontract.SettingKey{ProductID: plan.Product.ID, SKUID: plan.SKU.ID}]
 		if productSetting != nil && !productSetting.IsListed {
 			return nil, ErrResellerProductNotListed
 		}
@@ -111,7 +110,7 @@ func (r *ResellerPricingResolver) ApplyToOrderBuildResult(tenant TenantContext, 
 		ctx.BaseAmount = ctx.BaseAmount.Add(baseTotal).Round(2)
 		ctx.ResellerAmount = ctx.ResellerAmount.Add(resellerTotal).Round(2)
 		ctx.ProfitAmount = ctx.ProfitAmount.Add(profit).Round(2)
-		ctx.Items = append(ctx.Items, ResellerOrderPricingItem{
+		ctx.Items = append(ctx.Items, resellercontract.OrderPricingItem{
 			ProductID:           plan.Product.ID,
 			SKUID:               plan.SKU.ID,
 			Quantity:            plan.Item.Quantity,
@@ -153,7 +152,7 @@ func (r *ResellerPricingResolver) ApplyToOrderBuildResult(tenant TenantContext, 
 	return ctx, nil
 }
 
-func (r *ResellerPricingResolver) LoadDisplayPricingBatch(tenant TenantContext, products []productdomain.Product) (*ResellerDisplayPricingBatch, error) {
+func (r *ResellerPricingResolver) LoadDisplayPricingBatch(tenant resellercontract.TenantContext, products []productdomain.Product) (*resellercontract.DisplayPricingBatch, error) {
 	if !isResellerOrderContext(tenant) {
 		return nil, nil
 	}
@@ -169,18 +168,18 @@ func (r *ResellerPricingResolver) LoadDisplayPricingBatch(tenant TenantContext, 
 	if err != nil {
 		return nil, err
 	}
-	byProduct := make(map[uint][]models.ResellerProductSetting)
+	byProduct := make(map[uint][]resellerdomain.ProductSetting)
 	for _, setting := range settings {
 		byProduct[setting.ProductID] = append(byProduct[setting.ProductID], setting)
 	}
-	return &ResellerDisplayPricingBatch{
+	return &resellercontract.DisplayPricingBatch{
 		Tenant:            tenant,
 		Profile:           profile,
 		SettingsByProduct: byProduct,
 	}, nil
 }
 
-func (r *ResellerPricingResolver) ResolveDisplayPrices(tenant TenantContext, product *productdomain.Product, batch *ResellerDisplayPricingBatch) (*ResellerDisplayPriceResult, error) {
+func (r *ResellerPricingResolver) ResolveDisplayPrices(tenant resellercontract.TenantContext, product *productdomain.Product, batch *resellercontract.DisplayPricingBatch) (*resellercontract.DisplayPriceResult, error) {
 	if !isResellerOrderContext(tenant) {
 		return nil, nil
 	}
@@ -190,10 +189,10 @@ func (r *ResellerPricingResolver) ResolveDisplayPrices(tenant TenantContext, pro
 	productSettings, skuSettings := buildSettingIndexes(batch.SettingsByProduct[product.ID])
 	productSetting := productSettings[product.ID]
 	if productSetting != nil && !productSetting.IsListed {
-		return &ResellerDisplayPriceResult{Visible: false, ProductID: product.ID}, nil
+		return &resellercontract.DisplayPriceResult{Visible: false, ProductID: product.ID}, nil
 	}
 
-	result := &ResellerDisplayPriceResult{
+	result := &resellercontract.DisplayPriceResult{
 		Visible:      false,
 		ProductID:    product.ID,
 		SKUPrices:    map[uint]money.Amount{},
@@ -203,7 +202,7 @@ func (r *ResellerPricingResolver) ResolveDisplayPrices(tenant TenantContext, pro
 		if !sku.IsActive {
 			continue
 		}
-		skuSetting := skuSettings[resellerSettingKey{ProductID: product.ID, SKUID: sku.ID}]
+		skuSetting := skuSettings[resellercontract.SettingKey{ProductID: product.ID, SKUID: sku.ID}]
 		if skuSetting != nil && !skuSetting.IsListed {
 			result.HiddenSKUIDs[sku.ID] = true
 			continue
@@ -240,7 +239,7 @@ func (r *ResellerPricingResolver) ResolveDisplayPrices(tenant TenantContext, pro
 				"product_id", product.ID,
 				"error", err.Error(),
 			)
-			return &ResellerDisplayPriceResult{Visible: false, ProductID: product.ID}, nil
+			return &resellercontract.DisplayPriceResult{Visible: false, ProductID: product.ID}, nil
 		}
 		result.Visible = true
 		result.DisplayPrice = money.FromDecimal(price)
@@ -248,18 +247,18 @@ func (r *ResellerPricingResolver) ResolveDisplayPrices(tenant TenantContext, pro
 	return result, nil
 }
 
-func (r *ResellerPricingResolver) loadActiveProfile(resellerID uint) (*models.ResellerProfile, error) {
+func (r *ResellerPricingResolver) loadActiveProfile(resellerID uint) (*resellerdomain.Profile, error) {
 	profile, err := r.repo.GetProfileByID(resellerID)
 	if err != nil {
 		return nil, err
 	}
-	if profile == nil || profile.Status != models.ResellerProfileStatusActive {
+	if profile == nil || profile.Status != resellerdomain.ProfileStatusActive {
 		return nil, ErrResellerProductNotListed
 	}
 	return profile, nil
 }
 
-func (r *ResellerPricingResolver) applySelfDealingRisk(ctx *ResellerOrderPricingContext, profile *models.ResellerProfile) error {
+func (r *ResellerPricingResolver) applySelfDealingRisk(ctx *resellercontract.OrderPricingContext, profile *resellerdomain.Profile) error {
 	if ctx == nil || profile == nil {
 		return nil
 	}
@@ -271,20 +270,20 @@ func (r *ResellerPricingResolver) applySelfDealingRisk(ctx *ResellerOrderPricing
 		}
 		relatedMatch = matched
 	}
-	resellermodule.ApplySelfDealingRisk(ctx, profile, relatedMatch)
+	resellercontract.ApplySelfDealingRisk(ctx, profile, relatedMatch)
 	return nil
 }
 
-func buildSettingIndexes(settings []models.ResellerProductSetting) (map[uint]*models.ResellerProductSetting, map[resellerSettingKey]*models.ResellerProductSetting) {
-	return resellermodule.BuildSettingIndexes(settings)
+func buildSettingIndexes(settings []resellerdomain.ProductSetting) (map[uint]*resellerdomain.ProductSetting, map[resellercontract.SettingKey]*resellerdomain.ProductSetting) {
+	return resellercontract.BuildSettingIndexes(settings)
 }
 
-func resolveResellerUnitAmount(profile *models.ResellerProfile, productSetting *models.ResellerProductSetting, skuSetting *models.ResellerProductSetting, baseUnit decimal.Decimal) (decimal.Decimal, resellerPricingRule, error) {
-	return resellermodule.ResolveUnitAmount(profile, productSetting, skuSetting, baseUnit)
+func resolveResellerUnitAmount(profile *resellerdomain.Profile, productSetting *resellerdomain.ProductSetting, skuSetting *resellerdomain.ProductSetting, baseUnit decimal.Decimal) (decimal.Decimal, resellerapplication.PricingRule, error) {
+	return resellerapplication.ResolveUnitAmount(profile, productSetting, skuSetting, baseUnit)
 }
 
-func validateResellerUnitAmount(profile *models.ResellerProfile, sku *productdomain.ProductSKU, baseUnit decimal.Decimal, resellerUnit decimal.Decimal) error {
-	return resellermodule.ValidateUnitAmount(profile, sku, baseUnit, resellerUnit)
+func validateResellerUnitAmount(profile *resellerdomain.Profile, sku *productdomain.ProductSKU, baseUnit decimal.Decimal, resellerUnit decimal.Decimal) error {
+	return resellerapplication.ValidateUnitAmount(profile, sku, baseUnit, resellerUnit)
 }
 
 func collectOrderPlanIDs(plans []childOrderPlan) ([]uint, []uint) {
@@ -341,10 +340,10 @@ func uniqueServiceUintSlice(values []uint) []uint {
 	return result
 }
 
-func isResellerOrderContext(tenant TenantContext) bool {
+func isResellerOrderContext(tenant resellercontract.TenantContext) bool {
 	return tenant.IsReseller()
 }
 
-func resellerSnapshotDomain(tenant TenantContext) string {
-	return resellermodule.SnapshotDomain(tenant)
+func resellerSnapshotDomain(tenant resellercontract.TenantContext) string {
+	return resellercontract.SnapshotDomain(tenant)
 }

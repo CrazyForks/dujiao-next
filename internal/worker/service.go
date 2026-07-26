@@ -60,7 +60,7 @@ func registerPeriodicTasks(scheduler *asynq.Scheduler, consumer *Consumer, cfg *
 			logger.Infow("scheduler_register_affiliate_confirm_ok", "entry_id", entryID)
 		}
 	}
-	if consumer.ResellerAccountingService != nil {
+	if consumer.ResellerAccountingLedger != nil {
 		task := queue.NewResellerConfirmLedgerTask()
 		entryID, err := scheduler.Register("@every 1m", task, asynq.Queue(queue.DefaultQueue))
 		if err != nil {

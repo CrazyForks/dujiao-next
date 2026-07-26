@@ -14,6 +14,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	adminapplication "github.com/dujiao-next/internal/modules/identity/admin/application"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
+	resellerstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/passwordpolicy"
 	"github.com/dujiao-next/internal/version"
 	"github.com/dujiao-next/internal/web"
@@ -92,6 +93,9 @@ func main() {
 	// 自动迁移数据库表
 	if err := models.AutoMigrate(); err != nil {
 		stdLog.Fatalf("数据库迁移失败: %v", err)
+	}
+	if err := resellerstore.Migrate(models.DB); err != nil {
+		stdLog.Fatalf("分销模块数据库迁移失败: %v", err)
 	}
 
 	// 初始化默认管理员账号

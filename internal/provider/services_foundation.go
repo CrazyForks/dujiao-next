@@ -17,13 +17,13 @@ import (
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
-	"github.com/dujiao-next/internal/modules/reseller"
+	reseller "github.com/dujiao-next/internal/modules/reseller/application"
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 	uploadapp "github.com/dujiao-next/internal/modules/upload/application"
 	uploadlocal "github.com/dujiao-next/internal/modules/upload/infrastructure/localstore"
-	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
 	"github.com/dujiao-next/internal/service"
 )
 
@@ -41,19 +41,23 @@ func (c *Container) initPolicyAndSettingServices() {
 	}
 
 	c.SettingService = settingsapp.NewService(c.SettingRepo, c.Config.Order)
-	c.ResellerDomainResolver = reseller.NewDomainResolver(c.ResellerRepo, c.Config.Reseller)
-	c.ResellerPricingResolver = service.NewResellerPricingResolver(c.ResellerRepo)
-	c.ResellerManagementService = reseller.NewManagementService(resellerpersistence.NewManagementStore(c.ResellerRepo), c.Config.Reseller)
-	c.ResellerSiteConfigService = reseller.NewSiteConfigService(c.ResellerRepo)
-	c.ResellerProductSettingService = reseller.NewProductSettingService(
-		resellerpersistence.NewProductSettingStore(c.ResellerProductSettingRepo, c.ResellerRepo),
-		c.ProductRepo,
+	c.ResellerDomainResolver = reseller.NewDomainResolver(c.ResellerStore, c.Config.Reseller)
+	c.ResellerPricingResolver = service.NewResellerPricingResolver(c.ResellerStore)
+	c.ResellerManagementService = reseller.NewManagementService(c.ResellerStore, c.Config.Reseller)
+	c.ResellerSiteConfigService = reseller.NewSiteConfigService(c.ResellerStore)
+	c.ResellerProductSettingService = reseller.NewProductSettingService(c.ResellerStore, c.ProductRepo)
+	c.ResellerAccountingQuery = reseller.NewAccountingQueryService(c.ResellerStore)
+	c.ResellerAccountingWithdraw = reseller.NewAccountingWithdrawService(c.ResellerStore)
+	c.ResellerAccountingLedger = reseller.NewAccountingLedgerService(
+		c.ResellerStore,
+		c.Config.Reseller.SettlementConfirmDays,
 	)
-	c.ResellerAccountingService = service.NewResellerAccountingService(c.ResellerRepo, service.ResellerAccountingOptions{
-		ConfirmDays: c.Config.Reseller.SettlementConfirmDays,
-	})
-	c.ResellerOrderService = reseller.NewOrderQueryService(c.ResellerRepo)
-	c.ResellerOperationsService = reseller.NewOperationsService(c.ResellerOperationsRepo)
+	c.ResellerAccountingTransactions = resellergormstore.NewAccountingTransactionBridge(
+		c.ResellerStore,
+		c.ResellerAccountingLedger,
+	)
+	c.ResellerOrderService = reseller.NewOrderQueryService(c.ResellerStore)
+	c.ResellerOperationsService = reseller.NewOperationsService(c.ResellerStore)
 	c.ComplianceService = complianceapp.NewService(c.SettingRepo)
 }
 

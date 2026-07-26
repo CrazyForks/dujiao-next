@@ -5,11 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	resellerapplication "github.com/dujiao-next/internal/modules/reseller/application"
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+
+	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/queue"
-	"github.com/dujiao-next/internal/repository"
-	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
 	"github.com/hibiken/asynq"
@@ -22,34 +24,34 @@ func TestResellerConfirmLedgerWorkerMarksDueEntriesAvailable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open db failed: %v", err)
 	}
-	if err := db.AutoMigrate(&models.ResellerLedgerEntry{}, &models.ResellerBalanceAccount{}); err != nil {
+	if err := db.AutoMigrate(&resellerdomain.LedgerEntry{}, &resellerdomain.BalanceAccount{}); err != nil {
 		t.Fatalf("migrate failed: %v", err)
 	}
 	past := time.Now().Add(-time.Minute)
-	row := models.ResellerLedgerEntry{
+	row := resellerdomain.LedgerEntry{
 		ResellerID:     1,
-		Type:           models.ResellerLedgerTypeOrderProfit,
+		Type:           resellerdomain.LedgerTypeOrderProfit,
 		Amount:         money.FromDecimal(decimal.NewFromInt(10)),
 		Currency:       "USD",
 		IdempotencyKey: "order_profit:worker",
-		Status:         models.ResellerLedgerStatusPendingConfirm,
+		Status:         resellerdomain.LedgerStatusPendingConfirm,
 		AvailableAt:    &past,
 	}
 	if err := db.Create(&row).Error; err != nil {
 		t.Fatalf("seed ledger failed: %v", err)
 	}
-	repo := repository.NewResellerRepository(db)
+	repo := resellergormstore.New(db)
 	c := NewConsumer(&provider.Container{
-		ResellerAccountingService: service.NewResellerAccountingService(repo, service.ResellerAccountingOptions{ConfirmDays: 0}),
+		ResellerAccountingLedger: resellerapplication.NewAccountingLedgerService(repo, 0),
 	})
 	if err := c.handleResellerConfirmLedger(context.Background(), queue.NewResellerConfirmLedgerTask()); err != nil {
 		t.Fatalf("worker handler failed: %v", err)
 	}
-	var got models.ResellerLedgerEntry
+	var got resellerdomain.LedgerEntry
 	if err := db.First(&got, row.ID).Error; err != nil {
 		t.Fatalf("load ledger failed: %v", err)
 	}
-	if got.Status != models.ResellerLedgerStatusAvailable {
+	if got.Status != resellerdomain.LedgerStatusAvailable {
 		t.Fatalf("expected available, got %s", got.Status)
 	}
 }

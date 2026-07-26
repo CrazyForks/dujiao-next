@@ -26,19 +26,19 @@ type OrderRepository interface {
 	GetByIDAndGuest(id uint, email, password string) (*models.Order, error)
 	GetByOrderNoAndGuest(orderNo, email, password string) (*models.Order, error)
 	GetAnyByOrderNoAndGuest(orderNo, email, password string) (*models.Order, error)
-	GetByIDAndUserScoped(id uint, userID uint, scope ResellerOrderScope) (*models.Order, error)
-	GetByOrderNoAndUserScoped(orderNo string, userID uint, scope ResellerOrderScope) (*models.Order, error)
-	GetAnyByOrderNoAndUserScoped(orderNo string, userID uint, scope ResellerOrderScope) (*models.Order, error)
-	GetByIDAndGuestScoped(id uint, email, password string, scope ResellerOrderScope) (*models.Order, error)
-	GetByOrderNoAndGuestScoped(orderNo, email, password string, scope ResellerOrderScope) (*models.Order, error)
-	GetAnyByOrderNoAndGuestScoped(orderNo, email, password string, scope ResellerOrderScope) (*models.Order, error)
+	GetByIDAndUserScoped(id uint, userID uint, scope OrderTenantScope) (*models.Order, error)
+	GetByOrderNoAndUserScoped(orderNo string, userID uint, scope OrderTenantScope) (*models.Order, error)
+	GetAnyByOrderNoAndUserScoped(orderNo string, userID uint, scope OrderTenantScope) (*models.Order, error)
+	GetByIDAndGuestScoped(id uint, email, password string, scope OrderTenantScope) (*models.Order, error)
+	GetByOrderNoAndGuestScoped(orderNo, email, password string, scope OrderTenantScope) (*models.Order, error)
+	GetAnyByOrderNoAndGuestScoped(orderNo, email, password string, scope OrderTenantScope) (*models.Order, error)
 	ListChildren(parentID uint) ([]models.Order, error)
 	ListByUser(filter OrderListFilter) ([]models.Order, int64, error)
 	StatsByUser(filter OrderListFilter) (map[string]int64, error)
-	ListByUserScoped(filter OrderListFilter, scope ResellerOrderScope) ([]models.Order, int64, error)
-	StatsByUserScoped(filter OrderListFilter, scope ResellerOrderScope) (map[string]int64, error)
+	ListByUserScoped(filter OrderListFilter, scope OrderTenantScope) ([]models.Order, int64, error)
+	StatsByUserScoped(filter OrderListFilter, scope OrderTenantScope) (map[string]int64, error)
 	ListByGuest(email, password string, page, pageSize int) ([]models.Order, int64, error)
-	ListByGuestScoped(email, password string, page, pageSize int, scope ResellerOrderScope) ([]models.Order, int64, error)
+	ListByGuestScoped(email, password string, page, pageSize int, scope OrderTenantScope) ([]models.Order, int64, error)
 	ListAdmin(filter OrderListFilter) ([]models.Order, int64, error)
 	UpdateStatus(id uint, status string, updates map[string]interface{}) error
 	CountOrderItemsByProduct(productID uint) (int64, error)
@@ -239,7 +239,7 @@ func (r *GormOrderRepository) GetByOrderNoAndGuest(orderNo, email, password stri
 	return &order, nil
 }
 
-func applyResellerOrderScope(query *gorm.DB, scope ResellerOrderScope) *gorm.DB {
+func applyOrderTenantScope(query *gorm.DB, scope OrderTenantScope) *gorm.DB {
 	if scope.ResellerID == nil {
 		return query.Where("orders.reseller_id IS NULL")
 	}
@@ -247,10 +247,10 @@ func applyResellerOrderScope(query *gorm.DB, scope ResellerOrderScope) *gorm.DB 
 }
 
 // GetByIDAndUserScoped 获取用户订单详情，并强制限定当前前台租户范围。
-func (r *GormOrderRepository) GetByIDAndUserScoped(id uint, userID uint, scope ResellerOrderScope) (*models.Order, error) {
+func (r *GormOrderRepository) GetByIDAndUserScoped(id uint, userID uint, scope OrderTenantScope) (*models.Order, error) {
 	var order models.Order
 	query := r.withChildren(r.db.Preload("Items").Preload("Fulfillment"))
-	query = applyResellerOrderScope(query.Where("id = ? AND user_id = ? AND parent_id IS NULL", id, userID), scope)
+	query = applyOrderTenantScope(query.Where("id = ? AND user_id = ? AND parent_id IS NULL", id, userID), scope)
 	if err := query.First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -261,10 +261,10 @@ func (r *GormOrderRepository) GetByIDAndUserScoped(id uint, userID uint, scope R
 }
 
 // GetByOrderNoAndUserScoped 按订单号获取用户订单详情，并强制限定当前前台租户范围。
-func (r *GormOrderRepository) GetByOrderNoAndUserScoped(orderNo string, userID uint, scope ResellerOrderScope) (*models.Order, error) {
+func (r *GormOrderRepository) GetByOrderNoAndUserScoped(orderNo string, userID uint, scope OrderTenantScope) (*models.Order, error) {
 	var order models.Order
 	query := r.withChildren(r.db.Preload("Items").Preload("Fulfillment"))
-	query = applyResellerOrderScope(query.Where("order_no = ? AND user_id = ? AND parent_id IS NULL", orderNo, userID), scope)
+	query = applyOrderTenantScope(query.Where("order_no = ? AND user_id = ? AND parent_id IS NULL", orderNo, userID), scope)
 	if err := query.First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -275,12 +275,12 @@ func (r *GormOrderRepository) GetByOrderNoAndUserScoped(orderNo string, userID u
 }
 
 // GetAnyByOrderNoAndUserScoped 按订单号查找用户订单（不限父/子），并强制限定当前前台租户范围。
-func (r *GormOrderRepository) GetAnyByOrderNoAndUserScoped(orderNo string, userID uint, scope ResellerOrderScope) (*models.Order, error) {
+func (r *GormOrderRepository) GetAnyByOrderNoAndUserScoped(orderNo string, userID uint, scope OrderTenantScope) (*models.Order, error) {
 	var order models.Order
 	query := r.db.Preload("Items").Preload("Fulfillment").Preload("Children", func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Items").Preload("Fulfillment")
 	})
-	query = applyResellerOrderScope(query.Where("order_no = ? AND user_id = ?", orderNo, userID), scope)
+	query = applyOrderTenantScope(query.Where("order_no = ? AND user_id = ?", orderNo, userID), scope)
 	if err := query.First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -291,10 +291,10 @@ func (r *GormOrderRepository) GetAnyByOrderNoAndUserScoped(orderNo string, userI
 }
 
 // GetByIDAndGuestScoped 获取游客订单详情，并强制限定当前前台租户范围。
-func (r *GormOrderRepository) GetByIDAndGuestScoped(id uint, email, password string, scope ResellerOrderScope) (*models.Order, error) {
+func (r *GormOrderRepository) GetByIDAndGuestScoped(id uint, email, password string, scope OrderTenantScope) (*models.Order, error) {
 	var order models.Order
 	query := r.withChildren(r.db.Preload("Items").Preload("Fulfillment"))
-	query = applyResellerOrderScope(query.Where("id = ? AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", id, email, password), scope)
+	query = applyOrderTenantScope(query.Where("id = ? AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", id, email, password), scope)
 	if err := query.First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -305,10 +305,10 @@ func (r *GormOrderRepository) GetByIDAndGuestScoped(id uint, email, password str
 }
 
 // GetByOrderNoAndGuestScoped 获取游客订单详情（按订单号），并强制限定当前前台租户范围。
-func (r *GormOrderRepository) GetByOrderNoAndGuestScoped(orderNo, email, password string, scope ResellerOrderScope) (*models.Order, error) {
+func (r *GormOrderRepository) GetByOrderNoAndGuestScoped(orderNo, email, password string, scope OrderTenantScope) (*models.Order, error) {
 	var order models.Order
 	query := r.withChildren(r.db.Preload("Items").Preload("Fulfillment"))
-	query = applyResellerOrderScope(query.Where("order_no = ? AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", orderNo, email, password), scope)
+	query = applyOrderTenantScope(query.Where("order_no = ? AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", orderNo, email, password), scope)
 	if err := query.First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -319,12 +319,12 @@ func (r *GormOrderRepository) GetByOrderNoAndGuestScoped(orderNo, email, passwor
 }
 
 // GetAnyByOrderNoAndGuestScoped 按订单号查找游客订单（不限父/子），并强制限定当前前台租户范围。
-func (r *GormOrderRepository) GetAnyByOrderNoAndGuestScoped(orderNo, email, password string, scope ResellerOrderScope) (*models.Order, error) {
+func (r *GormOrderRepository) GetAnyByOrderNoAndGuestScoped(orderNo, email, password string, scope OrderTenantScope) (*models.Order, error) {
 	var order models.Order
 	query := r.db.Preload("Items").Preload("Fulfillment").Preload("Children", func(db *gorm.DB) *gorm.DB {
 		return db.Preload("Items").Preload("Fulfillment")
 	})
-	query = applyResellerOrderScope(query.Where("order_no = ? AND user_id = 0 AND guest_email = ? AND guest_password = ?", orderNo, email, password), scope)
+	query = applyOrderTenantScope(query.Where("order_no = ? AND user_id = 0 AND guest_email = ? AND guest_password = ?", orderNo, email, password), scope)
 	if err := query.First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -501,10 +501,10 @@ func (r *GormOrderRepository) StatsByUser(filter OrderListFilter) (map[string]in
 }
 
 // ListByUserScoped 获取用户订单列表，并强制限定当前前台租户范围。
-func (r *GormOrderRepository) ListByUserScoped(filter OrderListFilter, scope ResellerOrderScope) ([]models.Order, int64, error) {
+func (r *GormOrderRepository) ListByUserScoped(filter OrderListFilter, scope OrderTenantScope) ([]models.Order, int64, error) {
 	var orders []models.Order
 	query := r.db.Model(&models.Order{}).Where("user_id = ? AND parent_id IS NULL", filter.UserID)
-	query = applyResellerOrderScope(query, scope)
+	query = applyOrderTenantScope(query, scope)
 
 	if filter.Status != "" {
 		query = query.Where("status = ?", filter.Status)
@@ -527,9 +527,9 @@ func (r *GormOrderRepository) ListByUserScoped(filter OrderListFilter, scope Res
 }
 
 // StatsByUserScoped 按状态聚合用户订单数量，并强制限定当前前台租户范围。
-func (r *GormOrderRepository) StatsByUserScoped(filter OrderListFilter, scope ResellerOrderScope) (map[string]int64, error) {
+func (r *GormOrderRepository) StatsByUserScoped(filter OrderListFilter, scope OrderTenantScope) (map[string]int64, error) {
 	query := r.db.Model(&models.Order{}).Where("user_id = ? AND parent_id IS NULL", filter.UserID)
-	query = applyResellerOrderScope(query, scope)
+	query = applyOrderTenantScope(query, scope)
 	if filter.OrderNo != "" {
 		query = query.Where("order_no LIKE ?", "%"+filter.OrderNo+"%")
 	}
@@ -573,9 +573,9 @@ func (r *GormOrderRepository) ListByGuest(email, password string, page, pageSize
 }
 
 // ListByGuestScoped 获取游客订单列表，并强制限定当前前台租户范围。
-func (r *GormOrderRepository) ListByGuestScoped(email, password string, page, pageSize int, scope ResellerOrderScope) ([]models.Order, int64, error) {
+func (r *GormOrderRepository) ListByGuestScoped(email, password string, page, pageSize int, scope OrderTenantScope) ([]models.Order, int64, error) {
 	base := r.db.Model(&models.Order{}).Where("user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", email, password)
-	base = applyResellerOrderScope(base, scope)
+	base = applyOrderTenantScope(base, scope)
 
 	var total int64
 	if err := base.Count(&total).Error; err != nil {

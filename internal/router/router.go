@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/authz"
 	affiliatebootstrap "github.com/dujiao-next/internal/bootstrap/affiliate"
 	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
+	resellerbootstrap "github.com/dujiao-next/internal/bootstrap/reseller"
 	walletbootstrap "github.com/dujiao-next/internal/bootstrap/wallet"
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
@@ -45,7 +46,6 @@ import (
 	orderwiring "github.com/dujiao-next/internal/wiring/order"
 	paymentwiring "github.com/dujiao-next/internal/wiring/payment"
 	publicconfigwiring "github.com/dujiao-next/internal/wiring/publicconfig"
-	resellerwiring "github.com/dujiao-next/internal/wiring/reseller"
 	upstreamwiring "github.com/dujiao-next/internal/wiring/upstream"
 	userauthwiring "github.com/dujiao-next/internal/wiring/userauth"
 
@@ -94,7 +94,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 	)
 	publicCatalogHandler := catalogproductbootstrap.NewPublicHTTP(catalogproductbootstrap.PublicHTTPDependencies{
 		Products:     c.ProductReadService,
-		Hidden:       c.ResellerRepo,
+		Hidden:       c.ResellerStore,
 		Pricer:       c.ResellerPricingResolver,
 		Promotions:   c.PromotionRepo,
 		MemberLevels: c.MemberLevelService,
@@ -154,7 +154,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 	adminPromotionHandler := promotiontransport.NewAdminHandler(c.PromotionAdminService)
 	adminNotificationHandler := notificationtransport.NewAdminHandler(c.SettingService, c.NotificationLogService, c.NotificationService)
 	adminProcurementHandler := procurementtransport.NewAdminHandler(c.ProcurementOrderService)
-	resellerHandlers := resellerwiring.New(c)
+	resellerHandlers := resellerbootstrap.New(c)
 	userResellerHandler := resellerHandlers.User
 	userResellerProductSettingHandler := resellerHandlers.UserProductSetting
 	userResellerFinanceHandler := resellerHandlers.UserFinance

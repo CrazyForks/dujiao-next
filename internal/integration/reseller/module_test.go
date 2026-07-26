@@ -3,9 +3,9 @@ package resellerintegration_test
 import (
 	"github.com/dujiao-next/internal/config"
 	productcontract "github.com/dujiao-next/internal/modules/catalog/product/contract"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller"
-	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
-	"github.com/dujiao-next/internal/repository"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
 )
 
 // These aliases keep the integration scenarios concise while ensuring every
@@ -27,44 +27,41 @@ type (
 	ResellerSEOInput                    = resellermodule.ResellerSEOInput
 	LocalizedTextInput                  = resellermodule.LocalizedTextInput
 	ResellerSiteConfigFieldError        = resellermodule.ResellerSiteConfigFieldError
-	ResellerOrderListInput              = resellermodule.OrderListInput
+	ResellerOrderListInput              = resellercontract.OrderListInput
 )
 
 const (
-	ResellerProfitStatusCredited    = resellermodule.ProfitStatusCredited
-	ResellerProfitStatusPending     = resellermodule.ProfitStatusPending
-	ResellerProfitStatusUnavailable = resellermodule.ProfitStatusUnavailable
+	ResellerProfitStatusCredited    = resellercontract.ProfitStatusCredited
+	ResellerProfitStatusPending     = resellercontract.ProfitStatusPending
+	ResellerProfitStatusUnavailable = resellercontract.ProfitStatusUnavailable
 )
 
 var (
-	ErrResellerApplyDisabled        = resellermodule.ErrApplyDisabled
-	ErrResellerProfileInactive      = resellermodule.ErrProfileInactive
-	ErrResellerProfileStatusInvalid = resellermodule.ErrProfileStatusInvalid
-	ErrResellerSiteConfigInvalid    = resellermodule.ErrSiteConfigInvalid
-	ErrResellerPriceBelowBase       = resellermodule.ErrPriceBelowBase
-	ErrResellerMarkupExceeded       = resellermodule.ErrMarkupExceeded
-	ResellerTenantContext           = resellermodule.ResellerTenantContext
+	ErrResellerApplyDisabled        = resellercontract.ErrApplyDisabled
+	ErrResellerProfileInactive      = resellercontract.ErrProfileInactive
+	ErrResellerProfileStatusInvalid = resellercontract.ErrProfileStatusInvalid
+	ErrResellerSiteConfigInvalid    = resellercontract.ErrSiteConfigInvalid
+	ErrResellerPriceBelowBase       = resellercontract.ErrPriceBelowBase
+	ErrResellerMarkupExceeded       = resellercontract.ErrMarkupExceeded
+	ResellerTenantContext           = resellercontract.ResellerTenantContext
 )
 
-func NewResellerManagementService(repo repository.ResellerRepository, cfg config.ResellerConfig) *resellermodule.ManagementService {
-	return resellermodule.NewManagementService(resellerpersistence.NewManagementStore(repo), cfg)
+func NewResellerManagementService(store *resellergormstore.Store, cfg config.ResellerConfig) *resellermodule.ManagementService {
+	return resellermodule.NewManagementService(store, cfg)
 }
 
 func NewResellerProductSettingService(
-	settingRepo repository.ResellerProductSettingRepository,
-	resellerRepo repository.ResellerRepository,
+	settingStore *resellergormstore.Store,
+	_ *resellergormstore.Store,
 	productRepo productcontract.Repository,
 ) *resellermodule.ProductSettingService {
-	return resellermodule.NewProductSettingService(
-		resellerpersistence.NewProductSettingStore(settingRepo, resellerRepo),
-		productRepo,
-	)
+	return resellermodule.NewProductSettingService(settingStore, productRepo)
 }
 
-func NewResellerSiteConfigService(repo repository.ResellerRepository) *resellermodule.SiteConfigService {
-	return resellermodule.NewSiteConfigService(repo)
+func NewResellerSiteConfigService(store *resellergormstore.Store) *resellermodule.SiteConfigService {
+	return resellermodule.NewSiteConfigService(store)
 }
 
-func NewResellerOrderService(repo repository.ResellerRepository) *resellermodule.OrderQueryService {
-	return resellermodule.NewOrderQueryService(repo)
+func NewResellerOrderService(store *resellergormstore.Store) *resellermodule.OrderQueryService {
+	return resellermodule.NewOrderQueryService(store)
 }

@@ -16,7 +16,7 @@ import (
 	productpresenter "github.com/dujiao-next/internal/modules/catalog/product/transport/presenter"
 
 	contentcontract "github.com/dujiao-next/internal/modules/content/contract"
-	"github.com/dujiao-next/internal/modules/reseller"
+	reseller "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/money"

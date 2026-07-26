@@ -156,15 +156,6 @@ func AutoMigrate() error {
 		&affiliatedomain.Click{},
 		&affiliatedomain.Commission{},
 		&affiliatedomain.WithdrawRequest{},
-		&ResellerProfile{},
-		&ResellerDomain{},
-		&ResellerSiteConfig{},
-		&ResellerProductSetting{},
-		&ResellerOrderSnapshot{},
-		&ResellerLedgerEntry{},
-		&ResellerWithdrawRequest{},
-		&ResellerBalanceAccount{},
-		&ResellerRelatedAccount{},
 		&walletdomain.Account{},
 		&walletdomain.Transaction{},
 		&walletdomain.RechargeOrder{},
@@ -234,10 +225,6 @@ func AutoMigrate() error {
 	if err := ensureOrderItemOriginalPriceMigration(); err != nil {
 		return err
 	}
-	if err := ensureResellerIndexes(DB); err != nil {
-		return err
-	}
-
 	// 移除历史遗留商品币种列，统一由站点配置提供币种。
 	if DB.Migrator().HasColumn(&productdomain.Product{}, "price_currency") {
 		if err := DB.Migrator().DropColumn(&productdomain.Product{}, "price_currency"); err != nil {

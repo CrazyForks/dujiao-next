@@ -8,6 +8,7 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 
@@ -244,7 +245,7 @@ func (s *OrderService) GetOrderByUser(orderID uint, userID uint) (*models.Order,
 }
 
 // GetOrderByUserForTenant 获取当前租户上下文中的用户订单详情。
-func (s *OrderService) GetOrderByUserForTenant(tenant TenantContext, orderID uint, userID uint) (*models.Order, error) {
+func (s *OrderService) GetOrderByUserForTenant(tenant resellercontract.TenantContext, orderID uint, userID uint) (*models.Order, error) {
 	order, err := s.orderRepo.GetByIDAndUserScoped(orderID, userID, orderScopeFromTenant(tenant))
 	if err != nil {
 		return nil, ErrOrderFetchFailed
@@ -286,7 +287,7 @@ func (s *OrderService) GetOrderByUserOrderNo(orderNo string, userID uint) (*mode
 }
 
 // GetOrderByUserOrderNoForTenant 按订单号获取当前租户上下文中的用户订单详情。
-func (s *OrderService) GetOrderByUserOrderNoForTenant(tenant TenantContext, orderNo string, userID uint) (*models.Order, error) {
+func (s *OrderService) GetOrderByUserOrderNoForTenant(tenant resellercontract.TenantContext, orderNo string, userID uint) (*models.Order, error) {
 	orderNo = strings.TrimSpace(orderNo)
 	if orderNo == "" {
 		return nil, ErrOrderNotFound
@@ -309,7 +310,7 @@ func (s *OrderService) GetOrderByUserOrderNoForTenant(tenant TenantContext, orde
 }
 
 // GetAnyOrderByUserOrderNoForTenant 支持父订单或子订单号获取当前租户上下文中的用户订单。
-func (s *OrderService) GetAnyOrderByUserOrderNoForTenant(tenant TenantContext, orderNo string, userID uint) (*models.Order, error) {
+func (s *OrderService) GetAnyOrderByUserOrderNoForTenant(tenant resellercontract.TenantContext, orderNo string, userID uint) (*models.Order, error) {
 	orderNo = strings.TrimSpace(orderNo)
 	if orderNo == "" {
 		return nil, ErrOrderNotFound
@@ -352,7 +353,7 @@ func (s *OrderService) GetOrderByGuest(orderID uint, email, password string) (*m
 }
 
 // GetOrderByGuestForTenant 获取当前租户上下文中的游客订单详情。
-func (s *OrderService) GetOrderByGuestForTenant(tenant TenantContext, orderID uint, email, password string) (*models.Order, error) {
+func (s *OrderService) GetOrderByGuestForTenant(tenant resellercontract.TenantContext, orderID uint, email, password string) (*models.Order, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	order, err := s.orderRepo.GetByIDAndGuestScoped(orderID, email, password, orderScopeFromTenant(tenant))
 	if err != nil {
@@ -392,7 +393,7 @@ func (s *OrderService) GetOrderByGuestOrderNo(orderNo, email, password string) (
 }
 
 // GetOrderByGuestOrderNoForTenant 获取当前租户上下文中的游客订单详情（按订单号）。
-func (s *OrderService) GetOrderByGuestOrderNoForTenant(tenant TenantContext, orderNo, email, password string) (*models.Order, error) {
+func (s *OrderService) GetOrderByGuestOrderNoForTenant(tenant resellercontract.TenantContext, orderNo, email, password string) (*models.Order, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	order, err := s.orderRepo.GetByOrderNoAndGuestScoped(orderNo, email, password, orderScopeFromTenant(tenant))
 	if err != nil {
@@ -412,7 +413,7 @@ func (s *OrderService) GetOrderByGuestOrderNoForTenant(tenant TenantContext, ord
 }
 
 // GetAnyOrderByGuestOrderNoForTenant 支持父订单或子订单号获取当前租户上下文中的游客订单。
-func (s *OrderService) GetAnyOrderByGuestOrderNoForTenant(tenant TenantContext, orderNo, email, password string) (*models.Order, error) {
+func (s *OrderService) GetAnyOrderByGuestOrderNoForTenant(tenant resellercontract.TenantContext, orderNo, email, password string) (*models.Order, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	order, err := s.orderRepo.GetAnyByOrderNoAndGuestScoped(orderNo, email, password, orderScopeFromTenant(tenant))
 	if err != nil {
@@ -451,7 +452,7 @@ func (s *OrderService) ListOrdersByUser(filter repository.OrderListFilter) ([]mo
 }
 
 // ListOrdersByUserForTenant 获取当前租户上下文中的用户订单列表。
-func (s *OrderService) ListOrdersByUserForTenant(tenant TenantContext, filter repository.OrderListFilter) ([]models.Order, int64, error) {
+func (s *OrderService) ListOrdersByUserForTenant(tenant resellercontract.TenantContext, filter repository.OrderListFilter) ([]models.Order, int64, error) {
 	if filter.UserID == 0 {
 		return nil, 0, ErrOrderFetchFailed
 	}
@@ -482,7 +483,7 @@ func (s *OrderService) StatsOrdersByUser(filter repository.OrderListFilter) (map
 }
 
 // StatsOrdersByUserForTenant 按状态聚合当前租户上下文中的用户订单数量。
-func (s *OrderService) StatsOrdersByUserForTenant(tenant TenantContext, filter repository.OrderListFilter) (map[string]int64, error) {
+func (s *OrderService) StatsOrdersByUserForTenant(tenant resellercontract.TenantContext, filter repository.OrderListFilter) (map[string]int64, error) {
 	if filter.UserID == 0 {
 		return nil, ErrOrderFetchFailed
 	}
@@ -511,7 +512,7 @@ func (s *OrderService) ListOrdersByGuest(email, password string, page, pageSize 
 }
 
 // ListOrdersByGuestForTenant 获取当前租户上下文中的游客订单列表。
-func (s *OrderService) ListOrdersByGuestForTenant(tenant TenantContext, email, password string, page, pageSize int) ([]models.Order, int64, error) {
+func (s *OrderService) ListOrdersByGuestForTenant(tenant resellercontract.TenantContext, email, password string, page, pageSize int) ([]models.Order, int64, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
 	orders, total, err := s.orderRepo.ListByGuestScoped(email, password, page, pageSize, orderScopeFromTenant(tenant))
 	if err != nil {
@@ -527,11 +528,11 @@ func (s *OrderService) ListOrdersByGuestForTenant(tenant TenantContext, email, p
 	return orders, total, nil
 }
 
-func orderScopeFromTenant(tenant TenantContext) repository.ResellerOrderScope {
+func orderScopeFromTenant(tenant resellercontract.TenantContext) repository.OrderTenantScope {
 	if isResellerOrderContext(tenant) && tenant.ResellerID != nil {
-		return repository.ResellerOrderScope{ResellerID: tenant.ResellerID}
+		return repository.OrderTenantScope{ResellerID: tenant.ResellerID}
 	}
-	return repository.ResellerOrderScope{}
+	return repository.OrderTenantScope{}
 }
 
 // ListOrdersForAdmin 管理端订单列表

@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/dujiao-next/internal/models"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestResolveTenantReturnURLMainTenantKeepsConfigFallback(t *testing.T) {
-	ctx := WithTenantContext(context.Background(), MainTenantContext("main.example.com"))
+	ctx := resellercontract.WithTenantContext(context.Background(), resellercontract.MainTenantContext("main.example.com"))
 	channel := &models.PaymentChannel{ConfigJSON: jsonmap.JSON{"return_url": "https://main.example.com/pay"}}
 
 	if got := resolveTenantReturnURL(ctx, "https", channel); got != "" {
@@ -25,7 +26,7 @@ func TestResolveTenantReturnURLMainTenantKeepsConfigFallback(t *testing.T) {
 }
 
 func TestResolveTenantReturnURLResellerTenantUsesRequestHost(t *testing.T) {
-	ctx := WithTenantContext(context.Background(), ResellerTenantContext("shop.example.com", 7, 3, "primary.example.com"))
+	ctx := resellercontract.WithTenantContext(context.Background(), resellercontract.ResellerTenantContext("shop.example.com", 7, 3, "primary.example.com"))
 	channel := &models.PaymentChannel{ConfigJSON: jsonmap.JSON{"return_url": "https://main.example.com/pay"}}
 
 	if got := resolveTenantReturnURL(ctx, "https", channel); got != "https://shop.example.com/pay" {
@@ -34,7 +35,7 @@ func TestResolveTenantReturnURLResellerTenantUsesRequestHost(t *testing.T) {
 }
 
 func TestResolveTenantReturnURLResellerTenantFallsBackToPrimaryDomain(t *testing.T) {
-	ctx := WithTenantContext(context.Background(), ResellerTenantContext("", 7, 3, "primary.example.com"))
+	ctx := resellercontract.WithTenantContext(context.Background(), resellercontract.ResellerTenantContext("", 7, 3, "primary.example.com"))
 
 	if got := resolveTenantReturnURL(ctx, "https", nil); got != "https://primary.example.com/pay" {
 		t.Fatalf("want https://primary.example.com/pay got %q", got)
@@ -42,7 +43,7 @@ func TestResolveTenantReturnURLResellerTenantFallsBackToPrimaryDomain(t *testing
 }
 
 func TestResolveTenantReturnURLSchemeHandling(t *testing.T) {
-	ctx := WithTenantContext(context.Background(), ResellerTenantContext("shop.example.com", 7, 3, "primary.example.com"))
+	ctx := resellercontract.WithTenantContext(context.Background(), resellercontract.ResellerTenantContext("shop.example.com", 7, 3, "primary.example.com"))
 
 	if got := resolveTenantReturnURL(ctx, "http", nil); got != "http://shop.example.com/pay" {
 		t.Fatalf("http scheme want http://shop.example.com/pay got %q", got)
@@ -57,7 +58,7 @@ func TestResolveTenantReturnURLSchemeHandling(t *testing.T) {
 }
 
 func TestResolveTenantReturnURLUnavailableTenantKeepsConfigFallback(t *testing.T) {
-	ctx := WithTenantContext(context.Background(), UnavailableTenantContext("gone.example.com", "disabled"))
+	ctx := resellercontract.WithTenantContext(context.Background(), resellercontract.UnavailableTenantContext("gone.example.com", "disabled"))
 
 	if got := resolveTenantReturnURL(ctx, "https", nil); got != "" {
 		t.Fatalf("unavailable tenant want empty got %q", got)

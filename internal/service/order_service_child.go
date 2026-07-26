@@ -216,8 +216,8 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*mo
 						return err
 					}
 				}
-				if s.resellerAccountingSvc != nil {
-					if err := s.resellerAccountingSvc.PostOrderProfitTx(tx, order, nil); err != nil {
+				if s.resellerAccounting != nil {
+					if err := s.resellerAccounting.PostOrderProfitTx(tx, order, nil); err != nil {
 						return err
 					}
 				}

@@ -8,6 +8,10 @@ import (
 	"testing"
 	"time"
 
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+
+	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+
 	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
 	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 
@@ -27,8 +31,8 @@ import (
 	"github.com/dujiao-next/internal/models"
 	coupongormstore "github.com/dujiao-next/internal/modules/coupon/infrastructure/gormstore"
 	promotiongormstore "github.com/dujiao-next/internal/modules/promotion/infrastructure/gormstore"
-	resellermodule "github.com/dujiao-next/internal/modules/reseller"
-	resellerpersistence "github.com/dujiao-next/internal/persistence/reseller"
+	resellermodule "github.com/dujiao-next/internal/modules/reseller/application"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -59,14 +63,14 @@ func (q *fakeOrderTimeoutQueue) EnqueueOrderStatusEmail(payload queue.OrderStatu
 type orderResellerSnapshotFixture struct {
 	db           *gorm.DB
 	svc          *OrderService
-	resellerRepo repository.ResellerRepository
+	resellerRepo *resellergormstore.Store
 	queue        *fakeOrderTimeoutQueue
 	owner        userdomain.User
 	buyer        userdomain.User
-	profile      models.ResellerProfile
+	profile      resellerdomain.Profile
 	product      productdomain.Product
 	sku          productdomain.ProductSKU
-	tenant       TenantContext
+	tenant       resellercontract.TenantContext
 }
 
 func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture {
@@ -89,10 +93,10 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		&coupondomain.CouponUsage{},
 		&promotiondomain.Promotion{},
 		&models.Payment{},
-		&models.ResellerProfile{},
-		&models.ResellerProductSetting{},
-		&models.ResellerRelatedAccount{},
-		&models.ResellerOrderSnapshot{},
+		&resellerdomain.Profile{},
+		&resellerdomain.ProductSetting{},
+		&resellerdomain.RelatedAccount{},
+		&resellerdomain.OrderSnapshot{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -109,9 +113,9 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	if err := db.Create(&buyer).Error; err != nil {
 		t.Fatalf("create buyer failed: %v", err)
 	}
-	profile := models.ResellerProfile{
+	profile := resellerdomain.Profile{
 		UserID:               owner.ID,
-		Status:               models.ResellerProfileStatusActive,
+		Status:               resellerdomain.ProfileStatusActive,
 		DefaultMarkupPercent: money.FromDecimal(decimal.NewFromInt(20)),
 		MaxMarkupPercent:     money.FromDecimal(decimal.NewFromInt(80)),
 	}
@@ -146,12 +150,12 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	if err := db.Create(&sku).Error; err != nil {
 		t.Fatalf("create sku failed: %v", err)
 	}
-	setting := models.ResellerProductSetting{
+	setting := resellerdomain.ProductSetting{
 		ResellerID:       profile.ID,
 		ProductID:        product.ID,
 		SKUID:            sku.ID,
 		IsListed:         true,
-		PricingMode:      models.ResellerPricingModeFixedPrice,
+		PricingMode:      resellerdomain.PricingModeFixedPrice,
 		FixedPriceAmount: money.FromDecimal(decimal.NewFromInt(130)),
 	}
 	if err := db.Create(&setting).Error; err != nil {
@@ -174,7 +178,7 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		t.Fatalf("create promotion failed: %v", err)
 	}
 
-	resellerRepo := repository.NewResellerRepository(db)
+	resellerRepo := resellergormstore.New(db)
 	orderRepo := repository.NewOrderRepository(db)
 	q := &fakeOrderTimeoutQueue{}
 	svc := NewOrderService(OrderServiceOptions{
@@ -188,11 +192,11 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 		CouponUsageRepo:         coupongormstore.NewUsageStore(db),
 		PromotionRepo:           promotiongormstore.New(db),
 		ExpireMinutes:           15,
-		ResellerRepo:            resellerRepo,
+		ResellerStore:           resellerRepo,
 		ResellerPricingResolver: NewResellerPricingResolver(resellerRepo),
 	})
 	svc.queueClient = q
-	tenant := ResellerTenantContext("alias.example.test", profile.ID, owner.ID, "primary.example.test")
+	tenant := resellercontract.ResellerTenantContext("alias.example.test", profile.ID, owner.ID, "primary.example.test")
 	return orderResellerSnapshotFixture{
 		db:           db,
 		svc:          svc,
@@ -237,12 +241,12 @@ func (f orderResellerSnapshotFixture) addResellerSnapshotProduct(t *testing.T, s
 		t.Fatalf("create extra sku failed: %v", err)
 	}
 	if fixedMarkup.GreaterThanOrEqual(decimal.Zero) {
-		setting := models.ResellerProductSetting{
+		setting := resellerdomain.ProductSetting{
 			ResellerID:        f.profile.ID,
 			ProductID:         product.ID,
 			SKUID:             0,
 			IsListed:          true,
-			PricingMode:       models.ResellerPricingModeFixedMarkup,
+			PricingMode:       resellerdomain.PricingModeFixedMarkup,
 			FixedMarkupAmount: money.FromDecimal(fixedMarkup),
 		}
 		if err := f.db.Create(&setting).Error; err != nil {
@@ -437,18 +441,18 @@ func TestCreateOrderResellerRuntimePricesMatchPreviewAndSnapshotAcrossRuleSource
 func TestPreviewAndCreateOrderResellerRejectServicePersistedHiddenProductWithoutSnapshot(t *testing.T) {
 	f := newOrderResellerSnapshotFixture(t)
 	settingSvc := resellermodule.NewProductSettingService(
-		resellerpersistence.NewProductSettingStore(repository.NewResellerProductSettingRepository(f.db), f.resellerRepo),
+		f.resellerRepo,
 		productgormstore.NewProductStore(f.db),
 	)
 	if _, err := settingSvc.SaveUserProductSettings(f.owner.ID, f.product.ID, resellermodule.ProductSettingSaveInput{
 		Settings: []resellermodule.ProductSettingInput{
-			{SKUID: 0, IsListed: false, PricingMode: models.ResellerPricingModeInherit},
+			{SKUID: 0, IsListed: false, PricingMode: resellerdomain.PricingModeInherit},
 		},
 	}); err != nil {
 		t.Fatalf("save hidden product through service failed: %v", err)
 	}
 
-	var hiddenRow models.ResellerProductSetting
+	var hiddenRow resellerdomain.ProductSetting
 	if err := f.db.Where("reseller_id = ? AND product_id = ? AND sku_id = ?", f.profile.ID, f.product.ID, uint(0)).
 		First(&hiddenRow).Error; err != nil {
 		t.Fatalf("fetch hidden product row failed: %v", err)
@@ -469,7 +473,7 @@ func TestPreviewAndCreateOrderResellerRejectServicePersistedHiddenProductWithout
 		t.Fatalf("count orders failed: %v", err)
 	}
 	var snapshotCount int64
-	if err := f.db.Model(&models.ResellerOrderSnapshot{}).Count(&snapshotCount).Error; err != nil {
+	if err := f.db.Model(&resellerdomain.OrderSnapshot{}).Count(&snapshotCount).Error; err != nil {
 		t.Fatalf("count snapshots failed: %v", err)
 	}
 	if orderCount != 0 || snapshotCount != 0 {
@@ -555,7 +559,7 @@ func TestOrderServiceTenantScopedUserQueries(t *testing.T) {
 		t.Fatalf("create reseller order failed: %v", err)
 	}
 
-	if _, err := f.svc.GetOrderByUserOrderNoForTenant(MainTenantContext("main.example.test"), resellerOrder.OrderNo, f.buyer.ID); !errors.Is(err, ErrOrderNotFound) {
+	if _, err := f.svc.GetOrderByUserOrderNoForTenant(resellercontract.MainTenantContext("main.example.test"), resellerOrder.OrderNo, f.buyer.ID); !errors.Is(err, ErrOrderNotFound) {
 		t.Fatalf("main scope should not read reseller order, got %v", err)
 	}
 	got, err := f.svc.GetOrderByUserOrderNoForTenant(f.tenant, resellerOrder.OrderNo, f.buyer.ID)
@@ -572,7 +576,7 @@ func TestOrderServiceTenantScopedUserQueries(t *testing.T) {
 	if total != 1 || len(orders) != 1 || orders[0].ID != resellerOrder.ID {
 		t.Fatalf("expected only reseller order, total=%d orders=%+v", total, orders)
 	}
-	stats, err := f.svc.StatsOrdersByUserForTenant(MainTenantContext("main.example.test"), repository.OrderListFilter{UserID: f.buyer.ID})
+	stats, err := f.svc.StatsOrdersByUserForTenant(resellercontract.MainTenantContext("main.example.test"), repository.OrderListFilter{UserID: f.buyer.ID})
 	if err != nil {
 		t.Fatalf("StatsOrdersByUserForTenant failed: %v", err)
 	}
@@ -617,7 +621,7 @@ func TestOrderServiceTenantScopedGuestQueries(t *testing.T) {
 		t.Fatalf("create reseller guest order failed: %v", err)
 	}
 
-	if _, err := f.svc.GetOrderByGuestOrderNoForTenant(MainTenantContext("main.example.test"), resellerOrder.OrderNo, "scoped-guest@example.com", "pw"); !errors.Is(err, ErrGuestOrderNotFound) {
+	if _, err := f.svc.GetOrderByGuestOrderNoForTenant(resellercontract.MainTenantContext("main.example.test"), resellerOrder.OrderNo, "scoped-guest@example.com", "pw"); !errors.Is(err, ErrGuestOrderNotFound) {
 		t.Fatalf("main scope should not read reseller guest order, got %v", err)
 	}
 	got, err := f.svc.GetOrderByGuestOrderNoForTenant(f.tenant, resellerOrder.OrderNo, "scoped-guest@example.com", "pw")

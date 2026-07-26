@@ -6,11 +6,14 @@ import (
 	"testing"
 	"time"
 
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+
+	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 	"github.com/glebarez/sqlite"
@@ -28,25 +31,25 @@ func openResellerOrderServiceTestDB(t *testing.T) *gorm.DB {
 		&userdomain.User{},
 		&models.Order{},
 		&models.OrderItem{},
-		&models.ResellerProfile{},
-		&models.ResellerOrderSnapshot{},
-		&models.ResellerLedgerEntry{},
+		&resellerdomain.Profile{},
+		&resellerdomain.OrderSnapshot{},
+		&resellerdomain.LedgerEntry{},
 	); err != nil {
 		t.Fatalf("migrate failed: %v", err)
 	}
 	return db
 }
 
-func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (models.ResellerProfile, models.Order, models.ResellerOrderSnapshot) {
+func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (resellerdomain.Profile, models.Order, resellerdomain.OrderSnapshot) {
 	t.Helper()
 	user := userdomain.User{Email: email, PasswordHash: "hash", Status: constants.UserStatusActive}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	profile := models.ResellerProfile{
+	profile := resellerdomain.Profile{
 		UserID:           user.ID,
-		Status:           models.ResellerProfileStatusActive,
-		SettlementStatus: models.ResellerSettlementStatusNormal,
+		Status:           resellerdomain.ProfileStatusActive,
+		SettlementStatus: resellerdomain.SettlementStatusNormal,
 	}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
@@ -80,7 +83,7 @@ func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (models.R
 	if err := db.Create(&item).Error; err != nil {
 		t.Fatalf("create order item failed: %v", err)
 	}
-	snapshot := models.ResellerOrderSnapshot{
+	snapshot := resellerdomain.OrderSnapshot{
 		OrderID:           order.ID,
 		ResellerID:        profile.ID,
 		Domain:            order.ResellerDomain,
@@ -108,7 +111,7 @@ func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (models.R
 	if err := db.Create(&snapshot).Error; err != nil {
 		t.Fatalf("create snapshot failed: %v", err)
 	}
-	if err := db.Model(&models.ResellerOrderSnapshot{}).
+	if err := db.Model(&resellerdomain.OrderSnapshot{}).
 		Where("id = ?", snapshot.ID).
 		Update("profit_eligible", false).Error; err != nil {
 		t.Fatalf("force ineligible snapshot failed: %v", err)
@@ -117,16 +120,16 @@ func seedResellerOrderFixture(t *testing.T, db *gorm.DB, email string) (models.R
 	return profile, order, snapshot
 }
 
-func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email string) (models.ResellerProfile, models.Order, []models.OrderItem) {
+func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email string) (resellerdomain.Profile, models.Order, []models.OrderItem) {
 	t.Helper()
 	user := userdomain.User{Email: email, PasswordHash: "hash", Status: constants.UserStatusActive}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
 	}
-	profile := models.ResellerProfile{
+	profile := resellerdomain.Profile{
 		UserID:           user.ID,
-		Status:           models.ResellerProfileStatusActive,
-		SettlementStatus: models.ResellerSettlementStatusNormal,
+		Status:           resellerdomain.ProfileStatusActive,
+		SettlementStatus: resellerdomain.SettlementStatusNormal,
 	}
 	if err := db.Create(&profile).Error; err != nil {
 		t.Fatalf("create profile failed: %v", err)
@@ -180,7 +183,7 @@ func seedResellerOrderWithChildItemsFixture(t *testing.T, db *gorm.DB, email str
 		}
 		items = append(items, item)
 	}
-	snapshot := models.ResellerOrderSnapshot{
+	snapshot := resellerdomain.OrderSnapshot{
 		OrderID:        parent.ID,
 		ResellerID:     profile.ID,
 		Domain:         parent.ResellerDomain,
@@ -220,7 +223,7 @@ func TestResellerOrderServiceListUsesSnapshotAndHidesRiskFields(t *testing.T) {
 	db := openResellerOrderServiceTestDB(t)
 	profile, order, _ := seedResellerOrderFixture(t, db, "reseller-orders@example.test")
 	_, otherOrder, _ := seedResellerOrderFixture(t, db, "other-reseller-orders@example.test")
-	svc := NewResellerOrderService(repository.NewResellerRepository(db))
+	svc := NewResellerOrderService(resellergormstore.New(db))
 
 	rows, total, err := svc.ListUserOrders(profile.UserID, ResellerOrderListInput{Page: 1, PageSize: 20})
 	if err != nil {
@@ -254,10 +257,10 @@ func TestResellerOrderServiceBuyerLabelMasksMemberEmail(t *testing.T) {
 	if err := db.Model(&models.Order{}).Where("id = ?", order.ID).Update("user_id", buyer.ID).Error; err != nil {
 		t.Fatalf("update order buyer failed: %v", err)
 	}
-	if err := db.Model(&models.ResellerOrderSnapshot{}).Where("order_id = ?", order.ID).Update("buyer_user_id", buyer.ID).Error; err != nil {
+	if err := db.Model(&resellerdomain.OrderSnapshot{}).Where("order_id = ?", order.ID).Update("buyer_user_id", buyer.ID).Error; err != nil {
 		t.Fatalf("update snapshot buyer failed: %v", err)
 	}
-	svc := NewResellerOrderService(repository.NewResellerRepository(db))
+	svc := NewResellerOrderService(resellergormstore.New(db))
 
 	rows, _, err := svc.ListUserOrders(profile.UserID, ResellerOrderListInput{Page: 1, PageSize: 20})
 	if err != nil {
@@ -282,13 +285,13 @@ func TestResellerOrderServiceBuyerLabelMasksMemberEmail(t *testing.T) {
 func TestResellerOrderServiceProfitStatusRequiresAvailableLedger(t *testing.T) {
 	db := openResellerOrderServiceTestDB(t)
 	profile, order, snapshot := seedResellerOrderFixture(t, db, "reseller-ledger-status@example.test")
-	if err := db.Model(&models.ResellerOrderSnapshot{}).Where("id = ?", snapshot.ID).Updates(map[string]interface{}{
+	if err := db.Model(&resellerdomain.OrderSnapshot{}).Where("id = ?", snapshot.ID).Updates(map[string]interface{}{
 		"profit_eligible":     true,
 		"profit_block_reason": "",
 	}).Error; err != nil {
 		t.Fatalf("update snapshot failed: %v", err)
 	}
-	svc := NewResellerOrderService(repository.NewResellerRepository(db))
+	svc := NewResellerOrderService(resellergormstore.New(db))
 
 	rows, _, err := svc.ListUserOrders(profile.UserID, ResellerOrderListInput{Page: 1, PageSize: 20})
 	if err != nil {
@@ -299,14 +302,14 @@ func TestResellerOrderServiceProfitStatusRequiresAvailableLedger(t *testing.T) {
 	}
 
 	orderID := order.ID
-	if err := db.Create(&models.ResellerLedgerEntry{
+	if err := db.Create(&resellerdomain.LedgerEntry{
 		ResellerID:     profile.ID,
 		OrderID:        &orderID,
-		Type:           models.ResellerLedgerTypeOrderProfit,
+		Type:           resellerdomain.LedgerTypeOrderProfit,
 		Amount:         money.FromDecimal(decimal.RequireFromString("30.00")),
 		Currency:       "USD",
 		IdempotencyKey: "order-profit-status-pending",
-		Status:         models.ResellerLedgerStatusPendingConfirm,
+		Status:         resellerdomain.LedgerStatusPendingConfirm,
 	}).Error; err != nil {
 		t.Fatalf("create pending ledger failed: %v", err)
 	}
@@ -318,7 +321,7 @@ func TestResellerOrderServiceProfitStatusRequiresAvailableLedger(t *testing.T) {
 		t.Fatalf("pending_confirm ledger must map to pending, got %+v", rows[0])
 	}
 
-	if err := db.Model(&models.ResellerLedgerEntry{}).Where("idempotency_key = ?", "order-profit-status-pending").Update("status", models.ResellerLedgerStatusAvailable).Error; err != nil {
+	if err := db.Model(&resellerdomain.LedgerEntry{}).Where("idempotency_key = ?", "order-profit-status-pending").Update("status", resellerdomain.LedgerStatusAvailable).Error; err != nil {
 		t.Fatalf("update ledger failed: %v", err)
 	}
 	rows, _, err = svc.ListUserOrders(profile.UserID, ResellerOrderListInput{Page: 1, PageSize: 20})
@@ -333,7 +336,7 @@ func TestResellerOrderServiceProfitStatusRequiresAvailableLedger(t *testing.T) {
 func TestResellerOrderServicePartiallyRefundedOrderIsNeutralUnavailable(t *testing.T) {
 	db := openResellerOrderServiceTestDB(t)
 	profile, order, snapshot := seedResellerOrderFixture(t, db, "reseller-partial-refund@example.test")
-	if err := db.Model(&models.ResellerOrderSnapshot{}).Where("id = ?", snapshot.ID).Updates(map[string]interface{}{
+	if err := db.Model(&resellerdomain.OrderSnapshot{}).Where("id = ?", snapshot.ID).Updates(map[string]interface{}{
 		"profit_eligible":     true,
 		"profit_block_reason": "",
 	}).Error; err != nil {
@@ -343,18 +346,18 @@ func TestResellerOrderServicePartiallyRefundedOrderIsNeutralUnavailable(t *testi
 		t.Fatalf("update order failed: %v", err)
 	}
 	orderID := order.ID
-	if err := db.Create(&models.ResellerLedgerEntry{
+	if err := db.Create(&resellerdomain.LedgerEntry{
 		ResellerID:     profile.ID,
 		OrderID:        &orderID,
-		Type:           models.ResellerLedgerTypeOrderProfit,
+		Type:           resellerdomain.LedgerTypeOrderProfit,
 		Amount:         money.FromDecimal(decimal.RequireFromString("30.00")),
 		Currency:       "USD",
 		IdempotencyKey: "order-profit-status-partially-refunded",
-		Status:         models.ResellerLedgerStatusAvailable,
+		Status:         resellerdomain.LedgerStatusAvailable,
 	}).Error; err != nil {
 		t.Fatalf("create available ledger failed: %v", err)
 	}
-	svc := NewResellerOrderService(repository.NewResellerRepository(db))
+	svc := NewResellerOrderService(resellergormstore.New(db))
 
 	rows, _, err := svc.ListUserOrders(profile.UserID, ResellerOrderListInput{Page: 1, PageSize: 20})
 	if err != nil {
@@ -368,7 +371,7 @@ func TestResellerOrderServicePartiallyRefundedOrderIsNeutralUnavailable(t *testi
 func TestResellerOrderServiceDetailUsesItemSnapshot(t *testing.T) {
 	db := openResellerOrderServiceTestDB(t)
 	profile, order, _ := seedResellerOrderFixture(t, db, "reseller-order-detail@example.test")
-	svc := NewResellerOrderService(repository.NewResellerRepository(db))
+	svc := NewResellerOrderService(resellergormstore.New(db))
 
 	detail, err := svc.GetUserOrderDetail(profile.UserID, order.OrderNo)
 	if err != nil {
@@ -385,7 +388,7 @@ func TestResellerOrderServiceDetailUsesItemSnapshot(t *testing.T) {
 func TestResellerOrderServiceDetailAggregatesItemsFromChildOrders(t *testing.T) {
 	db := openResellerOrderServiceTestDB(t)
 	profile, parent, childItems := seedResellerOrderWithChildItemsFixture(t, db, "reseller-child-items@example.test")
-	svc := NewResellerOrderService(repository.NewResellerRepository(db))
+	svc := NewResellerOrderService(resellergormstore.New(db))
 
 	rows, _, err := svc.ListUserOrders(profile.UserID, ResellerOrderListInput{Page: 1, PageSize: 20})
 	if err != nil {
@@ -416,10 +419,10 @@ func TestResellerOrderServiceDetailAggregatesItemsFromChildOrders(t *testing.T) 
 func TestResellerOrderServiceRejectsInactiveProfile(t *testing.T) {
 	db := openResellerOrderServiceTestDB(t)
 	profile, _, _ := seedResellerOrderFixture(t, db, "inactive-reseller-orders@example.test")
-	if err := db.Model(&models.ResellerProfile{}).Where("id = ?", profile.ID).Update("status", models.ResellerProfileStatusPendingReview).Error; err != nil {
+	if err := db.Model(&resellerdomain.Profile{}).Where("id = ?", profile.ID).Update("status", resellerdomain.ProfileStatusPendingReview).Error; err != nil {
 		t.Fatalf("update profile failed: %v", err)
 	}
-	svc := NewResellerOrderService(repository.NewResellerRepository(db))
+	svc := NewResellerOrderService(resellergormstore.New(db))
 	_, _, err := svc.ListUserOrders(profile.UserID, ResellerOrderListInput{Page: 1, PageSize: 20})
 	if !errors.Is(err, ErrResellerProfileInactive) {
 		t.Fatalf("expected ErrResellerProfileInactive, got %v", err)

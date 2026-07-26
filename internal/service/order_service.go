@@ -22,6 +22,8 @@ import (
 	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
 	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
+	resellergormstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/queue"
@@ -44,7 +46,7 @@ type OrderService struct {
 	productRepo             orderProductStore
 	productSKURepo          orderSKUStore
 	cardSecretRepo          cardSecretStore
-	resellerRepo            repository.ResellerRepository
+	resellerRepo            *resellergormstore.Store
 	couponRepo              orderCouponRepository
 	couponUsageRepo         orderCouponUsageRepository
 	promotionRepo           promotioncontract.Repository
@@ -55,7 +57,7 @@ type OrderService struct {
 	affiliateSvc            AffiliateOrderLifecycle
 	memberLevelService      OrderMemberLevelService
 	resellerPricingResolver *ResellerPricingResolver
-	resellerAccountingSvc   *ResellerAccountingService
+	resellerAccounting      resellerAccountingTransactions
 	riskControlSvc          orderriskcontract.Controller
 	productMappingService   upstreamStockEnsurer
 	expireMinutes           int
@@ -104,6 +106,18 @@ type orderQueueClient interface {
 	EnqueueOrderStatusEmail(payload queue.OrderStatusEmailPayload, opts ...asynq.Option) error
 }
 
+// resellerAccountingTransactions is the order/payment boundary for reseller
+// ledger mutations inside caller-owned database transactions.
+type resellerAccountingTransactions interface {
+	PostOrderProfitTx(tx *gorm.DB, order *models.Order, payment *models.Payment) error
+	HandleRefundDeductTx(
+		tx *gorm.DB,
+		order *models.Order,
+		refundRecord *models.OrderRefundRecord,
+		refundedBefore decimal.Decimal,
+	) error
+}
+
 // upstreamStockEnsurer 是下单校验依赖的最小 Catalog Mapping 用例端口。
 type upstreamStockEnsurer interface {
 	EnsureUpstreamStockForOrder(localSKUID uint, quantity int) error
@@ -111,28 +125,28 @@ type upstreamStockEnsurer interface {
 
 // OrderServiceOptions 订单服务构造参数
 type OrderServiceOptions struct {
-	OrderRepo                 repository.OrderRepository
-	OrderRefundRecordRepo     repository.OrderRefundRecordRepository
-	PaymentRepo               repository.PaymentRepository
-	UserStore                 usercontract.Store
-	ProductRepo               orderProductStore
-	ProductSKURepo            orderSKUStore
-	CardSecretRepo            cardSecretStore
-	ResellerRepo              repository.ResellerRepository
-	CouponRepo                orderCouponRepository
-	CouponUsageRepo           orderCouponUsageRepository
-	PromotionRepo             promotioncontract.Repository
-	QueueClient               *queue.Client
-	SettingService            *settingsapp.Service
-	DefaultEmailConfig        config.EmailConfig
-	WalletService             *walletapp.Service
-	AffiliateService          AffiliateOrderLifecycle
-	MemberLevelService        OrderMemberLevelService
-	ResellerPricingResolver   *ResellerPricingResolver
-	ResellerAccountingService *ResellerAccountingService
-	RiskControlService        orderriskcontract.Controller
-	ProductMappingService     upstreamStockEnsurer
-	ExpireMinutes             int
+	OrderRepo               repository.OrderRepository
+	OrderRefundRecordRepo   repository.OrderRefundRecordRepository
+	PaymentRepo             repository.PaymentRepository
+	UserStore               usercontract.Store
+	ProductRepo             orderProductStore
+	ProductSKURepo          orderSKUStore
+	CardSecretRepo          cardSecretStore
+	ResellerStore           *resellergormstore.Store
+	CouponRepo              orderCouponRepository
+	CouponUsageRepo         orderCouponUsageRepository
+	PromotionRepo           promotioncontract.Repository
+	QueueClient             *queue.Client
+	SettingService          *settingsapp.Service
+	DefaultEmailConfig      config.EmailConfig
+	WalletService           *walletapp.Service
+	AffiliateService        AffiliateOrderLifecycle
+	MemberLevelService      OrderMemberLevelService
+	ResellerPricingResolver *ResellerPricingResolver
+	ResellerAccounting      resellerAccountingTransactions
+	RiskControlService      orderriskcontract.Controller
+	ProductMappingService   upstreamStockEnsurer
+	ExpireMinutes           int
 }
 
 // SetProductMappingService 注入商品映射服务（用于下单前上游库存兜底校验）。
@@ -154,7 +168,7 @@ func NewOrderService(opts OrderServiceOptions) *OrderService {
 		productRepo:             opts.ProductRepo,
 		productSKURepo:          opts.ProductSKURepo,
 		cardSecretRepo:          opts.CardSecretRepo,
-		resellerRepo:            opts.ResellerRepo,
+		resellerRepo:            opts.ResellerStore,
 		couponRepo:              opts.CouponRepo,
 		couponUsageRepo:         opts.CouponUsageRepo,
 		promotionRepo:           opts.PromotionRepo,
@@ -165,7 +179,7 @@ func NewOrderService(opts OrderServiceOptions) *OrderService {
 		affiliateSvc:            opts.AffiliateService,
 		memberLevelService:      opts.MemberLevelService,
 		resellerPricingResolver: opts.ResellerPricingResolver,
-		resellerAccountingSvc:   opts.ResellerAccountingService,
+		resellerAccounting:      opts.ResellerAccounting,
 		riskControlSvc:          opts.RiskControlService,
 		productMappingService:   opts.ProductMappingService,
 		expireMinutes:           opts.ExpireMinutes,
@@ -175,7 +189,7 @@ func NewOrderService(opts OrderServiceOptions) *OrderService {
 // CreateOrderInput 创建订单输入
 type CreateOrderInput struct {
 	UserID              uint
-	Tenant              TenantContext
+	Tenant              resellercontract.TenantContext
 	Items               []CreateOrderItem
 	CouponCode          string
 	AffiliateCode       string
@@ -191,7 +205,7 @@ type CreateGuestOrderInput struct {
 	Email               string
 	OrderPassword       string
 	Locale              string
-	Tenant              TenantContext
+	Tenant              resellercontract.TenantContext
 	Items               []CreateOrderItem
 	CouponCode          string
 	AffiliateCode       string
@@ -310,7 +324,7 @@ type orderCreateParams struct {
 	GuestEmail          string
 	GuestPassword       string
 	GuestLocale         string
-	Tenant              TenantContext
+	Tenant              resellercontract.TenantContext
 	Items               []CreateOrderItem
 	CouponCode          string
 	AffiliateCode       string
@@ -472,7 +486,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 	if err != nil {
 		return nil, err
 	}
-	var pricingCtx *ResellerOrderPricingContext
+	var pricingCtx *resellercontract.OrderPricingContext
 	if s.resellerPricingResolver != nil {
 		pricingCtx, err = s.resellerPricingResolver.ApplyToOrderBuildResult(input.Tenant, input.UserID, result)
 		if err != nil {
@@ -691,7 +705,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 			if s.resellerRepo == nil {
 				return ErrOrderCreateFailed
 			}
-			resellerRepo := s.resellerRepo.WithTx(tx)
+			resellerRepo := s.resellerRepo.BindTx(tx)
 			if err := resellerRepo.CreateOrderSnapshot(pricingCtx.BuildSnapshot(order.ID, now)); err != nil {
 				return err
 			}

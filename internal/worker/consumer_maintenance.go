@@ -57,11 +57,11 @@ func (c *Consumer) handleAffiliateConfirmCommissions(_ context.Context, _ *asynq
 }
 
 func (c *Consumer) handleResellerConfirmLedger(_ context.Context, _ *asynq.Task) error {
-	if c == nil || c.ResellerAccountingService == nil {
+	if c == nil || c.ResellerAccountingLedger == nil {
 		logger.Debugw("worker_reseller_confirm_ledger_skip_nil", "consumer_nil", c == nil)
 		return nil
 	}
-	affected, err := c.ResellerAccountingService.ConfirmDueLedgerEntries(time.Now())
+	affected, err := c.ResellerAccountingLedger.ConfirmDueLedgerEntries(time.Now())
 	if err != nil {
 		logger.Warnw("worker_reseller_confirm_ledger_failed", "error", err)
 		return err

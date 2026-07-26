@@ -12,7 +12,8 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
-	"github.com/dujiao-next/internal/modules/reseller"
+	resellerapplication "github.com/dujiao-next/internal/modules/reseller/application"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
@@ -126,9 +127,9 @@ func (a publicConfigTelegramAdapter) PublicConfig() map[string]interface{} {
 }
 
 type publicConfigResellerOverlayAdapter struct {
-	svc *reseller.SiteConfigService
+	svc *resellerapplication.SiteConfigService
 }
 
-func (a publicConfigResellerOverlayAdapter) ApplyPublicConfigOverlay(ctx context.Context, tenant reseller.TenantContext, base map[string]interface{}) (map[string]interface{}, error) {
+func (a publicConfigResellerOverlayAdapter) ApplyPublicConfigOverlay(ctx context.Context, tenant resellercontract.TenantContext, base map[string]interface{}) (map[string]interface{}, error) {
 	return a.svc.ApplyPublicConfigOverlay(ctx, tenant, base)
 }

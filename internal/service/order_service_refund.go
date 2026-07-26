@@ -61,7 +61,7 @@ type OrderRefundService struct {
 	orderRefundRecordRepo repository.OrderRefundRecordRepository
 	affiliateRefund       affiliateRefundProcessor
 	settingService        *settingsapp.Service
-	resellerAccountingSvc *ResellerAccountingService
+	resellerAccounting    resellerAccountingTransactions
 	wallets               *walletapp.Service
 }
 
@@ -124,8 +124,8 @@ func NewOrderRefundService(
 	}
 }
 
-func (s *OrderRefundService) SetResellerAccountingService(svc *ResellerAccountingService) {
-	s.resellerAccountingSvc = svc
+func (s *OrderRefundService) SetResellerAccounting(accounting resellerAccountingTransactions) {
+	s.resellerAccounting = accounting
 }
 
 // ParseRefundAmount 解析并校验退款金额。
@@ -328,8 +328,8 @@ func (s *OrderRefundService) AdminManualRefund(input AdminManualRefundInput) (*m
 				return err
 			}
 		}
-		if s.resellerAccountingSvc != nil {
-			if err := s.resellerAccountingSvc.HandleRefundDeductTx(tx, &order, record, refundedBefore); err != nil {
+		if s.resellerAccounting != nil {
+			if err := s.resellerAccounting.HandleRefundDeductTx(tx, &order, record, refundedBefore); err != nil {
 				return err
 			}
 		}
