@@ -2,12 +2,29 @@ version: 2
 
 project_name: dujiao-next
 
+# 前端在这里构建并拷进 internal/web/dist/，随后由 -tags=fullstack 的 go:embed 打进二进制。
+# 放在 before hooks 而不是 CI step 里，是为了让本地 `goreleaser build --snapshot`
+# 与 GitHub Actions 走完全相同的路径。执行前需要有 pnpm（见 .github/workflows/release.yml）。
 before:
   hooks:
     - go mod tidy
+    - cmd: pnpm install --frozen-lockfile
+      dir: frontend/admin
+    - cmd: pnpm install --frozen-lockfile
+      dir: frontend/user
+    # admin 用 fullstack 模式构建：base 为 './' 且注入 __DJ_ADMIN_BASE__ 占位符，
+    # 后端启动时按 web.admin_path 替换，使产物可挂载到任意自定义前缀。
+    - cmd: pnpm run build:fullstack
+      dir: frontend/admin
+    - cmd: pnpm run build
+      dir: frontend/user
+    - sh -c 'rm -rf internal/web/dist && mkdir -p internal/web/dist'
+    - sh -c 'cp -r frontend/admin/dist internal/web/dist/admin'
+    - sh -c 'cp -r frontend/user/dist  internal/web/dist/user'
 
 builds:
-  - id: api
+  # 单一产物：内嵌 admin + user SPA，一个二进制跑完整服务。
+  - id: dujiao-next
     env:
       - CGO_ENABLED=0
     main: ./cmd/server
@@ -15,7 +32,7 @@ builds:
     ldflags:
       - -s -w -X github.com/dujiao-next/internal/version.Version={{.Tag}}
     flags:
-      - "-tags=release"
+      - "-tags=release,fullstack"
     goos:
       - linux
       - windows
@@ -24,28 +41,10 @@ builds:
       - amd64
       - arm64
 
-  # fullstack 二进制：embed admin + user SPA。仅 linux（小白单二进制部署目标）。
-  # CI workflow 在 GoReleaser 之前 checkout admin/user 同 tag 源码、跑前端 build、
-  # 把 dist 拷到 internal/web/dist/{admin,user}，再由 -tags=fullstack 触发 embed。
-  - id: fullstack
-    env:
-      - CGO_ENABLED=0
-    main: ./cmd/server
-    binary: dujiao-server
-    ldflags:
-      - -s -w -X github.com/dujiao-next/internal/version.Version={{.Tag}}
-    flags:
-      - "-tags=release,fullstack"
-    goos:
-      - linux
-    goarch:
-      - amd64
-      - arm64
-
 archives:
-  - id: api
+  - id: dujiao-next
     ids:
-      - api
+      - dujiao-next
     formats: [tar.gz]
     files:
       - ./config.yml.example
@@ -61,21 +60,6 @@ archives:
     format_overrides:
       - goos: windows
         formats: [zip]
-
-  - id: fullstack
-    ids:
-      - fullstack
-    formats: [tar.gz]
-    files:
-      - ./config.yml.example
-      - ./README.md
-    name_template: >-
-      dujiao-all_
-      {{- .Tag }}_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
 
 changelog:
   sort: asc

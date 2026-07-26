@@ -12,28 +12,14 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout api
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ---- fullstack 模式所需：拉取同 tag 的 admin/user 源码并构建 ----
-      # admin/user 仓库为 public，无需 PAT。要求三仓库已用 scripts/tag-and-push.sh
-      # 打过同名 tag。
-      - name: Checkout admin (cross-repo)
-        uses: actions/checkout@v4
-        with:
-          repository: dujiao-next/admin
-          ref: ${{ github.ref_name }}
-          path: admin-src
-
-      - name: Checkout user (cross-repo)
-        uses: actions/checkout@v4
-        with:
-          repository: dujiao-next/user
-          ref: ${{ github.ref_name }}
-          path: user-src
-
+      # 前端源码已在本仓库 frontend/ 下，不再需要跨仓库 checkout。
+      # 实际的前端构建与嵌入由 .goreleaser.yaml 的 before hooks 完成，
+      # 这里只负责把 pnpm / Node 工具链准备好。
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -44,30 +30,10 @@ jobs:
         with:
           node-version: '24.11.1'
 
-      - name: Build admin (fullstack mode)
-        working-directory: admin-src
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm run build:fullstack
-
-      - name: Build user
-        working-directory: user-src
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm run build
-
-      - name: Embed frontend assets into api
-        run: |
-          mkdir -p internal/web/dist
-          cp -r admin-src/dist internal/web/dist/admin
-          cp -r user-src/dist  internal/web/dist/user
-          ls -la internal/web/dist/admin internal/web/dist/user | head -10
-
-      # ---- Go 工具链 + GoReleaser ----
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: stable
+          go-version-file: go.mod
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6

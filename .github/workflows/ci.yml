@@ -15,13 +15,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
+  api:
     name: Verify API
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
-      - name: Checkout api
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Go
@@ -33,10 +33,11 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
+      # 用 git ls-files 限定范围，避免 gofmt 递归遍历 frontend/*/node_modules
       - name: Check formatting
         shell: bash
         run: |
-          unformatted="$(gofmt -l .)"
+          unformatted="$(gofmt -l $(git ls-files '*.go'))"
           if [[ -n "$unformatted" ]]; then
             echo "::error::The following Go files are not formatted:"
             printf '%s\n' "$unformatted"
@@ -51,3 +52,52 @@ jobs:
 
       - name: Build server
         run: go build ./cmd/server
+
+  fullstack:
+    name: Verify fullstack build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.11.1'
+
+      # 用子 shell cd 而非 `pnpm --dir`：后者不会读取子目录的 packageManager 字段，
+      # 在启用 corepack 的环境下会用错 pnpm 版本
+      - name: Install frontend dependencies
+        run: |
+          (cd frontend/admin && pnpm install --frozen-lockfile)
+          (cd frontend/user  && pnpm install --frozen-lockfile)
+
+      # 两个 build 脚本都以 `vue-tsc -b` 开头，因此这一步同时覆盖了类型检查
+      - name: Build frontends
+        run: |
+          (cd frontend/admin && pnpm run build:fullstack)
+          (cd frontend/user  && pnpm run build)
+
+      - name: Embed frontend assets
+        run: |
+          mkdir -p internal/web/dist
+          cp -r frontend/admin/dist internal/web/dist/admin
+          cp -r frontend/user/dist  internal/web/dist/user
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # 只有带 fullstack tag 才会编译 embed_fullstack.go，
+      # 默认构建覆盖不到，必须在这里单独验证一次完整的嵌入链路。
+      - name: Build fullstack binary
+        run: go build -tags release,fullstack ./cmd/server

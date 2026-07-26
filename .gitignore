@@ -7,14 +7,14 @@ uploads
 *.log
 .env
 .DS_Store
-*/node_modules/
-*/dist/
+node_modules/
 # Added by goreleaser init:
 dist/
 
-# Fullstack 构建产物（仅 -tags fullstack 时使用，不进 git 历史）
-internal/web/dist/
+# 前端构建产物与依赖（frontend/{admin,user}）
+frontend/*/dist/
+frontend/*/node_modules/
+frontend/*/*.local
 
-# CI workflow 跨仓库 checkout 的前端源码（fullstack 构建用，不进 git 历史）
-admin-src/
-user-src/
+# Fullstack 嵌入产物：由前端构建拷贝而来，不进 git 历史
+internal/web/dist/

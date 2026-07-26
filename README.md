@@ -1,30 +1,75 @@
-# Dujiao-Next API
+# Dujiao-Next
 
-Dujiao-Next API is the backend service for the Dujiao-Next ecosystem. It provides public APIs, user/auth APIs, order and payment workflows, and admin APIs.
+Dujiao-Next is a digital goods e-commerce platform. This repository contains the complete
+application: the Go backend, the customer storefront, and the admin panel.
+
+**One binary runs everything.** Both frontends are compiled into the server binary with
+`go:embed`, so a production deployment is a single process on a single port behind a single
+domain — no separate frontend containers, no nginx serving static files.
 
 ## Tech Stack
 
-- Go
-- Gin
-- GORM
-- SQLite / PostgreSQL
+- Go · Gin · GORM · SQLite / PostgreSQL
+- Vue 3 · Vite · TypeScript · Tailwind CSS v4
 
-## What This Service Does
+## Repository Layout
 
-- Serves REST APIs for user, order, and payment flows
-- Handles payment callbacks/webhooks
-- Supports product, fulfillment, and configuration management
-
-## Quick Start
-
-```bash
-go mod tidy
-go run cmd/server/main.go
+```
+├── cmd/server/          # entry point
+├── internal/
+│   └── web/             # frontend embedding and SPA route mounting
+├── frontend/
+│   ├── admin/           # admin panel
+│   └── user/            # customer storefront
+├── config.yml.example
+├── Dockerfile           # single full-stack image
+└── .goreleaser.yaml
 ```
 
-The default health check endpoint is:
+## Quick Start (Deploy)
 
-- `GET /health`
+Download the latest `dujiao-next_*.tar.gz` from [Releases](https://github.com/dujiao-next/dujiao-next/releases):
+
+```bash
+tar -xzf dujiao-next_*.tar.gz
+cp config.yml.example config.yml
+# edit config.yml: set jwt.secret, user_jwt.secret, and web.admin_path
+./dujiao-next
+```
+
+The storefront is served at `/` and the admin panel at `web.admin_path` (default `/admin` —
+change it). Full instructions: https://dujiao-next.com/deploy/
+
+Or with Docker:
+
+```bash
+docker run -d -p 8080:8080 -v $PWD/config.yml:/app/config.yml:ro dujiaonext/api:latest
+```
+
+## Quick Start (Develop)
+
+Run the backend and the two frontends separately for hot reload:
+
+```bash
+go mod tidy && go run ./cmd/server   # :8080 — API only, no SPAs mounted
+
+cd frontend/user  && pnpm install && pnpm run dev   # :5173
+cd frontend/admin && pnpm install && pnpm run dev   # :5174
+```
+
+Both dev servers proxy `/api` and `/uploads` to `localhost:8080`.
+
+## Building the Full-Stack Binary
+
+```bash
+goreleaser build --snapshot --single-target --clean
+```
+
+This builds both frontends, embeds them, and compiles with `-tags fullstack` — the same path
+CI uses for releases. See [Manual Deployment](https://dujiao-next.com/deploy/manual) for the
+step-by-step equivalent.
+
+Health check endpoint: `GET /health`
 
 ## Online Documentation
 
