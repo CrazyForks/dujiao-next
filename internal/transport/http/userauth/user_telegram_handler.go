@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/dto"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	userpresenter "github.com/dujiao-next/internal/modules/identity/userauth/transport/presenter"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -181,7 +181,7 @@ func respondTelegramLoginSuccess(c *gin.Context, h *UserTelegramHandler, res *Au
 	h.recordLogin(c, res.User.Email, res.User.ID, constants.LoginLogStatusSuccess, "", constants.LoginLogSourceTelegram)
 	response.Success(c, gin.H{
 		"requires_totp": false,
-		"user":          dto.NewUserAuthBriefResp(res.User),
+		"user":          userpresenter.NewUserAuthBriefResp(res.User),
 		"token":         res.Token,
 		"expires_at":    res.ExpiresAt.Format("2006-01-02T15:04:05Z07:00"),
 	})
@@ -236,10 +236,10 @@ func (h *UserTelegramHandler) GetMyTelegramBinding(c *gin.Context) {
 		return
 	}
 	if identity == nil {
-		response.Success(c, dto.NewTelegramBindingResp(nil))
+		response.Success(c, userpresenter.NewTelegramBindingResp(nil))
 		return
 	}
-	response.Success(c, dto.NewTelegramBindingResp(identity))
+	response.Success(c, userpresenter.NewTelegramBindingResp(identity))
 }
 
 // BindMyTelegram 绑定当前用户 Telegram。
@@ -258,7 +258,7 @@ func (h *UserTelegramHandler) BindMyTelegram(c *gin.Context) {
 		respondTelegramBindError(c, err)
 		return
 	}
-	response.Success(c, dto.NewTelegramBindingResp(identity))
+	response.Success(c, userpresenter.NewTelegramBindingResp(identity))
 }
 
 // BindMyTelegramMiniApp 绑定当前用户的 Telegram Mini App 身份。
@@ -277,7 +277,7 @@ func (h *UserTelegramHandler) BindMyTelegramMiniApp(c *gin.Context) {
 		respondTelegramBindError(c, err)
 		return
 	}
-	response.Success(c, dto.NewTelegramBindingResp(identity))
+	response.Success(c, userpresenter.NewTelegramBindingResp(identity))
 }
 
 // UnbindMyTelegram 解绑当前用户 Telegram。

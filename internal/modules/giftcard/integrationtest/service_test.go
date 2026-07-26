@@ -18,7 +18,6 @@ import (
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/constants"
-	giftcardintegration "github.com/dujiao-next/internal/integration/giftcard"
 	"github.com/dujiao-next/internal/models"
 	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
 	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
@@ -27,6 +26,7 @@ import (
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
+	giftcardredeemgormuow "github.com/dujiao-next/internal/workflows/giftcardredeem/infrastructure/gormuow"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -80,7 +80,7 @@ func setupGiftCardServiceTest(t *testing.T) (*giftcardapp.Service, *walletapp.Se
 		Repo:     cardStore,
 		Users:    userRepo,
 		Currency: giftCardTestCurrencyProvider{settings: settingSvc},
-		Redeemer: giftcardintegration.New(cardStore, walletSvc),
+		Redeemer: giftcardredeemgormuow.New(cardStore, walletSvc),
 	})
 	return giftSvc, walletSvc, db
 }

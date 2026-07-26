@@ -1,4 +1,4 @@
-package giftcardintegration
+package gormuow
 
 import (
 	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"

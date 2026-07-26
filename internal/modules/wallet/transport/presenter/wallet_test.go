@@ -1,4 +1,4 @@
-package dto
+package presenter
 
 import (
 	"encoding/json"
@@ -11,7 +11,13 @@ import (
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
+	"github.com/shopspring/decimal"
 )
+
+func newMoney(s string) money.Amount {
+	return money.FromDecimal(decimal.RequireFromString(s))
+}
 
 func TestWalletAccountRespOmitsSensitiveFields(t *testing.T) {
 	account := &walletdomain.Account{

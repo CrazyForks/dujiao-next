@@ -1,4 +1,4 @@
-package channel_test
+package channelhttp_test
 
 import (
 	"encoding/json"

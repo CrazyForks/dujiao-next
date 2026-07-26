@@ -7,9 +7,9 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/dto"
 	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
+	userpresenter "github.com/dujiao-next/internal/modules/identity/userauth/transport/presenter"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -131,7 +131,7 @@ func (h *UserLoginHandler) UserRegister(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{
-		"user":       dto.NewUserAuthBriefResp(user),
+		"user":       userpresenter.NewUserAuthBriefResp(user),
 		"token":      token,
 		"expires_at": expiresAt.Format("2006-01-02T15:04:05Z07:00"),
 	})
@@ -204,7 +204,7 @@ func (h *UserLoginHandler) UserLogin(c *gin.Context) {
 	h.recordLogin(c, res.User.Email, res.User.ID, constants.LoginLogStatusSuccess, "", constants.LoginLogSourceWeb)
 	response.Success(c, gin.H{
 		"requires_totp": false,
-		"user":          dto.NewUserAuthBriefResp(res.User),
+		"user":          userpresenter.NewUserAuthBriefResp(res.User),
 		"token":         res.Token,
 		"expires_at":    res.ExpiresAt.Format("2006-01-02T15:04:05Z07:00"),
 	})

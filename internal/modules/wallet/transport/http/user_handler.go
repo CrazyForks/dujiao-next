@@ -11,7 +11,7 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/dto"
+	walletpresenter "github.com/dujiao-next/internal/modules/wallet/transport/presenter"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/shared/money"
@@ -155,7 +155,7 @@ func (h *UserHandler) GetWallet(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
-	response.Success(c, dto.NewWalletAccountResp(account))
+	response.Success(c, walletpresenter.NewWalletAccountResp(account))
 }
 
 func (h *UserHandler) GetTransactions(c *gin.Context) {
@@ -169,7 +169,7 @@ func (h *UserHandler) GetTransactions(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
-	response.SuccessWithPage(c, dto.NewWalletTransactionRespList(transactions), response.BuildPagination(page, pageSize, total))
+	response.SuccessWithPage(c, walletpresenter.NewWalletTransactionRespList(transactions), response.BuildPagination(page, pageSize, total))
 }
 
 func (h *UserHandler) Recharge(c *gin.Context) {
@@ -213,7 +213,7 @@ func (h *UserHandler) Recharge(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
-	response.Success(c, dto.NewWalletRechargePaymentPayload(result.Recharge, result.Payment, account))
+	response.Success(c, walletpresenter.NewWalletRechargePaymentPayload(result.Recharge, result.Payment, account))
 }
 
 func (h *UserHandler) GetRecharge(c *gin.Context) {
@@ -245,7 +245,7 @@ func (h *UserHandler) GetRecharge(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
-	response.Success(c, dto.NewWalletRechargePaymentPayload(recharge, payment, account))
+	response.Success(c, walletpresenter.NewWalletRechargePaymentPayload(recharge, payment, account))
 }
 
 func (h *UserHandler) ListRecharges(c *gin.Context) {
@@ -259,7 +259,7 @@ func (h *UserHandler) ListRecharges(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
-	response.SuccessWithPage(c, dto.NewWalletRechargeRespList(orders), response.BuildPagination(page, pageSize, total))
+	response.SuccessWithPage(c, walletpresenter.NewWalletRechargeRespList(orders), response.BuildPagination(page, pageSize, total))
 }
 
 func (h *UserHandler) RechargeStats(c *gin.Context) {
@@ -320,7 +320,7 @@ func (h *UserHandler) CaptureRechargePayment(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeInternal, "error.user_fetch_failed", err)
 		return
 	}
-	response.Success(c, dto.NewWalletRechargePaymentPayload(recharge, payment, account))
+	response.Success(c, walletpresenter.NewWalletRechargePaymentPayload(recharge, payment, account))
 }
 
 func requestSchemeFromContext(c *gin.Context) string {

@@ -14,6 +14,7 @@ func TestWalletOwnsCompleteVerticalSlice(t *testing.T) {
 	domainRoot := filepath.Join(moduleRoot, "domain")
 	storeRoot := filepath.Join(moduleRoot, "infrastructure", "gormstore")
 	transportRoot := filepath.Join(moduleRoot, "transport", "http")
+	presenterRoot := filepath.Join(moduleRoot, "transport", "presenter")
 	bootstrapRoot := filepath.Join(repositoryRoot, "internal", "bootstrap", "wallet")
 
 	production, total := countDirectGoFiles(t, moduleRoot)
@@ -71,6 +72,14 @@ func TestWalletOwnsCompleteVerticalSlice(t *testing.T) {
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "channel_handler.go"), []string{
 		"ChannelUserProvisioner", "ChannelHandler",
 	})
+	assertFileDeclaresTypes(t, filepath.Join(presenterRoot, "wallet.go"), []string{
+		"WalletAccountResp", "WalletTransactionResp", "WalletRechargeResp",
+		"WalletRechargePaymentPayload",
+	})
+	assertFileDeclaresFunctions(t, filepath.Join(presenterRoot, "wallet.go"), []string{
+		"NewWalletAccountResp", "NewWalletTransactionResp", "NewWalletTransactionRespList",
+		"NewWalletRechargeResp", "NewWalletRechargeRespList", "NewWalletRechargePaymentPayload",
+	})
 	assertFileDeclaresTypes(t, filepath.Join(bootstrapRoot, "handlers.go"), []string{"Handlers"})
 	assertFileDeclaresFunctions(t, filepath.Join(bootstrapRoot, "handlers.go"), []string{"New"})
 
@@ -79,6 +88,7 @@ func TestWalletOwnsCompleteVerticalSlice(t *testing.T) {
 	assertDirectoryGoFileBudget(t, domainRoot, 4)
 	assertDirectoryGoFileBudget(t, storeRoot, 2)
 	assertDirectoryGoFileBudget(t, transportRoot, 6)
+	assertDirectoryGoFileBudget(t, presenterRoot, 2)
 	assertDirectoryGoFileBudget(t, bootstrapRoot, 3)
 
 	for _, forbiddenImport := range []string{

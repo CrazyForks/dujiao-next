@@ -14,9 +14,7 @@ import (
 // or moving files is allowed, adding files below these roots is not. The map is
 // removed together with the roots when the migration is complete.
 var legacyRootGoFileBudgets = map[string]int{
-	"internal/dto":            24,
 	"internal/http":           17,
-	"internal/integration":    25,
 	"internal/models":         59,
 	"internal/provider":       10,
 	"internal/router":         23,
@@ -40,7 +38,6 @@ type packageFileBudget struct {
 // their packages are split into bounded-context leaf packages.
 var transitionalPackageFileBudgets = map[string]packageFileBudget{
 	"internal/architecture": {production: 0, total: 55},
-	"internal/dto":          {production: 15, total: 24},
 	"internal/models":       {production: 54, total: 59},
 	"internal/router":       {production: 13, total: 23},
 }
@@ -49,6 +46,8 @@ var transitionalPackageFileBudgets = map[string]packageFileBudget{
 // bounded context reaches this list, recreating its former horizontal package
 // is an architecture regression rather than an allowed transitional change.
 var completedMigrationPaths = []string{
+	"internal/dto",
+	"internal/integration",
 	"internal/repository",
 	"internal/service",
 	"internal/models/payment.go",

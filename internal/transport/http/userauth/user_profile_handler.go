@@ -5,7 +5,7 @@ import (
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/dto"
+	userpresenter "github.com/dujiao-next/internal/modules/identity/userauth/transport/presenter"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -68,16 +68,16 @@ func (h *UserProfileHandler) GetCurrentUser(c *gin.Context) {
 	response.Success(c, profile)
 }
 
-func (h *UserProfileHandler) userProfileResponse(user *userdomain.User) (dto.UserProfileResp, error) {
+func (h *UserProfileHandler) userProfileResponse(user *userdomain.User) (userpresenter.UserProfileResp, error) {
 	emailMode, err := h.service.ResolveEmailChangeMode(user)
 	if err != nil {
-		return dto.UserProfileResp{}, err
+		return userpresenter.UserProfileResp{}, err
 	}
 	passwordMode, err := h.service.ResolvePasswordChangeMode(user)
 	if err != nil {
-		return dto.UserProfileResp{}, err
+		return userpresenter.UserProfileResp{}, err
 	}
-	return dto.NewUserProfileResp(user, emailMode, passwordMode), nil
+	return userpresenter.NewUserProfileResp(user, emailMode, passwordMode), nil
 }
 
 // UpdateUserProfile 更新用户资料。

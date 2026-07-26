@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/dto"
+	userpresenter "github.com/dujiao-next/internal/modules/identity/userauth/transport/presenter"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -336,7 +336,7 @@ func (h *User2FAHandler) VerifyUser2FA(c *gin.Context) {
 	h.recordLogin(c, loginRes.User.Email, loginRes.User.ID, constants.LoginLogStatusSuccess, "", constants.LoginLogSourceWeb)
 	response.Success(c, gin.H{
 		"requires_totp": false,
-		"user":          dto.NewUserAuthBriefResp(loginRes.User),
+		"user":          userpresenter.NewUserAuthBriefResp(loginRes.User),
 		"token":         loginRes.Token,
 		"expires_at":    loginRes.ExpiresAt.Format("2006-01-02T15:04:05Z07:00"),
 	})

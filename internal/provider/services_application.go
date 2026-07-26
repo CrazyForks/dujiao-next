@@ -7,7 +7,6 @@ import (
 	adproxygateway "github.com/dujiao-next/internal/modules/adproxy/infrastructure/adgateway"
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
 
-	giftcardintegration "github.com/dujiao-next/internal/integration/giftcard"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	cardsecretapp "github.com/dujiao-next/internal/modules/cardsecret/application"
@@ -31,6 +30,7 @@ import (
 	sitemapcache "github.com/dujiao-next/internal/modules/sitemap/infrastructure/cacheadapter"
 	sitemapcatalog "github.com/dujiao-next/internal/modules/sitemap/infrastructure/catalogreader"
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	giftcardredeemgormuow "github.com/dujiao-next/internal/workflows/giftcardredeem/infrastructure/gormuow"
 )
 
 // initApplicationServices 装配内容、购物车、订单、履约和营销用例。
@@ -130,7 +130,7 @@ func (c *Container) initApplicationServices() {
 		Repo:     c.GiftCardRepo,
 		Users:    c.UserStore,
 		Currency: giftcardsettingscurrency.New(c.SettingService),
-		Redeemer: giftcardintegration.New(c.GiftCardRepo, c.WalletService),
+		Redeemer: giftcardredeemgormuow.New(c.GiftCardRepo, c.WalletService),
 	})
 	c.CouponAdminService = couponapp.NewAdminService(c.CouponRepo)
 	c.PromotionAdminService = promotionapp.NewAdminService(c.PromotionRepo)

@@ -8,8 +8,8 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/dto"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	userpresenter "github.com/dujiao-next/internal/modules/identity/userauth/transport/presenter"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/platform/http/response"
 
@@ -151,7 +151,7 @@ func (h *UserTelegramOIDCHandler) TelegramOIDCLoginCallback(c *gin.Context) {
 	h.recordLogin(c, res.User.Email, res.User.ID, constants.LoginLogStatusSuccess, "", constants.LoginLogSourceTelegram)
 	response.Success(c, gin.H{
 		"requires_totp": false,
-		"user":          dto.NewUserAuthBriefResp(res.User),
+		"user":          userpresenter.NewUserAuthBriefResp(res.User),
 		"token":         res.Token,
 		"expires_at":    res.ExpiresAt.Format("2006-01-02T15:04:05Z07:00"),
 	})
@@ -187,5 +187,5 @@ func (h *UserTelegramOIDCHandler) TelegramOIDCBindCallback(c *gin.Context) {
 		respondTelegramOIDCError(c, err)
 		return
 	}
-	response.Success(c, dto.NewTelegramBindingResp(identity))
+	response.Success(c, userpresenter.NewTelegramBindingResp(identity))
 }

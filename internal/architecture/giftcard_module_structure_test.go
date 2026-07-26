@@ -13,7 +13,10 @@ func TestGiftCardImplementationLivesInBoundedContextDirectories(t *testing.T) {
 	contractRoot := filepath.Join(moduleRoot, "contract")
 	applicationRoot := filepath.Join(moduleRoot, "application")
 	storeRoot := filepath.Join(moduleRoot, "infrastructure", "gormstore")
-	redeemTransactionRoot := filepath.Join(repositoryRoot, "internal", "integration", "giftcard")
+	redeemTransactionRoot := filepath.Join(
+		repositoryRoot,
+		"internal", "workflows", "giftcardredeem", "infrastructure", "gormuow",
+	)
 	settingsCurrencyRoot := filepath.Join(moduleRoot, "infrastructure", "settingscurrency")
 	integrationTestRoot := filepath.Join(moduleRoot, "integrationtest")
 	transportRoot := filepath.Join(moduleRoot, "transport", "http")
@@ -33,7 +36,7 @@ func TestGiftCardImplementationLivesInBoundedContextDirectories(t *testing.T) {
 	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "redeem.go"), []string{"RedeemGiftCard"})
 	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "export.go"), []string{"Export"})
 	assertFileDeclaresTypes(t, filepath.Join(storeRoot, "store.go"), []string{"Store"})
-	assertFileDeclaresTypes(t, filepath.Join(redeemTransactionRoot, "redeemtx.go"), []string{"Runner"})
+	assertFileDeclaresTypes(t, filepath.Join(redeemTransactionRoot, "runner.go"), []string{"Runner"})
 	assertFileDeclaresTypes(t, filepath.Join(settingsCurrencyRoot, "provider.go"), []string{"Provider"})
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{
 		"RegisterAdminRoutes", "RegisterUserRoutes", "RegisterChannelRoutes",

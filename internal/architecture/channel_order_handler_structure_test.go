@@ -82,7 +82,7 @@ func TestChannelOrderHandlerIsSplitByResponsibility(t *testing.T) {
 			t.Errorf("%s ownership mismatch: want [%s], got %v", typeName, wantFile, gotFiles)
 		}
 	}
-	assertDirectoryGoFileBudget(t, handlerDirectory, 10)
+	assertDirectoryGoFileBudget(t, handlerDirectory, 11)
 	legacyFiles, err := filepath.Glob(filepath.Join(repositoryRoot, "internal", "http", "handlers", "channel", "*.go"))
 	if err != nil {
 		t.Fatalf("list legacy channel handlers: %v", err)

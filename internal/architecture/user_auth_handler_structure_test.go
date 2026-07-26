@@ -125,6 +125,10 @@ func TestSharedTOTPApplicationLivesInIdentityModule(t *testing.T) {
 func TestUserProfileHTTPLivesInTransport(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	transportRoot := filepath.Join(repositoryRoot, "internal", "transport", "http", "userauth")
+	presenterRoot := filepath.Join(
+		repositoryRoot,
+		"internal", "modules", "identity", "userauth", "transport", "presenter",
+	)
 
 	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "routes.go"), []string{
 		"RegisterUserProfileRoutes",
@@ -194,7 +198,14 @@ func TestUserProfileHTTPLivesInTransport(t *testing.T) {
 		"NewUser2FAHandler", "GetUser2FAStatus", "SetupUser2FA", "EnableUser2FA",
 		"DisableUser2FA", "RegenerateUser2FARecoveryCodes", "VerifyUser2FA",
 	})
+	assertFileDeclaresTypes(t, filepath.Join(presenterRoot, "user.go"), []string{
+		"UserProfileResp", "TelegramBindingResp", "UserAuthBriefResp",
+	})
+	assertFileDeclaresFunctions(t, filepath.Join(presenterRoot, "user.go"), []string{
+		"NewUserProfileResp", "NewTelegramBindingResp", "NewUserAuthBriefResp",
+	})
 	assertDirectoryGoFileBudget(t, transportRoot, 10)
+	assertDirectoryGoFileBudget(t, presenterRoot, 2)
 
 	for _, legacy := range []string{
 		filepath.Join(repositoryRoot, "internal", "http", "handlers", "public", "user_profile.go"),

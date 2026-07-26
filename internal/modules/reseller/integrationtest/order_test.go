@@ -1,4 +1,4 @@
-package resellerintegration_test
+package integrationtest
 
 import (
 	"errors"

@@ -1,4 +1,4 @@
-package reselleradmin_test
+package integrationtest
 
 import (
 	"bytes"

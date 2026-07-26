@@ -22,7 +22,6 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	giftcardintegration "github.com/dujiao-next/internal/integration/giftcard"
 	"github.com/dujiao-next/internal/models"
 	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
 	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
@@ -36,6 +35,7 @@ import (
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
+	giftcardredeemgormuow "github.com/dujiao-next/internal/workflows/giftcardredeem/infrastructure/gormuow"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -108,7 +108,7 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 		Repo:     giftCardRepo,
 		Users:    userRepo,
 		Currency: giftCardTestCurrencyProvider{settings: settingSvc},
-		Redeemer: giftcardintegration.New(giftCardRepo, walletSvc),
+		Redeemer: giftcardredeemgormuow.New(giftCardRepo, walletSvc),
 	})
 	userAuthSvc := userauthapp.NewService(&config.Config{}, userRepo, identityRepo, emailVerifyRepo, nil, nil, nil)
 

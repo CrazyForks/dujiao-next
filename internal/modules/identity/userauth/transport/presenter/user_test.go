@@ -1,4 +1,4 @@
-package dto
+package presenter
 
 import (
 	"encoding/json"
@@ -7,7 +7,13 @@ import (
 	"time"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	"github.com/dujiao-next/internal/shared/money"
+	"github.com/shopspring/decimal"
 )
+
+func newMoney(s string) money.Amount {
+	return money.FromDecimal(decimal.RequireFromString(s))
+}
 
 func TestUserProfileRespOmitsSensitiveFields(t *testing.T) {
 	now := time.Now()
