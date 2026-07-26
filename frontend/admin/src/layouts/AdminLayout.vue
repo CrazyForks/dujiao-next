@@ -51,15 +51,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { RefreshCw, ExternalLink, CheckCircle2, AlertCircle } from 'lucide-vue-next'
+import { RefreshCw } from 'lucide-vue-next'
+import SystemUpdateDialog from '@/components/SystemUpdateDialog.vue'
 import { useAdminAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { applySiteIcon } from '@/utils/favicon'
-import { marked } from 'marked'
-
-marked.setOptions({ gfm: true, breaks: true })
 
 interface NavGroupItem {
   label: string
@@ -111,63 +108,9 @@ const isDark = ref(false)
 const appVersion = ref('')
 const siteUrl = ref('')
 
-interface UpdateCheckResult {
-  current_version: string
-  latest_version: string
-  has_update: boolean
-  release_url?: string
-  release_name?: string
-  release_notes?: string
-  published_at?: string | null
-  source?: string
-}
-
+// 版本检测与一键升级的完整交互都在 SystemUpdateDialog 内，这里只负责开关
 const updateCheckOpen = ref(false)
-const updateCheckLoading = ref(false)
-const updateCheckResult = ref<UpdateCheckResult | null>(null)
-const updateCheckError = ref<string>('')
 
-const renderedReleaseNotes = computed(() => {
-  const raw = updateCheckResult.value?.release_notes
-  if (!raw) return ''
-  return marked.parse(raw, { async: false }) as string
-})
-
-const formatPublishedAt = (raw: string | null | undefined) => {
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) return raw
-  return date.toLocaleString()
-}
-
-async function handleCheckUpdate() {
-  updateCheckOpen.value = true
-  updateCheckLoading.value = true
-  updateCheckError.value = ''
-  updateCheckResult.value = null
-  try {
-    const res = await adminAPI.checkSystemUpdate()
-    const payload = res.data?.data as UpdateCheckResult | undefined
-    if (payload) {
-      updateCheckResult.value = payload
-    } else {
-      updateCheckError.value = t('admin.updateCheck.failedGeneric')
-    }
-  } catch (err: any) {
-    const status = err?.response?.status
-    const code = err?.response?.data?.status_code
-    const msg = err?.response?.data?.msg || err?.message || ''
-    if (status === 429 || code === 429) {
-      updateCheckError.value = t('admin.updateCheck.rateLimited')
-    } else if (msg) {
-      updateCheckError.value = t('admin.updateCheck.failed', { message: msg })
-    } else {
-      updateCheckError.value = t('admin.updateCheck.failedGeneric')
-    }
-  } finally {
-    updateCheckLoading.value = false
-  }
-}
 const navSearch = ref('')
 const expandedGroups = ref<Record<string, boolean>>(readExpandedGroups())
 const mobileNavOpen = ref(false)
@@ -1021,11 +964,10 @@ onBeforeUnmount(() => {
             <Button
               size="icon-sm"
               variant="outline"
-              :disabled="updateCheckLoading"
-              :title="updateCheckLoading ? t('admin.updateCheck.checking') : t('admin.updateCheck.button')"
-              @click="handleCheckUpdate"
+              :title="t('admin.updateCheck.button')"
+              @click="updateCheckOpen = true"
             >
-              <RefreshCw class="h-4 w-4" :class="updateCheckLoading ? 'animate-spin' : ''" />
+              <RefreshCw class="h-4 w-4" />
             </Button>
             <Button size="icon-sm" variant="outline" @click="toggleTheme">
               <Sun v-if="isDark" class="h-4 w-4" />
@@ -1050,140 +992,6 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <Dialog v-model:open="updateCheckOpen">
-      <DialogContent class="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{{ t('admin.updateCheck.title') }}</DialogTitle>
-        </DialogHeader>
-        <div class="space-y-3 text-sm">
-          <div v-if="updateCheckLoading" class="flex items-center gap-2 text-muted-foreground py-4">
-            <RefreshCw class="h-4 w-4 animate-spin" />
-            <span>{{ t('admin.updateCheck.checking') }}</span>
-          </div>
-          <div v-else-if="updateCheckError" class="flex items-start gap-2 text-destructive">
-            <AlertCircle class="h-4 w-4 mt-0.5 shrink-0" />
-            <span>{{ updateCheckError }}</span>
-          </div>
-          <template v-else-if="updateCheckResult">
-            <div
-              class="flex items-start gap-2 rounded-md border px-3 py-2"
-              :class="updateCheckResult.has_update ? 'border-amber-500/40 bg-amber-500/5 text-amber-600 dark:text-amber-400' : 'border-emerald-500/40 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400'"
-            >
-              <component
-                :is="updateCheckResult.has_update ? AlertCircle : CheckCircle2"
-                class="h-4 w-4 mt-0.5 shrink-0"
-              />
-              <span v-if="updateCheckResult.has_update">
-                {{ t('admin.updateCheck.hasUpdate', { version: updateCheckResult.latest_version || t('admin.updateCheck.unknownVersion') }) }}
-              </span>
-              <span v-else>
-                {{ t('admin.updateCheck.latest', { version: updateCheckResult.current_version || t('admin.updateCheck.unknownVersion') }) }}
-              </span>
-            </div>
-            <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-muted-foreground">
-              <dt>{{ t('admin.updateCheck.currentLabel') }}</dt>
-              <dd class="text-foreground">{{ updateCheckResult.current_version || t('admin.updateCheck.unknownVersion') }}</dd>
-              <dt>{{ t('admin.updateCheck.latestLabel') }}</dt>
-              <dd class="text-foreground">{{ updateCheckResult.latest_version || t('admin.updateCheck.unknownVersion') }}</dd>
-              <template v-if="updateCheckResult.published_at">
-                <dt>{{ t('admin.updateCheck.publishedLabel') }}</dt>
-                <dd class="text-foreground">{{ formatPublishedAt(updateCheckResult.published_at) }}</dd>
-              </template>
-            </dl>
-            <div
-              v-if="updateCheckResult.release_notes"
-              class="release-notes max-h-48 overflow-y-auto rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground"
-              v-html="renderedReleaseNotes"
-            ></div>
-          </template>
-        </div>
-        <DialogFooter class="gap-2 sm:gap-2">
-          <a
-            v-if="updateCheckResult?.release_url"
-            :href="updateCheckResult.release_url"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            <ExternalLink class="h-4 w-4" />
-            {{ t('admin.updateCheck.viewRelease') }}
-          </a>
-          <Button variant="outline" @click="updateCheckOpen = false">{{ t('admin.updateCheck.close') }}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <SystemUpdateDialog v-model:open="updateCheckOpen" />
   </div>
 </template>
-
-<style scoped>
-.release-notes :deep(h1),
-.release-notes :deep(h2),
-.release-notes :deep(h3),
-.release-notes :deep(h4) {
-  color: hsl(var(--foreground));
-  font-weight: 600;
-  margin: 0.6em 0 0.3em;
-  line-height: 1.3;
-}
-.release-notes :deep(h1) { font-size: 1rem; }
-.release-notes :deep(h2) { font-size: 0.95rem; }
-.release-notes :deep(h3) { font-size: 0.85rem; }
-.release-notes :deep(h4) { font-size: 0.8rem; }
-.release-notes :deep(p) { margin: 0.4em 0; }
-.release-notes :deep(ul),
-.release-notes :deep(ol) {
-  padding-left: 1.25rem;
-  margin: 0.4em 0;
-}
-.release-notes :deep(ul) { list-style: disc; }
-.release-notes :deep(ol) { list-style: decimal; }
-.release-notes :deep(li) { margin: 0.15em 0; }
-.release-notes :deep(strong) { color: hsl(var(--foreground)); font-weight: 600; }
-.release-notes :deep(em) { font-style: italic; }
-.release-notes :deep(a) {
-  color: hsl(var(--primary));
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.release-notes :deep(code) {
-  background: hsl(var(--muted));
-  padding: 0.1em 0.35em;
-  border-radius: 0.25rem;
-  font-size: 0.9em;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-}
-.release-notes :deep(pre) {
-  background: hsl(var(--muted));
-  padding: 0.6em 0.8em;
-  border-radius: 0.375rem;
-  overflow-x: auto;
-  margin: 0.5em 0;
-}
-.release-notes :deep(pre code) {
-  background: transparent;
-  padding: 0;
-}
-.release-notes :deep(blockquote) {
-  border-left: 3px solid hsl(var(--border));
-  padding-left: 0.75rem;
-  margin: 0.5em 0;
-  color: hsl(var(--muted-foreground));
-}
-.release-notes :deep(hr) {
-  border: 0;
-  border-top: 1px solid hsl(var(--border));
-  margin: 0.8em 0;
-}
-.release-notes :deep(img) { max-width: 100%; height: auto; }
-.release-notes :deep(table) {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 0.5em 0;
-}
-.release-notes :deep(th),
-.release-notes :deep(td) {
-  border: 1px solid hsl(var(--border));
-  padding: 0.3em 0.5em;
-  text-align: left;
-}
-</style>

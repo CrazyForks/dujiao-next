@@ -24,13 +24,37 @@ const (
 
 // releasePayload GitHub Releases API 响应中本检测器关心的字段
 type releasePayload struct {
-	TagName     string    `json:"tag_name"`
-	Name        string    `json:"name"`
-	HTMLURL     string    `json:"html_url"`
-	Body        string    `json:"body"`
-	Draft       bool      `json:"draft"`
-	Prerelease  bool      `json:"prerelease"`
-	PublishedAt time.Time `json:"published_at"`
+	TagName     string         `json:"tag_name"`
+	Name        string         `json:"name"`
+	HTMLURL     string         `json:"html_url"`
+	Body        string         `json:"body"`
+	Draft       bool           `json:"draft"`
+	Prerelease  bool           `json:"prerelease"`
+	PublishedAt time.Time      `json:"published_at"`
+	Assets      []assetPayload `json:"assets"`
+}
+
+type assetPayload struct {
+	Name               string `json:"name"`
+	BrowserDownloadURL string `json:"browser_download_url"`
+	Size               int64  `json:"size"`
+}
+
+// Asset 发行版附件（goreleaser 产出的平台归档与 checksums.txt）
+type Asset struct {
+	Name        string `json:"name"`
+	DownloadURL string `json:"download_url"`
+	Size        int64  `json:"size"`
+}
+
+// Release GitHub 最新发行版的完整信息，供版本检测与一键升级共用
+type Release struct {
+	TagName     string
+	Name        string
+	HTMLURL     string
+	Body        string
+	PublishedAt time.Time
+	Assets      []Asset
 }
 
 // CheckResult 检测结果，已包含当前与最新版本以及是否需要更新
@@ -51,6 +75,33 @@ var ErrRateLimited = errors.New("github api rate limit exceeded")
 // CheckLatestRelease 通过 GitHub Releases API 获取最新发行版并与当前版本比较。
 // 仓库地址固定为 dujiao-next/dujiao-next，不接受外部传入，避免 SSRF。
 func CheckLatestRelease(ctx context.Context) (*CheckResult, error) {
+	release, err := FetchLatestRelease(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	current := strings.TrimSpace(Version)
+	latest := strings.TrimSpace(release.TagName)
+	hasUpdate, _ := IsNewerVersion(latest, current)
+
+	result := &CheckResult{
+		CurrentVersion: current,
+		LatestVersion:  latest,
+		HasUpdate:      hasUpdate,
+		ReleaseURL:     release.HTMLURL,
+		ReleaseName:    release.Name,
+		ReleaseNotes:   release.Body,
+		Source:         fmt.Sprintf("https://github.com/%s/%s/releases", repoOwner, repoName),
+	}
+	if !release.PublishedAt.IsZero() {
+		t := release.PublishedAt
+		result.PublishedAt = &t
+	}
+	return result, nil
+}
+
+// FetchLatestRelease 拉取最新发行版原始信息（含附件列表），供一键升级下载对应平台归档。
+func FetchLatestRelease(ctx context.Context) (*Release, error) {
 	url := fmt.Sprintf("%s/repos/%s/%s/releases/latest", githubAPIBaseURL, repoOwner, repoName)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -87,24 +138,21 @@ func CheckLatestRelease(ctx context.Context) (*CheckResult, error) {
 		return nil, fmt.Errorf("decode release: %w", err)
 	}
 
-	current := strings.TrimSpace(Version)
-	latest := strings.TrimSpace(payload.TagName)
-	hasUpdate, _ := IsNewerVersion(latest, current)
-
-	result := &CheckResult{
-		CurrentVersion: current,
-		LatestVersion:  latest,
-		HasUpdate:      hasUpdate,
-		ReleaseURL:     payload.HTMLURL,
-		ReleaseName:    payload.Name,
-		ReleaseNotes:   payload.Body,
-		Source:         fmt.Sprintf("https://github.com/%s/%s/releases", repoOwner, repoName),
+	release := &Release{
+		TagName:     strings.TrimSpace(payload.TagName),
+		Name:        payload.Name,
+		HTMLURL:     payload.HTMLURL,
+		Body:        payload.Body,
+		PublishedAt: payload.PublishedAt,
 	}
-	if !payload.PublishedAt.IsZero() {
-		t := payload.PublishedAt
-		result.PublishedAt = &t
+	for _, a := range payload.Assets {
+		release.Assets = append(release.Assets, Asset{
+			Name:        a.Name,
+			DownloadURL: a.BrowserDownloadURL,
+			Size:        a.Size,
+		})
 	}
-	return result, nil
+	return release, nil
 }
 
 // IsNewerVersion 判断 latest 是否比 current 更新。返回 (true, nil) 表示需要更新；

@@ -53,7 +53,7 @@ RUN set -eux; \
     export GOOS="$TARGETOS" GOARCH="$TARGETARCH"; \
     if [ "$TARGETARCH" = "arm" ] && [ -n "$TARGETVARIANT" ]; then export GOARM="${TARGETVARIANT#v}"; fi; \
     if [ "$TARGETARCH" = "amd64" ] && [ -n "$TARGETVARIANT" ]; then export GOAMD64="${TARGETVARIANT#v}"; fi; \
-    go build -trimpath -tags release,fullstack -ldflags="-s -w -X github.com/dujiao-next/internal/version.Version=${APP_VERSION}" -o /out/dujiao-next ./cmd/server
+    go build -trimpath -tags release,fullstack -ldflags="-s -w -X github.com/dujiao-next/internal/version.Version=${APP_VERSION} -X github.com/dujiao-next/internal/version.BuildType=release" -o /out/dujiao-next ./cmd/server
 
 # ---- 阶段 3：运行时 ----
 FROM alpine:latest

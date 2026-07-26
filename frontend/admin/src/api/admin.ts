@@ -384,6 +384,11 @@ export const adminAPI = {
   getSystemVersion: () => api.get('/admin/system/version'),
   checkSystemUpdate: (params?: { owner?: string; repo?: string }) =>
     api.get('/admin/system/version/check', { params }),
+  getUpdateCapability: () => api.get('/admin/system/update/capability'),
+  getUpdateStatus: () => api.get('/admin/system/update/status'),
+  startSystemUpdate: () => api.post('/admin/system/update/start'),
+  rollbackSystemUpdate: () => api.post('/admin/system/update/rollback'),
+  restartSystemService: () => api.post('/admin/system/restart'),
   getDashboardOverview: (params?: Record<string, unknown>) => api.get('/admin/dashboard/overview', { params }),
   getDashboardTrends: (params?: Record<string, unknown>) => api.get('/admin/dashboard/trends', { params }),
   getDashboardRankings: (params?: Record<string, unknown>) => api.get('/admin/dashboard/rankings', { params }),

@@ -236,6 +236,12 @@ func BuiltinRoleSeeds() []RoleSeed {
 				{Object: "/admin/authz/audit-logs", Action: "GET"},
 				// 系统信息与版本检测
 				{Object: "/admin/system/version/check", Action: "GET"},
+				// 一键升级（下载替换二进制 / 回滚 / 重启进程）
+				{Object: "/admin/system/update/capability", Action: "GET"},
+				{Object: "/admin/system/update/status", Action: "GET"},
+				{Object: "/admin/system/update/start", Action: "POST"},
+				{Object: "/admin/system/update/rollback", Action: "POST"},
+				{Object: "/admin/system/restart", Action: "POST"},
 				// 渠道客户端管理
 				{Object: "/admin/channel-clients", Action: "*"},
 				{Object: "/admin/channel-clients/:id", Action: "*"},
