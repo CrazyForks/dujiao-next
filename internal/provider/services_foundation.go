@@ -6,7 +6,6 @@ import (
 	telegramauthcache "github.com/dujiao-next/internal/bootstrap/telegramauthcache"
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
 	captchaturnstile "github.com/dujiao-next/internal/modules/captcha/infrastructure/turnstile"
@@ -24,11 +23,12 @@ import (
 	settingssecurity "github.com/dujiao-next/internal/modules/settings/schema/security"
 	uploadapp "github.com/dujiao-next/internal/modules/upload/application"
 	uploadlocal "github.com/dujiao-next/internal/modules/upload/infrastructure/localstore"
+	"github.com/dujiao-next/internal/platform/database/gormdb"
 )
 
 // initPolicyAndSettingServices 装配授权、动态设置、分销商基础能力与合规服务。
 func (c *Container) initPolicyAndSettingServices() {
-	authzService, err := authz.NewService(models.DB)
+	authzService, err := authz.NewService(gormdb.DB)
 	if err != nil {
 		logger.Errorw("provider_init_authz_failed", "error", err)
 		panic(err)

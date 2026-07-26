@@ -13,8 +13,8 @@ import (
 	ordergormstore "github.com/dujiao-next/internal/modules/order/infrastructure/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
+	"github.com/dujiao-next/internal/platform/database/gormdb"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -41,7 +41,7 @@ func setupFulfillmentServiceTestDB(t *testing.T) *gorm.DB {
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
-	models.DB = db
+	gormdb.DB = db
 	return db
 }
 

@@ -9,12 +9,13 @@ import (
 
 	"github.com/dujiao-next/internal/admincmd"
 	"github.com/dujiao-next/internal/app"
+	databasemigrations "github.com/dujiao-next/internal/bootstrap/database/migrations"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	adminapplication "github.com/dujiao-next/internal/modules/identity/admin/application"
 	adminstore "github.com/dujiao-next/internal/modules/identity/admin/infrastructure/gormstore"
 	resellerstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
+	"github.com/dujiao-next/internal/platform/database/gormdb"
 	"github.com/dujiao-next/internal/shared/passwordpolicy"
 	"github.com/dujiao-next/internal/version"
 	"github.com/dujiao-next/internal/web"
@@ -81,7 +82,7 @@ func main() {
 	}
 
 	// 初始化数据库
-	if err := models.InitDB(cfg.Database.Driver, cfg.Database.DSN, models.DBPoolConfig{
+	if err := gormdb.InitDB(cfg.Database.Driver, cfg.Database.DSN, gormdb.DBPoolConfig{
 		MaxOpenConns:           cfg.Database.Pool.MaxOpenConns,
 		MaxIdleConns:           cfg.Database.Pool.MaxIdleConns,
 		ConnMaxLifetimeSeconds: cfg.Database.Pool.ConnMaxLifetimeSeconds,
@@ -91,17 +92,17 @@ func main() {
 	}
 
 	// 自动迁移数据库表
-	if err := models.AutoMigrate(); err != nil {
+	if err := databasemigrations.AutoMigrate(); err != nil {
 		stdLog.Fatalf("数据库迁移失败: %v", err)
 	}
-	if err := resellerstore.Migrate(models.DB); err != nil {
+	if err := resellerstore.Migrate(gormdb.DB); err != nil {
 		stdLog.Fatalf("分销模块数据库迁移失败: %v", err)
 	}
 
 	// 初始化默认管理员账号
 	if cfg.Server.Mode == "release" && defaultAdminPass == "" {
 		stdLog.Printf("警告: 未设置 DJ_DEFAULT_ADMIN_PASSWORD 且 bootstrap.default_admin_password 为空，已跳过默认管理员初始化")
-	} else if err := adminapplication.InitDefaultAdmin(adminstore.New(models.DB), defaultAdminUser, defaultAdminPass); err != nil {
+	} else if err := adminapplication.InitDefaultAdmin(adminstore.New(gormdb.DB), defaultAdminUser, defaultAdminPass); err != nil {
 		stdLog.Printf("警告: 初始化默认管理员失败: %v", err)
 	}
 
@@ -196,7 +197,7 @@ func unsafeBootstrapAdminPassword(cfg *config.Config, password string) bool {
 // 后委托给 internal/admincmd 包，不启动 HTTP / worker / web 等服务。
 func runAdminSubcommand(args []string) {
 	cfg := config.Load()
-	if err := models.InitDB(cfg.Database.Driver, cfg.Database.DSN, models.DBPoolConfig{
+	if err := gormdb.InitDB(cfg.Database.Driver, cfg.Database.DSN, gormdb.DBPoolConfig{
 		MaxOpenConns:           cfg.Database.Pool.MaxOpenConns,
 		MaxIdleConns:           cfg.Database.Pool.MaxIdleConns,
 		ConnMaxLifetimeSeconds: cfg.Database.Pool.ConnMaxLifetimeSeconds,

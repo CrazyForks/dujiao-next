@@ -15,7 +15,6 @@ import (
 // removed together with the roots when the migration is complete.
 var legacyRootGoFileBudgets = map[string]int{
 	"internal/http":           17,
-	"internal/models":         59,
 	"internal/provider":       10,
 	"internal/router":         23,
 	"internal/transport/http": 184,
@@ -38,7 +37,6 @@ type packageFileBudget struct {
 // their packages are split into bounded-context leaf packages.
 var transitionalPackageFileBudgets = map[string]packageFileBudget{
 	"internal/architecture": {production: 0, total: 55},
-	"internal/models":       {production: 54, total: 59},
 	"internal/router":       {production: 13, total: 23},
 }
 
@@ -48,6 +46,7 @@ var transitionalPackageFileBudgets = map[string]packageFileBudget{
 var completedMigrationPaths = []string{
 	"internal/dto",
 	"internal/integration",
+	"internal/models",
 	"internal/repository",
 	"internal/service",
 	"internal/models/payment.go",
@@ -602,6 +601,18 @@ func TestAffiliateModuleOwnsDomainAndPersistence(t *testing.T) {
 	if production != 0 || total != 0 {
 		t.Fatalf("affiliate module root must remain structural only, got production=%d total=%d", production, total)
 	}
+}
+
+func TestDatabaseBootstrapIsSeparatedFromPlatformConnection(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	connectionRoot := filepath.Join(repositoryRoot, "internal", "platform", "database", "gormdb")
+	migrationRoot := filepath.Join(repositoryRoot, "internal", "bootstrap", "database", "migrations")
+
+	assertFileDeclaresTypes(t, filepath.Join(connectionRoot, "db.go"), []string{"DBPoolConfig"})
+	assertFileDeclaresFunctions(t, filepath.Join(connectionRoot, "db.go"), []string{"InitDB"})
+	assertFileDeclaresFunctions(t, filepath.Join(migrationRoot, "registry.go"), []string{"AutoMigrate"})
+	assertDirectoryGoFileBudget(t, connectionRoot, 2)
+	assertDirectoryGoFileBudget(t, migrationRoot, 4)
 }
 
 func TestLegacyHorizontalRootsCanOnlyShrink(t *testing.T) {

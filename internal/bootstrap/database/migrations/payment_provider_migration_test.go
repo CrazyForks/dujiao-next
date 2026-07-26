@@ -1,4 +1,4 @@
-package models
+package migrations
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 
 	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+	"github.com/dujiao-next/internal/platform/database/gormdb"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -21,7 +22,7 @@ func setupPaymentProviderRenameTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	DB = db
+	gormdb.DB = db
 	if err := db.AutoMigrate(&paymentdomain.PaymentChannel{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}

@@ -1,7 +1,6 @@
 package provider
 
 import (
-	"github.com/dujiao-next/internal/models"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	apicredentialgormstore "github.com/dujiao-next/internal/modules/apicredential/infrastructure/gormstore"
 	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/infrastructure/gormstore"
@@ -32,10 +31,11 @@ import (
 	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"
 	broadcaststore "github.com/dujiao-next/internal/modules/telegram/broadcast/infrastructure/gormstore"
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
+	"github.com/dujiao-next/internal/platform/database/gormdb"
 )
 
 func (c *Container) initRepositories() {
-	db := models.DB
+	db := gormdb.DB
 	c.AdminStore = adminstore.New(db)
 	c.UserStore = userstore.New(db)
 	c.ExternalIdentityStore = externalidentitystore.New(db)

@@ -27,7 +27,6 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliatetransport "github.com/dujiao-next/internal/modules/affiliate/transport/http"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
@@ -35,6 +34,7 @@ import (
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	"github.com/dujiao-next/internal/platform/database/gormdb"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -109,7 +109,7 @@ func setupChannelAffiliateHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server)
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
-	models.DB = db
+	gormdb.DB = db
 
 	userRepo := userstore.New(db)
 	identityRepo := externalidentitystore.New(db)

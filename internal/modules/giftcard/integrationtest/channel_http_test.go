@@ -22,7 +22,6 @@ import (
 
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
 	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/infrastructure/gormstore"
@@ -35,6 +34,7 @@ import (
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
+	"github.com/dujiao-next/internal/platform/database/gormdb"
 	giftcardredeemgormuow "github.com/dujiao-next/internal/workflows/giftcardredeem/infrastructure/gormuow"
 
 	"github.com/gin-gonic/gin"
@@ -90,7 +90,7 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
-	models.DB = db
+	gormdb.DB = db
 
 	userRepo := userstore.New(db)
 	identityRepo := externalidentitystore.New(db)

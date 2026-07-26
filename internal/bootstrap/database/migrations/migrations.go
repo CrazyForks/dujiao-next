@@ -1,4 +1,4 @@
-package models
+package migrations
 
 import (
 	"errors"
@@ -14,18 +14,29 @@ import (
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+	"github.com/dujiao-next/internal/platform/database/gormdb"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"gorm.io/gorm"
 )
 
+const (
+	manualStockRemainingMigrationSettingKey         = "migration/manual_stock_remaining_v1"
+	skuMigrationSettingKey                          = "migration/product_sku_v1"
+	categoryParentMigrationSettingKey               = "migration/category_parent_v1"
+	paymentProviderBepusdtRenameMigrationSettingKey = "migration/payment_provider_bepusdt_rename_v1"
+	paymentChannelBepusdtConfigMigrationSettingKey  = "migration/payment_channel_bepusdt_config_v2"
+	orderItemOriginalPriceMigrationKey              = "migration/order_item_original_price_v1"
+	manualStockUnlimitedValue                       = -1
+)
+
 // ensureManualStockRemainingMigration 将历史“总量库存”迁移为“剩余库存”语义，仅执行一次。
 func ensureManualStockRemainingMigration() error {
-	if DB == nil {
+	if gormdb.DB == nil {
 		return errors.New("database is not initialized")
 	}
 
 	var marker settingsstore.SettingRecord
-	if err := DB.First(&marker, "key = ?", manualStockRemainingMigrationSettingKey).Error; err != nil {
+	if err := gormdb.DB.First(&marker, "key = ?", manualStockRemainingMigrationSettingKey).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
@@ -33,7 +44,7 @@ func ensureManualStockRemainingMigration() error {
 		return nil
 	}
 
-	return DB.Transaction(func(tx *gorm.DB) error {
+	return gormdb.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&productdomain.Product{}).
 			Where("deleted_at IS NULL AND manual_stock_total >= ?", manualStockUnlimitedValue+1).
 			Update("manual_stock_total",
@@ -76,12 +87,12 @@ func migrationDone(value jsonmap.JSON) bool {
 // ensureOrderItemOriginalPriceMigration 为历史订单项回填原价快照。
 // 历史数据没有真实原价，只能以当时已记录的 unit_price/total_price 作为兼容回填。
 func ensureOrderItemOriginalPriceMigration() error {
-	if DB == nil {
+	if gormdb.DB == nil {
 		return errors.New("database is not initialized")
 	}
 
 	var marker settingsstore.SettingRecord
-	if err := DB.First(&marker, "key = ?", orderItemOriginalPriceMigrationKey).Error; err != nil {
+	if err := gormdb.DB.First(&marker, "key = ?", orderItemOriginalPriceMigrationKey).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
@@ -89,7 +100,7 @@ func ensureOrderItemOriginalPriceMigration() error {
 		return nil
 	}
 
-	return DB.Transaction(func(tx *gorm.DB) error {
+	return gormdb.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&orderdomain.OrderItem{}).
 			Where("original_unit_price = 0").
 			Update("original_unit_price", gorm.Expr("unit_price")).
@@ -116,7 +127,7 @@ func ensureOrderItemOriginalPriceMigration() error {
 
 // migrateCartSKUUniqueIndex 迁移购物车唯一索引为 user_id + product_id + sku_id 维度。
 func migrateCartSKUUniqueIndex() error {
-	migrator := DB.Migrator()
+	migrator := gormdb.DB.Migrator()
 
 	// 历史唯一索引会阻止同一商品不同 SKU 共存，迁移时必须移除。
 	if migrator.HasIndex(&cartdomain.Item{}, "idx_cart_user_product") {
@@ -136,13 +147,13 @@ func migrateCartSKUUniqueIndex() error {
 // ensureProductSKUMigration 执行 SKU 迁移：补默认 SKU、回填 sku_id、完整性校验。
 // 迁移完成后写入幂等标记，后续启动跳过。
 func ensureProductSKUMigration() error {
-	if DB == nil {
+	if gormdb.DB == nil {
 		return errors.New("database is not initialized")
 	}
 
 	// 检查迁移标记，已完成则跳过
 	var marker settingsstore.SettingRecord
-	if err := DB.First(&marker, "key = ?", skuMigrationSettingKey).Error; err != nil {
+	if err := gormdb.DB.First(&marker, "key = ?", skuMigrationSettingKey).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
@@ -175,13 +186,13 @@ func ensureProductSKUMigration() error {
 			"migrated_at": time.Now().UTC().Format(time.RFC3339),
 		},
 	}
-	return DB.Save(&doneMarker).Error
+	return gormdb.DB.Save(&doneMarker).Error
 }
 
 // ensureDefaultProductSKUs 为每个历史商品补一条 DEFAULT SKU。
 func ensureDefaultProductSKUs() error {
 	var products []productdomain.Product
-	if err := DB.Unscoped().
+	if err := gormdb.DB.Unscoped().
 		Select("id, price_amount, manual_stock_total, manual_stock_locked, manual_stock_sold, is_active").
 		Find(&products).Error; err != nil {
 		return err
@@ -194,7 +205,7 @@ func ensureDefaultProductSKUs() error {
 		ProductID uint
 	}
 	var existing []skuProductRow
-	if err := DB.Unscoped().Model(&productdomain.ProductSKU{}).
+	if err := gormdb.DB.Unscoped().Model(&productdomain.ProductSKU{}).
 		Select("DISTINCT product_id").
 		Scan(&existing).Error; err != nil {
 		return err
@@ -225,7 +236,7 @@ func ensureDefaultProductSKUs() error {
 		return nil
 	}
 
-	return DB.Create(&createRows).Error
+	return gormdb.DB.Create(&createRows).Error
 }
 
 // buildProductSKUMap 构建 product_id -> sku_id 映射，优先选择 DEFAULT SKU。
@@ -236,7 +247,7 @@ func buildProductSKUMap() (map[uint]uint, error) {
 		SKUCode   string
 	}
 	var rows []skuRow
-	if err := DB.Unscoped().Model(&productdomain.ProductSKU{}).
+	if err := gormdb.DB.Unscoped().Model(&productdomain.ProductSKU{}).
 		Select("id, product_id, sku_code").
 		Order("id asc").
 		Find(&rows).Error; err != nil {
@@ -270,7 +281,7 @@ func backfillLegacySKUID(productToSKU map[uint]uint) error {
 		return nil
 	}
 
-	return DB.Transaction(func(tx *gorm.DB) error {
+	return gormdb.DB.Transaction(func(tx *gorm.DB) error {
 		for productID, skuID := range productToSKU {
 			if productID == 0 || skuID == 0 {
 				continue
@@ -313,7 +324,7 @@ func validateSKUMigrationIntegrity() error {
 			name: "order_items",
 			query: func() (int64, error) {
 				var count int64
-				err := DB.Model(&orderdomain.OrderItem{}).Where("sku_id = 0").Count(&count).Error
+				err := gormdb.DB.Model(&orderdomain.OrderItem{}).Where("sku_id = 0").Count(&count).Error
 				return count, err
 			},
 		},
@@ -321,7 +332,7 @@ func validateSKUMigrationIntegrity() error {
 			name: "cart_items",
 			query: func() (int64, error) {
 				var count int64
-				err := DB.Model(&cartdomain.Item{}).Where("sku_id = 0").Count(&count).Error
+				err := gormdb.DB.Model(&cartdomain.Item{}).Where("sku_id = 0").Count(&count).Error
 				return count, err
 			},
 		},
@@ -329,7 +340,7 @@ func validateSKUMigrationIntegrity() error {
 			name: "card_secrets",
 			query: func() (int64, error) {
 				var count int64
-				err := DB.Model(&cardsecretdomain.Secret{}).Where("sku_id = 0 AND deleted_at IS NULL").Count(&count).Error
+				err := gormdb.DB.Model(&cardsecretdomain.Secret{}).Where("sku_id = 0 AND deleted_at IS NULL").Count(&count).Error
 				return count, err
 			},
 		},
@@ -337,7 +348,7 @@ func validateSKUMigrationIntegrity() error {
 			name: "card_secret_batches",
 			query: func() (int64, error) {
 				var count int64
-				err := DB.Model(&cardsecretdomain.Batch{}).Where("sku_id = 0 AND deleted_at IS NULL").Count(&count).Error
+				err := gormdb.DB.Model(&cardsecretdomain.Batch{}).Where("sku_id = 0 AND deleted_at IS NULL").Count(&count).Error
 				return count, err
 			},
 		},
@@ -354,7 +365,7 @@ func validateSKUMigrationIntegrity() error {
 	}
 
 	var missingProducts int64
-	if err := DB.Raw(`
+	if err := gormdb.DB.Raw(`
 SELECT COUNT(1) FROM (
 	SELECT p.id
 	FROM products p
@@ -378,12 +389,12 @@ SELECT COUNT(1) FROM (
 // 通过 settings 表写 marker 保证幂等：一旦标记 done，后续启动跳过；
 // 即使用户后续新建真 epusdt 渠道也不会被误改。
 func ensurePaymentProviderBepusdtRenameMigration() error {
-	if DB == nil {
+	if gormdb.DB == nil {
 		return errors.New("database is not initialized")
 	}
 
 	var marker settingsstore.SettingRecord
-	if err := DB.First(&marker, "key = ?", paymentProviderBepusdtRenameMigrationSettingKey).Error; err != nil {
+	if err := gormdb.DB.First(&marker, "key = ?", paymentProviderBepusdtRenameMigrationSettingKey).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
@@ -391,7 +402,7 @@ func ensurePaymentProviderBepusdtRenameMigration() error {
 		return nil
 	}
 
-	return DB.Transaction(func(tx *gorm.DB) error {
+	return gormdb.DB.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec(
 			"UPDATE payment_channels SET provider_type = ? WHERE provider_type = ?",
 			"bepusdt", "epusdt",
@@ -414,12 +425,12 @@ func ensurePaymentProviderBepusdtRenameMigration() error {
 // 缺少显式 trade_type 时保持旧版实际行为，统一使用 usdt.trc20；未知 channel 类型保持原样，
 // 并把跳过的渠道 ID 写入 migration marker，避免静默改成错误的支付类型。
 func ensurePaymentChannelBepusdtConfigMigration() error {
-	if DB == nil {
+	if gormdb.DB == nil {
 		return errors.New("database is not initialized")
 	}
 
 	var marker settingsstore.SettingRecord
-	if err := DB.First(&marker, "key = ?", paymentChannelBepusdtConfigMigrationSettingKey).Error; err != nil {
+	if err := gormdb.DB.First(&marker, "key = ?", paymentChannelBepusdtConfigMigrationSettingKey).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
@@ -427,7 +438,7 @@ func ensurePaymentChannelBepusdtConfigMigration() error {
 		return nil
 	}
 
-	return DB.Transaction(func(tx *gorm.DB) error {
+	return gormdb.DB.Transaction(func(tx *gorm.DB) error {
 		var channels []paymentdomain.PaymentChannel
 		if err := tx.Where("provider_type = ?", "bepusdt").Find(&channels).Error; err != nil {
 			return err
@@ -492,12 +503,12 @@ func ensurePaymentChannelBepusdtConfigMigration() error {
 
 // ensureCategoryParentMigration 兼容历史单层分类数据，统一将空 parent_id 视为 0。
 func ensureCategoryParentMigration() error {
-	if DB == nil {
+	if gormdb.DB == nil {
 		return errors.New("database is not initialized")
 	}
 
 	var marker settingsstore.SettingRecord
-	if err := DB.First(&marker, "key = ?", categoryParentMigrationSettingKey).Error; err != nil {
+	if err := gormdb.DB.First(&marker, "key = ?", categoryParentMigrationSettingKey).Error; err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
 		}
@@ -505,10 +516,10 @@ func ensureCategoryParentMigration() error {
 		return nil
 	}
 
-	if !DB.Migrator().HasColumn(&categorydomain.Category{}, "parent_id") {
+	if !gormdb.DB.Migrator().HasColumn(&categorydomain.Category{}, "parent_id") {
 		return nil
 	}
-	if err := DB.Model(&categorydomain.Category{}).Where("parent_id IS NULL").Update("parent_id", 0).Error; err != nil {
+	if err := gormdb.DB.Model(&categorydomain.Category{}).Where("parent_id IS NULL").Update("parent_id", 0).Error; err != nil {
 		return err
 	}
 
@@ -519,5 +530,5 @@ func ensureCategoryParentMigration() error {
 			"migrated_at": time.Now().UTC().Format(time.RFC3339),
 		},
 	}
-	return DB.Save(&doneMarker).Error
+	return gormdb.DB.Save(&doneMarker).Error
 }

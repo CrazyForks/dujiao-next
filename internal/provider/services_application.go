@@ -8,7 +8,6 @@ import (
 	categoryapp "github.com/dujiao-next/internal/modules/catalog/category/application"
 
 	"github.com/dujiao-next/internal/logger"
-	"github.com/dujiao-next/internal/models"
 	cardsecretapp "github.com/dujiao-next/internal/modules/cardsecret/application"
 	cartapp "github.com/dujiao-next/internal/modules/cart/application"
 	contentapp "github.com/dujiao-next/internal/modules/content/application"
@@ -30,14 +29,15 @@ import (
 	sitemapcache "github.com/dujiao-next/internal/modules/sitemap/infrastructure/cacheadapter"
 	sitemapcatalog "github.com/dujiao-next/internal/modules/sitemap/infrastructure/catalogreader"
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	"github.com/dujiao-next/internal/platform/database/gormdb"
 	giftcardredeemgormuow "github.com/dujiao-next/internal/workflows/giftcardredeem/infrastructure/gormuow"
 )
 
 // initApplicationServices 装配内容、购物车、订单、履约和营销用例。
 func (c *Container) initApplicationServices() {
 	c.AdProxyService = adproxyapp.NewService(adproxygateway.New())
-	postStore := gormstore.NewPostStore(models.DB)
-	postCategoryStore := gormstore.NewPostCategoryStore(models.DB)
+	postStore := gormstore.NewPostStore(gormdb.DB)
+	postCategoryStore := gormstore.NewPostCategoryStore(gormdb.DB)
 	c.ContentPostService = contentapp.NewPostService(
 		postStore,
 		postStore,
@@ -135,7 +135,7 @@ func (c *Container) initApplicationServices() {
 	c.CouponAdminService = couponapp.NewAdminService(c.CouponRepo)
 	c.PromotionAdminService = promotionapp.NewAdminService(c.PromotionRepo)
 	c.ContentBannerService = contentapp.NewBannerService(
-		gormstore.NewBannerStore(models.DB),
+		gormstore.NewBannerStore(gormdb.DB),
 		contentapp.SystemClock{},
 	)
 }

@@ -14,11 +14,11 @@ import (
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	cardsecretapp "github.com/dujiao-next/internal/modules/cardsecret/application"
 	cardsecretcontract "github.com/dujiao-next/internal/modules/cardsecret/contract"
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	cardsecretgormstore "github.com/dujiao-next/internal/modules/cardsecret/infrastructure/gormstore"
+	"github.com/dujiao-next/internal/platform/database/gormdb"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -72,7 +72,7 @@ func setupCardSecretServiceTestDB(t *testing.T) *gorm.DB {
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
-	models.DB = db
+	gormdb.DB = db
 	return db
 }
 

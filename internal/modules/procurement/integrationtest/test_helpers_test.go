@@ -14,7 +14,6 @@ import (
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	"github.com/dujiao-next/internal/config"
-	"github.com/dujiao-next/internal/models"
 	mappinggormstore "github.com/dujiao-next/internal/modules/catalog/mapping/infrastructure/gormstore"
 	procurementapp "github.com/dujiao-next/internal/modules/procurement/application"
 	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
@@ -25,6 +24,7 @@ import (
 	procurementupstream "github.com/dujiao-next/internal/modules/procurement/infrastructure/upstreamgateway"
 	siteconnectionapp "github.com/dujiao-next/internal/modules/siteconnection/application"
 	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"
+	"github.com/dujiao-next/internal/platform/database/gormdb"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -65,7 +65,7 @@ func setupProcurementTestDB(t *testing.T) *gorm.DB {
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
-	models.DB = db
+	gormdb.DB = db
 	return db
 }
 

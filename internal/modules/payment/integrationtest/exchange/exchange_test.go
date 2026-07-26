@@ -25,7 +25,7 @@ import (
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	"github.com/dujiao-next/internal/platform/database/gormdb"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -58,7 +58,7 @@ func setupExchangeTest(t *testing.T) (*paymentapp.PaymentService, *gorm.DB) {
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
-	models.DB = db
+	gormdb.DB = db
 
 	orderRepo := ordergormstore.New(db)
 	productRepo := productgormstore.NewProductStore(db)
