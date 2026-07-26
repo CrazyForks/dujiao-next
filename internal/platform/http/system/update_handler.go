@@ -47,17 +47,34 @@ func (h *AdminHandler) GetUpdateStatus(c *gin.Context) {
 	response.Success(c, h.updates.Snapshot())
 }
 
+// rollbackRequest 回滚请求体。force 用于在迁移已开始或元数据不可信时确认风险后强制回滚。
+type rollbackRequest struct {
+	Force bool `json:"force"`
+}
+
 // RollbackUpdate 还原到升级前的二进制。
-// 仅在新版本启动失败时有意义 —— 新版本一旦跑通并完成迁移，退回旧二进制未必兼容。
+//
+// 只有「二进制已替换但新版本还没开始迁移，且升级元数据可信」这个窗口内回滚是安全的。
+// AutoMigrate 一旦开始，即使后来失败也可能已部分推进 schema，退回旧二进制未必兼容。
+// 这种情况下默认拒绝，返回 error.update_rollback_unsafe，让前端确认后带 force 重试。
+//
+// 注意：如果新版本压根起不来，这个 HTTP 接口本身也是不可用的。那种场景请在终端执行
+// `dujiao-next rollback`，它不依赖 HTTP 服务与数据库。
 // POST /api/v1/admin/system/update/rollback
 func (h *AdminHandler) RollbackUpdate(c *gin.Context) {
-	err := h.updates.Rollback()
+	var req rollbackRequest
+	// 允许空 body：老前端与 curl 调用不带 JSON 时按 force=false 处理
+	_ = c.ShouldBindJSON(&req)
+
+	err := h.updates.Rollback(req.Force)
 	switch {
 	case err == nil:
-		logOperation(c, "self_update_rolled_back")
+		logOperation(c, "self_update_rolled_back", "forced", req.Force)
 		response.Success(c, h.updates.Snapshot())
 	case errors.Is(err, selfupdate.ErrNoBackup):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.update_no_backup", err)
+	case errors.Is(err, selfupdate.ErrRollbackUnsafe):
+		ginutil.RespondError(c, response.CodeBadRequest, "error.update_rollback_unsafe", err)
 	case errors.Is(err, selfupdate.ErrUpdateInProgress):
 		ginutil.RespondError(c, response.CodeBadRequest, "error.update_in_progress", err)
 	default:

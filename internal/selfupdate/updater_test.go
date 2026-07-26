@@ -182,6 +182,59 @@ func TestExtractBinaryIgnoresPathTraversal(t *testing.T) {
 	}
 }
 
+// TestExtractBinaryRejectsOversizedEntry 归档的 sha256 校验发生在解压之前，
+// 一个校验通过的合法归档照样可以解出超大条目。必须在写盘前按 header 声明的尺寸拦下来，
+// 否则截断出来的二进制会一路通过 chmod 和 swap 上线。
+func TestExtractBinaryRejectsOversizedEntry(t *testing.T) {
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "release.tar.gz")
+	// 只声明尺寸不写数据，避免测试真的产生 200MB 文件
+	writeTarGzRaw(t, archive, []rawTarEntry{
+		{name: binaryName, declaredSize: maxBinarySize + 1},
+	})
+
+	dest := filepath.Join(dir, "extracted")
+	err := extractBinary(archive, dest)
+	if err == nil {
+		t.Fatal("expected an error for an oversized binary entry")
+	}
+	if !strings.Contains(err.Error(), "invalid size") {
+		t.Errorf("error = %v, want it to mention the invalid size", err)
+	}
+	if _, statErr := os.Stat(dest); !os.IsNotExist(statErr) {
+		t.Error("no partial file may be left behind for swapping")
+	}
+}
+
+// TestExtractBinaryRejectsTruncatedEntry header 声称有 N 字节但归档实际只给了 M 字节时，
+// 旧实现的 io.Copy 会「成功」返回并留下半截二进制。这里必须报错。
+func TestExtractBinaryRejectsTruncatedEntry(t *testing.T) {
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "release.tar.gz")
+	writeTarGzRaw(t, archive, []rawTarEntry{
+		{name: binaryName, declaredSize: 4096, content: "only-a-few-bytes"},
+	})
+
+	dest := filepath.Join(dir, "extracted")
+	if err := extractBinary(archive, dest); err == nil {
+		t.Fatal("expected an error for a truncated binary entry")
+	}
+	if _, statErr := os.Stat(dest); !os.IsNotExist(statErr) {
+		t.Error("no partial file may be left behind for swapping")
+	}
+}
+
+// TestExtractBinaryRejectsEmptyEntry 空条目同样不能通过——换上去就是个跑不起来的 0 字节文件
+func TestExtractBinaryRejectsEmptyEntry(t *testing.T) {
+	dir := t.TempDir()
+	archive := filepath.Join(dir, "release.tar.gz")
+	writeTarGz(t, archive, map[string]string{binaryName: ""})
+
+	if err := extractBinary(archive, filepath.Join(dir, "extracted")); err == nil {
+		t.Fatal("expected an error for an empty binary entry")
+	}
+}
+
 func TestSwapBinaryAndRollback(t *testing.T) {
 	dir := t.TempDir()
 	exec := filepath.Join(dir, binaryName)
@@ -241,6 +294,52 @@ func TestPlatformAssetSuffix(t *testing.T) {
 	}
 	if strings.Contains(suffix, "amd64") {
 		t.Errorf("suffix %q should map amd64 to x86_64", suffix)
+	}
+}
+
+// rawTarEntry 用于构造畸形归档：declaredSize 可以与 content 的实际长度不符。
+type rawTarEntry struct {
+	name string
+	// declaredSize tar header 里声明的字节数，为 0 时取 content 的实际长度
+	declaredSize int64
+	content      string
+}
+
+// writeTarGzRaw 写出一个 header 声明与实际数据可能不一致的归档。
+// tar.Writer 在 Close 时会因为「少写了 N 字节」报错，这正是要构造的畸形形态，忽略即可 ——
+// header 本身在 WriteHeader 时就已经进了 gzip 流，读取端能拿到。
+func writeTarGzRaw(t *testing.T, path string, entries []rawTarEntry) {
+	t.Helper()
+
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gz := gzip.NewWriter(f)
+	tw := tar.NewWriter(gz)
+
+	for _, e := range entries {
+		size := e.declaredSize
+		if size == 0 {
+			size = int64(len(e.content))
+		}
+		if err := tw.WriteHeader(&tar.Header{
+			Name:     e.name,
+			Mode:     0o755,
+			Size:     size,
+			Typeflag: tar.TypeReg,
+		}); err != nil {
+			t.Fatal(err)
+		}
+		_, _ = tw.Write([]byte(e.content))
+	}
+
+	_ = tw.Close()
+	if err := gz.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
 

@@ -57,6 +57,7 @@ import { useAdminAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import { adminAPI } from '@/api/admin'
 import { applySiteIcon } from '@/utils/favicon'
+import { adminUrl } from '@/utils/adminBase'
 
 interface NavGroupItem {
   label: string
@@ -689,7 +690,9 @@ const handleResize = () => {
 
 const handleLogout = () => {
   authStore.logout()
-  window.location.href = '/login'
+  // 必须走 adminUrl()：后台可被挂到运行时任意 web.admin_path 前缀下，
+  // 硬编码 '/login' 会跳出后台落到用户前台 SPA 的兜底路由上。
+  window.location.href = adminUrl('/login')
 }
 
 onMounted(() => {

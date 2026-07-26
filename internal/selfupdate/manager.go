@@ -3,6 +3,7 @@ package selfupdate
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -59,6 +60,10 @@ type Manager struct {
 	updater *Updater
 	// now 便于测试注入时间
 	now func() time.Time
+	// detect / fetchLatest 便于把环境与网络边界注入测试，尤其用于复现
+	// 「HTTP 正在检查更新时 CLI 回滚」这种跨进程时序。
+	detect      func() Capability
+	fetchLatest func(context.Context) (*version.Release, error)
 }
 
 // NewManager 创建升级任务管理器
@@ -67,6 +72,10 @@ func NewManager() *Manager {
 		state:   State{Status: StatusIdle, Stage: StageIdle},
 		updater: NewUpdater(),
 		now:     time.Now,
+		detect:  Detect,
+		fetchLatest: func(ctx context.Context) (*version.Release, error) {
+			return version.FetchLatestRelease(ctx)
+		},
 	}
 }
 
@@ -80,26 +89,57 @@ func (m *Manager) Snapshot() State {
 // Start 校验环境后异步执行升级。
 // 返回 nil 表示任务已成功启动，不代表升级完成——完成情况需轮询 Snapshot。
 func (m *Manager) Start(ctx context.Context) error {
-	c := Detect()
+	c := m.detect()
 	if !c.CanUpdate {
 		return ErrNotSupported
 	}
 
-	release, err := version.FetchLatestRelease(ctx)
-	if err != nil {
+	// 必须在拉 release 之前就占坑。之前是拉完才置 running，中间那段网络等待里
+	// running 仍是 false，一个并发的回滚检查会顺利通过，然后两条流程同时对
+	// exec / .backup / .rollback-tmp 做 rename。
+	if err := m.acquire(); err != nil {
 		return err
 	}
-	hasUpdate, _ := version.IsNewerVersion(release.TagName, version.Version)
+
+	execPath := c.ExecPath
+	if execPath == "" {
+		var err error
+		execPath, err = ExecutablePath()
+		if err != nil {
+			m.releaseBusy()
+			return err
+		}
+	}
+
+	// 跨进程锁也必须在拉 release 之前取得。Manager.running 只能拦住当前
+	// HTTP 进程里的另一个请求，拦不住终端里单独启动的 `dujiao-next rollback`。
+	// 锁一直交给异步 Apply 持有，覆盖检查、下载、替换和元数据落盘的完整事务。
+	unlock, err := acquireBinaryLock(execPath)
+	if err != nil {
+		m.releaseBusy()
+		return err
+	}
+
+	release, err := m.fetchLatest(ctx)
+	if err != nil {
+		unlock()
+		m.releaseBusy()
+		return err
+	}
+	hasUpdate, compareErr := version.IsNewerVersion(release.TagName, version.Version)
+	if compareErr != nil {
+		unlock()
+		m.releaseBusy()
+		return fmt.Errorf("compare release version %q with current %q: %w",
+			release.TagName, version.Version, compareErr)
+	}
 	if !hasUpdate {
+		unlock()
+		m.releaseBusy()
 		return ErrNoUpdateAvailable
 	}
 
 	m.mu.Lock()
-	if m.running {
-		m.mu.Unlock()
-		return ErrUpdateInProgress
-	}
-	m.running = true
 	startedAt := m.now()
 	m.state = State{
 		Status:        StatusRunning,
@@ -111,15 +151,40 @@ func (m *Manager) Start(ctx context.Context) error {
 
 	// 不继承请求 ctx：HTTP 响应一返回请求就被取消，会把下载一并掐掉。
 	// 用独立 ctx 并以 downloadTimeout 兜底。
-	go m.run(release)
+	go m.run(release, execPath, unlock)
 	return nil
 }
 
-func (m *Manager) run(release *version.Release) {
+// acquire 取得「正在改动二进制」的独占权。升级与回滚共用同一把锁 ——
+// 它们操作的是同一组文件（exec、.backup、.rollback-tmp），任何交错都可能
+// 把最后一份可恢复的备份弄丢。
+func (m *Manager) acquire() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.running {
+		return ErrUpdateInProgress
+	}
+	m.running = true
+	return nil
+}
+
+// releaseBusy 释放独占权
+func (m *Manager) releaseBusy() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.running = false
+}
+
+func (m *Manager) run(release *version.Release, execPath string, unlock func()) {
 	ctx, cancel := context.WithTimeout(context.Background(), downloadTimeout)
 	defer cancel()
 
-	err := m.updater.Apply(ctx, release, m.report)
+	// 无论 Apply 成功还是失败，都在修改状态前先释放跨进程锁；调用方随后
+	// 发起回滚时看到的是已经落定的二进制与元数据，而不是半完成现场。
+	err := func() error {
+		defer unlock()
+		return m.updater.applyLocked(ctx, release, execPath, m.report)
+	}()
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -145,15 +210,18 @@ func (m *Manager) report(stage Stage, percent int) {
 }
 
 // Rollback 还原上一版本二进制。升级任务执行期间拒绝回滚，避免与替换过程交错。
-func (m *Manager) Rollback() error {
-	m.mu.Lock()
-	if m.running {
-		m.mu.Unlock()
-		return ErrUpdateInProgress
+//
+// force 为 false 时，若数据库迁移已经开始、或升级元数据不可信，会返回
+// ErrRollbackUnsafe，由前端弹出风险确认后再带 force 重试。
+func (m *Manager) Rollback(force bool) error {
+	// 整个回滚期间都持有独占权，而不是「检查一下就放开」——
+	// 后者挡不住两个并发回滚，也挡不住一个刚起步的升级。
+	if err := m.acquire(); err != nil {
+		return err
 	}
-	m.mu.Unlock()
+	defer m.releaseBusy()
 
-	if err := m.updater.Rollback(); err != nil {
+	if err := m.updater.Rollback(force); err != nil {
 		return err
 	}
 

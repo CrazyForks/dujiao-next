@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -82,7 +82,10 @@ func CheckLatestRelease(ctx context.Context) (*CheckResult, error) {
 
 	current := strings.TrimSpace(Version)
 	latest := strings.TrimSpace(release.TagName)
-	hasUpdate, _ := IsNewerVersion(latest, current)
+	hasUpdate, compareErr := IsNewerVersion(latest, current)
+	if compareErr != nil {
+		return nil, fmt.Errorf("compare latest version %q with current %q: %w", latest, current, compareErr)
+	}
 
 	result := &CheckResult{
 		CurrentVersion: current,
@@ -155,56 +158,191 @@ func FetchLatestRelease(ctx context.Context) (*Release, error) {
 	return release, nil
 }
 
+// semver 一个解析后的版本号。prerelease 为空表示正式版。
+type semver struct {
+	// core 也用十进制字符串保存：SemVer 对数字位数没有上限，major/minor/patch
+	// 与预发布数字标识符一样不能依赖本机 int 宽度。
+	core [3]string
+	// prerelease 预发布标识按 "." 拆分后的各段，例如 "rc.1" -> ["rc", "1"]
+	prerelease []string
+}
+
 // IsNewerVersion 判断 latest 是否比 current 更新。返回 (true, nil) 表示需要更新；
-// 当任一版本号无法解析时，回退到字符串不相等比较，并返回非空 error 提示调用方。
+// 当任一版本号无法解析时 fail-closed：返回 false 和错误。这个结果会直接决定
+// 是否允许自动替换二进制，不能把“字符串不同”猜成“版本更高”。
 func IsNewerVersion(latest, current string) (bool, error) {
 	l, lErr := parseSemver(latest)
 	c, cErr := parseSemver(current)
 	if lErr != nil || cErr != nil {
-		// 版本号格式无法识别时，仅在两者非空且不相等时认为有更新
-		if latest == "" {
-			return false, errors.New("latest version is empty")
-		}
-		return latest != "" && current != "" && latest != current, errors.Join(lErr, cErr)
+		return false, errors.Join(lErr, cErr)
 	}
 
-	for i := range 3 {
-		if l[i] > c[i] {
-			return true, nil
-		}
-		if l[i] < c[i] {
-			return false, nil
-		}
-	}
-	return false, nil
+	return compareSemver(l, c) > 0, nil
 }
 
-// parseSemver 将 "v1.2.3" / "1.2.3" / "v1.2.3-rc.1" 等格式解析为 [major, minor, patch]
-// 仅取主.次.修订三段，忽略预发布和构建元数据
-func parseSemver(v string) ([3]int, error) {
-	var out [3]int
+// compareSemver 按 SemVer 2.0.0 的优先级规则比较，返回 -1 / 0 / 1。
+func compareSemver(a, b semver) int {
+	for i := range 3 {
+		if c := compareNumericIdentifiers(a.core[i], b.core[i]); c != 0 {
+			return c
+		}
+	}
+	return comparePrerelease(a.prerelease, b.prerelease)
+}
+
+// comparePrerelease 比较预发布段的优先级（SemVer 2.0.0 §11.3、§11.4）。
+//
+// 核心规则：有预发布段的版本优先级**低于**同样核心版本号的正式版。
+// 这正是之前直接丢弃预发布信息会出问题的地方 —— v1.2.3-rc.1 和 v1.2.3 都被解析成
+// [1,2,3]，于是 RC 用户永远收不到同版本号正式版的升级提示。
+//
+// 段内比较：纯数字段按数值比，其余按 ASCII 字典序比，数字段优先级低于非数字段；
+// 前面各段都相等时，段数多的一方优先级更高（rc.1.1 > rc.1）。
+func comparePrerelease(a, b []string) int {
+	if len(a) == 0 && len(b) == 0 {
+		return 0
+	}
+	// 正式版 > 预发布版
+	if len(a) == 0 {
+		return 1
+	}
+	if len(b) == 0 {
+		return -1
+	}
+
+	for i := 0; i < len(a) && i < len(b); i++ {
+		aNum := isNumericIdentifier(a[i])
+		bNum := isNumericIdentifier(b[i])
+		switch {
+		case aNum && bNum:
+			if c := compareNumericIdentifiers(a[i], b[i]); c != 0 {
+				return c
+			}
+		case aNum != bNum:
+			// 数字段优先级低于非数字段
+			if aNum {
+				return -1
+			}
+			return 1
+		default:
+			if c := strings.Compare(a[i], b[i]); c != 0 {
+				return c
+			}
+		}
+	}
+
+	// 前缀相同时段数多的更大：rc.1.1 > rc.1
+	switch {
+	case len(a) > len(b):
+		return 1
+	case len(a) < len(b):
+		return -1
+	default:
+		return 0
+	}
+}
+
+// isNumericIdentifier 判断预发布段是否为纯数字标识符
+func isNumericIdentifier(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// compareNumericIdentifiers 按数值比较两个纯数字标识符，返回 -1 / 0 / 1。
+//
+// 不走 strconv.Atoi：SemVer 对数字标识符的位数没有上限，超出 int 范围时 Atoi 会报错，
+// 于是两个合法的超大数字会被降级成字符串比较，给出错误的顺序。
+// 去掉前导零之后先比长度再比字典序，对任意长度都成立。
+func compareNumericIdentifiers(a, b string) int {
+	a = strings.TrimLeft(a, "0")
+	b = strings.TrimLeft(b, "0")
+	if len(a) != len(b) {
+		if len(a) > len(b) {
+			return 1
+		}
+		return -1
+	}
+	return strings.Compare(a, b)
+}
+
+// semverIdentifier 是预发布和构建元数据标识符共同允许的字符集：
+// ASCII 字母、数字与连字符。
+var semverIdentifier = regexp.MustCompile(`^[0-9A-Za-z-]+$`)
+
+// parseSemver 将 "v1.2.3" / "1.2.3" / "v1.2.3-rc.1" / "v1.2.3-rc.1+build.5" 等格式
+// 解析为核心三段加预发布段。构建元数据（+ 之后）按 SemVer 规定不参与优先级比较，直接丢弃。
+//
+// 严格要求核心版本恰好是 X.Y.Z 三段：宽松接受 "1.2" 或 "1.2.3.4" 会把一个明显畸形的
+// 标签悄悄解析成某个版本号，然后据此判断要不要自动替换二进制 —— 这种地方宁可报错，
+// 让调用方拒绝自动升级，也不要猜。
+func parseSemver(v string) (semver, error) {
+	var out semver
 	s := strings.TrimSpace(v)
 	if s == "" {
 		return out, errors.New("empty version")
 	}
 	s = strings.TrimPrefix(s, "v")
 	s = strings.TrimPrefix(s, "V")
-	if i := strings.IndexAny(s, "-+"); i >= 0 {
+
+	// 构建元数据不参与优先级比较，但仍必须验证格式。直接把 "+" 后内容
+	// 丢掉会把 "1.2.3+"、"1.2.3+bad_ id" 这类畸形发布标签当成合法版本。
+	if i := strings.IndexByte(s, '+'); i >= 0 {
+		build := s[i+1:]
 		s = s[:i]
+		if build == "" {
+			return out, fmt.Errorf("empty build metadata in %s", v)
+		}
+		for _, id := range strings.Split(build, ".") {
+			if id == "" {
+				return out, fmt.Errorf("empty build metadata identifier in %s", v)
+			}
+			if !semverIdentifier.MatchString(id) {
+				return out, fmt.Errorf("invalid build metadata identifier %q in %s", id, v)
+			}
+		}
 	}
+	if i := strings.IndexByte(s, '-'); i >= 0 {
+		pre := s[i+1:]
+		s = s[:i]
+		// "1.2.3-" 不是正式版，而是一个畸形标签：SemVer 要求预发布段非空
+		if pre == "" {
+			return out, fmt.Errorf("empty prerelease in %s", v)
+		}
+		out.prerelease = strings.Split(pre, ".")
+		for _, id := range out.prerelease {
+			if id == "" {
+				return out, fmt.Errorf("empty prerelease identifier in %s", v)
+			}
+			if !semverIdentifier.MatchString(id) {
+				return out, fmt.Errorf("invalid prerelease identifier %q in %s", id, v)
+			}
+			// SemVer 2.0.0 §9：纯数字预发布标识符不能有前导零。
+			if isNumericIdentifier(id) && len(id) > 1 && id[0] == '0' {
+				return out, fmt.Errorf("numeric prerelease identifier %q has leading zeros in %s", id, v)
+			}
+		}
+	}
+
 	parts := strings.Split(s, ".")
-	if len(parts) == 0 {
-		return out, fmt.Errorf("invalid version: %s", v)
+	if len(parts) != 3 {
+		return out, fmt.Errorf("core version must have exactly 3 segments, got %d in %s", len(parts), v)
 	}
-	for i := 0; i < 3 && i < len(parts); i++ {
-		n, err := strconv.Atoi(strings.TrimSpace(parts[i]))
-		if err != nil {
-			return out, fmt.Errorf("invalid version segment %q in %s", parts[i], v)
+	for i, part := range parts {
+		if !isNumericIdentifier(part) {
+			return out, fmt.Errorf("invalid version segment %q in %s", part, v)
 		}
-		if n < 0 {
-			return out, fmt.Errorf("negative version segment in %s", v)
+		// SemVer 2.0.0 §2：major/minor/patch 不能有前导零。
+		if len(part) > 1 && part[0] == '0' {
+			return out, fmt.Errorf("version segment %q has leading zeros in %s", part, v)
 		}
-		out[i] = n
+		out.core[i] = part
 	}
 	return out, nil
 }

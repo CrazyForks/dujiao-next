@@ -221,6 +221,8 @@ func SetupRouter(cfg *config.Config, c *container.Container) *gin.Engine {
 
 	// 嵌入式前端资源（仅在 -tags fullstack 构建时生效）
 	if web.Enabled() {
+		// cmd/server 已在数据库初始化之前校验过一次；这里保留是为了兜住其它调用方
+		// （测试、未来的其它入口）——重复校验没有代价，漏校验会让 RegisterAdmin panic。
 		if err := web.ValidateAdminPath(cfg.Web.AdminPath); err != nil {
 			log.Sugar().Fatalf("web.admin_path 配置错误: %v", err)
 		}

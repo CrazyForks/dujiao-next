@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -25,11 +26,28 @@ func isReservedPath(p string) bool {
 	return false
 }
 
+// adminPathSegment 后台路径每一段允许的字符集。
+//
+// 之所以用白名单而不是「禁掉几个危险字符」：这个值会被直接拼进 Gin 的路由模式
+// （prefix + "/*filepath"），而 Gin 把 ':' 和 '*' 当作动态参数与 catch-all。
+//   - "/:tenant"     → 注册成 /:tenant/*filepath，会把任意一级用户站路径吞成后台 SPA
+//   - "/*admin"      → 违反 Gin 的 catch-all 规则，注册时直接 panic
+//   - "/admin/:id"   → 本该是一个字面秘密路径，结果变成动态参数路由
+//
+// 字符集取 RFC 3986 的 unreserved（字母、数字、'-'、'.'、'_'、'~'）再加 '@'：
+// 这些字符在 URL 路径里无需编码、语义稳定，且都不是 Gin 的路由元字符。
+// 之所以不缩到更窄的 [A-Za-z0-9_-]，是因为 '.' '~' '@' 在旧版本里是合法的，
+// 收得过紧会让 /ops.admin、/admin~private、/console@company 这类存量配置升级后直接起不来。
+//
+// 同时挡掉了空白、控制字符、反斜杠和百分号编码带来的歧义。
+var adminPathSegment = regexp.MustCompile(`^[A-Za-z0-9._~@-]+$`)
+
 // ValidateAdminPath 校验 web.admin_path 配置项的合法性。
 // 规则：
 //   - 必须以 "/" 开头
 //   - 不能为 "/"（会与 user SPA 兜底冲突）
 //   - 不能以 "/" 结尾
+//   - 每一段只能由字母、数字、'-'、'_' 组成（不允许 Gin 的 ':'、'*' 等路由元字符）
 //   - 不能等于、不能是、也不能拥有 "/api"、"/uploads"、"/health" 任一作为前缀
 func ValidateAdminPath(p string) error {
 	if !strings.HasPrefix(p, "/") {
@@ -41,6 +59,20 @@ func ValidateAdminPath(p string) error {
 	if strings.HasSuffix(p, "/") {
 		return fmt.Errorf("web.admin_path cannot end with '/', got %q", p)
 	}
+
+	// 逐段校验。TrimPrefix 后按 "/" 切分，连续斜杠会切出空段并在这里被拒。
+	for _, seg := range strings.Split(strings.TrimPrefix(p, "/"), "/") {
+		if !adminPathSegment.MatchString(seg) {
+			return fmt.Errorf(
+				"web.admin_path segment %q is invalid in %q: each segment must be a literal path made of letters, digits, '-', '.', '_', '~' or '@'",
+				seg, p)
+		}
+		// "." 与 ".." 单独成段会被路径规范化吃掉，导致实际挂载位置与配置不符
+		if seg == "." || seg == ".." {
+			return fmt.Errorf("web.admin_path cannot contain %q as a path segment, got %q", seg, p)
+		}
+	}
+
 	for _, r := range reservedPaths {
 		if p == r || strings.HasPrefix(p, r+"/") || strings.HasPrefix(r, p+"/") {
 			return fmt.Errorf("web.admin_path %q conflicts with reserved path %q", p, r)

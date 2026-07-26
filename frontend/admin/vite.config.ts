@@ -1,4 +1,6 @@
-import { defineConfig } from 'vite'
+// 从 vitest/config 引入而不是 vite：只有它的 defineConfig 认识下面的 test 字段，
+// 用 vite 的那个会让 vue-tsc 报 TS2769
+import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
@@ -78,5 +80,10 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
+  },
+  // DOMPurify 只能在有 DOM 的环境里跑，因此 sanitizer 的单测需要 jsdom
+  test: {
+    environment: 'jsdom',
+    include: ['src/**/*.test.ts'],
   },
 })

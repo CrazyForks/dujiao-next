@@ -53,6 +53,31 @@ jobs:
       - name: Build server
         run: go build ./cmd/server
 
+  # 发布配置只在打 tag 时才会被 GoReleaser 读取，普通 CI 覆盖不到。
+  # 而配置解析失败是在构建开始前就中止的，等到 tag 那一刻才发现代价最高，
+  # 所以这里用与 release.yml 完全相同的 distribution/version 提前验一次。
+  release-config:
+    name: Verify release config
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Check .goreleaser.yaml
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: latest
+          args: check
+
   fullstack:
     name: Verify fullstack build
     runs-on: ubuntu-latest
@@ -78,6 +103,10 @@ jobs:
         run: |
           (cd frontend/admin && pnpm install --frozen-lockfile)
           (cd frontend/user  && pnpm install --frozen-lockfile)
+
+      # release notes 的 sanitizer 是后台唯一一处 v-html，攻击向量必须每次 CI 都跑一遍
+      - name: Run admin frontend tests
+        run: (cd frontend/admin && pnpm run test)
 
       # 两个 build 脚本都以 `vue-tsc -b` 开头，因此这一步同时覆盖了类型检查
       - name: Build frontends

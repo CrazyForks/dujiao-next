@@ -5,19 +5,20 @@ project_name: dujiao-next
 # 前端在这里构建并拷进 internal/web/dist/，随后由 -tags=fullstack 的 go:embed 打进二进制。
 # 放在 before hooks 而不是 CI step 里，是为了让本地 `goreleaser build --snapshot`
 # 与 GitHub Actions 走完全相同的路径。执行前需要有 pnpm（见 .github/workflows/release.yml）。
+#
+# 注意：hooks 必须是纯字符串。带 cmd/dir/env 的结构化 hook 是 GoReleaser Pro 特性，
+# OSS 版会在解析阶段就报 "cannot unmarshal !!map into string" 而整个发布中止。
+# 因此换目录一律用 `sh -c 'cd X && ...'`，而不是 dir 字段。
+# 另外 hooks 不经过 shell，`cd X && y` 这种写法必须显式包一层 sh -c 才会生效。
 before:
   hooks:
     - go mod tidy
-    - cmd: pnpm install --frozen-lockfile
-      dir: frontend/admin
-    - cmd: pnpm install --frozen-lockfile
-      dir: frontend/user
+    - sh -c 'cd frontend/admin && pnpm install --frozen-lockfile'
+    - sh -c 'cd frontend/user  && pnpm install --frozen-lockfile'
     # admin 用 fullstack 模式构建：base 为 './' 且注入 __DJ_ADMIN_BASE__ 占位符，
     # 后端启动时按 web.admin_path 替换，使产物可挂载到任意自定义前缀。
-    - cmd: pnpm run build:fullstack
-      dir: frontend/admin
-    - cmd: pnpm run build
-      dir: frontend/user
+    - sh -c 'cd frontend/admin && pnpm run build:fullstack'
+    - sh -c 'cd frontend/user  && pnpm run build'
     - sh -c 'rm -rf internal/web/dist && mkdir -p internal/web/dist'
     - sh -c 'cp -r frontend/admin/dist internal/web/dist/admin'
     - sh -c 'cp -r frontend/user/dist  internal/web/dist/user'
@@ -93,6 +94,17 @@ changelog:
       - 'Merge branch'
 
 release:
+  # 过渡版本必须把警告直接放在 GitHub Release body 首部：旧版后台的一键升级
+  # 只会展示 Release notes，不会主动打开新版在线文档。等 v1.3.1 及更早版本
+  # 已完成迁移后，可以在后续版本删除这个一次性 header。
+  header: |
+    > [!WARNING]
+    > **二进制部署从 v1.3.1 或更早版本升级：**如果 systemd unit 仍是 `Restart=on-failure`，请先改成 `Restart=always` 并执行 `sudo systemctl daemon-reload`，再使用后台一键升级；否则本次升级后需要手动执行 `sudo systemctl start <你的 unit 名>`。
+    >
+    > **二進制部署從 v1.3.1 或更早版本升級：**如果 systemd unit 仍是 `Restart=on-failure`，請先改成 `Restart=always` 並執行 `sudo systemctl daemon-reload`，再使用後臺一鍵升級；否則本次升級後需要手動執行 `sudo systemctl start <你的 unit 名>`。
+    >
+    > **Binary deployments upgrading from v1.3.1 or earlier:** if the systemd unit still uses `Restart=on-failure`, change it to `Restart=always` and run `sudo systemctl daemon-reload` before using one-click upgrade. Otherwise, you must run `sudo systemctl start <your-unit>` manually after this upgrade.
+
   footer: >-
     ---
 

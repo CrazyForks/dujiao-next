@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { marked } from 'marked'
 import {
   AlertCircle,
   CheckCircle2,
@@ -15,11 +14,9 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { adminAPI } from '@/api/admin'
+import { renderReleaseNotes } from '@/utils/releaseNotes'
 import { confirmAction } from '@/utils/confirm'
 import { notifyError, notifySuccess } from '@/utils/notify'
-
-// release notes 是 GitHub 风格 markdown，换行需要按原样保留
-marked.setOptions({ gfm: true, breaks: true })
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ 'update:open': [value: boolean] }>()
@@ -45,17 +42,35 @@ type BlockReason =
   | 'dir_not_writable'
   | 'exec_not_found'
 
+interface BackupInfo {
+  previous_version: string
+  target_version: string
+  swapped_at: string
+  // 迁移开始后即视为不安全；即使启动失败，schema 也可能已经部分改变
+  migration_started: boolean
+  migration_started_at?: string
+  // 完整启动状态用于展示与诊断，安全判定仍以后端 rollback_unsafe 为准
+  new_version_started: boolean
+  new_version_started_at?: string
+}
+
 interface UpdateCapability {
   can_update: boolean
   can_restart: boolean
   block_reason?: BlockReason
   deployment: 'binary' | 'container'
   supervisor: 'systemd' | 'none'
+  // systemd unit 的 Restart= 取值，决定 can_restart
+  restart_policy?: string
   build_type: string
   exec_path?: string
   platform: string
   asset_name?: string
   has_backup: boolean
+  backup?: BackupInfo
+  // 回滚是否需要确认风险后强制执行。迁移已开始、或元数据不可信时都为 true。
+  // 由后端统一判定，前端不要自己从 backup 推导 —— 元数据缺失时 backup 本身就是空的。
+  rollback_unsafe: boolean
 }
 
 type UpdateStatus = 'idle' | 'running' | 'succeeded' | 'failed'
@@ -94,7 +109,7 @@ const dockerUpgradeCommand = 'docker compose pull && docker compose up -d'
 const renderedReleaseNotes = computed(() => {
   const raw = checkResult.value?.release_notes
   if (!raw) return ''
-  return marked.parse(raw, { async: false }) as string
+  return renderReleaseNotes(raw)
 })
 
 const isUpdating = computed(() => updateState.value?.status === 'running')
@@ -287,10 +302,25 @@ function waitForBackend() {
   }, 2000)
 }
 
+// 迁移已经开始（即使服务后来没启动成功），或者元数据不可信、压根判断不了 ——
+// 两种情况回滚风险都远高于「刚替换完还没重启」，确认文案要换成更重的版本并带 force。
+const rollbackIsRisky = computed(() => capability.value?.rollback_unsafe === true)
+// 元数据不可信时连「会退到哪个版本」都不知道，提示要说清楚这一点而不是编一个版本号
+const rollbackVersionUnknown = computed(() => !capability.value?.backup?.previous_version)
+
 async function handleRollback() {
+  const risky = rollbackIsRisky.value
+  const backup = capability.value?.backup
   const ok = await confirmAction({
     title: t('admin.systemUpdate.rollbackConfirmTitle'),
-    description: t('admin.systemUpdate.rollbackConfirmDescription'),
+    description: !risky
+      ? t('admin.systemUpdate.rollbackConfirmDescription')
+      : rollbackVersionUnknown.value
+        ? t('admin.systemUpdate.rollbackUnknownDescription')
+        : t('admin.systemUpdate.rollbackRiskyDescription', {
+            previous: backup?.previous_version || t('admin.updateCheck.unknownVersion'),
+            current: backup?.target_version || t('admin.updateCheck.unknownVersion'),
+          }),
     confirmText: t('admin.systemUpdate.rollback'),
     variant: 'destructive',
   })
@@ -298,7 +328,7 @@ async function handleRollback() {
 
   rollingBack.value = true
   try {
-    const res = await adminAPI.rollbackSystemUpdate()
+    const res = await adminAPI.rollbackSystemUpdate({ force: risky })
     updateState.value = (res.data?.data as UpdateState) || null
     notifySuccess(t('admin.systemUpdate.rollbackSucceeded'))
     void loadCapability()

@@ -20,9 +20,12 @@ import (
 )
 
 const (
-	// maxArchiveSize 归档下载上限。内嵌两个 SPA 后二进制约 40MB，
-	// 100MB 足够覆盖可预见的增长，同时挡住异常大响应耗尽磁盘。
+	// maxArchiveSize 归档下载上限。内嵌两个 SPA 后二进制实测约 76MB（v1.3.1 之后），
+	// tar.gz 压缩后远小于它，100MB 仍有充足余量，同时挡住异常大响应耗尽磁盘。
 	maxArchiveSize = 100 << 20
+	// maxBinarySize 解压后单个二进制的上限。归档经过压缩会明显小于二进制本身，
+	// 所以这里必须比 maxArchiveSize 宽松，否则正常增长会先撞上解压上限。
+	maxBinarySize = 200 << 20
 	// maxChecksumSize checksums.txt 只有几行，给足冗余即可
 	maxChecksumSize = 1 << 20
 	// binaryName 归档内可执行文件名，与 .goreleaser.yaml 的 builds.binary 一致
@@ -41,6 +44,8 @@ var (
 	ErrChecksumMismatch = errors.New("checksum mismatch")
 	// ErrNoBackup 没有可回滚的备份
 	ErrNoBackup = errors.New("no backup available")
+	// ErrRollbackUnsafe 数据库迁移已开始、或元数据不可信，回滚需显式确认
+	ErrRollbackUnsafe = errors.New("database migration may have started; rollback may be incompatible with the current database")
 	// ErrNotSupported 当前部署形态不支持一键升级
 	ErrNotSupported = errors.New("self-update not supported in current environment")
 )
@@ -81,6 +86,29 @@ func NewUpdater() *Updater {
 //
 // 成功返回后二进制已就位，但进程仍是旧版本，需由调用方决定何时重启。
 func (u *Updater) Apply(ctx context.Context, release *version.Release, progress func(stage Stage, percent int)) error {
+	execPath, err := ExecutablePath()
+	if err != nil {
+		return err
+	}
+
+	// 覆盖整个下载 + 替换过程，而不只是 swap 那一瞬：下载期间跑一次 CLI 回滚，
+	// 会把 .backup 消耗掉，随后 swapBinary 又生成一个指向新版本的 .backup，
+	// 结果是两边都以为自己成功了，可恢复的旧二进制却已经没了。
+	unlock, err := acquireBinaryLock(execPath)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+
+	return u.applyLocked(ctx, release, execPath, progress)
+}
+
+// applyLocked 执行实际升级，调用方必须已经持有 execPath 对应的跨进程锁。
+//
+// Manager.Start 在请求 GitHub release 之前取得锁并把所有权传到这里，从而覆盖
+// 「版本检查 → 下载 → 校验 → 替换 → 元数据落盘」完整事务；Apply 这个公开入口
+// 则在上面自行取得同一把锁后再调用。
+func (u *Updater) applyLocked(ctx context.Context, release *version.Release, execPath string, progress func(stage Stage, percent int)) error {
 	report := func(stage Stage, percent int) {
 		if progress != nil {
 			progress(stage, percent)
@@ -92,11 +120,6 @@ func (u *Updater) Apply(ctx context.Context, release *version.Release, progress 
 	}
 
 	archiveURL, checksumURL, assetName, err := selectAssets(release.Assets)
-	if err != nil {
-		return err
-	}
-
-	execPath, err := ExecutablePath()
 	if err != nil {
 		return err
 	}
@@ -142,35 +165,84 @@ func (u *Updater) Apply(ctx context.Context, release *version.Release, progress 
 		return err
 	}
 
+	// 元数据写失败不让整个升级失败：二进制已经就位，回滚也只依赖 .backup 文件本身。
+	// 丢掉的仅仅是「回滚会退到哪个版本、退回去安不安全」这部分提示信息。
+	_ = writeBackupInfo(execPath, BackupInfo{
+		PreviousVersion: version.Version,
+		TargetVersion:   release.TagName,
+		SwappedAt:       time.Now(),
+	})
+
 	return nil
 }
 
 // Rollback 用备份还原上一版本二进制。
-// 只在「新版本启动失败」这个窗口内有意义：新版本一旦跑起来并完成 AutoMigrate，
-// 数据库 schema 已经前进，退回旧二进制未必能正常工作。
-func (u *Updater) Rollback() error {
+//
+// 只在「二进制已替换，但新版本尚未开始迁移，且升级元数据可信」的窗口内是安全的。
+// AutoMigrate 一旦开始，即使随后失败，也可能已经部分推进 schema；退回旧二进制未必
+// 读得懂库。因此这种情况下默认返回 ErrRollbackUnsafe，要求调用方显式 force。
+func (u *Updater) Rollback(force bool) error {
 	execPath, err := ExecutablePath()
 	if err != nil {
 		return err
 	}
+	return rollbackAt(execPath, force)
+}
+
+// rollbackAt 是 Rollback 的可测实现，execPath 由调用方给出而不是从进程自身解析。
+// 拆出来是因为测试进程的可执行文件就是 go test 的临时二进制，没法在它旁边真的做替换。
+func rollbackAt(execPath string, force bool) error {
+	// 与 Apply 争同一把跨进程锁：后台升级和终端回滚是两个进程，只有这把锁能拦住它们交错
+	unlock, err := acquireBinaryLock(execPath)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+
 	backup := backupPath(execPath)
 	if _, err := os.Stat(backup); err != nil {
 		return ErrNoBackup
+	}
+
+	info, known, err := ReadBackupInfo(execPath)
+	if err != nil {
+		return err
+	}
+	// 元数据不可信、迁移已经开始或新版本已经完整启动，任一命中都必须 fail-closed。
+	// 尤其不能只看「完整启动」：AutoMigrate 可能已经部分修改 schema 后才报错。
+	if rollbackUnsafe(info, known) && !force {
+		return ErrRollbackUnsafe
+	}
+
+	// 在动二进制之前先落盘回滚标记。systemd 可能已经把新版本加载进另一个进程；
+	// 即使那个进程此刻还没拿到启动锁，稍后也能看到标记并在迁移数据库前退出。
+	supersededVersion := info.TargetVersion
+	if strings.TrimSpace(supersededVersion) == "" {
+		supersededVersion = version.Version
+	}
+	if err := writeRollbackMarker(execPath, supersededVersion); err != nil {
+		return fmt.Errorf("prepare rollback marker: %w", err)
 	}
 
 	// 先把当前（新）二进制挪走，失败时还能放回去
 	stash := execPath + ".rollback-tmp"
 	_ = os.Remove(stash)
 	if err := os.Rename(execPath, stash); err != nil {
+		removeRollbackMarker(execPath)
 		return fmt.Errorf("stash current binary: %w", err)
 	}
 	if err := os.Rename(backup, execPath); err != nil {
 		if restoreErr := os.Rename(stash, execPath); restoreErr != nil {
+			// 当前二进制与恢复都失败时保留 marker，阻止任何仍在内存里的
+			// 新版本继续碰数据库，等待运维人工恢复文件。
 			return fmt.Errorf("rollback failed and restore failed: %w (restore: %v)", err, restoreErr)
 		}
+		removeRollbackMarker(execPath)
 		return fmt.Errorf("rollback failed (current binary restored): %w", err)
 	}
 	_ = os.Remove(stash)
+	// 备份已被 rename 消耗掉，元数据描述的对象不复存在，留着只会让下次探测误判还有备份
+	removeBackupInfo(execPath)
 	return nil
 }
 
@@ -180,6 +252,10 @@ func (u *Updater) Rollback() error {
 func swapBinary(execPath, newBinary string) error {
 	backup := backupPath(execPath)
 	_ = os.Remove(backup)
+	// 旧备份及其描述一起失效；若本次元数据写入失败，缺失会被按 unsafe
+	// 处理，不能让上一轮 metadata 假装描述新生成的 backup。
+	removeBackupInfo(execPath)
+	removeRollbackMarker(execPath)
 
 	if err := os.Rename(execPath, backup); err != nil {
 		return fmt.Errorf("backup current binary: %w", err)
@@ -394,6 +470,10 @@ func fileSHA256(path string) (string, error) {
 
 // extractBinary 从 tar.gz 归档中取出可执行文件写到 dest。
 // 归档里还有 config.yml.example / README.md，只提取 binaryName 一项。
+//
+// 写入前后都要卡尺寸：归档本身的 sha256 校验发生在解压之前，一个合法且校验通过的
+// 归档完全可能解出一个超大条目。如果这里只用 LimitReader 截断，io.Copy 会「成功」返回，
+// 一个被砍掉尾巴的二进制就这样通过 chmod 和 swap 上线，直到下次重启才暴露。
 func extractBinary(archivePath, dest string) error {
 	f, err := os.Open(archivePath)
 	if err != nil {
@@ -425,15 +505,31 @@ func extractBinary(archivePath, dest string) error {
 			continue
 		}
 
+		if header.Size <= 0 || header.Size > maxBinarySize {
+			return fmt.Errorf("%s has invalid size %d bytes (limit %d)", binaryName, header.Size, int64(maxBinarySize))
+		}
+
 		out, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
 		if err != nil {
 			return fmt.Errorf("create binary: %w", err)
 		}
 		defer out.Close()
 
-		if _, err := io.Copy(out, io.LimitReader(tr, maxArchiveSize)); err != nil {
-			return fmt.Errorf("write binary: %w", err)
+		// 用 CopyN 按 header 声明的字节数精确读取：短读会返回 io.EOF，
+		// 从而把「归档声称有 N 字节但实际只给了 M 字节」这种情况暴露成错误而不是静默截断。
+		written, err := io.CopyN(out, tr, header.Size)
+		if err != nil {
+			_ = os.Remove(dest)
+			return fmt.Errorf("write binary (%d of %d bytes): %w", written, header.Size, err)
 		}
-		return out.Sync()
+		if written != header.Size {
+			_ = os.Remove(dest)
+			return fmt.Errorf("short binary extraction: got %d bytes, want %d", written, header.Size)
+		}
+		if err := out.Sync(); err != nil {
+			_ = os.Remove(dest)
+			return fmt.Errorf("sync binary: %w", err)
+		}
+		return nil
 	}
 }

@@ -33,6 +33,33 @@ func TestValidateAdminPath(t *testing.T) {
 		{"reserved uploads", "/uploads", true, "reserved"},
 		{"reserved uploads prefix", "/uploads/x", true, "reserved"},
 		{"reserved health", "/health", true, "reserved"},
+
+		{"valid nested", "/ops/console", false, ""},
+		{"valid underscores", "/dj_mgmt_7x9k2", false, ""},
+		// 这几种在收紧校验之前就是合法的，不能因为一次安全加固把存量配置弄成起不来
+		{"valid dot", "/ops.admin", false, ""},
+		{"valid tilde", "/admin~private", false, ""},
+		{"valid at sign", "/console@company", false, ""},
+
+		// Gin 路由元字符：拼进 prefix + "/*filepath" 后会变成动态参数或 catch-all，
+		// 前者把用户站路径吞成后台 SPA，后者直接让路由注册 panic
+		{"gin param", "/:tenant", true, "invalid"},
+		{"gin param nested", "/admin/:id", true, "invalid"},
+		{"gin catch-all", "/*admin", true, "invalid"},
+		{"gin catch-all nested", "/admin/*rest", true, "invalid"},
+
+		{"double slash", "/admin//panel", true, "invalid"},
+		{"space", "/my admin", true, "invalid"},
+		{"tab", "/my\tadmin", true, "invalid"},
+		{"backslash", "/admin\\panel", true, "invalid"},
+		{"percent encoded", "/adm%2Fin", true, "invalid"},
+		// "." / ".." 由字符集允许，但会被路径规范化吃掉，需要单独拒绝
+		{"dot segment", "/../etc", true, "cannot contain"},
+		{"single dot segment", "/./admin", true, "cannot contain"},
+		{"trailing dot segment", "/admin/..", true, "cannot contain"},
+		{"question mark", "/admin?x=1", true, "invalid"},
+		{"hash", "/admin#top", true, "invalid"},
+		{"control char", "/adm\x00in", true, "invalid"},
 	}
 
 	for _, c := range cases {
