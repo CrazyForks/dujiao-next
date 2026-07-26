@@ -4,12 +4,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/dujiao-next/internal/platform/http/channelresponse"
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/http/handlers/shared"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -48,27 +48,27 @@ func NewChannelHandler(
 
 // GetWallet GET /api/v1/channel/wallet?telegram_user_id=xxx
 func (h *ChannelHandler) GetWallet(c *gin.Context) {
-	channelUserID := shared.ChannelUserIDValue(c.Query("channel_user_id"), c.Query("telegram_user_id"))
+	channelUserID := channelresponse.UserIDValue(c.Query("channel_user_id"), c.Query("telegram_user_id"))
 	if channelUserID == "" {
-		shared.ChannelError(c, http.StatusBadRequest, 400, "validation_error", "error.bad_request", nil)
+		channelresponse.Error(c, http.StatusBadRequest, 400, "validation_error", "error.bad_request", nil)
 		return
 	}
 
 	userID, err := h.users.ProvisionUserID(channelUserID)
 	if err != nil {
 		ginutil.RequestLog(c).Errorw("channel_wallet_resolve_user", "channel_user_id", channelUserID, "error", err)
-		shared.ChannelIdentityError(c, err)
+		channelIdentityError(c, err)
 		return
 	}
 
 	account, err := h.wallets.GetAccount(userID)
 	if err != nil {
 		ginutil.RequestLog(c).Errorw("channel_wallet_get_account", "user_id", userID, "error", err)
-		shared.ChannelError(c, http.StatusInternalServerError, 500, "internal_error", "error.internal_error", err)
+		channelresponse.Error(c, http.StatusInternalServerError, 500, "internal_error", "error.internal_error", err)
 		return
 	}
 
-	shared.ChannelSuccess(c, gin.H{
+	channelresponse.Success(c, gin.H{
 		"balance":  account.Balance.StringFixed(2),
 		"currency": "CNY",
 	})
@@ -76,9 +76,9 @@ func (h *ChannelHandler) GetWallet(c *gin.Context) {
 
 // GetWalletTransactions GET /api/v1/channel/wallet/transactions?telegram_user_id=xxx&page=1&page_size=5
 func (h *ChannelHandler) GetWalletTransactions(c *gin.Context) {
-	channelUserID := shared.ChannelUserIDValue(c.Query("channel_user_id"), c.Query("telegram_user_id"))
+	channelUserID := channelresponse.UserIDValue(c.Query("channel_user_id"), c.Query("telegram_user_id"))
 	if channelUserID == "" {
-		shared.ChannelError(c, http.StatusBadRequest, 400, "validation_error", "error.bad_request", nil)
+		channelresponse.Error(c, http.StatusBadRequest, 400, "validation_error", "error.bad_request", nil)
 		return
 	}
 
@@ -87,14 +87,14 @@ func (h *ChannelHandler) GetWalletTransactions(c *gin.Context) {
 	userID, err := h.users.ProvisionUserID(channelUserID)
 	if err != nil {
 		ginutil.RequestLog(c).Errorw("channel_wallet_txns_resolve_user", "channel_user_id", channelUserID, "error", err)
-		shared.ChannelIdentityError(c, err)
+		channelIdentityError(c, err)
 		return
 	}
 
 	txns, total, err := h.wallets.ListTransactions(userID, page, pageSize)
 	if err != nil {
 		ginutil.RequestLog(c).Errorw("channel_wallet_list_txns", "user_id", userID, "error", err)
-		shared.ChannelError(c, http.StatusInternalServerError, 500, "internal_error", "error.internal_error", err)
+		channelresponse.Error(c, http.StatusInternalServerError, 500, "internal_error", "error.internal_error", err)
 		return
 	}
 
@@ -121,7 +121,7 @@ func (h *ChannelHandler) GetWalletTransactions(c *gin.Context) {
 
 	totalPages := (total + int64(pageSize) - 1) / int64(pageSize)
 
-	shared.ChannelSuccess(c, gin.H{
+	channelresponse.Success(c, gin.H{
 		"items":       items,
 		"page":        page,
 		"page_size":   pageSize,
@@ -139,25 +139,25 @@ func (h *ChannelHandler) CreateWalletRecharge(c *gin.Context) {
 		ChannelID      uint   `json:"channel_id" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		shared.ChannelBindError(c, err)
+		channelresponse.BindError(c, err)
 		return
 	}
-	channelUserID := shared.ChannelUserIDValue(req.ChannelUserID, req.TelegramUserID)
+	channelUserID := channelresponse.UserIDValue(req.ChannelUserID, req.TelegramUserID)
 	if channelUserID == "" {
-		shared.ChannelError(c, http.StatusBadRequest, 400, "validation_error", "error.bad_request", nil)
+		channelresponse.Error(c, http.StatusBadRequest, 400, "validation_error", "error.bad_request", nil)
 		return
 	}
 
 	userID, err := h.users.ProvisionUserID(channelUserID)
 	if err != nil {
 		ginutil.RequestLog(c).Errorw("channel_wallet_recharge_resolve_user", "channel_user_id", channelUserID, "error", err)
-		shared.ChannelIdentityError(c, err)
+		channelIdentityError(c, err)
 		return
 	}
 
 	amount, err := decimal.NewFromString(strings.TrimSpace(req.Amount))
 	if err != nil {
-		shared.ChannelError(c, http.StatusBadRequest, 400, "validation_error", "error.bad_request", nil)
+		channelresponse.Error(c, http.StatusBadRequest, 400, "validation_error", "error.bad_request", nil)
 		return
 	}
 
@@ -176,7 +176,7 @@ func (h *ChannelHandler) CreateWalletRecharge(c *gin.Context) {
 	})
 	if err != nil {
 		ginutil.RequestLog(c).Errorw("channel_wallet_recharge_create", "user_id", userID, "error", err)
-		shared.ChannelError(c, http.StatusBadRequest, 400, "payment_create_failed", "error.payment_create_failed", err)
+		channelresponse.Error(c, http.StatusBadRequest, 400, "payment_create_failed", "error.payment_create_failed", err)
 		return
 	}
 
@@ -206,7 +206,7 @@ func (h *ChannelHandler) CreateWalletRecharge(c *gin.Context) {
 		}
 	}
 
-	shared.ChannelSuccess(c, gin.H{
+	channelresponse.Success(c, gin.H{
 		"recharge_no": result.Recharge.RechargeNo,
 		"payment":     paymentBlock,
 	})

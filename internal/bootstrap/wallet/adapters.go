@@ -1,46 +1,48 @@
-package walletwiring
+package walletbootstrap
 
 import (
 	"errors"
 	"fmt"
 
-	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
-
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
-	"github.com/dujiao-next/internal/repository"
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	wallettransport "github.com/dujiao-next/internal/modules/wallet/transport/http"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/money"
-	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
 )
 
-// walletTransportAdapter 将 legacy 钱包和支付服务适配为用户钱包 transport 端口。
+// walletTransportAdapter composes wallet use cases with payment capabilities
+// needed by the wallet HTTP surface.
 type walletTransportAdapter struct {
-	wallets  *service.WalletService
+	wallets  *walletapp.Service
 	payments *service.PaymentService
 }
 
-func (a walletTransportAdapter) GetAccount(userID uint) (*models.WalletAccount, error) {
+func (a walletTransportAdapter) GetAccount(userID uint) (*walletdomain.Account, error) {
 	account, err := a.wallets.GetAccount(userID)
 	return account, mapWalletTransportError(err)
 }
 
-func (a walletTransportAdapter) ListTransactions(userID uint, page, pageSize int) ([]models.WalletTransaction, int64, error) {
-	transactions, total, err := a.wallets.ListTransactions(repository.WalletTransactionListFilter{
+func (a walletTransportAdapter) ListTransactions(userID uint, page, pageSize int) ([]walletdomain.Transaction, int64, error) {
+	transactions, total, err := a.wallets.ListTransactions(walletcontract.TransactionListFilter{
 		Page: page, PageSize: pageSize, UserID: userID,
 	})
 	return transactions, total, mapWalletTransportError(err)
 }
 
-func (a walletTransportAdapter) ListAdminTransactions(userID uint, page, pageSize int, typ, direction string) ([]models.WalletTransaction, int64, error) {
-	transactions, total, err := a.wallets.ListTransactions(repository.WalletTransactionListFilter{
+func (a walletTransportAdapter) ListAdminTransactions(userID uint, page, pageSize int, typ, direction string) ([]walletdomain.Transaction, int64, error) {
+	transactions, total, err := a.wallets.ListTransactions(walletcontract.TransactionListFilter{
 		Page: page, PageSize: pageSize, UserID: userID, Type: typ, Direction: direction,
 	})
 	return transactions, total, mapWalletTransportError(err)
 }
 
-func (a walletTransportAdapter) ListRechargeOrdersAdmin(filter wallettransport.AdminRechargeListFilter) ([]models.WalletRechargeOrder, int64, error) {
-	orders, total, err := a.wallets.ListRechargeOrdersAdmin(repository.WalletRechargeListFilter{
+func (a walletTransportAdapter) ListRechargeOrdersAdmin(filter wallettransport.AdminRechargeListFilter) ([]walletdomain.RechargeOrder, int64, error) {
+	orders, total, err := a.wallets.ListRechargeOrdersAdmin(walletcontract.RechargeListFilter{
 		Page:         filter.Page,
 		PageSize:     filter.PageSize,
 		RechargeNo:   filter.RechargeNo,
@@ -59,8 +61,8 @@ func (a walletTransportAdapter) ListRechargeOrdersAdmin(filter wallettransport.A
 	return orders, total, mapWalletTransportError(err)
 }
 
-func (a walletTransportAdapter) AdminAdjustBalance(input wallettransport.AdjustBalanceInput) (*models.WalletAccount, *models.WalletTransaction, error) {
-	account, txn, err := a.wallets.AdminAdjustBalance(service.WalletAdjustInput{
+func (a walletTransportAdapter) AdminAdjustBalance(input wallettransport.AdjustBalanceInput) (*walletdomain.Account, *walletdomain.Transaction, error) {
+	account, txn, err := a.wallets.AdminAdjustBalance(walletcontract.AdjustBalanceInput{
 		UserID:   input.UserID,
 		Delta:    input.Delta,
 		Currency: input.Currency,
@@ -69,7 +71,7 @@ func (a walletTransportAdapter) AdminAdjustBalance(input wallettransport.AdjustB
 	return account, txn, mapWalletTransportError(err)
 }
 
-func (a walletTransportAdapter) ListUserRechargeOrders(userID uint, page, pageSize int, status, rechargeNo string) ([]models.WalletRechargeOrder, int64, error) {
+func (a walletTransportAdapter) ListUserRechargeOrders(userID uint, page, pageSize int, status, rechargeNo string) ([]walletdomain.RechargeOrder, int64, error) {
 	orders, total, err := a.wallets.ListUserRechargeOrders(userID, page, pageSize, status, rechargeNo)
 	return orders, total, mapWalletTransportError(err)
 }
@@ -79,12 +81,12 @@ func (a walletTransportAdapter) StatsUserRechargeOrders(userID uint, rechargeNo 
 	return stats, mapWalletTransportError(err)
 }
 
-func (a walletTransportAdapter) GetRechargeOrderByRechargeNo(userID uint, rechargeNo string) (*models.WalletRechargeOrder, error) {
+func (a walletTransportAdapter) GetRechargeOrderByRechargeNo(userID uint, rechargeNo string) (*walletdomain.RechargeOrder, error) {
 	order, err := a.wallets.GetRechargeOrderByRechargeNo(userID, rechargeNo)
 	return order, mapWalletTransportError(err)
 }
 
-func (a walletTransportAdapter) GetRechargeOrderByPaymentIDAndUser(paymentID uint, userID uint) (*models.WalletRechargeOrder, error) {
+func (a walletTransportAdapter) GetRechargeOrderByPaymentIDAndUser(paymentID uint, userID uint) (*walletdomain.RechargeOrder, error) {
 	order, err := a.wallets.GetRechargeOrderByPaymentIDAndUser(paymentID, userID)
 	return order, mapWalletTransportError(err)
 }
@@ -125,10 +127,10 @@ func mapWalletTransportError(err error) error {
 		source error
 		target error
 	}{
-		{service.ErrWalletInvalidAmount, wallettransport.ErrInvalidAmount},
-		{service.ErrWalletInsufficientBalance, wallettransport.ErrInsufficientBalance},
-		{service.ErrWalletNotSupportedForGuest, wallettransport.ErrNotSupportedForGuest},
-		{service.ErrWalletRechargeNotFound, wallettransport.ErrRechargeNotFound},
+		{walletcontract.ErrInvalidAmount, wallettransport.ErrInvalidAmount},
+		{walletcontract.ErrInsufficientBalance, wallettransport.ErrInsufficientBalance},
+		{walletcontract.ErrNotSupportedForGuest, wallettransport.ErrNotSupportedForGuest},
+		{walletcontract.ErrRechargeNotFound, wallettransport.ErrRechargeNotFound},
 		{service.ErrPaymentInvalid, wallettransport.ErrPaymentInvalid},
 		{service.ErrPaymentNotFound, wallettransport.ErrPaymentNotFound},
 		{service.ErrOrderNotFound, wallettransport.ErrOrderNotFound},
@@ -142,7 +144,7 @@ func mapWalletTransportError(err error) error {
 		{service.ErrPaymentCurrencyMismatch, wallettransport.ErrPaymentCurrencyMismatch},
 		{service.ErrPaymentChannelNotAllowedForProduct, wallettransport.ErrPaymentChannelNotAllowedProduct},
 		{service.ErrPaymentChannelNotAllowedForRecharge, wallettransport.ErrPaymentChannelNotAllowedRecharge},
-		{service.ErrWalletOnlyPaymentRequired, wallettransport.ErrWalletOnlyPaymentRequired},
+		{walletcontract.ErrOnlyPaymentRequired, wallettransport.ErrWalletOnlyPaymentRequired},
 		{service.ErrPaymentStatusInvalid, wallettransport.ErrPaymentStatusInvalid},
 		{service.ErrPaymentAmountMismatch, wallettransport.ErrPaymentAmountMismatch},
 	} {

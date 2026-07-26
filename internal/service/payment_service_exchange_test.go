@@ -5,12 +5,14 @@ import (
 	"testing"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
-	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
-
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -39,9 +41,9 @@ func setupExchangeTest(t *testing.T) (*PaymentService, *gorm.DB) {
 		&models.Fulfillment{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.WalletAccount{},
-		&models.WalletTransaction{},
-		&models.WalletRechargeOrder{},
+		&walletdomain.Account{},
+		&walletdomain.Transaction{},
+		&walletdomain.RechargeOrder{},
 		&models.PaymentChannel{},
 		&models.Payment{},
 	); err != nil {
@@ -54,10 +56,11 @@ func setupExchangeTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	productSKURepo := productgormstore.NewSKUStore(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	channelRepo := repository.NewPaymentChannelRepository(db)
-	walletRepo := repository.NewWalletRepository(db)
-	userRepo := userstore.New(db)
-	refundRecordRepo := repository.NewOrderRefundRecordRepository(db)
-	walletSvc := NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, nil, nil)
+	walletRepo := walletgormstore.New(db)
+	walletSvc := walletapp.NewService(walletapp.Options{
+		Repository:   walletRepo,
+		Transactions: walletRepo,
+	})
 	paymentSvc := NewPaymentService(PaymentServiceOptions{
 		OrderRepo:      orderRepo,
 		ProductRepo:    productRepo,

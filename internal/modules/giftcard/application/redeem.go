@@ -5,8 +5,9 @@ import (
 	"strings"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
 	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 
@@ -14,7 +15,7 @@ import (
 )
 
 // RedeemGiftCard 在单一事务中完成礼品卡锁定、钱包入账和兑换状态更新。
-func (s *Service) RedeemGiftCard(input RedeemInput) (*giftcarddomain.GiftCard, *models.WalletAccount, *models.WalletTransaction, error) {
+func (s *Service) RedeemGiftCard(input RedeemInput) (*giftcarddomain.GiftCard, *walletdomain.Account, *walletdomain.Transaction, error) {
 	if s == nil || s.redeemer == nil {
 		return nil, nil, nil, giftcardcontract.ErrFetchFailed
 	}
@@ -25,8 +26,8 @@ func (s *Service) RedeemGiftCard(input RedeemInput) (*giftcarddomain.GiftCard, *
 
 	var (
 		resultCard *giftcarddomain.GiftCard
-		resultAcc  *models.WalletAccount
-		resultTxn  *models.WalletTransaction
+		resultAcc  *walletdomain.Account
+		resultTxn  *walletdomain.Transaction
 	)
 	err := s.redeemer.WithinRedeemTransaction(func(tx giftcardcontract.RedeemTransaction) error {
 		card, err := tx.GetByCodeForUpdate(code)

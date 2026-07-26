@@ -2,11 +2,15 @@ package service
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/money"
 
@@ -28,7 +32,7 @@ type CreateWalletRechargePaymentInput struct {
 
 // CreateWalletRechargePaymentResult 创建钱包充值支付结果
 type CreateWalletRechargePaymentResult struct {
-	Recharge *models.WalletRechargeOrder
+	Recharge *walletdomain.RechargeOrder
 	Payment  *models.Payment
 }
 
@@ -39,7 +43,7 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 	}
 	amount := input.Amount.Decimal.Round(2)
 	if amount.LessThanOrEqual(decimal.Zero) {
-		return nil, ErrWalletInvalidAmount
+		return nil, walletcontract.ErrInvalidAmount
 	}
 	if s.walletRepo == nil {
 		return nil, ErrPaymentCreateFailed
@@ -78,7 +82,10 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 		feeAmount = feeAmount.Add(amount.Mul(feeRate).Div(decimal.NewFromInt(100))).Round(2)
 	}
 	payableAmount := amount.Add(feeAmount).Round(2)
-	currency := normalizeWalletCurrency(input.Currency)
+	currency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	if currency == "" {
+		currency = "CNY"
+	}
 	if err := validatePaymentCurrencyForChannel(currency, channel); err != nil {
 		return nil, err
 	}
@@ -88,7 +95,7 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 	now := time.Now()
 
 	var payment *models.Payment
-	var recharge *models.WalletRechargeOrder
+	var recharge *walletdomain.RechargeOrder
 	err = s.paymentRepo.Transaction(func(tx *gorm.DB) error {
 		rechargeNo := generateWalletRechargeNo()
 		paymentRepo := s.paymentRepo.WithTx(tx)
@@ -111,8 +118,12 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 			return ErrPaymentCreateFailed
 		}
 
-		rechargeRepo := s.walletRepo.WithTx(tx)
-		recharge = &models.WalletRechargeOrder{
+		rechargeRepo := walletgormstore.UseTransaction(tx).Wallets()
+		remark := strings.TrimSpace(input.Remark)
+		if remark == "" {
+			remark = "余额充值"
+		}
+		recharge = &walletdomain.RechargeOrder{
 			RechargeNo:      rechargeNo,
 			UserID:          input.UserID,
 			PaymentID:       payment.ID,
@@ -126,7 +137,7 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 			FeeAmount:       money.FromDecimal(feeAmount),
 			Currency:        currency,
 			Status:          constants.WalletRechargeStatusPending,
-			Remark:          cleanWalletRemark(input.Remark, "余额充值"),
+			Remark:          remark,
 			CreatedAt:       now,
 			UpdatedAt:       now,
 		}
@@ -156,7 +167,7 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 		RequestScheme:    input.RequestScheme,
 	}, virtualOrder, channel, payment); err != nil {
 		_ = s.paymentRepo.Transaction(func(tx *gorm.DB) error {
-			rechargeRepo := s.walletRepo.WithTx(tx)
+			rechargeRepo := walletgormstore.UseTransaction(tx).Wallets()
 			paymentRepo := s.paymentRepo.WithTx(tx)
 			failedAt := time.Now()
 			payment.Status = constants.PaymentStatusFailed
@@ -186,7 +197,7 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 				"error", err,
 			)
 			_ = s.paymentRepo.Transaction(func(tx *gorm.DB) error {
-				rechargeRepo := s.walletRepo.WithTx(tx)
+				rechargeRepo := walletgormstore.UseTransaction(tx).Wallets()
 				paymentRepo := s.paymentRepo.WithTx(tx)
 				failedAt := time.Now()
 				payment.Status = constants.PaymentStatusFailed

@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	downstreamcallbackdomain "github.com/dujiao-next/internal/modules/downstreamcallback/domain"
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 	procurementcontract "github.com/dujiao-next/internal/modules/procurement/contract"
@@ -110,7 +112,7 @@ type Settings interface {
 }
 
 type Wallet interface {
-	GetAccount(userID uint) (*models.WalletAccount, error)
+	GetAccount(userID uint) (*walletdomain.Account, error)
 }
 
 type Orders interface {

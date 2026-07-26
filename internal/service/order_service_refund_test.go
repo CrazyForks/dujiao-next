@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 
 	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
@@ -48,8 +50,8 @@ func setupOrderRefundServiceTest(t *testing.T) (*OrderRefundService, *gorm.DB) {
 		&affiliatedomain.Profile{},
 		&affiliatedomain.Commission{},
 		&affiliatedomain.WithdrawRequest{},
-		&models.WalletAccount{},
-		&models.WalletTransaction{},
+		&walletdomain.Account{},
+		&walletdomain.Transaction{},
 		&models.OrderRefundRecord{},
 		&settingsstore.SettingRecord{},
 	); err != nil {
@@ -63,7 +65,7 @@ func setupOrderRefundServiceTest(t *testing.T) (*OrderRefundService, *gorm.DB) {
 	affiliateRefund := affiliategormstore.NewRefundHandler(affiliateSvc)
 	userRepo := userstore.New(db)
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
-	return NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateRefund, settingSvc), db
+	return NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateRefund, settingSvc, nil), db
 }
 
 func createOrderRefundTestSiteConnection(t *testing.T, db *gorm.DB, id uint) *siteconnectiondomain.Connection {

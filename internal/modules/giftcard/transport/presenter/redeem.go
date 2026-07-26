@@ -3,18 +3,19 @@ package presenter
 import (
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	"github.com/dujiao-next/internal/dto"
-	"github.com/dujiao-next/internal/models"
 	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	"github.com/dujiao-next/internal/shared/money"
 )
 
 // GiftCardRedeemResp 礼品卡兑换结果响应
 type GiftCardRedeemResp struct {
-	GiftCard    GiftCardResp          `json:"gift_card"`
+	GiftCard    GiftCardResp              `json:"gift_card"`
 	Wallet      dto.WalletAccountResp     `json:"wallet"`
 	Transaction dto.WalletTransactionResp `json:"transaction"`
-	WalletDelta money.Amount          `json:"wallet_delta"`
+	WalletDelta money.Amount              `json:"wallet_delta"`
 }
 
 // GiftCardResp 礼品卡响应（兑换后）
@@ -43,7 +44,7 @@ func NewGiftCardResp(c *giftcarddomain.GiftCard) GiftCardResp {
 }
 
 // NewGiftCardRedeemResp 构造完整兑换响应
-func NewGiftCardRedeemResp(card *giftcarddomain.GiftCard, account *models.WalletAccount, txn *models.WalletTransaction) GiftCardRedeemResp {
+func NewGiftCardRedeemResp(card *giftcarddomain.GiftCard, account *walletdomain.Account, txn *walletdomain.Transaction) GiftCardRedeemResp {
 	return GiftCardRedeemResp{
 		GiftCard:    NewGiftCardResp(card),
 		Wallet:      dto.NewWalletAccountResp(account),

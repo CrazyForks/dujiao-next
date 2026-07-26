@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 
 	"github.com/dujiao-next/internal/constants"
@@ -94,15 +96,15 @@ func (f fakeAdminOrderLookup) GetByIDs(ids []uint) ([]models.Order, error) {
 }
 
 type fakeAdminRechargeLookup struct {
-	orders []models.WalletRechargeOrder
+	orders []walletdomain.RechargeOrder
 }
 
-func (f fakeAdminRechargeLookup) GetRechargeOrdersByPaymentIDs(paymentIDs []uint) ([]models.WalletRechargeOrder, error) {
+func (f fakeAdminRechargeLookup) GetRechargeOrdersByPaymentIDs(paymentIDs []uint) ([]walletdomain.RechargeOrder, error) {
 	wanted := make(map[uint]struct{}, len(paymentIDs))
 	for _, id := range paymentIDs {
 		wanted[id] = struct{}{}
 	}
-	out := make([]models.WalletRechargeOrder, 0)
+	out := make([]walletdomain.RechargeOrder, 0)
 	for _, order := range f.orders {
 		if _, ok := wanted[order.PaymentID]; ok {
 			out = append(out, order)
@@ -194,7 +196,7 @@ func setupAdminPaymentHandlerTest(t *testing.T) (*AdminHandler, adminPaymentFixt
 		},
 		fakeAdminChannelLookup{names: map[uint]string{1: "alipay", 2: "wechat"}},
 		fakeAdminOrderLookup{orderNos: map[uint]string{101: fixture.OrderNo}},
-		fakeAdminRechargeLookup{orders: []models.WalletRechargeOrder{
+		fakeAdminRechargeLookup{orders: []walletdomain.RechargeOrder{
 			{PaymentID: fixture.RechargePaymentUser1, RechargeNo: fixture.RechargeNoUser1, UserID: fixture.User1ID, Status: constants.WalletRechargeStatusPending},
 			{PaymentID: fixture.RechargePaymentUser2, RechargeNo: fixture.RechargeNoUser2, UserID: fixture.User2ID, Status: constants.WalletRechargeStatusPending},
 		}},

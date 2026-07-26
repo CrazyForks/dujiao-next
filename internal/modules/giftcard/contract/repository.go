@@ -3,9 +3,10 @@ package contract
 import (
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/models"
 	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	"github.com/dujiao-next/internal/shared/money"
 )
@@ -53,7 +54,7 @@ type WalletCreditInput struct {
 type RedeemTransaction interface {
 	GetByCodeForUpdate(code string) (*giftcarddomain.GiftCard, error)
 	UpdateCard(card *giftcarddomain.GiftCard) error
-	CreditWallet(input WalletCreditInput) (*models.WalletAccount, *models.WalletTransaction, error)
+	CreditWallet(input WalletCreditInput) (*walletdomain.Account, *walletdomain.Transaction, error)
 }
 
 // RedeemTransactionRunner 保证礼品卡状态与钱包入账原子提交或回滚。

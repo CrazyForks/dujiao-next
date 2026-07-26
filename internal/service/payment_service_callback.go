@@ -213,7 +213,7 @@ func (s *PaymentService) applyPaymentUpdate(payment *models.Payment, order *mode
 			orderPaid = true
 		}
 		if (status == constants.PaymentStatusFailed || status == constants.PaymentStatusExpired) && order.Status == constants.OrderStatusPendingPayment && s.walletSvc != nil {
-			if _, err := s.walletSvc.ReleaseOrderBalance(tx, order, constants.WalletTxnTypeOrderRefund, "在线支付失败，退回余额"); err != nil {
+			if _, err := releaseOrderWalletBalance(s.walletSvc, s.orderRepo, tx, order, constants.WalletTxnTypeOrderRefund, "在线支付失败，退回余额"); err != nil {
 				return err
 			}
 		}

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
@@ -20,6 +22,7 @@ import (
 	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
 	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
 	"github.com/dujiao-next/internal/modules/reseller"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
@@ -241,11 +244,11 @@ func (a orderAdminRefundAdapter) AdminManualRefund(input ordertransport.AdminMan
 }
 
 type orderAdminWalletRefundAdapter struct {
-	wallets *service.WalletService
+	refunds *service.OrderRefundService
 }
 
-func (a orderAdminWalletRefundAdapter) AdminRefundToWallet(input ordertransport.AdminRefundToWalletInput) (*models.Order, *models.WalletTransaction, *models.OrderRefundRecord, error) {
-	order, txn, record, err := a.wallets.AdminRefundToWallet(service.AdminRefundToWalletInput{
+func (a orderAdminWalletRefundAdapter) AdminRefundToWallet(input ordertransport.AdminRefundToWalletInput) (*models.Order, *walletdomain.Transaction, *models.OrderRefundRecord, error) {
+	order, txn, record, err := a.refunds.AdminRefundToWallet(service.AdminRefundToWalletInput{
 		OrderID: input.OrderID,
 		Amount:  input.Amount,
 		Remark:  input.Remark,
@@ -478,9 +481,9 @@ func mapOrderTransportError(err error) error {
 		{service.ErrGuestOrderNotFound, ordertransport.ErrGuestOrderNotFound},
 		{service.ErrOrderCancelNotAllowed, ordertransport.ErrOrderCancelNotAllowed},
 		{service.ErrOrderRefundExpired, ordertransport.ErrOrderRefundExpired},
-		{service.ErrWalletInvalidAmount, ordertransport.ErrWalletInvalidAmount},
-		{service.ErrWalletRefundExceeded, ordertransport.ErrWalletRefundExceeded},
-		{service.ErrWalletNotSupportedForGuest, ordertransport.ErrWalletNotSupportedForGuest},
+		{walletcontract.ErrInvalidAmount, ordertransport.ErrWalletInvalidAmount},
+		{walletcontract.ErrRefundExceeded, ordertransport.ErrWalletRefundExceeded},
+		{walletcontract.ErrNotSupportedForGuest, ordertransport.ErrWalletNotSupportedForGuest},
 		{service.ErrProductSKURequired, ordertransport.ErrProductSKURequired},
 		{service.ErrInvalidOrderAmount, ordertransport.ErrInvalidOrderAmount},
 		{service.ErrGuestEmailRequired, ordertransport.ErrGuestEmailRequired},

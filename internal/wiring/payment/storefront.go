@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/modules/reseller"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	paymenttransport "github.com/dujiao-next/internal/transport/http/payment"
@@ -109,10 +110,10 @@ func mapTransportError(err error) error {
 		{service.ErrPaymentGatewayRequestFailed, paymenttransport.ErrPaymentGatewayRequestFailed},
 		{service.ErrPaymentGatewayResponseInvalid, paymenttransport.ErrPaymentGatewayResponseInvalid},
 		{service.ErrPaymentCurrencyMismatch, paymenttransport.ErrPaymentCurrencyMismatch},
-		{service.ErrWalletNotSupportedForGuest, paymenttransport.ErrWalletNotSupportedForGuest},
+		{walletcontract.ErrNotSupportedForGuest, paymenttransport.ErrWalletNotSupportedForGuest},
 		{service.ErrPaymentChannelNotAllowedForProduct, paymenttransport.ErrPaymentChannelNotAllowedForProduct},
 		{service.ErrPaymentChannelNotAllowedForRecharge, paymenttransport.ErrPaymentChannelNotAllowedForRecharge},
-		{service.ErrWalletOnlyPaymentRequired, paymenttransport.ErrWalletOnlyPaymentRequired},
+		{walletcontract.ErrOnlyPaymentRequired, paymenttransport.ErrWalletOnlyPaymentRequired},
 		{service.ErrPaymentStatusInvalid, paymenttransport.ErrPaymentStatusInvalid},
 		{service.ErrPaymentAmountMismatch, paymenttransport.ErrPaymentAmountMismatch},
 	} {

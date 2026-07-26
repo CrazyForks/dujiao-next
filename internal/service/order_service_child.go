@@ -91,7 +91,7 @@ func (s *OrderService) cancelOrderWithChildren(order *models.Order, rollbackCoup
 			}
 		}
 		if s.walletService != nil {
-			if _, err := s.walletService.ReleaseOrderBalance(tx, order, constants.WalletTxnTypeOrderRefund, "订单取消退回余额"); err != nil {
+			if _, err := releaseOrderWalletBalance(s.walletService, s.orderRepo, tx, order, constants.WalletTxnTypeOrderRefund, "订单取消退回余额"); err != nil {
 				return err
 			}
 		}
@@ -514,7 +514,7 @@ func (s *OrderService) cancelSingleOrderInTx(tx *gorm.DB, order *models.Order, t
 		return err
 	}
 	if s.walletService != nil {
-		if _, err := s.walletService.ReleaseOrderBalance(tx, order, constants.WalletTxnTypeOrderRefund, "订单取消退回余额"); err != nil {
+		if _, err := releaseOrderWalletBalance(s.walletService, s.orderRepo, tx, order, constants.WalletTxnTypeOrderRefund, "订单取消退回余额"); err != nil {
 			return err
 		}
 	}

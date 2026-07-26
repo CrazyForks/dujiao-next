@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/models"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -299,7 +300,7 @@ func (c *Consumer) handleWalletRechargeExpire(_ context.Context, task *asynq.Tas
 		case errors.Is(err, service.ErrPaymentNotFound):
 			logger.Debugw("worker_wallet_recharge_expire_skip_payment_not_found", "payment_id", payload.PaymentID)
 			return nil
-		case errors.Is(err, service.ErrWalletRechargeNotFound):
+		case errors.Is(err, walletcontract.ErrRechargeNotFound):
 			logger.Debugw("worker_wallet_recharge_expire_skip_recharge_not_found", "payment_id", payload.PaymentID)
 			return nil
 		case errors.Is(err, service.ErrPaymentUpdateFailed):

@@ -7,6 +7,7 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -67,7 +68,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 	if walletOnly {
 		input.UseBalance = true
 		if input.ChannelID != 0 {
-			return nil, ErrWalletOnlyPaymentRequired
+			return nil, walletcontract.ErrOnlyPaymentRequired
 		}
 	}
 
@@ -136,11 +137,11 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 
 		if s.walletSvc != nil {
 			if input.UseBalance {
-				if _, err := s.walletSvc.ApplyOrderBalance(tx, &lockedOrder, true); err != nil {
+				if _, err := applyOrderWalletBalance(s.walletSvc, s.orderRepo, tx, &lockedOrder, true); err != nil {
 					return err
 				}
 			} else if lockedOrder.WalletPaidAmount.Decimal.GreaterThan(decimal.Zero) {
-				if _, err := s.walletSvc.ReleaseOrderBalance(tx, &lockedOrder, constants.WalletTxnTypeOrderRefund, "用户改为在线支付，退回余额"); err != nil {
+				if _, err := releaseOrderWalletBalance(s.walletSvc, s.orderRepo, tx, &lockedOrder, constants.WalletTxnTypeOrderRefund, "用户改为在线支付，退回余额"); err != nil {
 					return err
 				}
 			}
@@ -178,7 +179,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 		}
 		if channel == nil {
 			if walletOnly {
-				return ErrWalletOnlyPaymentRequired
+				return walletcontract.ErrOnlyPaymentRequired
 			}
 			return ErrPaymentInvalid
 		}
@@ -298,7 +299,7 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 				return ErrOrderNotFound
 			}
 			lockedOrder := *preloaded
-			_, refundErr := s.walletSvc.ReleaseOrderBalance(tx, &lockedOrder, constants.WalletTxnTypeOrderRefund, "在线支付创建失败，退回余额")
+			_, refundErr := releaseOrderWalletBalance(s.walletSvc, s.orderRepo, tx, &lockedOrder, constants.WalletTxnTypeOrderRefund, "在线支付创建失败，退回余额")
 			return refundErr
 		})
 		if rollbackErr != nil {

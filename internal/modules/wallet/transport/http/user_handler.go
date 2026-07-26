@@ -1,6 +1,7 @@
 package wallethttp
 
 import (
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	"context"
 	"errors"
 	"strings"
@@ -42,12 +43,12 @@ var (
 
 // WalletService 是用户钱包查询所需的最小端口。
 type WalletService interface {
-	GetAccount(userID uint) (*models.WalletAccount, error)
-	ListTransactions(userID uint, page, pageSize int) ([]models.WalletTransaction, int64, error)
-	ListUserRechargeOrders(userID uint, page, pageSize int, status, rechargeNo string) ([]models.WalletRechargeOrder, int64, error)
+	GetAccount(userID uint) (*walletdomain.Account, error)
+	ListTransactions(userID uint, page, pageSize int) ([]walletdomain.Transaction, int64, error)
+	ListUserRechargeOrders(userID uint, page, pageSize int, status, rechargeNo string) ([]walletdomain.RechargeOrder, int64, error)
 	StatsUserRechargeOrders(userID uint, rechargeNo string) (map[string]int64, error)
-	GetRechargeOrderByRechargeNo(userID uint, rechargeNo string) (*models.WalletRechargeOrder, error)
-	GetRechargeOrderByPaymentIDAndUser(paymentID uint, userID uint) (*models.WalletRechargeOrder, error)
+	GetRechargeOrderByRechargeNo(userID uint, rechargeNo string) (*walletdomain.RechargeOrder, error)
+	GetRechargeOrderByPaymentIDAndUser(paymentID uint, userID uint) (*walletdomain.RechargeOrder, error)
 }
 
 // PaymentService 是用户钱包充值支付所需的最小端口。
@@ -80,7 +81,7 @@ type CreateRechargePaymentInput struct {
 }
 
 type CreateRechargePaymentResult struct {
-	Recharge *models.WalletRechargeOrder
+	Recharge *walletdomain.RechargeOrder
 	Payment  *models.Payment
 }
 

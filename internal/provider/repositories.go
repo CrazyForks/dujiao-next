@@ -27,6 +27,7 @@ import (
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	siteconnectiongormstore "github.com/dujiao-next/internal/modules/siteconnection/infrastructure/gormstore"
 	broadcaststore "github.com/dujiao-next/internal/modules/telegram/broadcast/infrastructure/gormstore"
+	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/repository"
 )
 
@@ -49,7 +50,7 @@ func (c *Container) initRepositories() {
 	c.CouponRepo = coupongormstore.New(db)
 	c.CouponUsageRepo = coupongormstore.NewUsageStore(db)
 	c.PromotionRepo = promotiongormstore.New(db)
-	c.WalletRepo = repository.NewWalletRepository(db)
+	c.WalletRepo = walletgormstore.New(db)
 	c.OrderRefundRecordRepo = repository.NewOrderRefundRecordRepository(db)
 	c.CategoryRepo = categorygormstore.NewCategoryStore(db)
 	c.SettingRepo = settingsstore.New(db)

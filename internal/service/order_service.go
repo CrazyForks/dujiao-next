@@ -22,6 +22,8 @@ import (
 	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
 	promotioncontract "github.com/dujiao-next/internal/modules/promotion/contract"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -49,7 +51,7 @@ type OrderService struct {
 	queueClient             orderQueueClient
 	settingService          *settingsapp.Service
 	defaultEmailConfig      config.EmailConfig
-	walletService           *WalletService
+	walletService           *walletapp.Service
 	affiliateSvc            AffiliateOrderLifecycle
 	memberLevelService      OrderMemberLevelService
 	resellerPricingResolver *ResellerPricingResolver
@@ -123,7 +125,7 @@ type OrderServiceOptions struct {
 	QueueClient               *queue.Client
 	SettingService            *settingsapp.Service
 	DefaultEmailConfig        config.EmailConfig
-	WalletService             *WalletService
+	WalletService             *walletapp.Service
 	AffiliateService          AffiliateOrderLifecycle
 	MemberLevelService        OrderMemberLevelService
 	ResellerPricingResolver   *ResellerPricingResolver
@@ -484,17 +486,17 @@ func (s *OrderService) createOrder(input orderCreateParams) (*models.Order, erro
 	if s.settingService != nil && s.settingService.GetWalletOnlyPayment() {
 		if input.UserID == 0 {
 			// 游客无钱包，wallet-only 模式下不允许下单
-			return nil, ErrWalletOnlyPaymentRequired
+			return nil, walletcontract.ErrOnlyPaymentRequired
 		}
 		if s.walletService == nil {
-			return nil, ErrWalletOnlyPaymentRequired
+			return nil, walletcontract.ErrOnlyPaymentRequired
 		}
 		account, accErr := s.walletService.GetAccount(input.UserID)
 		if accErr != nil {
-			return nil, ErrWalletOnlyPaymentRequired
+			return nil, walletcontract.ErrOnlyPaymentRequired
 		}
 		if account.Balance.Decimal.LessThan(result.TotalAmount) {
-			return nil, ErrWalletInsufficientBalance
+			return nil, walletcontract.ErrInsufficientBalance
 		}
 	}
 

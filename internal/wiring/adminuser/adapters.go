@@ -15,11 +15,12 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/cache"
-	"github.com/dujiao-next/internal/models"
 	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/money"
 	adminusertransport "github.com/dujiao-next/internal/transport/http/adminuser"
@@ -72,14 +73,14 @@ func (adminUserEmailAdapter) NormalizeEmail(email string) (string, error) {
 }
 
 type adminUserWalletAdapter struct {
-	wallets *service.WalletService
+	wallets *walletapp.Service
 }
 
 func (a adminUserWalletAdapter) GetBalancesByUserIDs(userIDs []uint) (map[uint]money.Amount, error) {
 	return a.wallets.GetBalancesByUserIDs(userIDs)
 }
 
-func (a adminUserWalletAdapter) GetAccount(userID uint) (*models.WalletAccount, error) {
+func (a adminUserWalletAdapter) GetAccount(userID uint) (*walletdomain.Account, error) {
 	return a.wallets.GetAccount(userID)
 }
 

@@ -1,11 +1,13 @@
 package giftcardintegration
 
 import (
-	"github.com/dujiao-next/internal/models"
 	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
 	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	"github.com/dujiao-next/internal/modules/giftcard/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/service"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 
 	"gorm.io/gorm"
 )
@@ -13,10 +15,10 @@ import (
 // Runner 将礼品卡仓储锁与钱包入账绑定到同一个 GORM 事务。
 type Runner struct {
 	cards  *gormstore.Store
-	wallet *service.WalletService
+	wallet *walletapp.Service
 }
 
-func New(cards *gormstore.Store, wallet *service.WalletService) *Runner {
+func New(cards *gormstore.Store, wallet *walletapp.Service) *Runner {
 	return &Runner{cards: cards, wallet: wallet}
 }
 
@@ -36,7 +38,7 @@ func (r *Runner) WithinRedeemTransaction(fn func(tx giftcardcontract.RedeemTrans
 type transaction struct {
 	db     *gorm.DB
 	cards  *gormstore.Store
-	wallet *service.WalletService
+	wallet *walletapp.Service
 }
 
 func (tx *transaction) GetByCodeForUpdate(code string) (*giftcarddomain.GiftCard, error) {
@@ -47,12 +49,12 @@ func (tx *transaction) UpdateCard(card *giftcarddomain.GiftCard) error {
 	return tx.cards.Update(card)
 }
 
-func (tx *transaction) CreditWallet(input giftcardcontract.WalletCreditInput) (*models.WalletAccount, *models.WalletTransaction, error) {
-	return tx.wallet.CreditInTx(tx.db, service.WalletCreditInput{
+func (tx *transaction) CreditWallet(input giftcardcontract.WalletCreditInput) (*walletdomain.Account, *walletdomain.Transaction, error) {
+	return tx.wallet.CreditInTransaction(walletgormstore.UseTransaction(tx.db), walletcontract.CreditInput{
 		UserID:    input.UserID,
 		Amount:    input.Amount,
 		Currency:  input.Currency,
-		TxnType:   input.TxnType,
+		Type:      input.TxnType,
 		Reference: input.Reference,
 		Remark:    input.Remark,
 		OrderID:   input.OrderID,

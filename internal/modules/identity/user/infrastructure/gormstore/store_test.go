@@ -5,7 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dujiao-next/internal/models"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	"github.com/dujiao-next/internal/shared/money"
@@ -21,7 +22,7 @@ func setupStoreTest(t *testing.T) (*Store, *gorm.DB) {
 	if err != nil {
 		t.Fatalf("open sqlite failed: %v", err)
 	}
-	if err := db.AutoMigrate(&userdomain.User{}, &models.WalletAccount{}); err != nil {
+	if err := db.AutoMigrate(&userdomain.User{}, &walletdomain.Account{}); err != nil {
 		t.Fatalf("migrate failed: %v", err)
 	}
 	return New(db), db
@@ -38,7 +39,7 @@ func createTestUser(t *testing.T, db *gorm.DB, email string, createdAt time.Time
 
 func createTestWalletAccount(t *testing.T, db *gorm.DB, userID uint, balance int64) {
 	t.Helper()
-	w := &models.WalletAccount{UserID: userID, Balance: money.FromDecimal(decimal.NewFromInt(balance))}
+	w := &walletdomain.Account{UserID: userID, Balance: money.FromDecimal(decimal.NewFromInt(balance))}
 	if err := db.Create(w).Error; err != nil {
 		t.Fatalf("create wallet account for user %d failed: %v", userID, err)
 	}

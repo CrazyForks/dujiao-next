@@ -1,8 +1,8 @@
-package walletwiring
+package walletbootstrap
 
 import (
+	wallettransport "github.com/dujiao-next/internal/modules/wallet/transport/http"
 	"github.com/dujiao-next/internal/provider"
-	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
 	channeluserwiring "github.com/dujiao-next/internal/wiring/channeluser"
 )
 

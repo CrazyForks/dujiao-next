@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -129,7 +131,8 @@ func (r *Store) GetPaymentOrderAlertCounts(startAt, endAt time.Time) (dashboard.
 // GetTotalUserBalance 获取全站用户余额总数
 func (r *Store) GetTotalUserBalance() (float64, error) {
 	var total float64
-	if err := r.db.Model(&models.WalletAccount{}).
+	if err := r.db.Model(&walletdomain.Account{}).
+		Where("deleted_at IS NULL").
 		Select("COALESCE(SUM(balance), 0)").
 		Scan(&total).Error; err != nil {
 		return 0, err

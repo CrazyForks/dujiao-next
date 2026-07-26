@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
@@ -22,10 +24,10 @@ var ErrInsufficientBalance = errors.New("wallet insufficient balance")
 
 // AdminWalletService 是后台钱包管理所需的最小端口。
 type AdminWalletService interface {
-	GetAccount(userID uint) (*models.WalletAccount, error)
-	ListAdminTransactions(userID uint, page, pageSize int, typ, direction string) ([]models.WalletTransaction, int64, error)
-	ListRechargeOrdersAdmin(filter AdminRechargeListFilter) ([]models.WalletRechargeOrder, int64, error)
-	AdminAdjustBalance(input AdjustBalanceInput) (*models.WalletAccount, *models.WalletTransaction, error)
+	GetAccount(userID uint) (*walletdomain.Account, error)
+	ListAdminTransactions(userID uint, page, pageSize int, typ, direction string) ([]walletdomain.Transaction, int64, error)
+	ListRechargeOrdersAdmin(filter AdminRechargeListFilter) ([]walletdomain.RechargeOrder, int64, error)
+	AdminAdjustBalance(input AdjustBalanceInput) (*walletdomain.Account, *walletdomain.Transaction, error)
 }
 
 // AdminUserReader 是后台钱包所需的用户读取端口。
@@ -85,7 +87,7 @@ type adminWalletRechargeUser struct {
 }
 
 type adminWalletRechargeItem struct {
-	models.WalletRechargeOrder
+	walletdomain.RechargeOrder
 	User          *adminWalletRechargeUser `json:"user,omitempty"`
 	ChannelName   string                   `json:"channel_name,omitempty"`
 	PaymentStatus string                   `json:"payment_status,omitempty"`
@@ -288,9 +290,9 @@ func (h *AdminHandler) GetRecharges(c *gin.Context) {
 	items := make([]adminWalletRechargeItem, 0, len(recharges))
 	for _, recharge := range recharges {
 		item := adminWalletRechargeItem{
-			WalletRechargeOrder: recharge,
-			ChannelName:         channelNameMap[recharge.ChannelID],
-			PaymentStatus:       paymentStatusMap[recharge.PaymentID],
+			RechargeOrder: recharge,
+			ChannelName:   channelNameMap[recharge.ChannelID],
+			PaymentStatus: paymentStatusMap[recharge.PaymentID],
 		}
 		if user, ok := userMap[recharge.UserID]; ok {
 			item.User = &adminWalletRechargeUser{

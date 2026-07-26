@@ -21,8 +21,9 @@ import (
 	giftcardcontract "github.com/dujiao-next/internal/modules/giftcard/contract"
 	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/infrastructure/gormstore"
-	"github.com/dujiao-next/internal/repository"
-	"github.com/dujiao-next/internal/service"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 
 	"github.com/glebarez/sqlite"
 	"github.com/shopspring/decimal"
@@ -41,7 +42,7 @@ func (provider giftCardTestCurrencyProvider) SiteCurrency() string {
 	return currency
 }
 
-func setupGiftCardServiceTest(t *testing.T) (*giftcardapp.Service, *service.WalletService, *gorm.DB) {
+func setupGiftCardServiceTest(t *testing.T) (*giftcardapp.Service, *walletapp.Service, *gorm.DB) {
 	t.Helper()
 	dsn := fmt.Sprintf("file:gift_card_service_test_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
@@ -53,8 +54,8 @@ func setupGiftCardServiceTest(t *testing.T) (*giftcardapp.Service, *service.Wall
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
-		&models.WalletAccount{},
-		&models.WalletTransaction{},
+		&walletdomain.Account{},
+		&walletdomain.Transaction{},
 		&settingsstore.SettingRecord{},
 		&giftcarddomain.GiftCardBatch{},
 		&giftcarddomain.GiftCard{},
@@ -66,7 +67,11 @@ func setupGiftCardServiceTest(t *testing.T) (*giftcardapp.Service, *service.Wall
 	userRepo := userstore.New(db)
 	settingRepo := settingsstore.New(db)
 	settingSvc := settingsapp.NewService(settingRepo)
-	walletSvc := service.NewWalletService(repository.NewWalletRepository(db), repository.NewOrderRepository(db), repository.NewOrderRefundRecordRepository(db), userRepo, nil, settingSvc)
+	walletStore := walletgormstore.New(db)
+	walletSvc := walletapp.NewService(walletapp.Options{
+		Repository:   walletStore,
+		Transactions: walletStore,
+	})
 	cardStore := giftcardgormstore.New(db)
 	giftSvc := giftcardapp.NewService(giftcardapp.Options{
 		Repo:     cardStore,

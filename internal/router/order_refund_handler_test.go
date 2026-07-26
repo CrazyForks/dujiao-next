@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	affiliateapp "github.com/dujiao-next/internal/modules/affiliate/application"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
@@ -60,8 +62,8 @@ func setupAdminOrderRefundHandlerTest(t *testing.T) (*ordertransport.AdminRefund
 		&affiliatedomain.Profile{},
 		&affiliatedomain.Commission{},
 		&affiliatedomain.WithdrawRequest{},
-		&models.WalletAccount{},
-		&models.WalletTransaction{},
+		&walletdomain.Account{},
+		&walletdomain.Transaction{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -71,7 +73,7 @@ func setupAdminOrderRefundHandlerTest(t *testing.T) (*ordertransport.AdminRefund
 	userRepo := userstore.New(db)
 	affiliateSvc := affiliateapp.NewService(affiliategormstore.New(db), nil, nil, nil, nil)
 	affiliateRefund := affiliategormstore.NewRefundHandler(affiliateSvc)
-	orderRefundService := service.NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateRefund, nil)
+	orderRefundService := service.NewOrderRefundService(orderRepo, userRepo, orderRefundRecordRepo, affiliateRefund, nil, nil)
 
 	return orderwiring.NewAdminRefundHandler(&provider.Container{
 		OrderRefundService: orderRefundService,

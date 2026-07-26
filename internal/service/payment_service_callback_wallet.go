@@ -6,6 +6,8 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
+	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 
 	"gorm.io/gorm"
 )
@@ -31,7 +33,7 @@ func (s *PaymentService) handleWalletRechargeCallback(payment *models.Payment, s
 	}
 	if recharge == nil {
 		log.Warnw("wallet_recharge_callback_recharge_not_found")
-		return nil, ErrWalletRechargeNotFound
+		return nil, walletcontract.ErrRechargeNotFound
 	}
 
 	if input.ChannelID != 0 && input.ChannelID != payment.ChannelID {
@@ -128,7 +130,8 @@ func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *models.Paymen
 
 	err := s.paymentRepo.Transaction(func(tx *gorm.DB) error {
 		paymentRepo := s.paymentRepo.WithTx(tx)
-		rechargeRepo := s.walletRepo.WithTx(tx)
+		walletTx := walletgormstore.UseTransaction(tx)
+		rechargeRepo := walletTx.Wallets()
 
 		if err := paymentRepo.Update(payment); err != nil {
 			return ErrPaymentUpdateFailed
@@ -138,7 +141,7 @@ func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *models.Paymen
 			return ErrPaymentUpdateFailed
 		}
 		if recharge == nil {
-			return ErrWalletRechargeNotFound
+			return walletcontract.ErrRechargeNotFound
 		}
 		if recharge.Status == constants.WalletRechargeStatusSuccess {
 			return nil
@@ -147,9 +150,9 @@ func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *models.Paymen
 		switch status {
 		case constants.PaymentStatusSuccess:
 			if s.walletSvc == nil {
-				return ErrWalletAccountNotFound
+				return walletcontract.ErrAccountNotFound
 			}
-			if _, err := s.walletSvc.ApplyRechargePayment(tx, recharge); err != nil {
+			if _, err := s.walletSvc.ApplyRechargePayment(walletTx, recharge); err != nil {
 				return err
 			}
 			recharge.Status = constants.WalletRechargeStatusSuccess

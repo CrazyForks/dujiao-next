@@ -27,6 +27,7 @@ import (
 	siteconnectiontransport "github.com/dujiao-next/internal/modules/siteconnection/transport/http"
 	broadcasthttp "github.com/dujiao-next/internal/modules/telegram/broadcast/transport/http"
 	uploadtransport "github.com/dujiao-next/internal/modules/upload/transport/http"
+	wallettransport "github.com/dujiao-next/internal/modules/wallet/transport/http"
 	"github.com/dujiao-next/internal/platform/http/response"
 	"github.com/dujiao-next/internal/provider"
 	adminauthtransport "github.com/dujiao-next/internal/transport/http/adminauth"
@@ -37,7 +38,6 @@ import (
 	paymenttransport "github.com/dujiao-next/internal/transport/http/payment"
 	resellertransport "github.com/dujiao-next/internal/transport/http/reseller"
 	systemtransport "github.com/dujiao-next/internal/transport/http/system"
-	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"

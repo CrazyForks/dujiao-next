@@ -2,11 +2,12 @@ package giftcardhttp
 
 import (
 	"errors"
-	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	"strings"
 
+	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	captcha "github.com/dujiao-next/internal/modules/captcha/contract"
 	captchahttp "github.com/dujiao-next/internal/modules/captcha/transport/http"
 	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
@@ -25,7 +26,7 @@ type CaptchaVerifier interface {
 
 // UserService 是用户侧礼品卡兑换端口。
 type UserService interface {
-	RedeemGiftCard(input giftcardapp.RedeemInput) (*giftcarddomain.GiftCard, *models.WalletAccount, *models.WalletTransaction, error)
+	RedeemGiftCard(input giftcardapp.RedeemInput) (*giftcarddomain.GiftCard, *walletdomain.Account, *walletdomain.Transaction, error)
 }
 
 // UserHandler 处理用户中心礼品卡请求。

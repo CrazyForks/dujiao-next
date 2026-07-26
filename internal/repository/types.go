@@ -4,7 +4,6 @@ import (
 	"time"
 
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
-	walletmodule "github.com/dujiao-next/internal/modules/wallet"
 )
 
 // Pagination 通用分页参数
@@ -138,12 +137,3 @@ type PaymentChannelListFilter struct {
 	ChannelType  string
 	ActiveOnly   bool
 }
-
-// WalletAccountListFilter is retained for legacy callers.
-type WalletAccountListFilter = walletmodule.AccountListFilter
-
-// WalletTransactionListFilter is retained for legacy callers.
-type WalletTransactionListFilter = walletmodule.TransactionListFilter
-
-// WalletRechargeListFilter is retained for legacy callers.
-type WalletRechargeListFilter = walletmodule.RechargeListFilter

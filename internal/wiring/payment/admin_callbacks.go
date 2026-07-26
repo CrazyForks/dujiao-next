@@ -6,6 +6,8 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -56,10 +58,10 @@ func (a adminOrderLookupAdapter) GetByIDs(ids []uint) ([]models.Order, error) {
 }
 
 type adminRechargeLookupAdapter struct {
-	wallets repository.WalletRepository
+	wallets walletcontract.Repository
 }
 
-func (a adminRechargeLookupAdapter) GetRechargeOrdersByPaymentIDs(paymentIDs []uint) ([]models.WalletRechargeOrder, error) {
+func (a adminRechargeLookupAdapter) GetRechargeOrdersByPaymentIDs(paymentIDs []uint) ([]walletdomain.RechargeOrder, error) {
 	if a.wallets == nil {
 		return nil, nil
 	}

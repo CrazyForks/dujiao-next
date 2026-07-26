@@ -13,6 +13,7 @@ import (
 	contenttransport "github.com/dujiao-next/internal/modules/content/transport/http"
 	giftcardtransport "github.com/dujiao-next/internal/modules/giftcard/transport/http"
 	memberleveltransport "github.com/dujiao-next/internal/modules/memberlevel/transport/http"
+	wallettransport "github.com/dujiao-next/internal/modules/wallet/transport/http"
 	"github.com/dujiao-next/internal/provider"
 	ordertransport "github.com/dujiao-next/internal/transport/http/order"
 	paymenttransport "github.com/dujiao-next/internal/transport/http/payment"
@@ -20,7 +21,6 @@ import (
 	publicconfigtransport "github.com/dujiao-next/internal/transport/http/publicconfig"
 	resellertransport "github.com/dujiao-next/internal/transport/http/reseller"
 	userauthtransport "github.com/dujiao-next/internal/transport/http/userauth"
-	wallettransport "github.com/dujiao-next/internal/transport/http/wallet"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"

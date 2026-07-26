@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	coupondomain "github.com/dujiao-next/internal/modules/coupon/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -14,7 +16,6 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
 	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
@@ -67,7 +68,7 @@ type EmailNormalizer interface {
 // WalletBalances 钱包余额查询端口。
 type WalletBalances interface {
 	GetBalancesByUserIDs(userIDs []uint) (map[uint]money.Amount, error)
-	GetAccount(userID uint) (*models.WalletAccount, error)
+	GetAccount(userID uint) (*walletdomain.Account, error)
 }
 
 // OAuthIdentityDirectory 第三方身份查询端口。

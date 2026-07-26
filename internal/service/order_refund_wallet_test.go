@@ -19,6 +19,10 @@ import (
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -31,7 +35,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func setupWalletServiceTest(t *testing.T) (*WalletService, *gorm.DB) {
+func setupOrderRefundWalletTest(t *testing.T) (*OrderRefundService, *gorm.DB) {
 	t.Helper()
 	dsn := fmt.Sprintf("file:wallet_service_test_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
@@ -48,22 +52,33 @@ func setupWalletServiceTest(t *testing.T) (*WalletService, *gorm.DB) {
 		&affiliatedomain.Profile{},
 		&affiliatedomain.Commission{},
 		&affiliatedomain.WithdrawRequest{},
-		&models.WalletAccount{},
-		&models.WalletTransaction{},
+		&walletdomain.Account{},
+		&walletdomain.Transaction{},
 		&models.OrderRefundRecord{},
 		&settingsstore.SettingRecord{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 	models.DB = db
-	walletRepo := repository.NewWalletRepository(db)
+	walletStore := walletgormstore.New(db)
+	walletService := walletapp.NewService(walletapp.Options{
+		Repository:   walletStore,
+		Transactions: walletStore,
+	})
 	orderRepo := repository.NewOrderRepository(db)
 	refundRecordRepo := repository.NewOrderRefundRecordRepository(db)
 	userRepo := userstore.New(db)
 	affiliateSvc := affiliateapp.NewService(affiliategormstore.New(db), nil, nil, nil, nil)
 	affiliateRefund := affiliategormstore.NewRefundHandler(affiliateSvc)
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
-	return NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, affiliateRefund, settingSvc), db
+	return NewOrderRefundService(
+		orderRepo,
+		userRepo,
+		refundRecordRepo,
+		affiliateRefund,
+		settingSvc,
+		walletService,
+	), db
 }
 
 func createTestUser(t *testing.T, db *gorm.DB, id uint) {
@@ -199,7 +214,7 @@ type walletMixedChildrenRefundFixture struct {
 
 func assertWalletMixedChildrenRefundStatus(t *testing.T, fixture walletMixedChildrenRefundFixture) {
 	t.Helper()
-	svc, db := setupWalletServiceTest(t)
+	svc, db := setupOrderRefundWalletTest(t)
 	createTestUser(t, db, fixture.userID)
 	parent := createTestOrder(t, db, fixture.userID, fixture.parentOrderNo, decimal.NewFromInt(100))
 	paidAt := time.Now()
@@ -247,10 +262,10 @@ func assertWalletOrderStatus(t *testing.T, db *gorm.DB, orderID uint, label, exp
 }
 
 func TestWalletServiceRecharge(t *testing.T) {
-	svc, db := setupWalletServiceTest(t)
+	svc, db := setupOrderRefundWalletTest(t)
 	createTestUser(t, db, 101)
 
-	account, txn, err := svc.Recharge(WalletRechargeInput{
+	account, txn, err := svc.wallets.Recharge(walletcontract.RechargeInput{
 		UserID: 101,
 		Amount: money.FromDecimal(decimal.NewFromInt(120)),
 		Remark: "测试充值",
@@ -267,32 +282,32 @@ func TestWalletServiceRecharge(t *testing.T) {
 }
 
 func TestWalletServiceAdminAdjustInsufficient(t *testing.T) {
-	svc, db := setupWalletServiceTest(t)
+	svc, db := setupOrderRefundWalletTest(t)
 	createTestUser(t, db, 102)
 
-	if _, _, err := svc.Recharge(WalletRechargeInput{
+	if _, _, err := svc.wallets.Recharge(walletcontract.RechargeInput{
 		UserID: 102,
 		Amount: money.FromDecimal(decimal.NewFromInt(10)),
 	}); err != nil {
 		t.Fatalf("recharge failed: %v", err)
 	}
 
-	_, _, err := svc.AdminAdjustBalance(WalletAdjustInput{
+	_, _, err := svc.wallets.AdminAdjustBalance(walletcontract.AdjustBalanceInput{
 		UserID: 102,
 		Delta:  money.FromDecimal(decimal.NewFromInt(-20)),
 		Remark: "测试扣减",
 	})
-	if !errors.Is(err, ErrWalletInsufficientBalance) {
+	if !errors.Is(err, walletcontract.ErrInsufficientBalance) {
 		t.Fatalf("expected insufficient balance, got: %v", err)
 	}
 }
 
 func TestWalletServiceApplyAndReleaseOrderBalance(t *testing.T) {
-	svc, db := setupWalletServiceTest(t)
+	svc, db := setupOrderRefundWalletTest(t)
 	createTestUser(t, db, 103)
 	order := createTestOrder(t, db, 103, "DJTESTAPPLY001", decimal.NewFromInt(30))
 
-	if _, _, err := svc.Recharge(WalletRechargeInput{
+	if _, _, err := svc.wallets.Recharge(walletcontract.RechargeInput{
 		UserID: 103,
 		Amount: money.FromDecimal(decimal.NewFromInt(50)),
 	}); err != nil {
@@ -300,7 +315,7 @@ func TestWalletServiceApplyAndReleaseOrderBalance(t *testing.T) {
 	}
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		deducted, err := svc.ApplyOrderBalance(tx, order, true)
+		deducted, err := applyOrderWalletBalance(svc.wallets, svc.orderRepo, tx, order, true)
 		if err != nil {
 			return err
 		}
@@ -312,7 +327,7 @@ func TestWalletServiceApplyAndReleaseOrderBalance(t *testing.T) {
 		t.Fatalf("apply order balance failed: %v", err)
 	}
 
-	account, err := svc.GetAccount(103)
+	account, err := svc.wallets.GetAccount(103)
 	if err != nil {
 		t.Fatalf("get account failed: %v", err)
 	}
@@ -328,7 +343,14 @@ func TestWalletServiceApplyAndReleaseOrderBalance(t *testing.T) {
 	order.OnlinePaidAmount = refreshed.OnlinePaidAmount
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		refunded, err := svc.ReleaseOrderBalance(tx, order, constants.WalletTxnTypeOrderRefund, "测试回退")
+		refunded, err := releaseOrderWalletBalance(
+			svc.wallets,
+			svc.orderRepo,
+			tx,
+			order,
+			constants.WalletTxnTypeOrderRefund,
+			"测试回退",
+		)
 		if err != nil {
 			return err
 		}
@@ -340,7 +362,7 @@ func TestWalletServiceApplyAndReleaseOrderBalance(t *testing.T) {
 		t.Fatalf("release order balance failed: %v", err)
 	}
 
-	account, err = svc.GetAccount(103)
+	account, err = svc.wallets.GetAccount(103)
 	if err != nil {
 		t.Fatalf("get account failed: %v", err)
 	}
@@ -350,7 +372,7 @@ func TestWalletServiceApplyAndReleaseOrderBalance(t *testing.T) {
 }
 
 func TestWalletServiceAdminRefundToWallet(t *testing.T) {
-	svc, db := setupWalletServiceTest(t)
+	svc, db := setupOrderRefundWalletTest(t)
 	createTestUser(t, db, 104)
 	createTestUser(t, db, 204)
 	order := createTestOrder(t, db, 104, "DJTESTREFUND001", decimal.NewFromInt(40))
@@ -431,13 +453,13 @@ func TestWalletServiceAdminRefundToWallet(t *testing.T) {
 		Amount:  money.FromDecimal(decimal.NewFromInt(30)),
 		Remark:  "超额退款",
 	})
-	if !errors.Is(err, ErrWalletRefundExceeded) {
+	if !errors.Is(err, walletcontract.ErrRefundExceeded) {
 		t.Fatalf("expected refund exceeded, got: %v", err)
 	}
 }
 
 func TestWalletServiceAdminRefundToWalletRejectUnpaidOrder(t *testing.T) {
-	svc, db := setupWalletServiceTest(t)
+	svc, db := setupOrderRefundWalletTest(t)
 	createTestUser(t, db, 105)
 	order := createTestOrder(t, db, 105, "DJTESTREFUND002", decimal.NewFromInt(40))
 	if err := db.Model(&models.Order{}).Where("id = ?", order.ID).Update("status", constants.OrderStatusCanceled).Error; err != nil {
@@ -455,7 +477,7 @@ func TestWalletServiceAdminRefundToWalletRejectUnpaidOrder(t *testing.T) {
 }
 
 func TestWalletServiceAdminRefundToWalletExpiredWindow(t *testing.T) {
-	svc, db := setupWalletServiceTest(t)
+	svc, db := setupOrderRefundWalletTest(t)
 	createTestUser(t, db, 111)
 	order := createTestOrder(t, db, 111, "DJTESTREFUND-EXPIRED", decimal.NewFromInt(40))
 	paidAt := time.Now().AddDate(0, 0, -31)
@@ -477,7 +499,7 @@ func TestWalletServiceAdminRefundToWalletExpiredWindow(t *testing.T) {
 }
 
 func TestWalletServiceAdminRefundToWalletNoLimitWhenZero(t *testing.T) {
-	svc, db := setupWalletServiceTest(t)
+	svc, db := setupOrderRefundWalletTest(t)
 	createTestUser(t, db, 116)
 	order := createTestOrder(t, db, 116, "DJTESTREFUND-NOLIMIT", decimal.NewFromInt(40))
 	paidAt := time.Now().AddDate(0, 0, -90)
@@ -511,7 +533,7 @@ func TestWalletServiceAdminRefundToWalletNoLimitWhenZero(t *testing.T) {
 }
 
 func TestWalletServiceAdminRefundToWalletCompletedOrderPartialSetsPartiallyRefunded(t *testing.T) {
-	svc, db := setupWalletServiceTest(t)
+	svc, db := setupOrderRefundWalletTest(t)
 	createTestUser(t, db, 112)
 	order := createTestOrder(t, db, 112, "DJTESTREFUND003", decimal.NewFromInt(40))
 	conn := createTestSiteConnection(t, db, 1)
@@ -564,7 +586,7 @@ func TestWalletServiceAdminRefundToWalletCompletedOrderPartialSetsPartiallyRefun
 }
 
 func TestWalletServiceAdminRefundToWalletFullRefundUpdatesChildrenStatus(t *testing.T) {
-	svc, db := setupWalletServiceTest(t)
+	svc, db := setupOrderRefundWalletTest(t)
 	createTestUser(t, db, 107)
 	parent := createTestOrder(t, db, 107, "DJTESTREFUNDCHILD001", decimal.NewFromInt(30))
 	paidAt := time.Now()

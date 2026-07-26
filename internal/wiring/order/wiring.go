@@ -57,7 +57,7 @@ func NewAdminRefundHandler(c *provider.Container) *ordertransport.AdminRefundHan
 	return ordertransport.NewAdminRefundHandler(
 		refunds,
 		refunds,
-		orderAdminWalletRefundAdapter{wallets: c.WalletService},
+		orderAdminWalletRefundAdapter{refunds: c.OrderRefundService},
 		orderAdminOrderLookupAdapter{orders: c.OrderRepo},
 		orderAdminStatusEmailAdapter{queue: c.QueueClient},
 	)

@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
@@ -28,7 +30,7 @@ func setupPaymentRepositoryTest(t *testing.T) (*GormPaymentRepository, *gorm.DB)
 		&userdomain.User{},
 		&models.Order{},
 		&models.Payment{},
-		&models.WalletRechargeOrder{},
+		&walletdomain.RechargeOrder{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
@@ -114,7 +116,7 @@ func TestPaymentRepositoryListAdminByUserIncludesWalletRechargePayments(t *testi
 	if err := db.Create(&rechargePaymentUser1).Error; err != nil {
 		t.Fatalf("create user1 recharge payment failed: %v", err)
 	}
-	if err := db.Create(&models.WalletRechargeOrder{
+	if err := db.Create(&walletdomain.RechargeOrder{
 		RechargeNo:      "DJRUSER1001",
 		UserID:          user1.ID,
 		PaymentID:       rechargePaymentUser1.ID,
@@ -151,7 +153,7 @@ func TestPaymentRepositoryListAdminByUserIncludesWalletRechargePayments(t *testi
 	if err := db.Create(&rechargePaymentUser2).Error; err != nil {
 		t.Fatalf("create user2 recharge payment failed: %v", err)
 	}
-	if err := db.Create(&models.WalletRechargeOrder{
+	if err := db.Create(&walletdomain.RechargeOrder{
 		RechargeNo:      "DJRUSER2001",
 		UserID:          user2.ID,
 		PaymentID:       rechargePaymentUser2.ID,

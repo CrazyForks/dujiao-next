@@ -8,6 +8,8 @@ import (
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
@@ -24,11 +26,11 @@ type PaymentService struct {
 	productSKURepo          paymentSKUStore
 	paymentRepo             repository.PaymentRepository
 	channelRepo             repository.PaymentChannelRepository
-	walletRepo              repository.WalletRepository
+	walletRepo              walletcontract.Repository
 	userRepo                usercontract.Store
 	userOAuthIdentityRepo   externalidentitycontract.Store
 	queueClient             *queue.Client
-	walletSvc               *WalletService
+	walletSvc               *walletapp.Service
 	settingService          *settingsapp.Service
 	defaultEmailConfig      config.EmailConfig
 	expireMinutes           int
@@ -92,11 +94,11 @@ type PaymentServiceOptions struct {
 	ProductSKURepo            paymentSKUStore
 	PaymentRepo               repository.PaymentRepository
 	ChannelRepo               repository.PaymentChannelRepository
-	WalletRepo                repository.WalletRepository
+	WalletRepo                walletcontract.Repository
 	UserStore                 usercontract.Store
 	ExternalIdentityStore     externalidentitycontract.Store
 	QueueClient               *queue.Client
-	WalletService             *WalletService
+	WalletService             *walletapp.Service
 	SettingService            *settingsapp.Service
 	DefaultEmailConfig        config.EmailConfig
 	ExpireMinutes             int

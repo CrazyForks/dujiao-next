@@ -24,14 +24,16 @@ import (
 	giftcardapp "github.com/dujiao-next/internal/modules/giftcard/application"
 	giftcarddomain "github.com/dujiao-next/internal/modules/giftcard/domain"
 	giftcardgormstore "github.com/dujiao-next/internal/modules/giftcard/infrastructure/gormstore"
+	giftcardtransport "github.com/dujiao-next/internal/modules/giftcard/transport/http"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
-	"github.com/dujiao-next/internal/repository"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/service"
-	giftcardtransport "github.com/dujiao-next/internal/modules/giftcard/transport/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/glebarez/sqlite"
@@ -78,8 +80,8 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 		&models.Order{},
 		&models.OrderItem{},
 		&models.Fulfillment{},
-		&models.WalletAccount{},
-		&models.WalletTransaction{},
+		&walletdomain.Account{},
+		&walletdomain.Transaction{},
 		&settingsstore.SettingRecord{},
 		&giftcarddomain.GiftCardBatch{},
 		&giftcarddomain.GiftCard{},
@@ -91,14 +93,15 @@ func setupChannelGiftCardHandlerTest(t *testing.T) (*gorm.DB, *httptest.Server) 
 	userRepo := userstore.New(db)
 	identityRepo := externalidentitystore.New(db)
 	emailVerifyRepo := emailverificationstore.New(db)
-	orderRepo := repository.NewOrderRepository(db)
-	walletRepo := repository.NewWalletRepository(db)
+	walletStore := walletgormstore.New(db)
 	settingRepo := settingsstore.New(db)
 	giftCardRepo := giftcardgormstore.New(db)
 
 	settingSvc := settingsapp.NewService(settingRepo)
-	refundRecordRepo := repository.NewOrderRefundRecordRepository(db)
-	walletSvc := service.NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, nil, settingSvc)
+	walletSvc := walletapp.NewService(walletapp.Options{
+		Repository:   walletStore,
+		Transactions: walletStore,
+	})
 	giftCardSvc := giftcardapp.NewService(giftcardapp.Options{
 		Repo:     giftCardRepo,
 		Users:    userRepo,
@@ -211,7 +214,7 @@ func TestRedeemGiftCardChannelHandlerSuccess(t *testing.T) {
 		t.Fatalf("expected provisioned telegram identity: %v", err)
 	}
 
-	var account models.WalletAccount
+	var account walletdomain.Account
 	if err := db.Where("user_id = ?", identity.UserID).First(&account).Error; err != nil {
 		t.Fatalf("expected wallet account: %v", err)
 	}
@@ -269,7 +272,7 @@ func TestRedeemGiftCardChannelHandlerReturnsMappedRedeemedError(t *testing.T) {
 	}
 
 	var walletCount int64
-	if err := db.Model(&models.WalletAccount{}).Where("user_id = ?", identity.UserID).Count(&walletCount).Error; err != nil {
+	if err := db.Model(&walletdomain.Account{}).Where("user_id = ?", identity.UserID).Count(&walletCount).Error; err != nil {
 		t.Fatalf("count wallet accounts failed: %v", err)
 	}
 	if walletCount != 0 {

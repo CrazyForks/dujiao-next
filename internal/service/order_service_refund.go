@@ -10,6 +10,8 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/dujiao-next/internal/constants"
@@ -60,6 +62,17 @@ type OrderRefundService struct {
 	affiliateRefund       affiliateRefundProcessor
 	settingService        *settingsapp.Service
 	resellerAccountingSvc *ResellerAccountingService
+	wallets               *walletapp.Service
+}
+
+type affiliateRefundProcessor interface {
+	HandleOrderRefundedTx(
+		tx *gorm.DB,
+		order *models.Order,
+		refundDelta decimal.Decimal,
+		refundedBefore decimal.Decimal,
+		reason string,
+	) error
 }
 
 // OrderStatusEmailRefundDetails 订单状态邮件中的退款信息
@@ -99,6 +112,7 @@ func NewOrderRefundService(
 	orderRefundRecordRepo repository.OrderRefundRecordRepository,
 	affiliateRefund affiliateRefundProcessor,
 	settingService *settingsapp.Service,
+	wallets *walletapp.Service,
 ) *OrderRefundService {
 	return &OrderRefundService{
 		orderRepo:             orderRepo,
@@ -106,6 +120,7 @@ func NewOrderRefundService(
 		orderRefundRecordRepo: orderRefundRecordRepo,
 		affiliateRefund:       affiliateRefund,
 		settingService:        settingService,
+		wallets:               wallets,
 	}
 }
 
@@ -117,11 +132,11 @@ func (s *OrderRefundService) SetResellerAccountingService(svc *ResellerAccountin
 func (s *OrderRefundService) ParseRefundAmount(raw string) (money.Amount, error) {
 	parsed, err := decimal.NewFromString(strings.TrimSpace(raw))
 	if err != nil {
-		return money.Amount{}, ErrWalletInvalidAmount
+		return money.Amount{}, walletcontract.ErrInvalidAmount
 	}
 	amount := parsed.Round(2)
 	if amount.LessThanOrEqual(decimal.Zero) {
-		return money.Amount{}, ErrWalletInvalidAmount
+		return money.Amount{}, walletcontract.ErrInvalidAmount
 	}
 	return money.FromDecimal(amount), nil
 }
@@ -230,7 +245,7 @@ func (s *OrderRefundService) AdminManualRefund(input AdminManualRefundInput) (*m
 	}
 	amount := input.Amount.Decimal.Round(2)
 	if amount.LessThanOrEqual(decimal.Zero) {
-		return nil, nil, ErrWalletInvalidAmount
+		return nil, nil, walletcontract.ErrInvalidAmount
 	}
 	recordRemark := strings.TrimSpace(input.Remark)
 	var createdRecord *models.OrderRefundRecord
@@ -265,7 +280,7 @@ func (s *OrderRefundService) AdminManualRefund(input AdminManualRefundInput) (*m
 		refundedBefore := order.RefundedAmount.Decimal.Round(2)
 		refundable := order.TotalAmount.Decimal.Sub(refundedBefore).Round(2)
 		if amount.GreaterThan(refundable) {
-			return ErrWalletRefundExceeded
+			return walletcontract.ErrRefundExceeded
 		}
 
 		newRefunded := refundedBefore.Add(amount).Round(2)
@@ -418,13 +433,17 @@ func (s *OrderRefundService) createRefundRecordTx(
 	if tx == nil || order == nil || s.orderRefundRecordRepo == nil {
 		return nil, ErrRefundRecordCreateFailed
 	}
+	currency := strings.ToUpper(strings.TrimSpace(order.Currency))
+	if currency == "" {
+		currency = "CNY"
+	}
 	record := &models.OrderRefundRecord{
 		UserID:     order.UserID,
 		GuestEmail: order.GuestEmail,
 		OrderID:    order.ID,
 		Type:       strings.TrimSpace(refundType),
 		Amount:     money.FromDecimal(amount.Round(2)),
-		Currency:   normalizeWalletCurrency(order.Currency),
+		Currency:   currency,
 		Remark:     remark,
 		CreatedAt:  now,
 		UpdatedAt:  now,

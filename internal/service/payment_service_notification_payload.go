@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	notificationformat "github.com/dujiao-next/internal/modules/notification/application/format"
@@ -53,7 +55,7 @@ func (s *PaymentService) buildOrderNotificationPayload(order *models.Order, paym
 	return payload
 }
 
-func (s *PaymentService) buildWalletRechargeNotificationPayload(recharge *models.WalletRechargeOrder, payment *models.Payment) jsonmap.JSON {
+func (s *PaymentService) buildWalletRechargeNotificationPayload(recharge *walletdomain.RechargeOrder, payment *models.Payment) jsonmap.JSON {
 	customerEmail, customerLabel := s.resolveUserNotificationIdentity(recharge.UserID)
 	providerType := strings.TrimSpace(recharge.ProviderType)
 	channelType := strings.TrimSpace(recharge.ChannelType)

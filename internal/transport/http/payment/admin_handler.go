@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	ginutil "github.com/dujiao-next/internal/platform/http/ginutil"
 
 	"github.com/dujiao-next/internal/models"
@@ -52,7 +54,7 @@ type AdminOrderLookup interface {
 
 // AdminRechargeLookup 后台充值单元数据查询端口。
 type AdminRechargeLookup interface {
-	GetRechargeOrdersByPaymentIDs(paymentIDs []uint) ([]models.WalletRechargeOrder, error)
+	GetRechargeOrdersByPaymentIDs(paymentIDs []uint) ([]walletdomain.RechargeOrder, error)
 }
 
 // AdminPaymentItem 支付记录返回

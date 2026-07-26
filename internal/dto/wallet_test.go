@@ -6,12 +6,14 @@ import (
 	"testing"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
 func TestWalletAccountRespOmitsSensitiveFields(t *testing.T) {
-	account := &models.WalletAccount{
+	account := &walletdomain.Account{
 		ID:      1,
 		UserID:  99,
 		Balance: newMoney("500.00"),
@@ -33,7 +35,7 @@ func TestWalletAccountRespOmitsSensitiveFields(t *testing.T) {
 }
 
 func TestWalletTransactionRespOmitsSensitiveFields(t *testing.T) {
-	txn := &models.WalletTransaction{
+	txn := &walletdomain.Transaction{
 		ID:            1,
 		UserID:        99,
 		Type:          "recharge",
@@ -68,7 +70,7 @@ func TestWalletTransactionRespOmitsSensitiveFields(t *testing.T) {
 
 func TestWalletRechargePaymentPayloadOmitsSensitiveFields(t *testing.T) {
 	expires := time.Now()
-	recharge := &models.WalletRechargeOrder{
+	recharge := &walletdomain.RechargeOrder{
 		ID:         1,
 		RechargeNo: "RCG-001",
 		UserID:     99,
@@ -92,7 +94,7 @@ func TestWalletRechargePaymentPayloadOmitsSensitiveFields(t *testing.T) {
 		ExpiredAt:       &expires,
 		Status:          "paid",
 	}
-	account := &models.WalletAccount{Balance: newMoney("200.00")}
+	account := &walletdomain.Account{Balance: newMoney("200.00")}
 
 	resp := NewWalletRechargePaymentPayload(recharge, payment, account)
 	data, _ := json.Marshal(resp)

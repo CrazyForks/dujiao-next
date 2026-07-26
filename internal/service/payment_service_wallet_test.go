@@ -5,12 +5,14 @@ import (
 	"testing"
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	productgormstore "github.com/dujiao-next/internal/modules/catalog/product/store/gormstore"
 
-	userstore "github.com/dujiao-next/internal/modules/identity/user/infrastructure/gormstore"
-
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
@@ -38,9 +40,9 @@ func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 		&models.Fulfillment{},
 		&productdomain.Product{},
 		&productdomain.ProductSKU{},
-		&models.WalletAccount{},
-		&models.WalletTransaction{},
-		&models.WalletRechargeOrder{},
+		&walletdomain.Account{},
+		&walletdomain.Transaction{},
+		&walletdomain.RechargeOrder{},
 		&models.PaymentChannel{},
 		&models.Payment{},
 	); err != nil {
@@ -53,10 +55,11 @@ func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	productSKURepo := productgormstore.NewSKUStore(db)
 	paymentRepo := repository.NewPaymentRepository(db)
 	channelRepo := repository.NewPaymentChannelRepository(db)
-	walletRepo := repository.NewWalletRepository(db)
-	userRepo := userstore.New(db)
-	refundRecordRepo := repository.NewOrderRefundRecordRepository(db)
-	walletSvc := NewWalletService(walletRepo, orderRepo, refundRecordRepo, userRepo, nil, nil)
+	walletRepo := walletgormstore.New(db)
+	walletSvc := walletapp.NewService(walletapp.Options{
+		Repository:   walletRepo,
+		Transactions: walletRepo,
+	})
 
 	// 构建与 Container.BuildRunner 相同的 PaymentProviderRegistry，
 	// 确保 applyProviderPayment 通过 Registry 路由时各 adapter 可以被找到。
@@ -121,7 +124,7 @@ func TestCreatePaymentWalletFullAmountCreatesPaymentRecord(t *testing.T) {
 		t.Fatalf("create order failed: %v", err)
 	}
 
-	account := &models.WalletAccount{
+	account := &walletdomain.Account{
 		UserID:    user.ID,
 		Balance:   money.FromDecimal(decimal.NewFromInt(100)),
 		CreatedAt: now,
@@ -189,7 +192,7 @@ func TestCreatePaymentWalletFullAmountCreatesPaymentRecord(t *testing.T) {
 		t.Fatalf("order should set paid_at")
 	}
 
-	var refreshedAccount models.WalletAccount
+	var refreshedAccount walletdomain.Account
 	if err := db.Where("user_id = ?", user.ID).First(&refreshedAccount).Error; err != nil {
 		t.Fatalf("reload wallet account failed: %v", err)
 	}
@@ -227,7 +230,7 @@ func TestExpireWalletRechargePaymentPendingToExpired(t *testing.T) {
 		t.Fatalf("reloaded payment expected expired_at set")
 	}
 
-	var refreshedRecharge models.WalletRechargeOrder
+	var refreshedRecharge walletdomain.RechargeOrder
 	if err := db.First(&refreshedRecharge, recharge.ID).Error; err != nil {
 		t.Fatalf("reload recharge failed: %v", err)
 	}
@@ -262,7 +265,7 @@ func TestExpireWalletRechargePaymentDoesNotOverrideSuccess(t *testing.T) {
 		t.Fatalf("success payment should keep paid_at")
 	}
 
-	var refreshedRecharge models.WalletRechargeOrder
+	var refreshedRecharge walletdomain.RechargeOrder
 	if err := db.First(&refreshedRecharge, recharge.ID).Error; err != nil {
 		t.Fatalf("reload recharge failed: %v", err)
 	}
@@ -357,7 +360,7 @@ func TestWalletRechargeCallbackDuplicateSuccessDoesNotDuplicateCredit(t *testing
 
 	reference := fmt.Sprintf("recharge:%d:success", recharge.ID)
 	var txnCount int64
-	if err := db.Model(&models.WalletTransaction{}).Where("reference = ?", reference).Count(&txnCount).Error; err != nil {
+	if err := db.Model(&walletdomain.Transaction{}).Where("reference = ?", reference).Count(&txnCount).Error; err != nil {
 		t.Fatalf("count wallet transaction failed: %v", err)
 	}
 	if txnCount != 1 {
@@ -380,7 +383,7 @@ func TestWalletRechargeCallbackPendingAfterExpireDoesNotReopen(t *testing.T) {
 		t.Fatalf("payment status want %s got %s", constants.PaymentStatusExpired, updated.Status)
 	}
 
-	var refreshedRecharge models.WalletRechargeOrder
+	var refreshedRecharge walletdomain.RechargeOrder
 	if err := db.First(&refreshedRecharge, recharge.ID).Error; err != nil {
 		t.Fatalf("reload recharge failed: %v", err)
 	}
@@ -462,7 +465,7 @@ func TestWalletRechargeCallbackTerminalStateMatrixDoesNotReopen(t *testing.T) {
 				t.Fatalf("reloaded payment status want %s got %s", tc.wantPaymentStatus, refreshedPayment.Status)
 			}
 
-			var refreshedRecharge models.WalletRechargeOrder
+			var refreshedRecharge walletdomain.RechargeOrder
 			if err := db.First(&refreshedRecharge, recharge.ID).Error; err != nil {
 				t.Fatalf("reload recharge failed: %v", err)
 			}
@@ -489,7 +492,7 @@ func TestWalletRechargeCallbackSuccessAfterFailedCreditsOnce(t *testing.T) {
 
 	reference := fmt.Sprintf("recharge:%d:success", recharge.ID)
 	var txnCount int64
-	if err := db.Model(&models.WalletTransaction{}).Where("reference = ?", reference).Count(&txnCount).Error; err != nil {
+	if err := db.Model(&walletdomain.Transaction{}).Where("reference = ?", reference).Count(&txnCount).Error; err != nil {
 		t.Fatalf("count wallet transaction failed: %v", err)
 	}
 	if txnCount != 1 {
@@ -497,7 +500,7 @@ func TestWalletRechargeCallbackSuccessAfterFailedCreditsOnce(t *testing.T) {
 	}
 }
 
-func createWalletRechargeFixture(t *testing.T, db *gorm.DB, paymentStatus string, rechargeStatus string) (*models.Payment, *models.WalletRechargeOrder) {
+func createWalletRechargeFixture(t *testing.T, db *gorm.DB, paymentStatus string, rechargeStatus string) (*models.Payment, *walletdomain.RechargeOrder) {
 	t.Helper()
 	now := time.Now()
 	payment := &models.Payment{
@@ -522,7 +525,7 @@ func createWalletRechargeFixture(t *testing.T, db *gorm.DB, paymentStatus string
 		t.Fatalf("create payment failed: %v", err)
 	}
 
-	recharge := &models.WalletRechargeOrder{
+	recharge := &walletdomain.RechargeOrder{
 		RechargeNo:      fmt.Sprintf("WRTEST%d", now.UnixNano()),
 		UserID:          1,
 		PaymentID:       payment.ID,
@@ -549,7 +552,7 @@ func createWalletRechargeFixture(t *testing.T, db *gorm.DB, paymentStatus string
 	return payment, recharge
 }
 
-func buildWalletRechargeCallbackInput(payment *models.Payment, recharge *models.WalletRechargeOrder, status string, providerRef string) PaymentCallbackInput {
+func buildWalletRechargeCallbackInput(payment *models.Payment, recharge *walletdomain.RechargeOrder, status string, providerRef string) PaymentCallbackInput {
 	return PaymentCallbackInput{
 		PaymentID:   payment.ID,
 		OrderNo:     recharge.RechargeNo,
@@ -580,7 +583,7 @@ func assertWalletRechargeSuccessState(t *testing.T, db *gorm.DB, paymentID uint,
 		t.Fatalf("payment should set paid_at")
 	}
 
-	var refreshedRecharge models.WalletRechargeOrder
+	var refreshedRecharge walletdomain.RechargeOrder
 	if err := db.First(&refreshedRecharge, rechargeID).Error; err != nil {
 		t.Fatalf("reload recharge failed: %v", err)
 	}
@@ -591,7 +594,7 @@ func assertWalletRechargeSuccessState(t *testing.T, db *gorm.DB, paymentID uint,
 		t.Fatalf("recharge should set paid_at")
 	}
 
-	var account models.WalletAccount
+	var account walletdomain.Account
 	if err := db.Where("user_id = ?", userID).First(&account).Error; err != nil {
 		t.Fatalf("reload wallet account failed: %v", err)
 	}

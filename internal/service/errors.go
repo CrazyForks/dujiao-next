@@ -12,7 +12,6 @@ import (
 	resellermodule "github.com/dujiao-next/internal/modules/reseller"
 	settingsintegration "github.com/dujiao-next/internal/modules/settings/schema/integration"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
-	walletmodule "github.com/dujiao-next/internal/modules/wallet"
 )
 
 var (
@@ -81,16 +80,6 @@ var (
 	ErrPaymentAmountTooLarge               = errors.New("payment amount too large")
 	ErrPaymentGatewayRequestFailed         = errors.New("payment gateway request failed")
 	ErrPaymentGatewayResponseInvalid       = errors.New("payment gateway response invalid")
-	ErrWalletInvalidAmount                 = walletmodule.ErrInvalidAmount
-	ErrWalletInsufficientBalance           = walletmodule.ErrInsufficientBalance
-	ErrWalletAccountNotFound               = walletmodule.ErrAccountNotFound
-	ErrWalletAccountCreateFailed           = walletmodule.ErrAccountCreateFailed
-	ErrWalletAccountUpdateFailed           = walletmodule.ErrAccountUpdateFailed
-	ErrWalletTransactionCreateFailed       = walletmodule.ErrTransactionCreateFailed
-	ErrWalletRefundExceeded                = walletmodule.ErrRefundExceeded
-	ErrWalletNotSupportedForGuest          = walletmodule.ErrNotSupportedForGuest
-	ErrWalletRechargeNotFound              = walletmodule.ErrRechargeNotFound
-	ErrWalletRechargeStatusInvalid         = walletmodule.ErrRechargeStatusInvalid
 	ErrRefundRecordCreateFailed            = errors.New("refund record create failed")
 	ErrCardSecretInsufficient              = errors.New("card secret insufficient")
 	ErrFulfillmentNotAuto                  = errors.New("fulfillment not auto")
@@ -122,7 +111,6 @@ var (
 	ErrOrderEmailTemplateConfigInvalid     = settingsmessaging.ErrOrderEmailTemplateConfigInvalid
 	ErrPaymentChannelNotAllowedForProduct  = errors.New("payment channel not allowed for product")
 	ErrPaymentChannelNotAllowedForRecharge = errors.New("payment channel not allowed for wallet recharge")
-	ErrWalletOnlyPaymentRequired           = walletmodule.ErrOnlyPaymentRequired
 	ErrResellerProductNotListed            = productcontract.ErrResellerProductNotListed
 	ErrResellerPriceBelowBase              = resellermodule.ErrPriceBelowBase
 	ErrResellerMarkupExceeded              = resellermodule.ErrMarkupExceeded

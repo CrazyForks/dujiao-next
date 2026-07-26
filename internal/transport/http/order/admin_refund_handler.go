@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/platform/http/ginutil"
@@ -74,7 +76,7 @@ type AdminRefundWriter interface {
 
 // AdminWalletRefunder 管理端退款到余额端口。
 type AdminWalletRefunder interface {
-	AdminRefundToWallet(input AdminRefundToWalletInput) (*models.Order, *models.WalletTransaction, *models.OrderRefundRecord, error)
+	AdminRefundToWallet(input AdminRefundToWalletInput) (*models.Order, *walletdomain.Transaction, *models.OrderRefundRecord, error)
 }
 
 // OrderByIDLookup 按 ID 查询订单（退款邮件优先父订单）。

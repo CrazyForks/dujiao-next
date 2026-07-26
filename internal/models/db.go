@@ -34,6 +34,7 @@ import (
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	"github.com/glebarez/sqlite" // 纯 Go SQLite 驱动（基于 modernc.org/sqlite）
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -164,9 +165,9 @@ func AutoMigrate() error {
 		&ResellerWithdrawRequest{},
 		&ResellerBalanceAccount{},
 		&ResellerRelatedAccount{},
-		&WalletAccount{},
-		&WalletTransaction{},
-		&WalletRechargeOrder{},
+		&walletdomain.Account{},
+		&walletdomain.Transaction{},
+		&walletdomain.RechargeOrder{},
 		&auditlogdomain.UserLoginLog{},
 		&auditlogdomain.AuthzAuditLog{},
 		&notificationdomain.NotificationLog{},

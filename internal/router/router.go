@@ -9,6 +9,7 @@ import (
 	"github.com/dujiao-next/internal/authz"
 	affiliatebootstrap "github.com/dujiao-next/internal/bootstrap/affiliate"
 	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
+	walletbootstrap "github.com/dujiao-next/internal/bootstrap/wallet"
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
@@ -47,7 +48,6 @@ import (
 	resellerwiring "github.com/dujiao-next/internal/wiring/reseller"
 	upstreamwiring "github.com/dujiao-next/internal/wiring/upstream"
 	userauthwiring "github.com/dujiao-next/internal/wiring/userauth"
-	walletwiring "github.com/dujiao-next/internal/wiring/wallet"
 
 	"github.com/gin-gonic/gin"
 )
@@ -121,7 +121,7 @@ func SetupRouter(cfg *config.Config, c *provider.Container) *gin.Engine {
 	user2FAHandler := userAuthHandlers.TwoFA
 	userTelegramOIDCHandler := userAuthHandlers.TelegramOIDC
 	userTelegramHandler := userAuthHandlers.Telegram
-	walletHandlers := walletwiring.New(c)
+	walletHandlers := walletbootstrap.New(c)
 	userWalletHandler := walletHandlers.User
 	adminWalletHandler := walletHandlers.Admin
 	channelWalletHandler := walletHandlers.Channel

@@ -9,6 +9,7 @@ import (
 
 	"github.com/dujiao-next/internal/models"
 	productapplication "github.com/dujiao-next/internal/modules/catalog/product/application"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/service"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -114,7 +115,7 @@ func mapOrderError(err error) error {
 	}{
 		{[]error{service.ErrOrderNotFound}, upstreamtransport.ErrOrderNotFound},
 		{[]error{service.ErrOrderCancelNotAllowed}, upstreamtransport.ErrOrderCancelNotAllowed},
-		{[]error{service.ErrWalletInsufficientBalance}, upstreamtransport.ErrWalletInsufficient},
+		{[]error{walletcontract.ErrInsufficientBalance}, upstreamtransport.ErrWalletInsufficient},
 		{[]error{service.ErrCardSecretInsufficient, service.ErrManualStockInsufficient}, upstreamtransport.ErrStockInsufficient},
 		{[]error{service.ErrProductNotAvailable, service.ErrProductNotFound}, upstreamtransport.ErrProductUnavailable},
 		{[]error{service.ErrProductSKUInvalid, service.ErrProductSKURequired}, upstreamtransport.ErrSKUUnavailable},

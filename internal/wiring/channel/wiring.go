@@ -10,6 +10,7 @@ import (
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/provider"
 	"github.com/dujiao-next/internal/repository"
 	"github.com/dujiao-next/internal/service"
@@ -209,7 +210,7 @@ func mapError(err error) error {
 		{service.ErrPaymentGatewayRequestFailed, channeltransport.ErrPaymentGatewayRequestFailed},
 		{service.ErrPaymentGatewayResponseInvalid, channeltransport.ErrPaymentGatewayResponseInvalid},
 		{service.ErrPaymentCurrencyMismatch, channeltransport.ErrPaymentCurrencyMismatch},
-		{service.ErrWalletOnlyPaymentRequired, channeltransport.ErrWalletOnlyPaymentRequired},
+		{walletcontract.ErrOnlyPaymentRequired, channeltransport.ErrWalletOnlyPaymentRequired},
 	} {
 		if errors.Is(err, mapping.source) {
 			mapped := fmt.Errorf("%w: %v", mapping.target, err)

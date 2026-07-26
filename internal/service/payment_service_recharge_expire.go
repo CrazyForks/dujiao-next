@@ -5,6 +5,9 @@ import (
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 
 	"gorm.io/gorm"
 )
@@ -34,13 +37,13 @@ func (s *PaymentService) ExpireWalletRechargePayment(paymentID uint) (*models.Pa
 			return nil
 		}
 
-		rechargeRepo := s.walletRepo.WithTx(tx)
+		rechargeRepo := walletgormstore.UseTransaction(tx).Wallets()
 		recharge, err := rechargeRepo.GetRechargeOrderByPaymentIDForUpdate(payment.ID)
 		if err != nil {
 			return ErrPaymentUpdateFailed
 		}
 		if recharge == nil {
-			return ErrWalletRechargeNotFound
+			return walletcontract.ErrRechargeNotFound
 		}
 		if !canExpireWalletRechargePayment(&payment, recharge) {
 			output = &payment
@@ -69,7 +72,7 @@ func (s *PaymentService) ExpireWalletRechargePayment(paymentID uint) (*models.Pa
 	return output, nil
 }
 
-func canExpireWalletRechargePayment(payment *models.Payment, recharge *models.WalletRechargeOrder) bool {
+func canExpireWalletRechargePayment(payment *models.Payment, recharge *walletdomain.RechargeOrder) bool {
 	if payment == nil || recharge == nil {
 		return false
 	}

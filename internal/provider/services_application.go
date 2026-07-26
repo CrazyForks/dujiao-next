@@ -25,6 +25,7 @@ import (
 	sitemapcontract "github.com/dujiao-next/internal/modules/sitemap/contract"
 	sitemapcache "github.com/dujiao-next/internal/modules/sitemap/infrastructure/cacheadapter"
 	sitemapcatalog "github.com/dujiao-next/internal/modules/sitemap/infrastructure/catalogreader"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	"github.com/dujiao-next/internal/service"
 )
 
@@ -69,8 +70,17 @@ func (c *Container) initApplicationServices() {
 	}
 	c.SitemapService = sitemapService
 	c.CartService = cartapp.NewService(c.CartRepo, c.ProductRepo, c.ProductSKURepo, c.PromotionRepo, c.SettingService)
-	c.WalletService = service.NewWalletService(c.WalletRepo, c.OrderRepo, c.OrderRefundRecordRepo, c.UserStore, c.AffiliateRefundHandler, c.SettingService)
-	c.OrderRefundService = service.NewOrderRefundService(c.OrderRepo, c.UserStore, c.OrderRefundRecordRepo, c.AffiliateRefundHandler, c.SettingService)
+	c.WalletService = walletapp.NewService(walletapp.Options{
+		Repository: c.WalletRepo, Transactions: c.WalletRepo,
+	})
+	c.OrderRefundService = service.NewOrderRefundService(
+		c.OrderRepo,
+		c.UserStore,
+		c.OrderRefundRecordRepo,
+		c.AffiliateRefundHandler,
+		c.SettingService,
+		c.WalletService,
+	)
 	c.MemberLevelService = memberlevelapp.NewService(c.MemberLevelRepo, c.MemberLevelPriceRepo, c.MemberLevelUserRepo)
 	c.OrderRiskControlService = orderriskapp.NewService(orderriskapp.Options{
 		Settings:    c.SettingService,

@@ -1,4 +1,4 @@
-package wallet
+package contract
 
 import "errors"
 
@@ -14,4 +14,5 @@ var (
 	ErrRechargeNotFound        = errors.New("wallet recharge not found")
 	ErrRechargeStatusInvalid   = errors.New("wallet recharge status invalid")
 	ErrOnlyPaymentRequired     = errors.New("wallet only payment required")
+	ErrTransactionRequired     = errors.New("wallet transaction required")
 )

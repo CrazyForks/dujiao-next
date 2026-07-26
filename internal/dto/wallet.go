@@ -3,6 +3,8 @@ package dto
 import (
 	"time"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	"github.com/dujiao-next/internal/models"
 	"github.com/dujiao-next/internal/shared/money"
 )
@@ -12,8 +14,8 @@ type WalletAccountResp struct {
 	Balance money.Amount `json:"balance"`
 }
 
-// NewWalletAccountResp 从 models.WalletAccount 构造响应
-func NewWalletAccountResp(a *models.WalletAccount) WalletAccountResp {
+// NewWalletAccountResp 从 walletdomain.Account 构造响应
+func NewWalletAccountResp(a *walletdomain.Account) WalletAccountResp {
 	return WalletAccountResp{
 		Balance: a.Balance,
 	}
@@ -30,8 +32,8 @@ type WalletTransactionResp struct {
 	CreatedAt    time.Time    `json:"created_at"`
 }
 
-// NewWalletTransactionResp 从 models.WalletTransaction 构造响应
-func NewWalletTransactionResp(t *models.WalletTransaction) WalletTransactionResp {
+// NewWalletTransactionResp 从 walletdomain.Transaction 构造响应
+func NewWalletTransactionResp(t *walletdomain.Transaction) WalletTransactionResp {
 	return WalletTransactionResp{
 		ID:           t.ID,
 		Type:         t.Type,
@@ -45,7 +47,7 @@ func NewWalletTransactionResp(t *models.WalletTransaction) WalletTransactionResp
 }
 
 // NewWalletTransactionRespList 批量转换钱包流水
-func NewWalletTransactionRespList(txns []models.WalletTransaction) []WalletTransactionResp {
+func NewWalletTransactionRespList(txns []walletdomain.Transaction) []WalletTransactionResp {
 	result := make([]WalletTransactionResp, 0, len(txns))
 	for i := range txns {
 		result = append(result, NewWalletTransactionResp(&txns[i]))
@@ -68,8 +70,8 @@ type WalletRechargeResp struct {
 	CreatedAt     time.Time    `json:"created_at"`
 }
 
-// NewWalletRechargeResp 从 models.WalletRechargeOrder 构造响应
-func NewWalletRechargeResp(r *models.WalletRechargeOrder) WalletRechargeResp {
+// NewWalletRechargeResp 从 walletdomain.RechargeOrder 构造响应
+func NewWalletRechargeResp(r *walletdomain.RechargeOrder) WalletRechargeResp {
 	return WalletRechargeResp{
 		ID:            r.ID,
 		RechargeNo:    r.RechargeNo,
@@ -87,7 +89,7 @@ func NewWalletRechargeResp(r *models.WalletRechargeOrder) WalletRechargeResp {
 }
 
 // NewWalletRechargeRespList 批量转换钱包充值单
-func NewWalletRechargeRespList(orders []models.WalletRechargeOrder) []WalletRechargeResp {
+func NewWalletRechargeRespList(orders []walletdomain.RechargeOrder) []WalletRechargeResp {
 	result := make([]WalletRechargeResp, 0, len(orders))
 	for i := range orders {
 		result = append(result, NewWalletRechargeResp(&orders[i]))
@@ -116,7 +118,7 @@ type WalletRechargePaymentPayload struct {
 }
 
 // NewWalletRechargePaymentPayload 构造钱包充值支付响应
-func NewWalletRechargePaymentPayload(recharge *models.WalletRechargeOrder, payment *models.Payment, account *models.WalletAccount) WalletRechargePaymentPayload {
+func NewWalletRechargePaymentPayload(recharge *walletdomain.RechargeOrder, payment *models.Payment, account *walletdomain.Account) WalletRechargePaymentPayload {
 	p := WalletRechargePaymentPayload{}
 	if recharge != nil {
 		r := NewWalletRechargeResp(recharge)

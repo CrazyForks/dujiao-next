@@ -66,6 +66,8 @@ import (
 	broadcastapp "github.com/dujiao-next/internal/modules/telegram/broadcast/application"
 	broadcastcontract "github.com/dujiao-next/internal/modules/telegram/broadcast/contract"
 	uploadapp "github.com/dujiao-next/internal/modules/upload/application"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 	paymentprovider "github.com/dujiao-next/internal/payment/provider"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/repository"
@@ -95,7 +97,7 @@ type Container struct {
 	CouponRepo                 *coupongormstore.Store
 	CouponUsageRepo            *coupongormstore.UsageStore
 	PromotionRepo              *promotiongormstore.Store
-	WalletRepo                 repository.WalletRepository
+	WalletRepo                 *walletgormstore.Store
 	OrderRefundRecordRepo      repository.OrderRefundRecordRepository
 	CategoryRepo               categorycontract.Repository
 	SettingRepo                settingscontract.Store
@@ -143,7 +145,7 @@ type Container struct {
 	SettingService                *settingsapp.Service
 	SitemapService                *sitemapapp.Service
 	CartService                   *cartapp.Service
-	WalletService                 *service.WalletService
+	WalletService                 *walletapp.Service
 	OrderRefundService            *service.OrderRefundService
 	OrderService                  *service.OrderService
 	FulfillmentService            *service.FulfillmentService

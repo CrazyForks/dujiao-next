@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/models"
 	notificationformat "github.com/dujiao-next/internal/modules/notification/application/format"
@@ -144,7 +146,7 @@ func (s *PaymentService) enqueueOrderPaidNotificationAsync(order *models.Order, 
 	}
 }
 
-func (s *PaymentService) enqueueWalletRechargeSuccessAsync(recharge *models.WalletRechargeOrder, payment *models.Payment, log *zap.SugaredLogger) {
+func (s *PaymentService) enqueueWalletRechargeSuccessAsync(recharge *walletdomain.RechargeOrder, payment *models.Payment, log *zap.SugaredLogger) {
 	if s.notificationSvc == nil || recharge == nil {
 		return
 	}
@@ -195,7 +197,7 @@ func (s *PaymentService) enqueueOrderPaidBotNotifyAsync(order *models.Order, log
 	}
 }
 
-func (s *PaymentService) enqueueWalletRechargeBotNotifyAsync(recharge *models.WalletRechargeOrder, log *zap.SugaredLogger) {
+func (s *PaymentService) enqueueWalletRechargeBotNotifyAsync(recharge *walletdomain.RechargeOrder, log *zap.SugaredLogger) {
 	if s.queueClient == nil || recharge == nil || recharge.UserID == 0 || s.userOAuthIdentityRepo == nil {
 		return
 	}

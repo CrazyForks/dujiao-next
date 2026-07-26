@@ -38,7 +38,7 @@ func (r *Store) WithinTransaction(fn func(repo giftcardcontract.Repository) erro
 	})
 }
 
-// Transaction 为兑换写路径提供可与 wallet CreditInTx 共享的事务。
+// Transaction 为兑换写路径提供可与钱包入账共享的事务。
 func (r *Store) Transaction(fn func(tx *gorm.DB) error) error {
 	return r.db.Transaction(fn)
 }

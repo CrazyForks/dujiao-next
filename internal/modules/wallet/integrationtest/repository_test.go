@@ -1,4 +1,4 @@
-package repository
+package integrationtest
 
 import (
 	"fmt"
@@ -8,7 +8,9 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/models"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
+	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
+	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
@@ -16,7 +18,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func setupWalletRepositoryTest(t *testing.T) (*GormWalletRepository, *gorm.DB) {
+func setupWalletRepositoryTest(t *testing.T) (*walletgormstore.Store, *gorm.DB) {
 	t.Helper()
 	dsn := fmt.Sprintf("file:wallet_repo_test_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
@@ -25,11 +27,13 @@ func setupWalletRepositoryTest(t *testing.T) (*GormWalletRepository, *gorm.DB) {
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
-		&models.WalletRechargeOrder{},
+		&walletdomain.Account{},
+		&walletdomain.Transaction{},
+		&walletdomain.RechargeOrder{},
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
-	return NewWalletRepository(db), db
+	return walletgormstore.New(db), db
 }
 
 func TestWalletRepositoryListRechargeOrdersAdmin(t *testing.T) {
@@ -61,7 +65,7 @@ func TestWalletRepositoryListRechargeOrdersAdmin(t *testing.T) {
 
 	paidAt1 := now.Add(-2 * time.Hour)
 	paidAt3 := now.Add(-30 * time.Minute)
-	orders := []models.WalletRechargeOrder{
+	orders := []walletdomain.RechargeOrder{
 		{
 			RechargeNo:      "DJR-A001",
 			UserID:          user1.ID,
@@ -121,7 +125,7 @@ func TestWalletRepositoryListRechargeOrdersAdmin(t *testing.T) {
 	}
 
 	t.Run("filter by user keyword", func(t *testing.T) {
-		rows, total, err := repo.ListRechargeOrdersAdmin(WalletRechargeListFilter{
+		rows, total, err := repo.ListRechargeOrdersAdmin(walletcontract.RechargeListFilter{
 			Page:        1,
 			PageSize:    20,
 			UserKeyword: "alpha_wallet_repo",
@@ -145,7 +149,7 @@ func TestWalletRepositoryListRechargeOrdersAdmin(t *testing.T) {
 	t.Run("filter by status and paid range", func(t *testing.T) {
 		from := now.Add(-3 * time.Hour)
 		to := now.Add(-90 * time.Minute)
-		rows, total, err := repo.ListRechargeOrdersAdmin(WalletRechargeListFilter{
+		rows, total, err := repo.ListRechargeOrdersAdmin(walletcontract.RechargeListFilter{
 			Page:      1,
 			PageSize:  20,
 			Status:    constants.WalletRechargeStatusSuccess,
@@ -166,4 +170,85 @@ func TestWalletRepositoryListRechargeOrdersAdmin(t *testing.T) {
 			t.Fatalf("unexpected recharge_no=%s", rows[0].RechargeNo)
 		}
 	})
+}
+
+func TestWalletStoreExcludesSoftDeletedRecords(t *testing.T) {
+	repo, db := setupWalletRepositoryTest(t)
+	now := time.Now()
+	account := walletdomain.Account{
+		UserID:    991,
+		Balance:   money.FromDecimal(decimal.NewFromInt(10)),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := db.Create(&account).Error; err != nil {
+		t.Fatalf("create account: %v", err)
+	}
+	transaction := walletdomain.Transaction{
+		UserID:        account.UserID,
+		Type:          constants.WalletTxnTypeRecharge,
+		Direction:     constants.WalletTxnDirectionIn,
+		Amount:        money.FromDecimal(decimal.NewFromInt(10)),
+		BalanceBefore: money.FromDecimal(decimal.Zero),
+		BalanceAfter:  money.FromDecimal(decimal.NewFromInt(10)),
+		Currency:      "CNY",
+		Reference:     "soft-delete-proof",
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	if err := db.Create(&transaction).Error; err != nil {
+		t.Fatalf("create transaction: %v", err)
+	}
+	recharge := walletdomain.RechargeOrder{
+		RechargeNo:      "SOFT-DELETE-RECHARGE",
+		UserID:          account.UserID,
+		PaymentID:       992,
+		ChannelID:       1,
+		ProviderType:    constants.PaymentProviderOfficial,
+		ChannelType:     constants.PaymentChannelTypeAlipay,
+		InteractionMode: constants.PaymentInteractionRedirect,
+		Amount:          money.FromDecimal(decimal.NewFromInt(10)),
+		PayableAmount:   money.FromDecimal(decimal.NewFromInt(10)),
+		FeeRate:         money.FromDecimal(decimal.Zero),
+		FeeAmount:       money.FromDecimal(decimal.Zero),
+		Currency:        "CNY",
+		Status:          constants.WalletRechargeStatusPending,
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+	if err := db.Create(&recharge).Error; err != nil {
+		t.Fatalf("create recharge: %v", err)
+	}
+	deletedAt := now.Add(time.Second)
+	if err := db.Model(&walletdomain.Account{}).Where("id = ?", account.ID).Update("deleted_at", deletedAt).Error; err != nil {
+		t.Fatalf("soft delete account: %v", err)
+	}
+	if err := db.Model(&walletdomain.Transaction{}).Where("id = ?", transaction.ID).Update("deleted_at", deletedAt).Error; err != nil {
+		t.Fatalf("soft delete transaction: %v", err)
+	}
+	if err := db.Model(&walletdomain.RechargeOrder{}).Where("id = ?", recharge.ID).Update("deleted_at", deletedAt).Error; err != nil {
+		t.Fatalf("soft delete recharge: %v", err)
+	}
+
+	foundAccount, err := repo.GetAccountByUserID(account.UserID)
+	if err != nil {
+		t.Fatalf("get deleted account: %v", err)
+	}
+	if foundAccount != nil {
+		t.Fatalf("soft-deleted account leaked: %+v", foundAccount)
+	}
+	foundTransaction, err := repo.GetTransactionByReference(transaction.Reference)
+	if err != nil {
+		t.Fatalf("get deleted transaction: %v", err)
+	}
+	if foundTransaction != nil {
+		t.Fatalf("soft-deleted transaction leaked: %+v", foundTransaction)
+	}
+	foundRecharge, err := repo.GetRechargeOrderByPaymentID(recharge.PaymentID)
+	if err != nil {
+		t.Fatalf("get deleted recharge: %v", err)
+	}
+	if foundRecharge != nil {
+		t.Fatalf("soft-deleted recharge leaked: %+v", foundRecharge)
+	}
 }
