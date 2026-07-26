@@ -126,7 +126,7 @@ func (r *Store) FindActiveVerifiedDomain(host string) (*resellerdomain.Domain, e
 		return nil, nil
 	}
 	var row resellerdomain.Domain
-	err := r.db.Preload("Profile").
+	err := r.db.Preload("Profile", "deleted_at IS NULL").
 		Joins("JOIN reseller_profiles ON reseller_profiles.id = reseller_domains.reseller_id AND reseller_profiles.deleted_at IS NULL").
 		Where("reseller_domains.domain = ? AND reseller_domains.status = ? AND reseller_domains.verification_status = ? AND reseller_domains.deleted_at IS NULL", domain, resellerdomain.DomainStatusActive, resellerdomain.DomainVerificationVerified).
 		Where("reseller_profiles.status = ?", resellerdomain.ProfileStatusActive).

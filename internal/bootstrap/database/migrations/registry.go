@@ -26,6 +26,7 @@ import (
 	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
 	reconciliationdomain "github.com/dujiao-next/internal/modules/reconciliation/domain"
+	resellerstore "github.com/dujiao-next/internal/modules/reseller/infrastructure/gormstore"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	siteconnectiondomain "github.com/dujiao-next/internal/modules/siteconnection/domain"
 	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
@@ -91,6 +92,9 @@ func AutoMigrate() error {
 		return err
 	}
 
+	if err := resellerstore.Migrate(db); err != nil {
+		return err
+	}
 	if err := migrateCartSKUUniqueIndex(); err != nil {
 		return err
 	}
@@ -110,6 +114,12 @@ func AutoMigrate() error {
 		return err
 	}
 	if err := ensureOrderItemOriginalPriceMigration(); err != nil {
+		return err
+	}
+	if err := ensureCartForeignKeyConstraints(); err != nil {
+		return err
+	}
+	if err := ensureProcurementOrderForeignKeyConstraint(); err != nil {
 		return err
 	}
 	if db.Migrator().HasColumn(&productdomain.Product{}, "price_currency") {

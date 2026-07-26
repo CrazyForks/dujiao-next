@@ -250,7 +250,7 @@ func (r *Store) ListCommissions(filter affiliatecontract.CommissionListFilter) (
 		Where("affiliate_commissions.deleted_at IS NULL").
 		Preload("AffiliateProfile", "deleted_at IS NULL").
 		Preload("AffiliateProfile.User", "deleted_at IS NULL").
-		Preload("Order")
+		Preload("Order", "deleted_at IS NULL")
 	if filter.AffiliateProfileID != 0 {
 		query = query.Where("affiliate_commissions.affiliate_profile_id = ?", filter.AffiliateProfileID)
 	}

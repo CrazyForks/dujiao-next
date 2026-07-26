@@ -239,6 +239,44 @@ func TestResellerAccountingRepositoryListAdminLedgerEntriesFiltersByKeywordAndOr
 	}
 }
 
+func TestResellerAccountingRepositoryDoesNotPreloadSoftDeletedOrder(t *testing.T) {
+	db := openResellerAccountingRepoTestDB(t)
+	repo := New(db)
+	profile := seedResellerAccountingProfileWithEmail(t, db, "deleted-order-ledger@example.com")
+	order := seedResellerAccountingOrder(t, db, "DELETED-LEDGER-ORDER")
+	entry := resellerdomain.LedgerEntry{
+		ResellerID:     profile.ID,
+		OrderID:        &order.ID,
+		Type:           resellerdomain.LedgerTypeOrderProfit,
+		Amount:         money.FromDecimal(decimal.NewFromInt(12)),
+		Currency:       "USD",
+		IdempotencyKey: "deleted-order-ledger",
+		Status:         resellerdomain.LedgerStatusAvailable,
+	}
+	if err := db.Create(&entry).Error; err != nil {
+		t.Fatalf("create ledger failed: %v", err)
+	}
+	deletedAt := time.Now()
+	if err := db.Model(&order).Update("deleted_at", &deletedAt).Error; err != nil {
+		t.Fatalf("soft delete order failed: %v", err)
+	}
+
+	rows, total, err := repo.ListAdminResellerLedgerEntries(resellercontract.AdminLedgerListFilter{
+		Page:     1,
+		PageSize: 20,
+		OrderID:  order.ID,
+	})
+	if err != nil {
+		t.Fatalf("ListAdminResellerLedgerEntries failed: %v", err)
+	}
+	if total != 1 || len(rows) != 1 {
+		t.Fatalf("expected ledger to remain visible, total=%d rows=%d", total, len(rows))
+	}
+	if rows[0].Order != nil {
+		t.Fatalf("soft-deleted order leaked through preload: %+v", rows[0].Order)
+	}
+}
+
 func TestResellerAccountingRepositoryListAdminBalanceAccountsFiltersAndPreloadsProfile(t *testing.T) {
 	db := openResellerAccountingRepoTestDB(t)
 	repo := New(db)

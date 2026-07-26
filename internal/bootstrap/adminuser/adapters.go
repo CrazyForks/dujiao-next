@@ -18,11 +18,11 @@ import (
 	couponcontract "github.com/dujiao-next/internal/modules/coupon/contract"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	adminusertransport "github.com/dujiao-next/internal/modules/identity/user/transport/http/admin"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	"github.com/dujiao-next/internal/shared/money"
-	adminusertransport "github.com/dujiao-next/internal/modules/identity/user/transport/http/admin"
 )
 
 type adminUserDirectoryAdapter struct {

@@ -10,6 +10,7 @@ import (
 	affiliatecontract "github.com/dujiao-next/internal/modules/affiliate/contract"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
+	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/glebarez/sqlite"
@@ -26,6 +27,7 @@ func openTestStore(t *testing.T) (*Store, *gorm.DB) {
 	}
 	if err := db.AutoMigrate(
 		&userdomain.User{},
+		&orderdomain.Order{},
 		&affiliatedomain.Profile{},
 		&affiliatedomain.Click{},
 		&affiliatedomain.Commission{},
@@ -106,6 +108,52 @@ func TestStoreExcludesSoftDeletedAffiliateRows(t *testing.T) {
 	}
 	if row, err := store.GetWithdrawByID(request.ID); err != nil || row != nil {
 		t.Fatalf("deleted withdraw leaked: row=%+v err=%v", row, err)
+	}
+}
+
+func TestStoreDoesNotPreloadSoftDeletedCommissionOrder(t *testing.T) {
+	store, db := openTestStore(t)
+	user := &userdomain.User{Email: "affiliate-deleted-order@example.com", PasswordHash: "x", Status: constants.UserStatusActive}
+	if err := db.Create(user).Error; err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	profile := createTestProfile(t, store, user.ID, "AFFDELETEDORDER")
+	order := &orderdomain.Order{
+		OrderNo:  "AFF-DELETED-ORDER",
+		Status:   constants.OrderStatusPaid,
+		Currency: "USD",
+	}
+	if err := db.Create(order).Error; err != nil {
+		t.Fatalf("create order: %v", err)
+	}
+	commission := &affiliatedomain.Commission{
+		AffiliateProfileID: profile.ID,
+		OrderID:            order.ID,
+		CommissionType:     constants.AffiliateCommissionTypeOrder,
+		CommissionAmount:   money.FromDecimal(decimal.NewFromInt(12)),
+		Status:             constants.AffiliateCommissionStatusAvailable,
+	}
+	if err := store.CreateCommission(commission); err != nil {
+		t.Fatalf("create commission: %v", err)
+	}
+	deletedAt := time.Now()
+	if err := db.Model(order).Update("deleted_at", &deletedAt).Error; err != nil {
+		t.Fatalf("soft delete order: %v", err)
+	}
+
+	rows, total, err := store.ListCommissions(affiliatecontract.CommissionListFilter{
+		Page:     1,
+		PageSize: 20,
+		OrderID:  order.ID,
+	})
+	if err != nil {
+		t.Fatalf("list commissions: %v", err)
+	}
+	if total != 1 || len(rows) != 1 {
+		t.Fatalf("expected commission to remain visible, total=%d rows=%d", total, len(rows))
+	}
+	if rows[0].Order.ID != 0 {
+		t.Fatalf("soft-deleted order leaked through preload: %+v", rows[0].Order)
 	}
 }
 

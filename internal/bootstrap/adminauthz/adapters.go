@@ -11,8 +11,8 @@ import (
 	admincontract "github.com/dujiao-next/internal/modules/identity/admin/contract"
 	admindomain "github.com/dujiao-next/internal/modules/identity/admin/domain"
 	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
-	"github.com/dujiao-next/internal/shared/passwordpolicy"
 	adminauthztransport "github.com/dujiao-next/internal/modules/identity/adminauthorization/transport/http"
+	"github.com/dujiao-next/internal/shared/passwordpolicy"
 )
 
 type adminAuthzRolePolicyAdapter struct {

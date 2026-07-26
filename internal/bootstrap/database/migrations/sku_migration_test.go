@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
+	resellerdomain "github.com/dujiao-next/internal/modules/reseller/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/platform/database/gormdb"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -21,6 +24,10 @@ import (
 
 func setupSKUMigrationTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
+	previousDB := gormdb.DB
+	t.Cleanup(func() {
+		gormdb.DB = previousDB
+	})
 	dsn := fmt.Sprintf("file:sku_migration_test_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		DisableForeignKeyConstraintWhenMigrating: true,
@@ -30,6 +37,59 @@ func setupSKUMigrationTestDB(t *testing.T) *gorm.DB {
 	}
 	gormdb.DB = db
 	return db
+}
+
+func setupRegistryMigrationTestDB(t *testing.T) *gorm.DB {
+	t.Helper()
+	previousDB := gormdb.DB
+	t.Cleanup(func() {
+		gormdb.DB = previousDB
+	})
+	dsn := fmt.Sprintf("file:registry_migration_test_%d?mode=memory&cache=shared&_pragma=foreign_keys(1)", time.Now().UnixNano())
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite failed: %v", err)
+	}
+	gormdb.DB = db
+	return db
+}
+
+func modelIndexNames(t *testing.T, db *gorm.DB, model interface{}) []string {
+	t.Helper()
+	statement := &gorm.Statement{DB: db}
+	if err := statement.Parse(model); err != nil {
+		t.Fatalf("parse model indexes: %v", err)
+	}
+	indexes := statement.Schema.ParseIndexes()
+	names := make([]string, 0, len(indexes))
+	for _, index := range indexes {
+		names = append(names, index.Name)
+	}
+	if len(names) == 0 {
+		t.Fatalf("model %T does not declare any indexes", model)
+	}
+	return names
+}
+
+func assertModelIndexesExist(t *testing.T, db *gorm.DB, model interface{}) {
+	t.Helper()
+	for _, name := range modelIndexNames(t, db, model) {
+		if !db.Migrator().HasIndex(model, name) {
+			t.Errorf("model %T index %s does not exist", model, name)
+		}
+	}
+}
+
+func dropModelIndexes(t *testing.T, db *gorm.DB, model interface{}) {
+	t.Helper()
+	for _, name := range modelIndexNames(t, db, model) {
+		if !db.Migrator().HasIndex(model, name) {
+			continue
+		}
+		if err := db.Migrator().DropIndex(model, name); err != nil {
+			t.Fatalf("drop model %T index %s: %v", model, name, err)
+		}
+	}
 }
 
 func TestEnsureProductSKUMigrationBackfillLegacyData(t *testing.T) {
@@ -199,5 +259,200 @@ func TestMigrateCartSKUUniqueIndex(t *testing.T) {
 	}
 	if !db.Migrator().HasIndex(&cartdomain.Item{}, "idx_cart_user_product_sku") {
 		t.Fatalf("new unique index idx_cart_user_product_sku should exist")
+	}
+}
+
+func TestAutoMigrateOwnsResellerSchemaAndCrossModuleConstraints(t *testing.T) {
+	db := setupRegistryMigrationTestDB(t)
+	if err := AutoMigrate(); err != nil {
+		t.Fatalf("auto migrate failed: %v", err)
+	}
+	if err := AutoMigrate(); err != nil {
+		t.Fatalf("idempotent auto migrate failed: %v", err)
+	}
+	for _, table := range []string{
+		"reseller_profiles",
+		"reseller_domains",
+		"reseller_site_configs",
+		"reseller_product_settings",
+		"reseller_order_snapshots",
+		"reseller_ledger_entries",
+		"reseller_withdraw_requests",
+		"reseller_balance_accounts",
+		"reseller_related_accounts",
+	} {
+		if !db.Migrator().HasTable(table) {
+			t.Errorf("central AutoMigrate did not create reseller table %s", table)
+		}
+	}
+	for _, index := range []struct {
+		model interface{}
+		name  string
+	}{
+		{model: &resellerdomain.Domain{}, name: "idx_reseller_domains_active_domain"},
+		{model: &resellerdomain.SiteConfig{}, name: "idx_reseller_site_configs_active_reseller"},
+		{model: &resellerdomain.ProductSetting{}, name: "idx_reseller_product_settings_active_scope"},
+		{model: &resellerdomain.BalanceAccount{}, name: "idx_reseller_balance_accounts_active_currency"},
+		{model: &resellerdomain.RelatedAccount{}, name: "idx_reseller_related_accounts_active_user"},
+	} {
+		if !db.Migrator().HasIndex(index.model, index.name) {
+			t.Errorf("central AutoMigrate did not create reseller index %s", index.name)
+		}
+	}
+	for _, constraint := range []string{
+		cartProductForeignKeyConstraint,
+		cartSKUForeignKeyConstraint,
+	} {
+		if !db.Migrator().HasConstraint(&cartItemConstraintSchema{}, constraint) {
+			t.Errorf("central AutoMigrate did not create cart constraint %s", constraint)
+		}
+	}
+	if !db.Migrator().HasConstraint(&procurementdomain.Order{}, procurementOrderForeignKeyConstraint) {
+		t.Errorf("central AutoMigrate did not create procurement constraint %s", procurementOrderForeignKeyConstraint)
+	}
+	if db.Migrator().HasConstraint(&procurementdomain.Order{}, supersededProcurementOrderForeignKeyConstraint) {
+		t.Errorf("central AutoMigrate retained superseded procurement constraint %s", supersededProcurementOrderForeignKeyConstraint)
+	}
+}
+
+func TestEnsureCartForeignKeyConstraintsPreservesRowsAndEnforcesReferences(t *testing.T) {
+	db := setupRegistryMigrationTestDB(t)
+	for _, statement := range []string{
+		`CREATE TABLE products (id integer PRIMARY KEY)`,
+		`CREATE TABLE product_skus (id integer PRIMARY KEY)`,
+		`INSERT INTO products (id) VALUES (1)`,
+		`INSERT INTO product_skus (id) VALUES (2)`,
+	} {
+		if err := db.Exec(statement).Error; err != nil {
+			t.Fatalf("prepare cart schema: %v", err)
+		}
+	}
+	if err := db.AutoMigrate(&cartdomain.Item{}); err != nil {
+		t.Fatalf("prepare indexed cart schema: %v", err)
+	}
+	if err := db.Exec(`INSERT INTO cart_items (id, user_id, product_id, sku_id, quantity) VALUES (3, 4, 1, 2, 1)`).Error; err != nil {
+		t.Fatalf("prepare cart row: %v", err)
+	}
+	assertModelIndexesExist(t, db, &cartdomain.Item{})
+
+	if err := ensureCartForeignKeyConstraints(); err != nil {
+		t.Fatalf("ensure cart constraints: %v", err)
+	}
+	assertModelIndexesExist(t, db, &cartdomain.Item{})
+	var rowCount int64
+	if err := db.Table("cart_items").Where("id = ?", 3).Count(&rowCount).Error; err != nil {
+		t.Fatalf("count preserved cart rows: %v", err)
+	}
+	if rowCount != 1 {
+		t.Fatalf("cart constraint migration lost existing row: count=%d", rowCount)
+	}
+	if err := db.Exec(`INSERT INTO cart_items (id, user_id, product_id, sku_id, quantity) VALUES (5, 6, 999, 2, 1)`).Error; err == nil {
+		t.Fatal("cart product foreign key did not reject missing product")
+	}
+	if err := db.Exec(`INSERT INTO cart_items (id, user_id, product_id, sku_id, quantity) VALUES (7, 8, 1, 999, 1)`).Error; err == nil {
+		t.Fatal("cart SKU foreign key did not reject missing SKU")
+	}
+
+	dropModelIndexes(t, db, &cartdomain.Item{})
+	if err := ensureCartForeignKeyConstraints(); err != nil {
+		t.Fatalf("repair cart indexes with existing constraints: %v", err)
+	}
+	assertModelIndexesExist(t, db, &cartdomain.Item{})
+	for _, constraint := range []string{cartProductForeignKeyConstraint, cartSKUForeignKeyConstraint} {
+		if !db.Migrator().HasConstraint(&cartItemConstraintSchema{}, constraint) {
+			t.Errorf("cart index repair removed constraint %s", constraint)
+		}
+	}
+	if err := db.Exec(`INSERT INTO cart_items (id, user_id, product_id, sku_id, quantity) VALUES (9, 4, 1, 2, 1)`).Error; err == nil {
+		t.Fatal("repaired cart unique index did not reject duplicate user/product/SKU")
+	}
+}
+
+func TestEnsureCartForeignKeyConstraintsRejectsOrphansBeforeSchemaChanges(t *testing.T) {
+	db := setupRegistryMigrationTestDB(t)
+	for _, statement := range []string{
+		`CREATE TABLE products (id integer PRIMARY KEY)`,
+		`CREATE TABLE product_skus (id integer PRIMARY KEY)`,
+		`CREATE TABLE cart_items (id integer PRIMARY KEY, user_id integer NOT NULL, product_id integer NOT NULL, sku_id integer NOT NULL, quantity integer NOT NULL)`,
+		`INSERT INTO product_skus (id) VALUES (2)`,
+		`INSERT INTO cart_items (id, user_id, product_id, sku_id, quantity) VALUES (3, 4, 999, 2, 1)`,
+	} {
+		if err := db.Exec(statement).Error; err != nil {
+			t.Fatalf("prepare orphaned cart schema: %v", err)
+		}
+	}
+
+	err := ensureCartForeignKeyConstraints()
+	if err == nil || !strings.Contains(err.Error(), cartProductForeignKeyConstraint) {
+		t.Fatalf("expected descriptive product reference error, got %v", err)
+	}
+	for _, constraint := range []string{cartProductForeignKeyConstraint, cartSKUForeignKeyConstraint} {
+		if db.Migrator().HasConstraint(&cartItemConstraintSchema{}, constraint) {
+			t.Fatalf("orphan preflight left partial constraint %s", constraint)
+		}
+	}
+}
+
+type supersededProcurementOrderSchema struct {
+	ID                  uint `gorm:"primarykey"`
+	LocalOrderID        uint
+	LocalOrderReference *supersededProcurementOrderReference `gorm:"foreignKey:LocalOrderID;references:ID;constraint:fk_procurement_orders_local_order_reference"`
+}
+
+func (supersededProcurementOrderSchema) TableName() string { return "procurement_orders" }
+
+type supersededProcurementOrderReference struct {
+	ID uint `gorm:"primarykey"`
+}
+
+func (supersededProcurementOrderReference) TableName() string { return "orders" }
+
+type procurementOrderIndexSchema struct {
+	ID              uint       `gorm:"primarykey"`
+	ConnectionID    uint       `gorm:"index"`
+	LocalOrderID    uint       `gorm:"index"`
+	LocalOrderNo    string     `gorm:"index"`
+	UpstreamOrderNo string     `gorm:"index"`
+	Status          string     `gorm:"index"`
+	NextRetryAt     *time.Time `gorm:"index"`
+	TraceID         string     `gorm:"index"`
+	CreatedAt       time.Time  `gorm:"index"`
+	UpdatedAt       time.Time  `gorm:"index"`
+	DeletedAt       *time.Time `gorm:"index"`
+}
+
+func (procurementOrderIndexSchema) TableName() string { return "procurement_orders" }
+
+func TestAutoMigrateReplacesSupersededProcurementConstraintName(t *testing.T) {
+	db := setupRegistryMigrationTestDB(t)
+	if err := db.AutoMigrate(&supersededProcurementOrderSchema{}); err != nil {
+		t.Fatalf("create superseded procurement schema failed: %v", err)
+	}
+	if err := db.AutoMigrate(&procurementOrderIndexSchema{}); err != nil {
+		t.Fatalf("create indexed superseded procurement schema failed: %v", err)
+	}
+	assertModelIndexesExist(t, db, &procurementdomain.Order{})
+	if !db.Migrator().HasConstraint(&supersededProcurementOrderSchema{}, supersededProcurementOrderForeignKeyConstraint) {
+		t.Fatalf("test setup did not create superseded procurement constraint")
+	}
+
+	if err := AutoMigrate(); err != nil {
+		t.Fatalf("auto migrate superseded schema failed: %v", err)
+	}
+	if db.Migrator().HasConstraint(&procurementdomain.Order{}, supersededProcurementOrderForeignKeyConstraint) {
+		t.Errorf("superseded procurement constraint %s still exists", supersededProcurementOrderForeignKeyConstraint)
+	}
+	if !db.Migrator().HasConstraint(&procurementdomain.Order{}, procurementOrderForeignKeyConstraint) {
+		t.Errorf("canonical procurement constraint %s does not exist", procurementOrderForeignKeyConstraint)
+	}
+	assertModelIndexesExist(t, db, &procurementdomain.Order{})
+
+	dropModelIndexes(t, db, &procurementdomain.Order{})
+	if err := ensureProcurementOrderForeignKeyConstraint(); err != nil {
+		t.Fatalf("repair procurement indexes with canonical constraint: %v", err)
+	}
+	assertModelIndexesExist(t, db, &procurementdomain.Order{})
+	if !db.Migrator().HasConstraint(&procurementdomain.Order{}, procurementOrderForeignKeyConstraint) {
+		t.Errorf("procurement index repair removed canonical constraint %s", procurementOrderForeignKeyConstraint)
 	}
 }

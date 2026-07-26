@@ -17,7 +17,7 @@ func (r *Store) ListAdminResellerLedgerEntries(filter resellercontract.AdminLedg
 	query := r.db.Model(&resellerdomain.LedgerEntry{}).
 		Preload("Profile", "deleted_at IS NULL").
 		Preload("Profile.User", "deleted_at IS NULL").
-		Preload("Order").
+		Preload("Order", "deleted_at IS NULL").
 		Where("reseller_ledger_entries.deleted_at IS NULL")
 
 	query = r.applyAdminResellerProfileFilters(query, "reseller_ledger_entries", filter.ResellerID, filter.UserID, filter.Keyword, "")

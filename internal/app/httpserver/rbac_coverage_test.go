@@ -1,10 +1,16 @@
 package httpserver
 
 import (
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -19,17 +25,19 @@ import (
 // 目的：避免新增 admin 接口时忘记同步 RBAC 预置角色，导致非超管角色无法通过
 // 角色分配获得该权限（catalog UI 上能看到，但任何角色都拿不到）。
 //
-// 实现：静态扫描 routes_admin*.go 提取 authorized.METHOD("/path", ...) 与
-// paymentProtected.METHOD("/path", ...) 调用，与
-// builtin role seeds 用 keyMatch2 比对（与运行时 Casbin 模型一致）。
+// 实现：静态扫描 routes_admin*.go、internal/modules/**/routes.go
+// 以及 internal/platform/http/**/routes.go，
+// 提取 admin/authorized/paymentProtected.METHOD("/path", ...) 调用，
+// 与 builtin role seeds 用 keyMatch2 比对（与运行时 Casbin 模型一致）。
 func TestAllAdminRoutesCoveredByBuiltinRoles(t *testing.T) {
 	routes, err := extractAdminRoutesFromSource()
 	if err != nil {
 		t.Fatalf("extract admin routes: %v", err)
 	}
 	if len(routes) == 0 {
-		t.Fatalf("no admin routes extracted; regex or source layout changed?")
+		t.Fatalf("no admin routes extracted; parser or source layout changed?")
 	}
+	t.Logf("validating RBAC coverage for %d admin routes", len(routes))
 
 	seeds := authz.BuiltinRoleSeeds()
 	if len(seeds) == 0 {
@@ -82,93 +90,163 @@ type adminRoute struct {
 	object string // 例如 "/admin/users/:id"
 }
 
-// extractAdminRoutesFromSource 从 admin 路由文件和已抽取的模块路由文件中读取调用。
+var adminRouteMethods = map[string]struct{}{
+	"GET":    {},
+	"POST":   {},
+	"PUT":    {},
+	"PATCH":  {},
+	"DELETE": {},
+}
+
+var adminRouteReceivers = map[string]struct{}{
+	"admin":            {},
+	"authorized":       {},
+	"paymentProtected": {},
+}
+
+var publicAdminRoutes = map[string]struct{}{
+	"POST /admin/login":            {},
+	"POST /admin/login/verify-2fa": {},
+}
+
+// extractAdminRoutesFromSource 从应用 admin 路由、模块路由和平台 HTTP 路由文件中读取调用。
 // 方法范围：GET / POST / PUT / PATCH / DELETE。HEAD/OPTIONS 不参与 RBAC。
 func extractAdminRoutesFromSource() ([]adminRoute, error) {
 	_, thisFile, _, _ := runtime.Caller(0)
 	routerDirectory := filepath.Dir(thisFile)
-	type routeSource struct {
-		path       string
-		expression *regexp.Regexp
-	}
 
-	adminSources, err := filepath.Glob(filepath.Join(routerDirectory, "routes_admin*.go"))
+	sources, err := discoverAdminRouteSources(routerDirectory)
 	if err != nil {
 		return nil, err
-	}
-	if len(adminSources) == 0 {
-		return nil, os.ErrNotExist
-	}
-
-	sources := make([]routeSource, 0, len(adminSources)+8)
-	for _, path := range adminSources {
-		if strings.HasSuffix(path, "_test.go") {
-			continue
-		}
-		sources = append(sources, routeSource{
-			path:       path,
-			expression: regexp.MustCompile(`(?:authorized|paymentProtected)\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
-		})
 	}
 	if len(sources) == 0 {
 		return nil, os.ErrNotExist
 	}
-	sources = append(sources,
-		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "..", "modules", "content", "transport", "http", "routes.go"),
-			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
-		},
-		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "..", "modules", "dashboard", "transport", "http", "routes.go"),
-			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
-		},
-		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "..", "modules", "memberlevel", "transport", "http", "routes.go"),
-			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
-		},
-		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "..", "modules", "apicredential", "transport", "http", "routes.go"),
-			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
-		},
-		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "..", "modules", "auditlog", "transport", "http", "routes.go"),
-			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
-		},
-		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "..", "modules", "coupon", "transport", "http", "routes.go"),
-			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
-		},
-		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "..", "modules", "promotion", "transport", "http", "routes.go"),
-			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
-		},
-		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "..", "modules", "giftcard", "transport", "http", "routes.go"),
-			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
-		},
-		routeSource{
-			path:       filepath.Join(routerDirectory, "..", "..", "modules", "notification", "transport", "http", "routes.go"),
-			expression: regexp.MustCompile(`admin\.(GET|POST|PUT|PATCH|DELETE)\("([^"]+)"`),
-		},
-	)
 
 	seen := make(map[string]struct{})
 	var out []adminRoute
 	for _, source := range sources {
-		raw, err := os.ReadFile(source.path)
+		routes, err := extractAdminRoutesFromFile(source)
 		if err != nil {
 			return nil, err
 		}
-		for _, match := range source.expression.FindAllStringSubmatch(string(raw), -1) {
-			method := match[1]
-			object := authz.NormalizeObject("/admin" + match[2])
-			key := method + " " + object
+		for _, route := range routes {
+			key := route.method + " " + route.object
+			if _, public := publicAdminRoutes[key]; public {
+				continue
+			}
 			if _, duplicate := seen[key]; duplicate {
 				continue
 			}
 			seen[key] = struct{}{}
-			out = append(out, adminRoute{method: method, object: object})
+			out = append(out, route)
 		}
 	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].object == out[j].object {
+			return out[i].method < out[j].method
+		}
+		return out[i].object < out[j].object
+	})
 	return out, nil
+}
+
+func discoverAdminRouteSources(routerDirectory string) ([]string, error) {
+	adminSources, err := filepath.Glob(filepath.Join(routerDirectory, "routes_admin*.go"))
+	if err != nil {
+		return nil, err
+	}
+
+	sources := make([]string, 0, len(adminSources)+32)
+	for _, path := range adminSources {
+		if !strings.HasSuffix(path, "_test.go") {
+			sources = append(sources, path)
+		}
+	}
+
+	for _, directory := range []string{
+		filepath.Join(routerDirectory, "..", "..", "modules"),
+		filepath.Join(routerDirectory, "..", "..", "platform", "http"),
+	} {
+		if err := filepath.WalkDir(directory, func(path string, entry fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if !entry.IsDir() && entry.Name() == "routes.go" {
+				sources = append(sources, path)
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	sort.Strings(sources)
+	return sources, nil
+}
+
+func TestExtractAdminRoutesIncludesPlatformHTTPRoutes(t *testing.T) {
+	routes, err := extractAdminRoutesFromSource()
+	if err != nil {
+		t.Fatalf("extract admin routes: %v", err)
+	}
+	for _, route := range routes {
+		if route.method == "GET" && route.object == "/admin/system/version/check" {
+			return
+		}
+	}
+	t.Fatal("platform HTTP route GET /admin/system/version/check was not discovered")
+}
+
+func extractAdminRoutesFromFile(path string) ([]adminRoute, error) {
+	fileSet := token.NewFileSet()
+	file, err := parser.ParseFile(fileSet, path, nil, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var routes []adminRoute
+	var routeErr error
+	ast.Inspect(file, func(node ast.Node) bool {
+		if routeErr != nil {
+			return false
+		}
+		call, ok := node.(*ast.CallExpr)
+		if !ok || len(call.Args) == 0 {
+			return true
+		}
+		selector, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		receiver, ok := selector.X.(*ast.Ident)
+		if !ok {
+			return true
+		}
+		if _, ok := adminRouteReceivers[receiver.Name]; !ok {
+			return true
+		}
+		if _, ok := adminRouteMethods[selector.Sel.Name]; !ok {
+			return true
+		}
+		pathLiteral, ok := call.Args[0].(*ast.BasicLit)
+		if !ok || pathLiteral.Kind != token.STRING {
+			routeErr = fmt.Errorf("%s:%d: admin route path must be a string literal", path, fileSet.Position(call.Args[0].Pos()).Line)
+			return false
+		}
+		routePath, err := strconv.Unquote(pathLiteral.Value)
+		if err != nil {
+			routeErr = fmt.Errorf("%s:%d: decode admin route path: %w", path, fileSet.Position(pathLiteral.Pos()).Line, err)
+			return false
+		}
+		routes = append(routes, adminRoute{
+			method: selector.Sel.Name,
+			object: authz.NormalizeObject("/admin" + routePath),
+		})
+		return true
+	})
+	if routeErr != nil {
+		return nil, routeErr
+	}
+	return routes, nil
 }

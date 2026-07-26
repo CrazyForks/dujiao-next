@@ -36,7 +36,7 @@ type Order struct {
 
 	Connection             *siteconnectiondomain.Connection `gorm:"foreignKey:ConnectionID" json:"connection,omitempty"`
 	LocalOrder             *LocalOrder                      `gorm:"-" json:"local_order,omitempty"`
-	LocalOrderReference    *LocalOrderReference             `gorm:"foreignKey:LocalOrderID;references:ID" json:"-"`
+	LocalOrderReference    *LocalOrderReference             `gorm:"foreignKey:LocalOrderID;references:ID;constraint:fk_procurement_orders_local_order,OnUpdate:NO ACTION,OnDelete:NO ACTION" json:"-"`
 	ParentOrderNo          string                           `gorm:"-" json:"parent_order_no,omitempty"`
 	UpstreamRefundRecords  []jsonmap.JSON                   `gorm:"-" json:"upstream_refund_records,omitempty"`
 	UpstreamRefundedAmount string                           `gorm:"-" json:"upstream_refunded_amount,omitempty"`

@@ -13,6 +13,7 @@ import (
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
+	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 	settingsstore "github.com/dujiao-next/internal/modules/settings/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/platform/database/gormdb"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -27,7 +28,119 @@ const (
 	paymentChannelBepusdtConfigMigrationSettingKey  = "migration/payment_channel_bepusdt_config_v2"
 	orderItemOriginalPriceMigrationKey              = "migration/order_item_original_price_v1"
 	manualStockUnlimitedValue                       = -1
+	cartProductForeignKeyConstraint                 = "fk_cart_items_product"
+	cartSKUForeignKeyConstraint                     = "fk_cart_items_sku"
+	procurementOrderForeignKeyConstraint            = "fk_procurement_orders_local_order"
+	supersededProcurementOrderForeignKeyConstraint  = "fk_procurement_orders_local_order_reference"
 )
+
+type cartItemConstraintSchema struct {
+	cartdomain.Item
+	Product *cartProductReference    `gorm:"foreignKey:ProductID;references:ID;constraint:fk_cart_items_product"`
+	SKU     *cartProductSKUReference `gorm:"foreignKey:SKUID;references:ID;constraint:fk_cart_items_sku"`
+}
+
+func (cartItemConstraintSchema) TableName() string { return "cart_items" }
+
+type cartProductReference struct {
+	ID uint `gorm:"primarykey"`
+}
+
+func (cartProductReference) TableName() string { return "products" }
+
+type cartProductSKUReference struct {
+	ID uint `gorm:"primarykey"`
+}
+
+func (cartProductSKUReference) TableName() string { return "product_skus" }
+
+func ensureCartForeignKeyConstraints() error {
+	if gormdb.DB == nil {
+		return errors.New("database is not initialized")
+	}
+	migrator := gormdb.DB.Migrator()
+	missing := make([]struct {
+		name     string
+		relation string
+	}, 0, 2)
+	for _, constraint := range []struct {
+		name     string
+		relation string
+	}{
+		{name: cartProductForeignKeyConstraint, relation: "Product"},
+		{name: cartSKUForeignKeyConstraint, relation: "SKU"},
+	} {
+		if migrator.HasConstraint(&cartItemConstraintSchema{}, constraint.name) {
+			continue
+		}
+		missing = append(missing, constraint)
+	}
+	if len(missing) > 0 {
+		if err := validateCartForeignKeyReferences(); err != nil {
+			return err
+		}
+		for _, constraint := range missing {
+			if err := migrator.CreateConstraint(&cartItemConstraintSchema{}, constraint.relation); err != nil {
+				return err
+			}
+		}
+	}
+
+	// SQLite 通过重建表来增加外键，重建过程不会保留原表索引。
+	// 即使外键已经存在也要执行，以修复曾被旧迁移版本移除的索引。
+	return gormdb.DB.AutoMigrate(&cartdomain.Item{})
+}
+
+func validateCartForeignKeyReferences() error {
+	for _, reference := range []struct {
+		constraint string
+		table      string
+		column     string
+	}{
+		{constraint: cartProductForeignKeyConstraint, table: "products", column: "product_id"},
+		{constraint: cartSKUForeignKeyConstraint, table: "product_skus", column: "sku_id"},
+	} {
+		var orphanCount int64
+		query := fmt.Sprintf(
+			"SELECT COUNT(*) FROM cart_items AS cart LEFT JOIN %s AS target ON target.id = cart.%s WHERE target.id IS NULL",
+			reference.table,
+			reference.column,
+		)
+		if err := gormdb.DB.Raw(query).Scan(&orphanCount).Error; err != nil {
+			return err
+		}
+		if orphanCount > 0 {
+			return fmt.Errorf(
+				"cannot create %s: %d cart_items rows reference missing %s",
+				reference.constraint,
+				orphanCount,
+				reference.table,
+			)
+		}
+	}
+	return nil
+}
+
+func ensureProcurementOrderForeignKeyConstraint() error {
+	if gormdb.DB == nil {
+		return errors.New("database is not initialized")
+	}
+	migrator := gormdb.DB.Migrator()
+	if migrator.HasConstraint(&procurementdomain.Order{}, supersededProcurementOrderForeignKeyConstraint) {
+		if err := migrator.DropConstraint(&procurementdomain.Order{}, supersededProcurementOrderForeignKeyConstraint); err != nil {
+			return err
+		}
+	}
+	if !migrator.HasConstraint(&procurementdomain.Order{}, procurementOrderForeignKeyConstraint) {
+		if err := migrator.CreateConstraint(&procurementdomain.Order{}, "LocalOrderReference"); err != nil {
+			return err
+		}
+	}
+
+	// SQLite 的 DropConstraint/CreateConstraint 都可能重建表并丢失索引。
+	// 无条件同步模型索引，同时让已经运行过旧迁移的数据库可以自愈。
+	return gormdb.DB.AutoMigrate(&procurementdomain.Order{})
+}
 
 // ensureManualStockRemainingMigration 将历史“总量库存”迁移为“剩余库存”语义，仅执行一次。
 func ensureManualStockRemainingMigration() error {
