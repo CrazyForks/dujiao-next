@@ -154,7 +154,7 @@ Full instructions: https://dujiao-next.com/deploy/
 Or with Docker:
 
 ```bash
-docker run -d -p 8080:8080 -v $PWD/config.yml:/app/config.yml:ro dujiaonext/api:latest
+docker run -d -p 8080:8080 -v $PWD/config.yml:/app/config.yml:ro dujiaonext/dujiao-next:latest
 ```
 
 ## Quick Start (Develop)
