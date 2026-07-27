@@ -163,13 +163,16 @@ func guestCredentialBackfillCandidateSQL(dialect string) (string, []interface{})
 	prefixPattern := guestCredentialHashPrefix + "%"
 	expectedLength := len(guestCredentialHashPrefix) + sha256.Size*2
 	hashStart := len(guestCredentialHashPrefix) + 1
+	// 长度与起始位置是编译期常量，直接内联成 SQL 字面量：PostgreSQL 在
+	// SUBSTRING(x FROM $n) 中会把未知类型的占位符按 substring(text, text)
+	// 正则重载推断为 text，pgx 随后无法把整数编码成 text 而报错。
 	switch strings.ToLower(strings.TrimSpace(dialect)) {
 	case "sqlite":
-		return "(guest_password NOT LIKE ? OR LENGTH(guest_password) <> ? OR SUBSTR(guest_password, ?) GLOB ?)",
-			[]interface{}{prefixPattern, expectedLength, hashStart, "*[^0-9A-Fa-f]*"}
+		return fmt.Sprintf("(guest_password NOT LIKE ? OR LENGTH(guest_password) <> %d OR SUBSTR(guest_password, %d) GLOB ?)", expectedLength, hashStart),
+			[]interface{}{prefixPattern, "*[^0-9A-Fa-f]*"}
 	case "postgres":
-		return "(guest_password NOT LIKE ? OR LENGTH(guest_password) <> ? OR SUBSTRING(guest_password FROM ?) !~ ?)",
-			[]interface{}{prefixPattern, expectedLength, hashStart, "^[0-9A-Fa-f]+$"}
+		return fmt.Sprintf("(guest_password NOT LIKE ? OR LENGTH(guest_password) <> %d OR SUBSTRING(guest_password FROM %d) !~ ?)", expectedLength, hashStart),
+			[]interface{}{prefixPattern, "^[0-9A-Fa-f]+$"}
 	default:
 		return "1 = 1", nil
 	}
