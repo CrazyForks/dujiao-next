@@ -32,6 +32,20 @@ func TestWeakRuntimeSecretNamesAcceptsStrongIndependentSecrets(t *testing.T) {
 	}
 }
 
+func TestWeakRuntimeSecretNamesRejectsReusedStrongSecrets(t *testing.T) {
+	shared := "2f8d164772cd4bbcaef8fa4ad19a2a26f7a15505"
+	cfg := &config.Config{
+		App:     config.AppConfig{SecretKey: shared},
+		JWT:     config.JWTConfig{SecretKey: shared},
+		UserJWT: config.JWTConfig{SecretKey: "ca36df49b49446d2a9b2cac7f035d11574575b53"},
+	}
+
+	want := []string{"app.secret_key", "jwt.secret"}
+	if got := weakRuntimeSecretNames(cfg); !reflect.DeepEqual(got, want) {
+		t.Fatalf("reused runtime secrets want %v got %v", want, got)
+	}
+}
+
 func TestUnsafeBootstrapAdminPasswordRejectsDefaultsAndPolicyViolations(t *testing.T) {
 	cfg := &config.Config{Security: config.SecurityConfig{PasswordPolicy: config.PasswordPolicyConfig{
 		MinLength:     10,

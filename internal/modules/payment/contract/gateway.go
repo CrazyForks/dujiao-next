@@ -8,6 +8,10 @@ import (
 	"github.com/dujiao-next/internal/shared/money"
 )
 
+// GatewayPayloadFiatCurrencySent 标记创建支付时实际提交给网关的法币币种。
+// 回调兼容逻辑用它区分具备新版事实快照的支付与升级前创建的在途支付。
+const GatewayPayloadFiatCurrencySent = "_dujiao_next_fiat_currency_sent"
+
 // GatewayCreateInput 是统一支付网关创建输入。
 type GatewayCreateInput struct {
 	PaymentID      uint

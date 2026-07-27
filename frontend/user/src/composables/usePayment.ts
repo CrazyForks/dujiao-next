@@ -18,6 +18,7 @@ import {
 } from '../utils/paymentResumePolicy'
 import QRCode from 'qrcode'
 import { type PageAlert } from '../utils/alerts'
+import { loadGuestOrderAuth, saveGuestOrderAuth } from '../utils/guestOrderAuth'
 
 /**
  * 支付页共享逻辑（classic + vault 双模板共用）。
@@ -781,7 +782,13 @@ export function usePayment() {
     if (isTelegramMiniApp.value) {
       telegramMiniAppStore.openLink(payLink.value)
     } else {
-      window.open(payLink.value, '_blank', 'noopener')
+      // 先创建同源空白页，让浏览器按规范复制当前标签页的 sessionStorage；
+      // 随后立即切断 opener 再跳转到支付站。这样第三方回跳仍能恢复游客订单，
+      // 同时不给外部收银台保留反向控制原页面的能力。
+      const paymentWindow = window.open('', '_blank')
+      if (!paymentWindow) return
+      paymentWindow.opener = null
+      paymentWindow.location.replace(payLink.value)
     }
     openedPayWindow.value = true
   }
@@ -1248,12 +1255,7 @@ export function usePayment() {
       return
     }
     if (!orderNoQuery.value) return
-    const saved = localStorage.getItem('guest_order_auth')
-    const savedAuth = saved ? JSON.parse(saved) : {}
-    guestAuth.value = {
-      email: savedAuth.email || '',
-      order_password: savedAuth.order_password || '',
-    }
+    guestAuth.value = loadGuestOrderAuth()
     loadOrder()
     void loadWallet()
     if (!appStore.config || !Array.isArray(appStore.config?.payment_channels)) {
@@ -1364,10 +1366,10 @@ export function usePayment() {
       guestAuthError.value = t('payment.guestAuthRequired')
       return
     }
-    localStorage.setItem('guest_order_auth', JSON.stringify({
+    saveGuestOrderAuth({
       email: guestAuth.value.email,
       order_password: guestAuth.value.order_password,
-    }))
+    })
     await debouncedLoadOrder()
   }
 

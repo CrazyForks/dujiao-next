@@ -66,10 +66,11 @@ func (a walletTransportAdapter) ListRechargeOrdersAdmin(filter wallettransport.A
 
 func (a walletTransportAdapter) AdminAdjustBalance(input wallettransport.AdjustBalanceInput) (*walletdomain.Account, *walletdomain.Transaction, error) {
 	account, txn, err := a.wallets.AdminAdjustBalance(walletcontract.AdjustBalanceInput{
-		UserID:   input.UserID,
-		Delta:    input.Delta,
-		Currency: input.Currency,
-		Remark:   input.Remark,
+		UserID:          input.UserID,
+		OperatorAdminID: input.OperatorAdminID,
+		Delta:           input.Delta,
+		Currency:        input.Currency,
+		Remark:          input.Remark,
 	})
 	return account, txn, mapWalletTransportError(err)
 }

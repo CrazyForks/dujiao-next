@@ -178,7 +178,7 @@ const dujiaopayConfig = reactive({
   api_secret: '',
   webhook_secret: '',
   order_mode: 'transaction',
-  allowed_methods: [] as string[],
+  allowed_methods: '',
   fiat_currency: 'CNY',
   success_url: '',
   cancel_url: '',
@@ -208,37 +208,15 @@ const okpayChannelOptions = [
   { value: 'trx', label: 'admin.paymentChannels.channelTypes.trx' },
 ]
 
-const dujiaopayChannelOptions = [
-  { value: 'tron-usdt', label: 'admin.paymentChannels.channelTypes.tronUsdt' },
-  { value: 'tron-trx', label: 'admin.paymentChannels.channelTypes.tronTrx' },
-  { value: 'ethereum-usdt', label: 'admin.paymentChannels.channelTypes.ethereumUsdt' },
-  { value: 'ethereum-usdc', label: 'admin.paymentChannels.channelTypes.ethereumUsdc' },
-  { value: 'ethereum-eth', label: 'admin.paymentChannels.channelTypes.ethereumEth' },
-  { value: 'bsc-usdt', label: 'admin.paymentChannels.channelTypes.bscUsdt' },
-  { value: 'bsc-bnb', label: 'admin.paymentChannels.channelTypes.bscBnb' },
-  { value: 'polygon-usdc', label: 'admin.paymentChannels.channelTypes.polygonUsdc' },
-  { value: 'polygon-usdt0', label: 'admin.paymentChannels.channelTypes.polygonUsdt0' },
-  { value: 'base-usdc', label: 'admin.paymentChannels.channelTypes.baseUsdc' },
-  { value: 'arbitrum-usdc', label: 'admin.paymentChannels.channelTypes.arbitrumUsdc' },
-  { value: 'arbitrum-usdt0', label: 'admin.paymentChannels.channelTypes.arbitrumUsdt0' },
-  { value: 'plasma-usdt0', label: 'admin.paymentChannels.channelTypes.plasmaUsdt0' },
-  { value: 'x-layer-usdt0', label: 'admin.paymentChannels.channelTypes.xLayerUsdt0' },
-  { value: 'solana-usdc', label: 'admin.paymentChannels.channelTypes.solanaUsdc' },
-  { value: 'solana-usdt', label: 'admin.paymentChannels.channelTypes.solanaUsdt' },
-  { value: 'aptos-usdc', label: 'admin.paymentChannels.channelTypes.aptosUsdc' },
-  { value: 'aptos-usdt', label: 'admin.paymentChannels.channelTypes.aptosUsdt' },
-]
+// DujiaoPay 的 token_id 由管理员手动填写（形如 tron-usdt），不在前端维护固定列表，
+// 上游新增链或代币时无需同步改代码。默认值仅用于新建渠道时的初始填充。
+const dujiaopayDefaultTokenID = 'tron-usdt'
 
 const channelOptions = [
   ...epayChannelOptions,
   ...officialChannelOptions,
   ...okpayChannelOptions,
-  ...dujiaopayChannelOptions,
 ]
-
-const dujiaopayMethodOptions = computed(() =>
-  dujiaopayChannelOptions.map((option) => ({ value: option.value, label: t(option.label) }))
-)
 
 const paymentTypeOptions = computed(() => [
   { value: 'order', label: t('admin.paymentChannels.paymentTypes.order') },
@@ -269,9 +247,6 @@ const formChannelOptions = computed(() => {
   }
   if (form.provider_type === 'okpay') {
     return okpayChannelOptions
-  }
-  if (form.provider_type === 'dujiaopay') {
-    return dujiaopayChannelOptions
   }
   return channelOptions
 })
@@ -472,7 +447,7 @@ const resetDujiaoPayConfig = () => {
   dujiaopayConfig.api_secret = ''
   dujiaopayConfig.webhook_secret = ''
   dujiaopayConfig.order_mode = 'transaction'
-  dujiaopayConfig.allowed_methods = []
+  dujiaopayConfig.allowed_methods = ''
   dujiaopayConfig.fiat_currency = 'CNY'
   dujiaopayConfig.success_url = 'https://yourdomain.com/pay'
   dujiaopayConfig.cancel_url = 'https://yourdomain.com/pay'
@@ -613,12 +588,7 @@ const applyDujiaoPayConfig = (raw: Record<string, unknown>) => {
   dujiaopayConfig.webhook_secret = String(raw.webhook_secret || '')
   dujiaopayConfig.order_mode = String(raw.order_mode || 'transaction') === 'cashier' ? 'cashier' : 'transaction'
   dujiaopayConfig.allowed_methods =
-    dujiaopayConfig.order_mode === 'cashier'
-      ? String(raw.allowed_methods || '')
-          .split(',')
-          .map((item) => item.trim().toLowerCase())
-          .filter((item) => item !== '')
-      : []
+    dujiaopayConfig.order_mode === 'cashier' ? String(raw.allowed_methods || '') : ''
   dujiaopayConfig.fiat_currency = String(raw.fiat_currency || 'CNY').toUpperCase()
   dujiaopayConfig.success_url = String(raw.success_url || '')
   dujiaopayConfig.cancel_url = String(raw.cancel_url || '')
@@ -848,20 +818,24 @@ const buildDujiaoPayConfig = () => {
   setIfNotEmpty('cancel_url', dujiaopayConfig.cancel_url)
   config.order_mode = String(dujiaopayConfig.order_mode || 'transaction') === 'cashier' ? 'cashier' : 'transaction'
   if (config.order_mode === 'cashier') {
-    const methods = (dujiaopayConfig.allowed_methods || [])
-      .map((item) => String(item || '').trim().toLowerCase())
+    const methods = String(dujiaopayConfig.allowed_methods || '')
+      .split(',')
+      .map((item) => item.trim().toLowerCase())
       .filter((item) => item !== '')
     if (methods.length > 0) {
       config.allowed_methods = methods.join(',')
     }
   } else if (form.channel_type) {
-    config.token_id = form.channel_type
+    config.token_id = String(form.channel_type).trim().toLowerCase()
   }
   return config
 }
 
+// token_id 由管理员手动输入，提交前统一规范化，避免大小写或空格写进 channel_type。
 const resolveDujiaopayChannelType = () =>
-  dujiaopayConfig.order_mode === 'cashier' ? 'dujiaopay' : form.channel_type
+  dujiaopayConfig.order_mode === 'cashier'
+    ? 'dujiaopay'
+    : String(form.channel_type || '').trim().toLowerCase()
 
 // --- Watchers for provider_type / channel_type ---
 
@@ -893,11 +867,9 @@ watch(
     } else if (value === 'dujiaopay') {
       if (dujiaopayConfig.order_mode === 'cashier') {
         form.channel_type = 'dujiaopay'
-      } else {
-        const allowed = dujiaopayChannelOptions.map((option) => option.value)
-        if (!allowed.includes(form.channel_type)) {
-          form.channel_type = allowed[0] || 'tron-usdt'
-        }
+      } else if (String(form.channel_type || '').trim() === '' || form.channel_type === 'dujiaopay') {
+        // token_id 由管理员手动输入，这里只在为空或残留 cashier 值时填一个默认值。
+        form.channel_type = dujiaopayDefaultTokenID
       }
     } else if (value === 'tokenpay') {
       form.channel_type = 'usdt'
@@ -974,10 +946,9 @@ watch(
     if (dujiaopayConfig.order_mode === 'cashier') {
       form.channel_type = 'dujiaopay'
     } else {
-      dujiaopayConfig.allowed_methods = []
-      const allowed = dujiaopayChannelOptions.map((option) => option.value)
-      if (!allowed.includes(form.channel_type)) {
-        form.channel_type = allowed[0] || 'tron-usdt'
+      dujiaopayConfig.allowed_methods = ''
+      if (String(form.channel_type || '').trim() === '' || form.channel_type === 'dujiaopay') {
+        form.channel_type = dujiaopayDefaultTokenID
       }
     }
     const allowedModes = interactionModeOptions.value.map((item) => item.value)
@@ -1089,11 +1060,15 @@ watch(
 const handleSubmit = async () => {
   error.value = ''
   let configJson: Record<string, unknown> = {}
+  let explicitlyNullConfigKeys: string[] = []
   if (form.config_json && form.config_json.trim() !== '') {
     try {
       const parsed = JSON.parse(form.config_json)
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         configJson = parsed
+        explicitlyNullConfigKeys = Object.entries(configJson)
+          .filter(([, value]) => value === null)
+          .map(([key]) => key)
       }
     } catch (err) {
       error.value = t('admin.paymentChannels.errors.invalidConfig')
@@ -1182,6 +1157,12 @@ const handleSubmit = async () => {
     }
   }
 
+  // 专用表单构建器可能会重写同名字段；高级 JSON 中的显式 null
+  // 始终具有最高优先级，用于区分“清空密钥”和“保留掩码值”。
+  explicitlyNullConfigKeys.forEach((key) => {
+    configJson[key] = null
+  })
+
   const payload = {
     name: form.name,
     icon: form.icon || '',
@@ -1264,7 +1245,7 @@ const closeModal = () => {
               </SelectContent>
             </Select>
           </div>
-          <div v-if="form.provider_type !== 'tokenpay' && form.provider_type !== 'bepusdt' && form.provider_type !== 'epusdt' && !(form.provider_type === 'dujiaopay' && dujiaopayConfig.order_mode === 'cashier')" class="min-w-0">
+          <div v-if="form.provider_type !== 'tokenpay' && form.provider_type !== 'bepusdt' && form.provider_type !== 'epusdt' && form.provider_type !== 'dujiaopay'" class="min-w-0">
             <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.channelType') }}</label>
             <Select v-model="form.channel_type">
               <SelectTrigger class="h-9 w-full">
@@ -1764,14 +1745,6 @@ const closeModal = () => {
         <div v-if="form.provider_type === 'dujiaopay'" class="min-w-0 rounded-xl border border-border bg-muted/20 p-4 overflow-hidden">
           <div class="text-sm font-semibold text-foreground mb-3">{{ t('admin.paymentChannels.modal.dujiaopaySection') }}</div>
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2 [&>*]:min-w-0">
-            <div class="min-w-0 md:col-span-2">
-              <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.dujiaopayApiBaseUrl') }}</label>
-              <Input v-model="dujiaopayConfig.api_base_url" :placeholder="t('admin.paymentChannels.modal.dujiaopayApiBaseUrlPlaceholder')" />
-            </div>
-            <div class="min-w-0">
-              <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.dujiaopayApiKeyId') }}</label>
-              <Input v-model="dujiaopayConfig.api_key_id" :placeholder="t('admin.paymentChannels.modal.dujiaopayApiKeyIdPlaceholder')" />
-            </div>
             <div class="min-w-0">
               <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.dujiaopayOrderMode') }}</label>
               <Select v-model="dujiaopayConfig.order_mode">
@@ -1784,13 +1757,21 @@ const closeModal = () => {
                 </SelectContent>
               </Select>
             </div>
+            <div v-if="dujiaopayConfig.order_mode !== 'cashier'" class="min-w-0">
+              <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.dujiaopayFixedMethod') }}</label>
+              <Input v-model="form.channel_type" :placeholder="t('admin.paymentChannels.modal.dujiaopayFixedMethodPlaceholder')" />
+            </div>
             <div v-if="dujiaopayConfig.order_mode === 'cashier'" class="min-w-0 md:col-span-2">
               <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.dujiaopayAllowedMethods') }}</label>
-              <MultiSelect
-                v-model="dujiaopayConfig.allowed_methods"
-                :options="dujiaopayMethodOptions"
-                :placeholder="t('admin.paymentChannels.modal.dujiaopayAllowedMethodsPlaceholder')"
-              />
+              <Input v-model="dujiaopayConfig.allowed_methods" :placeholder="t('admin.paymentChannels.modal.dujiaopayAllowedMethodsPlaceholder')" />
+            </div>
+            <div class="min-w-0 md:col-span-2">
+              <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.dujiaopayApiBaseUrl') }}</label>
+              <Input v-model="dujiaopayConfig.api_base_url" :placeholder="t('admin.paymentChannels.modal.dujiaopayApiBaseUrlPlaceholder')" />
+            </div>
+            <div class="min-w-0">
+              <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.dujiaopayApiKeyId') }}</label>
+              <Input v-model="dujiaopayConfig.api_key_id" :placeholder="t('admin.paymentChannels.modal.dujiaopayApiKeyIdPlaceholder')" />
             </div>
             <div class="min-w-0">
               <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.dujiaopayFiatCurrency') }}</label>
@@ -1823,7 +1804,10 @@ const closeModal = () => {
               {{ showAdvanced ? t('admin.paymentChannels.modal.advancedHide') : t('admin.paymentChannels.modal.advancedShow') }}
             </button>
           </div>
-          <Textarea v-if="showAdvanced" v-model="form.config_json" rows="8" class="font-mono text-xs" :placeholder="configJsonPlaceholder" />
+          <template v-if="showAdvanced">
+            <Textarea v-model="form.config_json" rows="8" class="font-mono text-xs" :placeholder="configJsonPlaceholder" />
+            <p class="mt-1.5 text-xs text-muted-foreground">{{ t('admin.paymentChannels.modal.advancedClearHint') }}</p>
+          </template>
         </div>
 
         <div v-if="error" class="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">

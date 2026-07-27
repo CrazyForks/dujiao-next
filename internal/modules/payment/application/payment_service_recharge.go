@@ -62,6 +62,16 @@ func (s *PaymentService) CreateWalletRechargePayment(input CreateWalletRechargeP
 	if !channel.IsActive {
 		return nil, ErrPaymentChannelInactive
 	}
+	if s.userRepo == nil {
+		return nil, ErrPaymentInvalid
+	}
+	user, err := s.userRepo.GetByID(input.UserID)
+	if err != nil {
+		return nil, ErrPaymentUpdateFailed
+	}
+	if err := validateWalletChannelEligibility(*channel, user); err != nil {
+		return nil, err
+	}
 
 	// 校验钱包充值是否允许该支付渠道
 	if err := s.validateWalletRechargeChannel(channel.ID); err != nil {

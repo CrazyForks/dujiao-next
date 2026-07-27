@@ -110,7 +110,7 @@ func TestCancelExpiredOrderExpiresPendingPayments(t *testing.T) {
 	}
 
 	svc := NewOrderService(OrderServiceOptions{
-		OrderStore:       ordergormstore.New(db),
+		OrderStore:       ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes"),
 		ProductStore:     productgormstore.NewProductStore(db),
 		ProductSKUStore:  productgormstore.NewSKUStore(db),
 		CouponStore:      coupongormstore.New(db),
@@ -216,7 +216,7 @@ func TestCancelOrderExpiresPendingPayments(t *testing.T) {
 	}
 
 	svc := NewOrderService(OrderServiceOptions{
-		OrderStore:       ordergormstore.New(db),
+		OrderStore:       ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes"),
 		ProductStore:     productgormstore.NewProductStore(db),
 		ProductSKUStore:  productgormstore.NewSKUStore(db),
 		CouponStore:      coupongormstore.New(db),
@@ -259,7 +259,7 @@ func TestUpdateOrderStatusAdminCancelExpiresPendingPaymentsSingleOrder(t *testin
 	}
 
 	svc := NewOrderService(OrderServiceOptions{
-		OrderStore:       ordergormstore.New(db),
+		OrderStore:       ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes"),
 		ProductStore:     productgormstore.NewProductStore(db),
 		ProductSKUStore:  productgormstore.NewSKUStore(db),
 		CouponStore:      coupongormstore.New(db),
@@ -312,7 +312,7 @@ func TestCancelExpiredOrderExpiresPaymentsForParentAndChildren(t *testing.T) {
 	}
 
 	svc := NewOrderService(OrderServiceOptions{
-		OrderStore:       ordergormstore.New(db),
+		OrderStore:       ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes"),
 		ProductStore:     productgormstore.NewProductStore(db),
 		ProductSKUStore:  productgormstore.NewSKUStore(db),
 		CouponStore:      coupongormstore.New(db),

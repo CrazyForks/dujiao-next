@@ -4,6 +4,15 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"time"
+)
+
+const (
+	httpReadHeaderTimeout = 10 * time.Second
+	httpReadTimeout       = 30 * time.Second
+	httpWriteTimeout      = 60 * time.Second
+	httpIdleTimeout       = 120 * time.Second
+	httpMaxHeaderBytes    = 1 << 20
 )
 
 // HTTPService HTTP 服务封装
@@ -17,8 +26,13 @@ func NewHTTPService(addr string, handler http.Handler) *HTTPService {
 	return &HTTPService{
 		name: "http",
 		server: &http.Server{
-			Addr:    addr,
-			Handler: handler,
+			Addr:              addr,
+			Handler:           handler,
+			ReadHeaderTimeout: httpReadHeaderTimeout,
+			ReadTimeout:       httpReadTimeout,
+			WriteTimeout:      httpWriteTimeout,
+			IdleTimeout:       httpIdleTimeout,
+			MaxHeaderBytes:    httpMaxHeaderBytes,
 		},
 	}
 }

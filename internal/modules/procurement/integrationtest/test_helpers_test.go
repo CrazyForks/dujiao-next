@@ -120,7 +120,7 @@ func createTestProcurementOrder(t *testing.T, db *gorm.DB, connID, localOrderID 
 }
 
 func newTestProcurementService(db *gorm.DB, connections *siteconnectionapp.Service) *procurementapp.Service {
-	orders := ordergormstore.New(db)
+	orders := ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes")
 	return procurementapp.NewService(procurementapp.Options{
 		Repository:      procurementgormstore.New(db),
 		Orders:          procurementorder.New(orders),

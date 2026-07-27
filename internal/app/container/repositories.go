@@ -1,6 +1,8 @@
 package container
 
 import (
+	"fmt"
+
 	affiliategormstore "github.com/dujiao-next/internal/modules/affiliate/infrastructure/gormstore"
 	apicredentialgormstore "github.com/dujiao-next/internal/modules/apicredential/infrastructure/gormstore"
 	auditloggormstore "github.com/dujiao-next/internal/modules/auditlog/infrastructure/gormstore"
@@ -34,14 +36,18 @@ import (
 	"github.com/dujiao-next/internal/platform/database/gormdb"
 )
 
-func (c *Container) initRepositories() {
+func (c *Container) initRepositories() error {
 	db := gormdb.DB
 	c.AdminStore = adminstore.New(db)
 	c.UserStore = userstore.New(db)
 	c.ExternalIdentityStore = externalidentitystore.New(db)
 	c.EmailVerificationStore = emailverificationstore.New(db)
-	c.OrderStore = ordergormstore.New(db)
-	c.PaymentStore = paymentgormstore.New(db)
+	orderStore := ordergormstore.New(db, c.Config.App.SecretKey)
+	if _, err := orderStore.BackfillGuestCredentialHashes(); err != nil {
+		return fmt.Errorf("backfill guest order credentials: %w", err)
+	}
+	c.OrderStore = orderStore
+	c.PaymentStore = paymentgormstore.New(db, c.Config.App.SecretKey)
 	c.PaymentChannelStore = paymentgormstore.NewChannelStore(db)
 	c.CardSecretRepo = cardsecretgormstore.New(db)
 	c.CardSecretBatchRepo = cardsecretgormstore.NewBatch(db)
@@ -76,4 +82,5 @@ func (c *Container) initRepositories() {
 	c.MemberLevelRepo = memberlevelgormstore.NewLevelStore(db)
 	c.MemberLevelPriceRepo = memberlevelgormstore.NewPriceStore(db)
 	c.MemberLevelUserRepo = memberlevelgormstore.NewUserStore(db)
+	return nil
 }

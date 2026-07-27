@@ -1,13 +1,17 @@
 package middleware
 
 import (
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 )
 
 func TestKeyByIPAndJSONField(t *testing.T) {
@@ -51,6 +55,121 @@ func TestRateLimitMiddlewareWithoutClient(t *testing.T) {
 	}
 	if !strings.Contains(w.Body.String(), `"ok":true`) {
 		t.Fatalf("expected handler response body, got %s", w.Body.String())
+	}
+
+	w = httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodGet, "/ping", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("second request must be limited even without Redis: status want 429 got %d", w.Code)
+	}
+}
+
+func TestLocalRateLimiterCapacityDoesNotEvictLiveEntries(t *testing.T) {
+	now := time.Now()
+	limiter := &localRateLimiter{entries: make(map[string]localRateLimitEntry, localRateLimitMaxEntries)}
+	for i := 0; i < localRateLimitMaxEntries; i++ {
+		limiter.entries[fmt.Sprintf("live-%d", i)] = localRateLimitEntry{
+			count:     1,
+			expiresAt: now.Add(10 * time.Minute),
+		}
+	}
+
+	rule := RateLimitRule{WindowSeconds: 60, MaxRequests: 5}
+	count, _, warned := limiter.increment("new-key", rule, now)
+	if count <= int64(rule.MaxRequests) {
+		t.Fatalf("new key must fail closed when local limiter is at capacity, count=%d", count)
+	}
+	if !warned {
+		t.Fatal("first capacity rejection must request an operator warning")
+	}
+	_, _, warned = limiter.increment("another-new-key", rule, now.Add(time.Second))
+	if warned {
+		t.Fatal("capacity warning must be throttled")
+	}
+	_, _, warned = limiter.increment("later-new-key", rule, now.Add(localRateLimitWarningInterval))
+	if !warned {
+		t.Fatal("capacity warning should be emitted again after the throttle interval")
+	}
+	if len(limiter.entries) != localRateLimitMaxEntries {
+		t.Fatalf("live entry count changed: got %d want %d", len(limiter.entries), localRateLimitMaxEntries)
+	}
+	if _, ok := limiter.entries["live-0"]; !ok {
+		t.Fatal("capacity handling must not evict live counters")
+	}
+	if _, ok := limiter.entries["new-key"]; ok {
+		t.Fatal("rejected new key must not be stored")
+	}
+}
+
+func TestLocalRateLimiterPurgesExpiredEntriesBeforeRejectingNewKey(t *testing.T) {
+	now := time.Now()
+	limiter := &localRateLimiter{entries: make(map[string]localRateLimitEntry, localRateLimitMaxEntries)}
+	for i := 0; i < localRateLimitMaxEntries; i++ {
+		expiresAt := now.Add(time.Minute)
+		if i == 0 {
+			expiresAt = now.Add(-time.Second)
+		}
+		limiter.entries[fmt.Sprintf("entry-%d", i)] = localRateLimitEntry{
+			count:     1,
+			expiresAt: expiresAt,
+		}
+	}
+
+	count, _, warned := limiter.increment("new-key", RateLimitRule{WindowSeconds: 60, MaxRequests: 5}, now)
+	if count != 1 {
+		t.Fatalf("new key count = %d, want 1 after expired entry cleanup", count)
+	}
+	if warned {
+		t.Fatal("successful expired-entry cleanup must not emit a capacity warning")
+	}
+	if _, ok := limiter.entries["new-key"]; !ok {
+		t.Fatal("new key should be stored after expired entry cleanup")
+	}
+	if _, ok := limiter.entries["entry-0"]; ok {
+		t.Fatal("expired entry should be removed")
+	}
+}
+
+func TestRateLimitMiddlewareFallsBackLocallyWhenRedisIsUnavailable(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("reserve local address: %v", err)
+	}
+	addr := listener.Addr().String()
+	if err := listener.Close(); err != nil {
+		t.Fatalf("close reserved address: %v", err)
+	}
+	client := redis.NewClient(&redis.Options{
+		Addr:         addr,
+		DialTimeout:  50 * time.Millisecond,
+		ReadTimeout:  50 * time.Millisecond,
+		WriteTimeout: 50 * time.Millisecond,
+		MaxRetries:   -1,
+	})
+	t.Cleanup(func() { _ = client.Close() })
+
+	r := gin.New()
+	r.Use(RateLimitMiddleware(client, RateLimitRule{
+		Prefix:        "redis-fallback-test",
+		WindowSeconds: 60,
+		MaxRequests:   1,
+	}, KeyByIP))
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
+	first := httptest.NewRecorder()
+	r.ServeHTTP(first, httptest.NewRequest(http.MethodGet, "/ping", nil))
+	if first.Code != http.StatusOK {
+		t.Fatalf("first fallback request status = %d, want 200", first.Code)
+	}
+
+	second := httptest.NewRecorder()
+	r.ServeHTTP(second, httptest.NewRequest(http.MethodGet, "/ping", nil))
+	if second.Code != http.StatusTooManyRequests {
+		t.Fatalf("second fallback request status = %d, want 429", second.Code)
 	}
 }
 

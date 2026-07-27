@@ -123,6 +123,42 @@ func TestResolvedParentStatusPrefersOwnRefund(t *testing.T) {
 	}
 }
 
+func TestUpdateOrderStatusRejectsManualPaidTransition(t *testing.T) {
+	dsn := fmt.Sprintf("file:order_service_reject_manual_paid_%d?mode=memory&cache=shared", time.Now().UnixNano())
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite failed: %v", err)
+	}
+	if err := db.AutoMigrate(&orderdomain.Order{}, &orderdomain.OrderItem{}, &fulfillmentdomain.Fulfillment{}); err != nil {
+		t.Fatalf("auto migrate failed: %v", err)
+	}
+	now := time.Now()
+	order := &orderdomain.Order{
+		OrderNo:        "MANUAL-PAID-MUST-FAIL",
+		Status:         constants.OrderStatusPendingPayment,
+		Currency:       "CNY",
+		TotalAmount:    money.FromDecimal(decimal.NewFromInt(100)),
+		OriginalAmount: money.FromDecimal(decimal.NewFromInt(100)),
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
+	if err := db.Create(order).Error; err != nil {
+		t.Fatalf("create order failed: %v", err)
+	}
+	svc := NewOrderService(OrderServiceOptions{OrderStore: ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes")})
+
+	if _, err := svc.UpdateOrderStatus(order.ID, constants.OrderStatusPaid); err != ErrOrderStatusInvalid {
+		t.Fatalf("manual paid transition error = %v, want %v", err, ErrOrderStatusInvalid)
+	}
+	var stored orderdomain.Order
+	if err := db.First(&stored, order.ID).Error; err != nil {
+		t.Fatalf("reload order failed: %v", err)
+	}
+	if stored.Status != constants.OrderStatusPendingPayment || stored.PaidAt != nil {
+		t.Fatalf("manual paid transition mutated order: %+v", stored)
+	}
+}
+
 func TestIsTransitionAllowedRefunded(t *testing.T) {
 	if !IsTransitionAllowed(constants.OrderStatusDelivered, constants.OrderStatusPartiallyRefunded) {
 		t.Fatalf("expected delivered to partially_refunded transition to be allowed")
@@ -213,7 +249,7 @@ func TestUpdateOrderStatusParentToPartiallyRefundedSyncsChildren(t *testing.T) {
 	}
 
 	svc := NewOrderService(OrderServiceOptions{
-		OrderStore: ordergormstore.New(db),
+		OrderStore: ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes"),
 	})
 	updated, err := svc.UpdateOrderStatus(parent.ID, constants.OrderStatusPartiallyRefunded)
 	if err != nil {

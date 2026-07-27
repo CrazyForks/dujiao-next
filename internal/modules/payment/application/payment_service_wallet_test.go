@@ -1,7 +1,13 @@
 package application
 
 import (
+	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -31,9 +37,11 @@ import (
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
+	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 
 	"github.com/dujiao-next/internal/constants"
+	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
 	"github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/provider"
 	"github.com/dujiao-next/internal/platform/database/gormdb"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -68,10 +76,10 @@ func setupPaymentServiceWalletTest(t *testing.T) (*PaymentService, *gorm.DB) {
 	}
 	gormdb.DB = db
 
-	orderRepo := ordergormstore.New(db)
+	orderRepo := ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes")
 	productRepo := productgormstore.NewProductStore(db)
 	productSKURepo := productgormstore.NewSKUStore(db)
-	paymentRepo := paymentgormstore.New(db)
+	paymentRepo := paymentgormstore.New(db, "test-guest-credential-secret-with-32-bytes")
 	channelRepo := paymentgormstore.NewChannelStore(db)
 	walletRepo := walletgormstore.New(db)
 	walletSvc := walletapp.NewService(walletapp.Options{
@@ -386,6 +394,51 @@ func TestWalletRechargeCallbackDuplicateSuccessDoesNotDuplicateCredit(t *testing
 	}
 }
 
+func TestWalletRechargeCallbackConcurrentSuccessCreditsOnce(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusPending, constants.WalletRechargeStatusPending)
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("get raw db: %v", err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+	sqlDB.SetMaxIdleConns(1)
+
+	const callbacks = 2
+	var wait sync.WaitGroup
+	errorsCh := make(chan error, callbacks)
+	for index := 0; index < callbacks; index++ {
+		wait.Add(1)
+		go func(index int) {
+			defer wait.Done()
+			input := buildWalletRechargeCallbackInput(
+				payment,
+				recharge,
+				constants.PaymentStatusSuccess,
+				fmt.Sprintf("CALLBACK-CONCURRENT-%d", index),
+			)
+			if _, callbackErr := svc.HandleCallback(input); callbackErr != nil {
+				errorsCh <- callbackErr
+			}
+		}(index)
+	}
+	wait.Wait()
+	close(errorsCh)
+	for callbackErr := range errorsCh {
+		t.Errorf("concurrent callback failed: %v", callbackErr)
+	}
+
+	assertWalletRechargeSuccessState(t, db, payment.ID, recharge.ID, recharge.UserID, recharge.Amount.Decimal)
+	reference := fmt.Sprintf("recharge:%d:success", recharge.ID)
+	var transactionCount int64
+	if err := db.Model(&walletdomain.Transaction{}).Where("reference = ?", reference).Count(&transactionCount).Error; err != nil {
+		t.Fatalf("count wallet transaction: %v", err)
+	}
+	if transactionCount != 1 {
+		t.Fatalf("concurrent success callbacks created %d credits, want 1", transactionCount)
+	}
+}
+
 func TestWalletRechargeCallbackPendingAfterExpireDoesNotReopen(t *testing.T) {
 	svc, db := setupPaymentServiceWalletTest(t)
 	payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusPending, constants.WalletRechargeStatusPending)
@@ -515,6 +568,303 @@ func TestWalletRechargeCallbackSuccessAfterFailedCreditsOnce(t *testing.T) {
 	}
 	if txnCount != 1 {
 		t.Fatalf("wallet recharge success transaction count want 1 got %d", txnCount)
+	}
+}
+
+type failWalletRechargeReloadRepository struct {
+	walletcontract.Repository
+	getCalls int
+}
+
+func (r *failWalletRechargeReloadRepository) GetRechargeOrderByPaymentID(paymentID uint) (*walletdomain.RechargeOrder, error) {
+	r.getCalls++
+	if r.getCalls > 1 {
+		return nil, fmt.Errorf("forced recharge reload failure")
+	}
+	return r.Repository.GetRechargeOrderByPaymentID(paymentID)
+}
+
+type recordingMemberLevelProgressor struct {
+	rechargeUserID uint
+	rechargeAmount decimal.Decimal
+}
+
+func (r *recordingMemberLevelProgressor) OnOrderPaid(uint, decimal.Decimal) error {
+	return nil
+}
+
+func (r *recordingMemberLevelProgressor) OnRechargeCompleted(userID uint, amount decimal.Decimal) error {
+	r.rechargeUserID = userID
+	r.rechargeAmount = amount
+	return nil
+}
+
+func TestWalletRechargeCallbackReloadFailureKeepsNotificationContext(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusPending, constants.WalletRechargeStatusPending)
+	svc.walletRepo = &failWalletRechargeReloadRepository{Repository: svc.walletRepo}
+	progressor := &recordingMemberLevelProgressor{}
+	svc.SetMemberLevelService(progressor)
+
+	if _, err := svc.HandleCallback(buildWalletRechargeCallbackInput(payment, recharge, constants.PaymentStatusSuccess, "CALLBACK-RELOAD-FAILURE")); err != nil {
+		t.Fatalf("HandleCallback failed: %v", err)
+	}
+	if progressor.rechargeUserID != recharge.UserID {
+		t.Fatalf("fallback recharge user id = %d, want %d", progressor.rechargeUserID, recharge.UserID)
+	}
+	if !progressor.rechargeAmount.Equal(recharge.Amount.Decimal) {
+		t.Fatalf("fallback recharge amount = %s, want %s", progressor.rechargeAmount, recharge.Amount.String())
+	}
+}
+
+func TestHandleDujiaoPayWebhookAppliesVerifiedWalletRecharge(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	channel, payment, recharge := createDujiaoPayWalletWebhookFixture(t, db)
+
+	body := []byte(fmt.Sprintf(
+		`{"event_id":"evt-wallet-paid","event_type":"order.paid","event_version":"v1","created_at":"2026-07-27T00:00:00Z","data":{"order_id":%q,"merchant_order_id":%q,"fiat_currency":"CNY","fiat_amount":"88.00","tx_id":"0xwallet","paid_at":"2026-07-27T00:00:01Z"}}`,
+		payment.ProviderRef,
+		recharge.RechargeNo,
+	))
+	headers := signDujiaoPayWebhook(body, "test-dujiaopay-webhook-secret")
+
+	updated, status, err := svc.HandleDujiaoPayWebhook(WebhookCallbackInput{
+		ChannelID: channel.ID,
+		Headers:   headers,
+		Body:      body,
+		Context:   context.Background(),
+	})
+	if err != nil {
+		t.Fatalf("HandleDujiaoPayWebhook failed: %v", err)
+	}
+	if status != constants.PaymentStatusSuccess || updated == nil || updated.Status != constants.PaymentStatusSuccess {
+		t.Fatalf("webhook result status=%q payment=%+v", status, updated)
+	}
+	assertWalletRechargeSuccessState(t, db, payment.ID, recharge.ID, recharge.UserID, recharge.Amount.Decimal)
+}
+
+func TestHandleDujiaoPayWebhookMarksOrderPaid(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	channel := createDujiaoPayChannelFixture(t, db)
+	now := time.Now()
+	order := &orderdomain.Order{
+		OrderNo:          fmt.Sprintf("DJ-DUJIAOPAY-%d", now.UnixNano()),
+		UserID:           1,
+		Status:           constants.OrderStatusPendingPayment,
+		Currency:         "CNY",
+		OriginalAmount:   money.FromDecimal(decimal.NewFromInt(88)),
+		TotalAmount:      money.FromDecimal(decimal.NewFromInt(88)),
+		OnlinePaidAmount: money.FromDecimal(decimal.NewFromInt(88)),
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+	if err := db.Create(order).Error; err != nil {
+		t.Fatalf("create order failed: %v", err)
+	}
+	payment := &paymentdomain.Payment{
+		OrderID:         order.ID,
+		ChannelID:       channel.ID,
+		ProviderType:    constants.PaymentProviderDujiaoPay,
+		ChannelType:     channel.ChannelType,
+		InteractionMode: constants.PaymentInteractionRedirect,
+		Amount:          money.FromDecimal(decimal.NewFromInt(88)),
+		Currency:        "CNY",
+		Status:          constants.PaymentStatusPending,
+		GatewayOrderNo:  fmt.Sprintf("PAY-DUJIAOPAY-%d", now.UnixNano()),
+		ProviderRef:     fmt.Sprintf("do_order_%d", now.UnixNano()),
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+	if err := db.Create(payment).Error; err != nil {
+		t.Fatalf("create payment failed: %v", err)
+	}
+
+	body := []byte(fmt.Sprintf(
+		`{"event_id":"evt-order-paid","event_type":"order.paid","event_version":"v1","created_at":"2026-07-27T00:00:00Z","data":{"order_id":%q,"merchant_order_id":%q,"fiat_currency":"CNY","fiat_amount":"88.00","tx_id":"0xorder"}}`,
+		payment.ProviderRef,
+		payment.GatewayOrderNo,
+	))
+	updated, status, err := svc.HandleDujiaoPayWebhook(WebhookCallbackInput{
+		ChannelID: channel.ID,
+		Headers:   signDujiaoPayWebhook(body, "test-dujiaopay-webhook-secret"),
+		Body:      body,
+		Context:   context.Background(),
+	})
+	if err != nil {
+		t.Fatalf("HandleDujiaoPayWebhook failed: %v", err)
+	}
+	if status != constants.PaymentStatusSuccess || updated == nil || updated.Status != constants.PaymentStatusSuccess {
+		t.Fatalf("webhook result status=%q payment=%+v", status, updated)
+	}
+	var storedOrder orderdomain.Order
+	if err := db.First(&storedOrder, order.ID).Error; err != nil {
+		t.Fatalf("reload order failed: %v", err)
+	}
+	if storedOrder.Status != constants.OrderStatusPaid || storedOrder.PaidAt == nil {
+		t.Fatalf("DujiaoPay webhook did not mark order paid: %+v", storedOrder)
+	}
+}
+
+func TestHandleDujiaoPayWebhookRejectsMismatchedMerchantOrderID(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	channel, payment, recharge := createDujiaoPayWalletWebhookFixture(t, db)
+
+	body := []byte(fmt.Sprintf(
+		`{"event_id":"evt-wallet-mismatch","event_type":"order.paid","event_version":"v1","created_at":"2026-07-27T00:00:00Z","data":{"order_id":%q,"merchant_order_id":"WRONG-MERCHANT-ORDER","fiat_currency":"CNY","fiat_amount":"88.00","tx_id":"0xmismatch"}}`,
+		payment.ProviderRef,
+	))
+	headers := signDujiaoPayWebhook(body, "test-dujiaopay-webhook-secret")
+
+	if _, _, err := svc.HandleDujiaoPayWebhook(WebhookCallbackInput{
+		ChannelID: channel.ID,
+		Headers:   headers,
+		Body:      body,
+		Context:   context.Background(),
+	}); err != ErrPaymentInvalid {
+		t.Fatalf("mismatched merchant order error = %v, want ErrPaymentInvalid", err)
+	}
+
+	var storedRecharge walletdomain.RechargeOrder
+	if err := db.First(&storedRecharge, recharge.ID).Error; err != nil {
+		t.Fatalf("reload recharge failed: %v", err)
+	}
+	if storedRecharge.Status != constants.WalletRechargeStatusPending {
+		t.Fatalf("mismatched webhook changed recharge status to %s", storedRecharge.Status)
+	}
+}
+
+func TestHandleDujiaoPayWebhookAdoptsSignedCurrencyForLegacyPendingPayment(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	channel, payment, recharge := createDujiaoPayWalletWebhookFixture(t, db)
+	channel.ConfigJSON["fiat_currency"] = "USD"
+	if err := db.Model(channel).Update("config_json", channel.ConfigJSON).Error; err != nil {
+		t.Fatalf("update channel fiat currency: %v", err)
+	}
+
+	body := []byte(fmt.Sprintf(
+		`{"event_id":"evt-wallet-legacy-currency","event_type":"order.paid","event_version":"v1","created_at":"2026-07-27T00:00:00Z","data":{"order_id":%q,"merchant_order_id":%q,"fiat_currency":"USD","fiat_amount":"88.00","tx_id":"0xlegacycurrency"}}`,
+		payment.ProviderRef,
+		recharge.RechargeNo,
+	))
+	updated, status, err := svc.HandleDujiaoPayWebhook(WebhookCallbackInput{
+		ChannelID: channel.ID,
+		Headers:   signDujiaoPayWebhook(body, "test-dujiaopay-webhook-secret"),
+		Body:      body,
+		Context:   context.Background(),
+	})
+	if err != nil {
+		t.Fatalf("legacy DujiaoPay webhook failed: %v", err)
+	}
+	if status != constants.PaymentStatusSuccess || updated == nil || updated.Currency != "USD" {
+		t.Fatalf("legacy webhook status=%q payment=%+v", status, updated)
+	}
+
+	var stored paymentdomain.Payment
+	if err := db.First(&stored, payment.ID).Error; err != nil {
+		t.Fatalf("reload payment: %v", err)
+	}
+	if stored.Currency != "USD" {
+		t.Fatalf("stored currency = %q, want signed legacy currency USD", stored.Currency)
+	}
+	if got := stored.ProviderPayload[paymentcontract.GatewayPayloadFiatCurrencySent]; got != "USD" {
+		t.Fatalf("stored fiat currency snapshot = %#v, want USD", got)
+	}
+}
+
+func TestHandleDujiaoPayWebhookKeepsStrictCurrencyCheckForSnapshottedPayment(t *testing.T) {
+	svc, db := setupPaymentServiceWalletTest(t)
+	channel, payment, recharge := createDujiaoPayWalletWebhookFixture(t, db)
+	payment.ProviderPayload = jsonmap.JSON{
+		paymentcontract.GatewayPayloadFiatCurrencySent: "CNY",
+	}
+	if err := db.Model(payment).Update("provider_payload", payment.ProviderPayload).Error; err != nil {
+		t.Fatalf("store payment fiat currency snapshot: %v", err)
+	}
+
+	body := []byte(fmt.Sprintf(
+		`{"event_id":"evt-wallet-strict-currency","event_type":"order.paid","event_version":"v1","created_at":"2026-07-27T00:00:00Z","data":{"order_id":%q,"merchant_order_id":%q,"fiat_currency":"USD","fiat_amount":"88.00","tx_id":"0xstrictcurrency"}}`,
+		payment.ProviderRef,
+		recharge.RechargeNo,
+	))
+	if _, _, err := svc.HandleDujiaoPayWebhook(WebhookCallbackInput{
+		ChannelID: channel.ID,
+		Headers:   signDujiaoPayWebhook(body, "test-dujiaopay-webhook-secret"),
+		Body:      body,
+		Context:   context.Background(),
+	}); err != ErrPaymentCurrencyMismatch {
+		t.Fatalf("snapshotted currency mismatch error = %v, want ErrPaymentCurrencyMismatch", err)
+	}
+
+	var stored paymentdomain.Payment
+	if err := db.First(&stored, payment.ID).Error; err != nil {
+		t.Fatalf("reload payment: %v", err)
+	}
+	if stored.Status != constants.PaymentStatusPending || stored.Currency != "CNY" {
+		t.Fatalf("strict mismatch changed payment: %+v", stored)
+	}
+}
+
+func createDujiaoPayWalletWebhookFixture(t *testing.T, db *gorm.DB) (*paymentdomain.PaymentChannel, *paymentdomain.Payment, *walletdomain.RechargeOrder) {
+	t.Helper()
+	channel := createDujiaoPayChannelFixture(t, db)
+	now := time.Now()
+	payment, recharge := createWalletRechargeFixture(t, db, constants.PaymentStatusPending, constants.WalletRechargeStatusPending)
+	providerRef := fmt.Sprintf("do_wallet_%d", now.UnixNano())
+	if err := db.Model(payment).Updates(map[string]interface{}{
+		"channel_id":       channel.ID,
+		"provider_type":    constants.PaymentProviderDujiaoPay,
+		"channel_type":     channel.ChannelType,
+		"interaction_mode": constants.PaymentInteractionRedirect,
+		"gateway_order_no": recharge.RechargeNo,
+		"provider_ref":     providerRef,
+	}).Error; err != nil {
+		t.Fatalf("update DujiaoPay payment fixture failed: %v", err)
+	}
+	payment.ChannelID = channel.ID
+	payment.ProviderType = constants.PaymentProviderDujiaoPay
+	payment.ChannelType = channel.ChannelType
+	payment.InteractionMode = constants.PaymentInteractionRedirect
+	payment.GatewayOrderNo = recharge.RechargeNo
+	payment.ProviderRef = providerRef
+	return channel, payment, recharge
+}
+
+func createDujiaoPayChannelFixture(t *testing.T, db *gorm.DB) *paymentdomain.PaymentChannel {
+	t.Helper()
+	now := time.Now()
+	channel := &paymentdomain.PaymentChannel{
+		Name:            "DujiaoPay test",
+		ProviderType:    constants.PaymentProviderDujiaoPay,
+		ChannelType:     "tron-usdt",
+		InteractionMode: constants.PaymentInteractionRedirect,
+		ConfigJSON: jsonmap.JSON{
+			"api_base_url":   "https://pay.example.test",
+			"api_key_id":     "test-key",
+			"api_secret":     "test-api-secret",
+			"webhook_secret": "test-dujiaopay-webhook-secret",
+			"order_mode":     constants.PaymentDujiaoPayOrderModeTransaction,
+			"chain":          "tron",
+			"token_id":       "tron-usdt",
+			"fiat_currency":  "CNY",
+		},
+		IsActive:  true,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if err := db.Create(channel).Error; err != nil {
+		t.Fatalf("create DujiaoPay channel failed: %v", err)
+	}
+	return channel
+}
+
+func signDujiaoPayWebhook(body []byte, secret string) map[string]string {
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write([]byte(timestamp + "."))
+	_, _ = mac.Write(body)
+	return map[string]string{
+		"DJP-Webhook-Timestamp": timestamp,
+		"DJP-Webhook-Signature": hex.EncodeToString(mac.Sum(nil)),
 	}
 }
 

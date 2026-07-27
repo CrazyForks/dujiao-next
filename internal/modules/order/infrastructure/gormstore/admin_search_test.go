@@ -30,7 +30,7 @@ func setupAdminSearchRepositoryTest(t *testing.T) (*userstore.Store, *Store, *go
 	if err := db.AutoMigrate(&userdomain.User{}, &externalidentitydomain.Identity{}, &orderdomain.Order{}, &orderdomain.OrderItem{}, &fulfillmentdomain.Fulfillment{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
-	return userstore.New(db), New(db), db
+	return userstore.New(db), New(db, "test-guest-credential-secret-with-32-bytes"), db
 }
 
 func TestUserRepositoryListSupportsOAuthKeyword(t *testing.T) {

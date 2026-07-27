@@ -13,14 +13,47 @@ import (
 
 	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
 
+	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/jsonslice"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
 )
+
+func TestValidateOrderChannelEligibilityUsesPersistedOrderIdentity(t *testing.T) {
+	levelID := uint(2)
+	channel := paymentdomain.PaymentChannel{
+		PaymentRoles: jsonslice.Strings{constants.PaymentRoleMember},
+		MemberLevels: jsonslice.Uints{levelID},
+		PaymentTypes: jsonslice.Strings{constants.PaymentTypeOrder},
+	}
+	memberOrder := &orderdomain.Order{UserID: 10, MemberLevelID: &levelID}
+	if err := validateOrderChannelEligibility(channel, memberOrder); err != nil {
+		t.Fatalf("eligible persisted member order rejected: %v", err)
+	}
+	if err := validateOrderChannelEligibility(channel, &orderdomain.Order{}); err != ErrPaymentChannelNotAllowedForProduct {
+		t.Fatalf("guest bypass error = %v, want channel rejection", err)
+	}
+	wrongLevel := uint(3)
+	if err := validateOrderChannelEligibility(channel, &orderdomain.Order{UserID: 10, MemberLevelID: &wrongLevel}); err != ErrPaymentChannelNotAllowedForProduct {
+		t.Fatalf("member-level bypass error = %v, want channel rejection", err)
+	}
+}
+
+func TestValidateWalletChannelEligibilityRejectsOrderOnlyChannel(t *testing.T) {
+	channel := paymentdomain.PaymentChannel{
+		PaymentRoles: jsonslice.Strings{constants.PaymentRoleMember},
+		PaymentTypes: jsonslice.Strings{constants.PaymentTypeOrder},
+	}
+	user := &userdomain.User{ID: 10}
+	if err := validateWalletChannelEligibility(channel, user); err != ErrPaymentChannelNotAllowedForRecharge {
+		t.Fatalf("wallet payment-type bypass error = %v, want recharge rejection", err)
+	}
+}
 
 type emptyProviderRefProvider struct {
 	onCreate           func(paymentcontract.GatewayCreateInput)

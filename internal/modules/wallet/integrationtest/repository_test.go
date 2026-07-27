@@ -8,6 +8,7 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
 	"github.com/dujiao-next/internal/constants"
+	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
@@ -17,6 +18,37 @@ import (
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
+
+func TestAdminAdjustmentPersistsOperatorIdentity(t *testing.T) {
+	repo, db := setupWalletRepositoryTest(t)
+	service := walletapp.NewService(walletapp.Options{Repository: repo, Transactions: repo})
+	const (
+		userID  = uint(7001)
+		adminID = uint(42)
+	)
+
+	_, transaction, err := service.AdminAdjustBalance(walletcontract.AdjustBalanceInput{
+		UserID:          userID,
+		OperatorAdminID: adminID,
+		Delta:           money.FromDecimal(decimal.NewFromInt(25)),
+		Currency:        "CNY",
+		Remark:          "manual reconciliation",
+	})
+	if err != nil {
+		t.Fatalf("AdminAdjustBalance failed: %v", err)
+	}
+	if transaction.OperatorAdminID == nil || *transaction.OperatorAdminID != adminID {
+		t.Fatalf("returned operator_admin_id = %v, want %d", transaction.OperatorAdminID, adminID)
+	}
+
+	var stored walletdomain.Transaction
+	if err := db.First(&stored, transaction.ID).Error; err != nil {
+		t.Fatalf("reload wallet transaction: %v", err)
+	}
+	if stored.OperatorAdminID == nil || *stored.OperatorAdminID != adminID {
+		t.Fatalf("stored operator_admin_id = %v, want %d", stored.OperatorAdminID, adminID)
+	}
+}
 
 func setupWalletRepositoryTest(t *testing.T) (*walletgormstore.Store, *gorm.DB) {
 	t.Helper()

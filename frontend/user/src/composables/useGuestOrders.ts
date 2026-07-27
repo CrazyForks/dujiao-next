@@ -4,6 +4,7 @@ import { guestOrderAPI } from '../api'
 import { orderStatusVariant, orderStatusLabel } from '../utils/status'
 import { debounceAsync } from '../utils/debounce'
 import { amountToCents } from '../utils/money'
+import { clearGuestOrderAuth, loadGuestOrderAuth, saveGuestOrderAuth } from '../utils/guestOrderAuth'
 
 /**
  * 游客订单查询/列表逻辑（classic + vault 共用）。
@@ -26,12 +27,7 @@ export function useGuestOrders() {
   })
 
   const loadSavedAuth = () => {
-    const saved = localStorage.getItem('guest_order_auth')
-    const parsed = saved ? JSON.parse(saved) : {}
-    savedAuth.value = {
-      email: parsed.email || '',
-      order_password: parsed.order_password || '',
-    }
+    savedAuth.value = loadGuestOrderAuth()
     email.value = savedAuth.value.email
     orderPassword.value = savedAuth.value.order_password
   }
@@ -43,12 +39,12 @@ export function useGuestOrders() {
       email: email.value,
       order_password: orderPassword.value,
     }
-    localStorage.setItem('guest_order_auth', JSON.stringify(payload))
+    saveGuestOrderAuth(payload)
     savedAuth.value = payload
   }
 
   const clearSaved = () => {
-    localStorage.removeItem('guest_order_auth')
+    clearGuestOrderAuth()
     savedAuth.value = { email: '', order_password: '' }
     email.value = ''
     orderPassword.value = ''

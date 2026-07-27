@@ -70,7 +70,7 @@ func setupAdminOrderRefundHandlerTest(t *testing.T) (*ordertransport.AdminRefund
 		t.Fatalf("auto migrate failed: %v", err)
 	}
 
-	orderRepo := ordergormstore.New(db)
+	orderRepo := ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes")
 	userRepo := userstore.New(db)
 	affiliateSvc := affiliateapp.NewService(affiliategormstore.New(db), nil, nil, nil, nil)
 	orderRefundService := orderrefund.New(orderRepo, userRepo, affiliateSvc, nil, nil)

@@ -80,16 +80,8 @@ type CreatePaymentRequest struct {
 
 // CreateGuestPaymentRequest 游客发起支付请求。
 type CreateGuestPaymentRequest struct {
-	Email         string `json:"email" binding:"required"`
-	OrderPassword string `json:"order_password" binding:"required"`
-	OrderNo       string `json:"order_no" binding:"required"`
-	ChannelID     uint   `json:"channel_id" binding:"required"`
-}
-
-// CaptureGuestPaymentRequest 游客捕获支付请求。
-type CaptureGuestPaymentRequest struct {
-	Email         string `json:"email" binding:"required"`
-	OrderPassword string `json:"order_password" binding:"required"`
+	OrderNo   string `json:"order_no" binding:"required"`
+	ChannelID uint   `json:"channel_id" binding:"required"`
 }
 
 // WriteHandler 处理前台支付创建与捕获 HTTP。
@@ -200,9 +192,8 @@ func (h *WriteHandler) CreateGuestPayment(c *gin.Context) {
 		ginutil.RespondBindError(c, err)
 		return
 	}
-	email := strings.TrimSpace(req.Email)
-	password := strings.TrimSpace(req.OrderPassword)
-	if email == "" {
+	email, password, ok := ginutil.GetGuestCredentials(c)
+	if !ok || email == "" {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
 		return
 	}
@@ -247,14 +238,8 @@ func (h *WriteHandler) CaptureGuestPayment(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.payment_invalid", nil)
 		return
 	}
-	var req CaptureGuestPaymentRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		ginutil.RespondBindError(c, err)
-		return
-	}
-	email := strings.TrimSpace(req.Email)
-	password := strings.TrimSpace(req.OrderPassword)
-	if email == "" {
+	email, password, ok := ginutil.GetGuestCredentials(c)
+	if !ok || email == "" {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
 		return
 	}

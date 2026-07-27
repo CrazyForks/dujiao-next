@@ -90,6 +90,7 @@ func (s *Service) changeBalance(
 	transactionType string,
 	orderID *uint,
 	reference, remark, currency string,
+	operatorAdminID *uint,
 ) (*walletdomain.Account, *walletdomain.Transaction, error) {
 	if s.transactions == nil {
 		return nil, nil, walletcontract.ErrTransactionRequired
@@ -122,7 +123,7 @@ func (s *Service) changeBalance(
 			return walletcontract.ErrAccountUpdateFailed
 		}
 		transaction := &walletdomain.Transaction{
-			UserID: userID, OrderID: orderID, Type: transactionType, Direction: direction,
+			UserID: userID, OperatorAdminID: operatorAdminID, OrderID: orderID, Type: transactionType, Direction: direction,
 			Amount: money.FromDecimal(amount), BalanceBefore: money.FromDecimal(before),
 			BalanceAfter: money.FromDecimal(after), Currency: normalizeCurrency(currency),
 			Reference: strings.TrimSpace(reference), Remark: remark, CreatedAt: now, UpdatedAt: now,

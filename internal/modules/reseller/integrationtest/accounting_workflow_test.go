@@ -432,8 +432,8 @@ func TestPaymentSuccessTransactionPostsResellerLedger(t *testing.T) {
 	}
 	repo := resellergormstore.New(db)
 	accounting := newResellerAccountingTestHarness(repo, 0)
-	orderRepo := ordergormstore.New(db)
-	paymentRepo := paymentgormstore.New(db)
+	orderRepo := ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes")
+	paymentRepo := paymentgormstore.New(db, "test-guest-credential-secret-with-32-bytes")
 	productRepo := productgormstore.NewProductStore(db)
 	productSKURepo := productgormstore.NewSKUStore(db)
 	paymentSvc := paymentapp.NewPaymentService(paymentapp.PaymentServiceOptions{
@@ -444,8 +444,13 @@ func TestPaymentSuccessTransactionPostsResellerLedger(t *testing.T) {
 		ResellerAccounting: accounting.ledger,
 	})
 	updated, err := paymentSvc.HandleCallback(paymentapp.PaymentCallbackInput{
-		PaymentID: payment.ID,
-		Status:    constants.PaymentStatusSuccess,
+		PaymentID:   payment.ID,
+		OrderNo:     order.OrderNo,
+		ChannelID:   payment.ChannelID,
+		Status:      constants.PaymentStatusSuccess,
+		ProviderRef: payment.ProviderRef,
+		Amount:      payment.Amount,
+		Currency:    payment.Currency,
 	})
 	if err != nil {
 		t.Fatalf("handle payment callback failed: %v", err)

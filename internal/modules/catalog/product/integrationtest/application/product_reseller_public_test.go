@@ -83,7 +83,7 @@ func newProductServiceForResellerPublicTest(t *testing.T) (catalogproductbootstr
 		MemberLevelPrices: memberlevelgormstore.NewPriceStore(db),
 		Carts:             cartgormstore.New(db),
 		ProductMappings:   mappinggormstore.NewMappingStore(db),
-		Orders:            ordergormstore.New(db),
+		Orders:            ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes"),
 		PaymentChannels:   paymentgormstore.NewChannelStore(db),
 	})
 	return svc, resellergormstore.New(db), db

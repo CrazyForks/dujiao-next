@@ -16,7 +16,10 @@ func BuildRunner(cfg *config.Config, mode string) (*Runner, error) {
 		return nil, errors.New("config is nil")
 	}
 
-	dependencies := container.NewContainer(cfg)
+	dependencies, err := container.NewContainer(cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	var services []Service
 

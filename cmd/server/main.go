@@ -86,10 +86,7 @@ func main() {
 
 	weakSecrets := weakRuntimeSecretNames(cfg)
 	if len(weakSecrets) > 0 {
-		if cfg.Server.Mode == "release" {
-			stdLog.Fatalf("以下运行时密钥过弱或仍为默认值，请在生产环境中配置强随机密钥: %s", strings.Join(weakSecrets, ", "))
-		}
-		stdLog.Printf("警告: 以下运行时密钥过弱或仍为默认值，建议在生产环境中更换: %s", strings.Join(weakSecrets, ", "))
+		stdLog.Fatalf("以下运行时密钥过弱、重复或仍为默认值，请配置彼此独立的强随机密钥: %s", strings.Join(weakSecrets, ", "))
 	}
 	defaultAdminUser, defaultAdminPass := resolveDefaultAdminCredentials(cfg)
 	if unsafeBootstrapAdminPassword(cfg, defaultAdminPass) {
@@ -265,7 +262,33 @@ func weakRuntimeSecretNames(cfg *config.Config) []string {
 			weak = append(weak, candidate.name)
 		}
 	}
+	for idx := range candidates {
+		secret := strings.TrimSpace(candidates[idx].secret)
+		if secret == "" {
+			continue
+		}
+		for other := 0; other < idx; other++ {
+			if secret != strings.TrimSpace(candidates[other].secret) {
+				continue
+			}
+			if !containsString(weak, candidates[other].name) {
+				weak = append(weak, candidates[other].name)
+			}
+			if !containsString(weak, candidates[idx].name) {
+				weak = append(weak, candidates[idx].name)
+			}
+		}
+	}
 	return weak
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }
 
 func unsafeBootstrapAdminPassword(cfg *config.Config, password string) bool {

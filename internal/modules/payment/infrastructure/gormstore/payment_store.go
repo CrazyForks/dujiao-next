@@ -16,12 +16,17 @@ import (
 
 // Store 是支付记录的 GORM 实现。
 type Store struct {
-	db *gorm.DB
+	db                    *gorm.DB
+	guestCredentialSecret string
 }
 
 // New 创建支付 Store。
-func New(db *gorm.DB) *Store {
-	return &Store{db: db}
+func New(db *gorm.DB, guestCredentialSecret string) *Store {
+	secret := strings.TrimSpace(guestCredentialSecret)
+	if secret == "" {
+		panic("payment store: guest credential secret is required")
+	}
+	return &Store{db: db, guestCredentialSecret: secret}
 }
 
 // Create 创建支付记录

@@ -61,6 +61,8 @@ func registerStorefrontRoutes(
 	userWalletHandler *wallettransport.UserHandler,
 	redisClient *redis.Client,
 	loginRule middleware.RateLimitRule,
+	guestReadRule middleware.RateLimitRule,
+	guestWriteRule middleware.RateLimitRule,
 ) {
 	storefront := apiV1.Group("")
 	storefront.Use(middleware.ResellerTenantMiddleware(c.ResellerDomainResolver))
@@ -80,13 +82,19 @@ func registerStorefrontRoutes(
 
 	// 游客接口
 	guest := storefront.Group("/guest")
+	guestRead := guest.Group("")
+	guestRead.Use(middleware.RateLimitMiddleware(redisClient, guestReadRule, middleware.KeyByIP))
 	{
-		ordertransport.RegisterGuestCreateRoute(guest, orderCreateHandler)
-		ordertransport.RegisterGuestCreateAndPayRoute(guest, orderCreateHandler)
-		ordertransport.RegisterGuestPreviewRoute(guest, orderPreviewHandler)
-		ordertransport.RegisterGuestReadRoutes(guest, guestOrderHandler)
-		paymenttransport.RegisterGuestWriteRoutes(guest, paymentWriteHandler)
-		paymenttransport.RegisterGuestLatestRoute(guest, paymentLatestHandler)
+		ordertransport.RegisterGuestPreviewRoute(guestRead, orderPreviewHandler)
+		ordertransport.RegisterGuestReadRoutes(guestRead, guestOrderHandler)
+		paymenttransport.RegisterGuestLatestRoute(guestRead, paymentLatestHandler)
+	}
+	guestWrite := guest.Group("")
+	guestWrite.Use(middleware.RateLimitMiddleware(redisClient, guestWriteRule, middleware.KeyByIP))
+	{
+		ordertransport.RegisterGuestCreateRoute(guestWrite, orderCreateHandler)
+		ordertransport.RegisterGuestCreateAndPayRoute(guestWrite, orderCreateHandler)
+		paymenttransport.RegisterGuestWriteRoutes(guestWrite, paymentWriteHandler)
 	}
 
 	// 用户认证接口

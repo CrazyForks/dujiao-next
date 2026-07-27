@@ -14,6 +14,9 @@ import (
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/modules/payment/infrastructure/gateway/dujiaopay"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/money"
+
+	"github.com/shopspring/decimal"
 )
 
 // dujiaoPayAdapter 是 DujiaoPay 的 paymentcontract.GatewayProvider + paymentcontract.GatewayWebhooker 实现。
@@ -73,9 +76,8 @@ func checkDujiaoPayChannelTypeForMode(cfg *dujiaopay.Config, channelType string)
 // ValidateConfig 验证 DujiaoPay channel.ConfigJSON。
 func (a *dujiaoPayAdapter) ValidateConfig(raw jsonmap.JSON, channelType string) error {
 	channelType = strings.ToLower(strings.TrimSpace(channelType))
-	if channelType != "" && channelType != constants.PaymentProviderDujiaoPay && !dujiaopay.IsSupportedTokenID(channelType) {
-		return fmt.Errorf("%w: dujiaopay token_id %s", paymentcontract.ErrGatewayUnsupportedChannel, channelType)
-	}
+	// token_id 的合法性由 parseConfig 内的 dujiaopay.ValidateConfig 统一判定：
+	// 只要能推导出 chain（或显式配置了 chain）即可，不限定在内置映射表内。
 	cfg, err := a.parseConfig(raw, channelType)
 	if err != nil {
 		return err
@@ -86,9 +88,6 @@ func (a *dujiaoPayAdapter) ValidateConfig(raw jsonmap.JSON, channelType string) 
 // CreatePayment 创建 DujiaoPay 收银台订单。
 func (a *dujiaoPayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, input paymentcontract.GatewayCreateInput) (*paymentcontract.GatewayCreateResult, error) {
 	channelType := strings.ToLower(strings.TrimSpace(input.ChannelType))
-	if channelType != "" && channelType != constants.PaymentProviderDujiaoPay && !dujiaopay.IsSupportedTokenID(channelType) {
-		return nil, fmt.Errorf("%w: dujiaopay token_id %s", paymentcontract.ErrGatewayUnsupportedChannel, channelType)
-	}
 
 	cfg, err := a.parseConfig(raw, channelType)
 	if err != nil {
@@ -156,12 +155,15 @@ func (a *dujiaoPayAdapter) CreatePayment(ctx context.Context, raw jsonmap.JSON, 
 	setIfNotEmpty("pay_address", result.PayAddress)
 	setIfNotEmpty("payable_amount", result.PayableAmount)
 	setIfNotEmpty("checkout_url", result.CheckoutURL)
+	payload[paymentcontract.GatewayPayloadFiatCurrencySent] = strings.ToUpper(strings.TrimSpace(cfg.FiatCurrency))
 
 	return &paymentcontract.GatewayCreateResult{
-		ProviderRef: result.OrderID,
-		RedirectURL: result.CheckoutURL,
-		QRCodeURL:   qrCodeURL,
-		Payload:     payload,
+		ProviderRef:  result.OrderID,
+		RedirectURL:  result.CheckoutURL,
+		QRCodeURL:    qrCodeURL,
+		Payload:      payload,
+		AmountSent:   input.Amount.Decimal.String(),
+		CurrencySent: strings.ToUpper(strings.TrimSpace(cfg.FiatCurrency)),
 	}, nil
 }
 
@@ -180,14 +182,27 @@ func (a *dujiaoPayAdapter) ParseWebhook(_ context.Context, raw jsonmap.JSON, hea
 	for key, value := range event.Raw {
 		payload[key] = value
 	}
-	if event.TxHash != "" {
-		payload["tx_hash"] = event.TxHash
+	if event.TransactionID != "" {
+		payload["tx_id"] = event.TransactionID
+		// 保留旧的归一化键，避免已存在的通知/审计消费者因字段升级丢失交易标识。
+		payload["tx_hash"] = event.TransactionID
+	}
+
+	amount := money.Amount{}
+	if rawAmount := strings.TrimSpace(event.FiatAmount); rawAmount != "" {
+		parsed, parseErr := decimal.NewFromString(rawAmount)
+		if parseErr != nil {
+			return nil, fmt.Errorf("%w: invalid fiat_amount", paymentcontract.ErrGatewayResponseInvalid)
+		}
+		amount = money.FromDecimal(parsed)
 	}
 
 	return &paymentcontract.GatewayCallbackResult{
 		OrderNo:     event.MerchantOrderID,
 		ProviderRef: event.OrderID,
 		Status:      event.Status,
+		Amount:      amount,
+		Currency:    strings.ToUpper(strings.TrimSpace(event.FiatCurrency)),
 		PaidAt:      event.PaidAt,
 		Payload:     payload,
 	}, nil

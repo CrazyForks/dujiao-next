@@ -60,10 +60,10 @@ func setupExchangeTest(t *testing.T) (*paymentapp.PaymentService, *gorm.DB) {
 	}
 	gormdb.DB = db
 
-	orderRepo := ordergormstore.New(db)
+	orderRepo := ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes")
 	productRepo := productgormstore.NewProductStore(db)
 	productSKURepo := productgormstore.NewSKUStore(db)
-	paymentRepo := paymentgormstore.New(db)
+	paymentRepo := paymentgormstore.New(db, "test-guest-credential-secret-with-32-bytes")
 	channelRepo := paymentgormstore.NewChannelStore(db)
 	walletRepo := walletgormstore.New(db)
 	walletSvc := walletapp.NewService(walletapp.Options{
@@ -220,7 +220,7 @@ func TestCallbackRejectsCurrencyMismatchAfterConversion(t *testing.T) {
 	}
 }
 
-func TestCallbackSkipsAmountCheckWhenZero(t *testing.T) {
+func TestCallbackRejectsMissingAmountForSuccess(t *testing.T) {
 	svc, db := setupExchangeTest(t)
 	payment, order := createExchangePaymentFixture(t, db,
 		decimal.NewFromInt(10), "USD",
@@ -229,25 +229,29 @@ func TestCallbackSkipsAmountCheckWhenZero(t *testing.T) {
 	)
 
 	now := time.Now()
-	updated, err := svc.HandleCallback(paymentapp.PaymentCallbackInput{
+	_, err := svc.HandleCallback(paymentapp.PaymentCallbackInput{
 		PaymentID:   payment.ID,
 		OrderNo:     order.OrderNo,
 		ChannelID:   payment.ChannelID,
 		Status:      constants.PaymentStatusSuccess,
 		ProviderRef: "REF-002",
-		Amount:      money.FromDecimal(decimal.Zero), // zero = skip check
+		Amount:      money.FromDecimal(decimal.Zero),
 		Currency:    "CNY",
 		PaidAt:      &now,
 	})
-	if err != nil {
-		t.Fatalf("callback with zero amount should skip amount check: %v", err)
+	if err != paymentapp.ErrPaymentAmountMismatch {
+		t.Fatalf("callback without amount should fail with ErrPaymentAmountMismatch, got: %v", err)
 	}
-	if updated.Status != constants.PaymentStatusSuccess {
-		t.Errorf("status = %s, want %s", updated.Status, constants.PaymentStatusSuccess)
+	var stored paymentdomain.Payment
+	if err := db.First(&stored, payment.ID).Error; err != nil {
+		t.Fatalf("reload payment: %v", err)
+	}
+	if stored.Status == constants.PaymentStatusSuccess {
+		t.Fatalf("missing amount callback must not mark payment successful")
 	}
 }
 
-func TestCallbackSkipsCurrencyCheckWhenEmpty(t *testing.T) {
+func TestCallbackRejectsMissingCurrencyForSuccess(t *testing.T) {
 	svc, db := setupExchangeTest(t)
 	payment, order := createExchangePaymentFixture(t, db,
 		decimal.NewFromInt(10), "USD",
@@ -256,7 +260,7 @@ func TestCallbackSkipsCurrencyCheckWhenEmpty(t *testing.T) {
 	)
 
 	now := time.Now()
-	updated, err := svc.HandleCallback(paymentapp.PaymentCallbackInput{
+	_, err := svc.HandleCallback(paymentapp.PaymentCallbackInput{
 		PaymentID:   payment.ID,
 		OrderNo:     order.OrderNo,
 		ChannelID:   payment.ChannelID,
@@ -266,11 +270,15 @@ func TestCallbackSkipsCurrencyCheckWhenEmpty(t *testing.T) {
 		Currency:    "", // empty = skip check
 		PaidAt:      &now,
 	})
-	if err != nil {
-		t.Fatalf("callback with empty currency should skip currency check: %v", err)
+	if err != paymentapp.ErrPaymentCurrencyMismatch {
+		t.Fatalf("callback without currency should fail with ErrPaymentCurrencyMismatch, got: %v", err)
 	}
-	if updated.Status != constants.PaymentStatusSuccess {
-		t.Errorf("status = %s, want %s", updated.Status, constants.PaymentStatusSuccess)
+	var stored paymentdomain.Payment
+	if err := db.First(&stored, payment.ID).Error; err != nil {
+		t.Fatalf("reload payment: %v", err)
+	}
+	if stored.Status == constants.PaymentStatusSuccess {
+		t.Fatalf("missing currency callback must not mark payment successful")
 	}
 }
 

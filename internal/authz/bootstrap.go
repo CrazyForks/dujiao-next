@@ -16,7 +16,17 @@ func BuiltinRoleSeeds() []RoleSeed {
 		{
 			Role: "readonly_auditor",
 			Policies: []Policy{
-				{Object: "/admin/*", Action: "GET"},
+				// 只读审计员只获得明确列出的非敏感概览能力。禁止使用
+				// /admin/* 之类通配策略，避免新增 GET 接口时自动泄露密钥、
+				// 卡密、交付内容或第三方原始报文。
+				{Object: "/admin/dashboard/overview", Action: "GET"},
+				{Object: "/admin/dashboard/trends", Action: "GET"},
+				{Object: "/admin/dashboard/rankings", Action: "GET"},
+				{Object: "/admin/dashboard/inventory-alerts", Action: "GET"},
+				{Object: "/admin/compliance/status", Action: "GET"},
+				{Object: "/admin/authz/me", Action: "GET"},
+				{Object: "/admin/2fa/status", Action: "GET"},
+				{Object: "/admin/ads/render/:slotCode", Action: "GET"},
 				{Object: "/admin/password", Action: "PUT"},                       // 所有管理员均可修改自己密码
 				{Object: "/admin/ads/impression", Action: "POST"},                // 广告曝光埋点，所有管理员可触发
 				{Object: "/admin/2fa/setup", Action: "POST"},                     // 自助绑定 2FA
@@ -38,6 +48,7 @@ func BuiltinRoleSeeds() []RoleSeed {
 				{Object: "/admin/categories/:id/active", Action: "PATCH"},
 				{Object: "/admin/posts", Action: "*"},
 				{Object: "/admin/posts/:id", Action: "*"},
+				{Object: "/admin/posts/:id/products", Action: "GET"},
 				{Object: "/admin/banners", Action: "*"},
 				{Object: "/admin/banners/:id", Action: "*"},
 				{Object: "/admin/coupons", Action: "*"},
@@ -64,6 +75,7 @@ func BuiltinRoleSeeds() []RoleSeed {
 				{Object: "/admin/media/batch-delete", Action: "POST"},
 				{Object: "/admin/media/:id", Action: "PUT"},
 				{Object: "/admin/media/:id", Action: "DELETE"},
+				{Object: "/admin/media", Action: "GET"},
 				{Object: "/admin/affiliates/users", Action: "GET"},
 				{Object: "/admin/affiliates/users/:id/status", Action: "PATCH"},
 				{Object: "/admin/affiliates/users/batch-status", Action: "PATCH"},
@@ -88,10 +100,7 @@ func BuiltinRoleSeeds() []RoleSeed {
 			Policies: []Policy{
 				{Object: "/admin/orders", Action: "GET"},
 				{Object: "/admin/orders/:id", Action: "GET"},
-				{Object: "/admin/orders/:id", Action: "PATCH"},
 				{Object: "/admin/orders/:id/fulfillment/download", Action: "GET"},
-				{Object: "/admin/orders/:id/refund-to-wallet", Action: "POST"},
-				{Object: "/admin/orders/:id/manual-refund", Action: "POST"},
 				{Object: "/admin/order-refunds", Action: "GET"},
 				{Object: "/admin/order-refunds/:id", Action: "GET"},
 				{Object: "/admin/fulfillments", Action: "POST"},
@@ -102,7 +111,6 @@ func BuiltinRoleSeeds() []RoleSeed {
 				{Object: "/admin/users/:id/coupon-usages", Action: "GET"},
 				{Object: "/admin/users/:id/wallet", Action: "GET"},
 				{Object: "/admin/users/:id/wallet/transactions", Action: "GET"},
-				{Object: "/admin/users/:id/wallet/adjust", Action: "POST"},
 				{Object: "/admin/users/:id/member-level", Action: "PUT"},
 				{Object: "/admin/users/:id/oauth/telegram", Action: "DELETE"},
 				{Object: "/admin/users/:id/2fa", Action: "DELETE"}, // 客服协助用户重置丢失 TOTP+恢复码 的 2FA
@@ -148,6 +156,7 @@ func BuiltinRoleSeeds() []RoleSeed {
 				{Object: "/admin/api-credentials/:id/reject", Action: "POST"},
 				{Object: "/admin/api-credentials/:id/status", Action: "PUT"},
 				{Object: "/admin/upstream-products", Action: "GET"},
+				{Object: "/admin/upstream-categories", Action: "GET"},
 				{Object: "/admin/resellers/operations/overview", Action: "GET"},
 				{Object: "/admin/resellers/profiles", Action: "GET"},
 				{Object: "/admin/resellers/profiles/:id", Action: "GET"},
@@ -181,6 +190,7 @@ func BuiltinRoleSeeds() []RoleSeed {
 				{Object: "/admin/payment-channels/:id", Action: "*"},
 				{Object: "/admin/orders", Action: "GET"},
 				{Object: "/admin/orders/:id", Action: "GET"},
+				{Object: "/admin/orders/:id", Action: "PATCH"},
 				{Object: "/admin/orders/:id/refund-to-wallet", Action: "POST"},
 				{Object: "/admin/orders/:id/manual-refund", Action: "POST"},
 				{Object: "/admin/order-refunds", Action: "GET"},
@@ -198,6 +208,9 @@ func BuiltinRoleSeeds() []RoleSeed {
 				{Object: "/admin/gift-cards", Action: "GET"},
 				{Object: "/admin/gift-cards/export", Action: "POST"},
 				{Object: "/admin/wallet/recharges", Action: "GET"},
+				{Object: "/admin/users/:id/wallet", Action: "GET"},
+				{Object: "/admin/users/:id/wallet/transactions", Action: "GET"},
+				{Object: "/admin/users/:id/wallet/adjust", Action: "POST"},
 			},
 			Immutable: true,
 		},
@@ -249,8 +262,9 @@ func BuiltinRoleSeeds() []RoleSeed {
 				{Object: "/admin/channel-clients/:id/reset-secret", Action: "POST"},
 				// Telegram Bot 群发
 				{Object: "/admin/telegram-bot/broadcasts", Action: "*"},
+				{Object: "/admin/telegram-bot/broadcasts/:id", Action: "GET"},
 				{Object: "/admin/telegram-bot/users", Action: "GET"},
-				// 合规声明（GET 已由 readonly_auditor 的 /admin/* GET 通配覆盖）
+				// 合规声明
 				{Object: "/admin/compliance/acknowledge", Action: "POST"},
 				{Object: "/admin/resellers/profiles/:id/disable", Action: "POST"},
 				{Object: "/admin/resellers/profiles/:id/restore", Action: "POST"},
@@ -288,11 +302,13 @@ func (s *Service) BootstrapBuiltinRoles() error {
 			}
 		}
 
+		desiredParents := map[string]struct{}{roleAnchor: {}}
 		for _, parent := range seed.Inherits {
 			parentRole, err := NormalizeRole(parent)
 			if err != nil {
 				return err
 			}
+			desiredParents[parentRole] = struct{}{}
 			added, err := s.enforcer.AddNamedGroupingPolicy("g", role, parentRole)
 			if err != nil {
 				return fmt.Errorf("link role inheritance failed: %w", err)
@@ -301,18 +317,65 @@ func (s *Service) BootstrapBuiltinRoles() error {
 				changed = true
 			}
 		}
+		if seed.Immutable {
+			currentLinks, err := s.enforcer.GetFilteredNamedGroupingPolicy("g", 0, role)
+			if err != nil {
+				return fmt.Errorf("list builtin role links failed: %w", err)
+			}
+			for _, link := range currentLinks {
+				if len(link) < 2 {
+					continue
+				}
+				if _, keep := desiredParents[link[1]]; keep {
+					continue
+				}
+				removed, err := s.enforcer.RemoveNamedGroupingPolicy("g", link)
+				if err != nil {
+					return fmt.Errorf("remove stale builtin role link failed: %w", err)
+				}
+				if removed {
+					changed = true
+				}
+			}
+		}
 
+		desiredPolicies := make(map[string]struct{}, len(seed.Policies))
 		for _, policy := range seed.Policies {
 			action := NormalizeAction(policy.Action)
 			if action == "" {
 				return fmt.Errorf("builtin policy action is required")
 			}
-			added, err := s.enforcer.AddPolicy(role, NormalizeObject(policy.Object), action)
+			object := NormalizeObject(policy.Object)
+			desiredPolicies[object+"|"+action] = struct{}{}
+			added, err := s.enforcer.AddPolicy(role, object, action)
 			if err != nil {
 				return fmt.Errorf("add builtin policy failed: %w", err)
 			}
 			if added {
 				changed = true
+			}
+		}
+		if seed.Immutable {
+			currentPolicies, err := s.enforcer.GetFilteredPolicy(0, role)
+			if err != nil {
+				return fmt.Errorf("list builtin role policies failed: %w", err)
+			}
+			for _, policy := range currentPolicies {
+				if len(policy) < 3 {
+					continue
+				}
+				object := NormalizeObject(policy[1])
+				action := NormalizeAction(policy[2])
+				if _, keep := desiredPolicies[object+"|"+action]; keep {
+					continue
+				}
+				removed, err := s.enforcer.RemovePolicy(role, object, action)
+				if err != nil {
+					return fmt.Errorf("remove stale builtin role policy failed: %w", err)
+				}
+				if removed {
+					changed = true
+				}
 			}
 		}
 	}

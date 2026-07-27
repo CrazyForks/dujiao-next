@@ -26,6 +26,11 @@ type PaymentCallbackInput struct {
 	Currency    string
 	PaidAt      *time.Time
 	Payload     jsonmap.JSON
+
+	// verifiedLegacyDujiaoPayCurrency 只能由已验签的 DujiaoPay webhook 入口设置。
+	// 它允许升级前创建且没有法币快照标记的在途支付采纳网关签名币种；
+	// 普通调用方无法开启该兼容分支。
+	verifiedLegacyDujiaoPayCurrency string
 }
 
 func (s *PaymentService) HandleCallback(input PaymentCallbackInput) (*paymentdomain.Payment, error) {
@@ -87,19 +92,8 @@ func (s *PaymentService) HandleCallback(input PaymentCallbackInput) (*paymentdom
 		)
 		return nil, ErrPaymentInvalid
 	}
-	if input.Currency != "" && !strings.EqualFold(strings.TrimSpace(input.Currency), strings.TrimSpace(payment.Currency)) {
-		log.Warnw("payment_callback_currency_mismatch",
-			"stored_currency", payment.Currency,
-			"callback_currency", input.Currency,
-		)
-		return nil, ErrPaymentCurrencyMismatch
-	}
-	if !input.Amount.Decimal.IsZero() && input.Amount.Decimal.Cmp(payment.Amount.Decimal) != 0 {
-		log.Warnw("payment_callback_amount_mismatch",
-			"stored_amount", payment.Amount.String(),
-			"callback_amount", input.Amount.String(),
-		)
-		return nil, ErrPaymentAmountMismatch
+	if err := validateCallbackPaymentFacts(payment, order.OrderNo, status, input); err != nil {
+		return nil, err
 	}
 
 	// 幂等处理：已成功的不再回退状态
@@ -118,7 +112,7 @@ func (s *PaymentService) HandleCallback(input PaymentCallbackInput) (*paymentdom
 
 	previousStatus := payment.Status
 	now := time.Now()
-	updated, orderPaid, err := s.applyPaymentUpdate(payment, order, status, input, now)
+	updated, processedOrder, orderPaid, err := s.applyPaymentUpdate(payment, order, status, input, now)
 	if err != nil {
 		log.Errorw("payment_callback_apply_failed",
 			"order_id", order.ID,
@@ -129,11 +123,11 @@ func (s *PaymentService) HandleCallback(input PaymentCallbackInput) (*paymentdom
 		return nil, err
 	}
 	if orderPaid {
-		s.enqueueOrderPaidAsync(order, updated, log)
+		s.enqueueOrderPaidAsync(processedOrder, updated, log)
 	}
 	log.Infow("payment_callback_processed",
-		"order_id", order.ID,
-		"order_no", order.OrderNo,
+		"order_id", processedOrder.ID,
+		"order_no", processedOrder.OrderNo,
 		"previous_status", previousStatus,
 		"new_status", updated.Status,
 		"order_paid", orderPaid,
@@ -141,8 +135,80 @@ func (s *PaymentService) HandleCallback(input PaymentCallbackInput) (*paymentdom
 	return updated, nil
 }
 
+func validateCallbackPaymentFacts(payment *paymentdomain.Payment, businessOrderNo, status string, input PaymentCallbackInput) error {
+	if payment == nil {
+		return ErrPaymentNotFound
+	}
+	if input.ChannelID != 0 && input.ChannelID != payment.ChannelID {
+		return ErrPaymentInvalid
+	}
+	if !matchesBusinessOrderNo(input.OrderNo, businessOrderNo, payment) {
+		return ErrPaymentInvalid
+	}
+	currency := strings.TrimSpace(input.Currency)
+	if status == constants.PaymentStatusSuccess {
+		if currency == "" {
+			return ErrPaymentCurrencyMismatch
+		}
+		if !input.Amount.Decimal.IsPositive() {
+			return ErrPaymentAmountMismatch
+		}
+	}
+	if currency != "" &&
+		!strings.EqualFold(currency, strings.TrimSpace(payment.Currency)) &&
+		!canAdoptVerifiedLegacyDujiaoPayCurrency(payment, status, input) {
+		return ErrPaymentCurrencyMismatch
+	}
+	if !input.Amount.Decimal.IsZero() && input.Amount.Decimal.Cmp(payment.Amount.Decimal) != 0 {
+		return ErrPaymentAmountMismatch
+	}
+	return nil
+}
+
+// canAdoptVerifiedLegacyDujiaoPayCurrency 只接受已经通过 DujiaoPay webhook
+// 验签入口标记的升级前支付。新版支付带有创建时法币快照，仍执行严格币种一致性校验。
+func canAdoptVerifiedLegacyDujiaoPayCurrency(payment *paymentdomain.Payment, status string, input PaymentCallbackInput) bool {
+	if payment == nil ||
+		payment.ProviderType != constants.PaymentProviderDujiaoPay ||
+		payment.Status == constants.PaymentStatusSuccess ||
+		status != constants.PaymentStatusSuccess {
+		return false
+	}
+	verifiedCurrency := strings.ToUpper(strings.TrimSpace(input.verifiedLegacyDujiaoPayCurrency))
+	callbackCurrency := strings.ToUpper(strings.TrimSpace(input.Currency))
+	if verifiedCurrency == "" || verifiedCurrency != callbackCurrency {
+		return false
+	}
+	if !input.Amount.Decimal.IsPositive() || input.Amount.Decimal.Cmp(payment.Amount.Decimal) != 0 {
+		return false
+	}
+	if payment.ProviderPayload != nil {
+		if _, hasSnapshot := payment.ProviderPayload[paymentcontract.GatewayPayloadFiatCurrencySent]; hasSnapshot {
+			return false
+		}
+	}
+	return true
+}
+
+func adoptVerifiedLegacyDujiaoPayCurrency(payment *paymentdomain.Payment, status string, input PaymentCallbackInput) bool {
+	if !canAdoptVerifiedLegacyDujiaoPayCurrency(payment, status, input) {
+		return false
+	}
+	currency := strings.ToUpper(strings.TrimSpace(input.verifiedLegacyDujiaoPayCurrency))
+	payment.Currency = currency
+	if payment.ProviderPayload == nil {
+		payment.ProviderPayload = jsonmap.JSON{}
+	}
+	payment.ProviderPayload[paymentcontract.GatewayPayloadFiatCurrencySent] = currency
+	return true
+}
+
 func (s *PaymentService) updateCallbackMeta(payment *paymentdomain.Payment, status string, input PaymentCallbackInput) (*paymentdomain.Payment, error) {
-	updated := false
+	return updateCallbackMetaWithRepo(s.paymentRepo, payment, status, input)
+}
+
+func updateCallbackMetaWithRepo(repo paymentcontract.Store, payment *paymentdomain.Payment, status string, input PaymentCallbackInput) (*paymentdomain.Payment, error) {
+	updated := adoptVerifiedLegacyDujiaoPayCurrency(payment, status, input)
 	if input.ProviderRef != "" && payment.ProviderRef == "" {
 		payment.ProviderRef = input.ProviderRef
 		updated = true
@@ -163,58 +229,87 @@ func (s *PaymentService) updateCallbackMeta(payment *paymentdomain.Payment, stat
 		now := time.Now()
 		payment.CallbackAt = &now
 		payment.UpdatedAt = now
-		if err := s.paymentRepo.Update(payment); err != nil {
+		if err := repo.Update(payment); err != nil {
 			return nil, ErrPaymentUpdateFailed
 		}
 	}
 	return payment, nil
 }
 
-func (s *PaymentService) applyPaymentUpdate(payment *paymentdomain.Payment, order *orderdomain.Order, status string, input PaymentCallbackInput, now time.Time) (*paymentdomain.Payment, bool, error) {
+func (s *PaymentService) applyPaymentUpdate(payment *paymentdomain.Payment, order *orderdomain.Order, status string, input PaymentCallbackInput, now time.Time) (*paymentdomain.Payment, *orderdomain.Order, bool, error) {
 	returnVal := payment
+	processedOrder := order
 	orderPaid := false
-
-	switch status {
-	case constants.PaymentStatusSuccess:
-		paidAt := now
-		if input.PaidAt != nil {
-			paidAt = *input.PaidAt
-		}
-		payment.PaidAt = &paidAt
-	case constants.PaymentStatusExpired:
-		payment.ExpiredAt = &now
-	}
-
-	payment.Status = status
-	payment.CallbackAt = &now
-	payment.UpdatedAt = now
-	if input.ProviderRef != "" {
-		payment.ProviderRef = input.ProviderRef
-	}
-	if input.Payload != nil {
-		payment.ProviderPayload = mergeProviderPayload(payment.ProviderPayload, input.Payload)
-	}
 
 	err := s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
 		paymentRepo := tx.Payments()
+		lockedPayment, err := paymentRepo.GetByIDForUpdate(payment.ID)
+		if err != nil {
+			return ErrPaymentUpdateFailed
+		}
+		if lockedPayment == nil {
+			return ErrPaymentNotFound
+		}
+		lockedOrder, err := tx.Orders().GetByIDForUpdateWithChildren(order.ID)
+		if err != nil {
+			return orderapp.ErrOrderFetchFailed
+		}
+		if lockedOrder == nil {
+			return orderapp.ErrOrderNotFound
+		}
+		if err := validateCallbackPaymentFacts(lockedPayment, lockedOrder.OrderNo, status, input); err != nil {
+			return err
+		}
+		adoptVerifiedLegacyDujiaoPayCurrency(lockedPayment, status, input)
+		returnVal = lockedPayment
+		processedOrder = lockedOrder
 
-		if err := paymentRepo.Update(payment); err != nil {
+		if lockedPayment.Status == constants.PaymentStatusSuccess {
+			_, err := updateCallbackMetaWithRepo(paymentRepo, lockedPayment, constants.PaymentStatusSuccess, input)
+			return err
+		}
+		if lockedPayment.Status == status {
+			_, err := updateCallbackMetaWithRepo(paymentRepo, lockedPayment, status, input)
+			return err
+		}
+
+		switch status {
+		case constants.PaymentStatusSuccess:
+			paidAt := now
+			if input.PaidAt != nil {
+				paidAt = *input.PaidAt
+			}
+			lockedPayment.PaidAt = &paidAt
+		case constants.PaymentStatusExpired:
+			lockedPayment.ExpiredAt = &now
+		}
+
+		lockedPayment.Status = status
+		lockedPayment.CallbackAt = &now
+		lockedPayment.UpdatedAt = now
+		if input.ProviderRef != "" {
+			lockedPayment.ProviderRef = input.ProviderRef
+		}
+		if input.Payload != nil {
+			lockedPayment.ProviderPayload = mergeProviderPayload(lockedPayment.ProviderPayload, input.Payload)
+		}
+		if err := paymentRepo.Update(lockedPayment); err != nil {
 			return ErrPaymentUpdateFailed
 		}
 
-		if status == constants.PaymentStatusSuccess && order.Status != constants.OrderStatusPaid {
-			if err := s.markOrderPaid(tx, order, now); err != nil {
+		if status == constants.PaymentStatusSuccess && lockedOrder.Status != constants.OrderStatusPaid {
+			if err := s.markOrderPaid(tx, lockedOrder, now); err != nil {
 				return err
 			}
 			if s.resellerAccounting != nil {
-				if err := s.resellerAccounting.PostOrderProfit(tx.ResellerAccounting(), order, payment); err != nil {
+				if err := s.resellerAccounting.PostOrderProfit(tx.ResellerAccounting(), lockedOrder, lockedPayment); err != nil {
 					return err
 				}
 			}
 			orderPaid = true
 		}
-		if (status == constants.PaymentStatusFailed || status == constants.PaymentStatusExpired) && order.Status == constants.OrderStatusPendingPayment && s.walletSvc != nil {
-			if _, err := orderapp.ReleaseWalletBalance(s.walletSvc, tx, order, constants.WalletTxnTypeOrderRefund, "在线支付失败，退回余额"); err != nil {
+		if (status == constants.PaymentStatusFailed || status == constants.PaymentStatusExpired) && lockedOrder.Status == constants.OrderStatusPendingPayment && s.walletSvc != nil {
+			if _, err := orderapp.ReleaseWalletBalance(s.walletSvc, tx, lockedOrder, constants.WalletTxnTypeOrderRefund, "在线支付失败，退回余额"); err != nil {
 				return err
 			}
 		}
@@ -222,9 +317,9 @@ func (s *PaymentService) applyPaymentUpdate(payment *paymentdomain.Payment, orde
 		return nil
 	})
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
-	return returnVal, orderPaid, nil
+	return returnVal, processedOrder, orderPaid, nil
 }
 
 // mergeProviderPayload 合并第三方回调原文，同时保留创建支付阶段写入的展示快照等元数据。

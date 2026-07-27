@@ -128,8 +128,9 @@ func (h *AdminHandler) GetAdminPayments(c *gin.Context) {
 	items := make([]AdminPaymentItem, 0, len(payments))
 	for _, payment := range payments {
 		rechargeMeta := rechargeMetaMap[payment.ID]
+		safePayment := redactAdminPayment(payment)
 		items = append(items, AdminPaymentItem{
-			Payment:            payment,
+			Payment:            safePayment,
 			ChannelName:        channelNameMap[payment.ChannelID],
 			DisplayChannelType: paymentDisplayChannelType(payment),
 			OrderNo:            orderNoMap[payment.OrderID],
@@ -246,8 +247,9 @@ func (h *AdminHandler) GetAdminPayment(c *gin.Context) {
 		return
 	}
 	rechargeMeta := rechargeMetaMap[payment.ID]
+	safePayment := redactAdminPayment(*payment)
 	response.Success(c, AdminPaymentItem{
-		Payment:            *payment,
+		Payment:            safePayment,
 		ChannelName:        channelNameMap[payment.ChannelID],
 		DisplayChannelType: paymentDisplayChannelType(*payment),
 		OrderNo:            orderNoMap[payment.OrderID],
@@ -257,9 +259,16 @@ func (h *AdminHandler) GetAdminPayment(c *gin.Context) {
 	})
 }
 
+func redactAdminPayment(payment paymentdomain.Payment) paymentdomain.Payment {
+	payment.ProviderPayload = nil
+	payment.PayURL = ""
+	payment.QRCode = ""
+	return payment
+}
+
 // paymentDisplayChannelType 提取后台支付记录的展示用渠道类型。
 // CSV 导出的 lightweight 查询会把 provider_payload.display_channel_type 提取到 Payment.DisplayChannelType；
-// 后台列表和详情保留完整 ProviderPayload，因此需要从 payload 里兜底读取。
+// 后台列表和详情会在响应前清空 ProviderPayload，因此必须在脱敏前从 payload 兜底读取。
 func paymentDisplayChannelType(payment paymentdomain.Payment) string {
 	if displayChannelType := strings.TrimSpace(payment.DisplayChannelType); displayChannelType != "" {
 		return displayChannelType

@@ -37,10 +37,9 @@ func NewGuestHandler(orders GuestOrderQuery, payments PaymentChannelPolicy, refu
 
 // ListGuestOrders 获取游客订单列表
 func (h *GuestHandler) ListGuestOrders(c *gin.Context) {
-	email := strings.TrimSpace(c.Query("email"))
-	password := strings.TrimSpace(c.Query("order_password"))
+	email, password, ok := ginutil.GetGuestCredentials(c)
 	orderNo := strings.TrimSpace(c.Query("order_no"))
-	if email == "" {
+	if !ok || email == "" {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
 		return
 	}
@@ -88,9 +87,8 @@ func (h *GuestHandler) ListGuestOrders(c *gin.Context) {
 
 // GetGuestOrderByOrderNo 按订单号获取游客订单详情
 func (h *GuestHandler) GetGuestOrderByOrderNo(c *gin.Context) {
-	email := strings.TrimSpace(c.Query("email"))
-	password := strings.TrimSpace(c.Query("order_password"))
-	if email == "" {
+	email, password, ok := ginutil.GetGuestCredentials(c)
+	if !ok || email == "" {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
 		return
 	}
@@ -121,9 +119,8 @@ func (h *GuestHandler) GetGuestOrderByOrderNo(c *gin.Context) {
 // DownloadGuestFulfillment 下载订单交付内容（游客）
 // 支持父订单或子订单的 order_no
 func (h *GuestHandler) DownloadGuestFulfillment(c *gin.Context) {
-	email := strings.TrimSpace(c.Query("email"))
-	password := strings.TrimSpace(c.Query("order_password"))
-	if email == "" || password == "" {
+	email, password, ok := ginutil.GetGuestCredentials(c)
+	if !ok || email == "" || password == "" {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
 		return
 	}

@@ -54,3 +54,28 @@ func TestBuildAuthzPolicyAuditRecord(t *testing.T) {
 		t.Fatalf("Detail method = %v, want %q", got.Detail["method"], "GET")
 	}
 }
+
+func TestBuildAuthzRoleItemsUsesBackendImmutableSeeds(t *testing.T) {
+	items := buildAuthzRoleItems([]string{"role:readonly_auditor", "role:custom_billing"})
+	if len(items) != 2 {
+		t.Fatalf("items length = %d, want 2", len(items))
+	}
+	if items[0].Role != "role:readonly_auditor" || !items[0].Immutable {
+		t.Fatalf("builtin role metadata = %+v, want immutable", items[0])
+	}
+	if items[1].Role != "role:custom_billing" || items[1].Immutable {
+		t.Fatalf("custom role metadata = %+v, want mutable", items[1])
+	}
+}
+
+func TestBuildAuthzRoleListPayloadKeepsLegacyStringShape(t *testing.T) {
+	roles := []string{"role:readonly_auditor", "role:custom_billing"}
+	legacy, ok := buildAuthzRoleListPayload(roles, false).([]string)
+	if !ok || len(legacy) != 2 || legacy[0] != roles[0] {
+		t.Fatalf("legacy payload = %#v, want string role array", legacy)
+	}
+	metadata, ok := buildAuthzRoleListPayload(roles, true).([]AuthzRoleItem)
+	if !ok || len(metadata) != 2 || !metadata[0].Immutable || metadata[1].Immutable {
+		t.Fatalf("metadata payload = %#v, want role descriptors", metadata)
+	}
+}

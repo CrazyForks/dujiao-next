@@ -21,11 +21,12 @@ func (s *Service) Recharge(input walletcontract.RechargeInput) (*walletdomain.Ac
 		uniqueReference("recharge", input.UserID),
 		cleanRemark(input.Remark, "用户充值"),
 		normalizeCurrency(input.Currency),
+		nil,
 	)
 }
 
 func (s *Service) AdminAdjustBalance(input walletcontract.AdjustBalanceInput) (*walletdomain.Account, *walletdomain.Transaction, error) {
-	if input.UserID == 0 {
+	if input.UserID == 0 || input.OperatorAdminID == 0 {
 		return nil, nil, walletcontract.ErrAccountNotFound
 	}
 	delta := input.Delta.Decimal.Round(2)
@@ -37,5 +38,6 @@ func (s *Service) AdminAdjustBalance(input walletcontract.AdjustBalanceInput) (*
 		uniqueReference("admin_adjust", input.UserID),
 		cleanRemark(input.Remark, "管理员调整余额"),
 		normalizeCurrency(input.Currency),
+		&input.OperatorAdminID,
 	)
 }

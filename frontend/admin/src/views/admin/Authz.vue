@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { adminAPI, type AdminAuthzAdmin, type AdminAuthzPolicy, type AdminPermissionCatalogItem } from '@/api/admin'
+import {
+  adminAPI,
+  type AdminAuthzAdmin,
+  type AdminAuthzPolicy,
+  type AdminAuthzRole,
+  type AdminPermissionCatalogItem,
+} from '@/api/admin'
 import { useAdminAuthStore } from '@/stores/auth'
 import IdCell from '@/components/IdCell.vue'
 import { Button } from '@/components/ui/button'
@@ -32,6 +38,7 @@ const textMap = {
     rolesEmpty: '暂无角色',
     policiesTitle: '角色策略',
     selectRoleHint: '请先在左侧选择角色',
+    immutableRoleHint: '系统内置角色由程序托管，仅可查看和分配，不能修改策略或删除。',
     objectPlaceholder: '资源路径，例如 /admin/orders/:id',
     addPolicy: '添加策略',
     policiesEmpty: '暂无策略',
@@ -130,6 +137,7 @@ const textMap = {
     rolesEmpty: '暫無角色',
     policiesTitle: '角色策略',
     selectRoleHint: '請先在左側選擇角色',
+    immutableRoleHint: '系統內建角色由程式託管，僅可檢視和分配，不能修改策略或刪除。',
     objectPlaceholder: '資源路徑，例如 /admin/orders/:id',
     addPolicy: '新增策略',
     policiesEmpty: '暫無策略',
@@ -228,6 +236,7 @@ const textMap = {
     rolesEmpty: 'No roles',
     policiesTitle: 'Role Policies',
     selectRoleHint: 'Please select a role first',
+    immutableRoleHint: 'Built-in roles are system-managed. They can be viewed and assigned, but not modified or deleted.',
     objectPlaceholder: 'Resource path, e.g. /admin/orders/:id',
     addPolicy: 'Add Policy',
     policiesEmpty: 'No policies',
@@ -366,8 +375,12 @@ const policyForm = reactive({
 })
 
 const actionOptions = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', '*']
+const immutableRoles = ref<Set<string>>(new Set())
+const stripRolePrefix = (role: string) => role.replace(/^role:/, '')
+const isRoleImmutable = (role: string) => immutableRoles.value.has(role)
 
 const normalizedRoleOptions = computed(() => roles.value.map((item) => item.trim()).filter((item) => !!item))
+const selectedRoleImmutable = computed(() => isRoleImmutable(selectedRole.value))
 const selectedAdmin = computed(() => admins.value.find((item) => item.id === selectedAdminId.value) || null)
 const adminFormTitle = computed(() => (adminFormMode.value === 'create' ? text.value.adminFormTitleCreate : text.value.adminFormTitleEdit))
 const adminSubmitLabel = computed(() => (adminFormMode.value === 'create' ? text.value.adminSubmitCreate : text.value.adminSubmitUpdate))
@@ -425,8 +438,6 @@ const collapseAllModules = () => {
   collapsedModules.value = groupedCatalog.value.map((item) => item.module)
 }
 
-const stripRolePrefix = (role: string) => role.replace(/^role:/, '')
-
 const resetAdminForm = () => {
   adminFormMode.value = 'create'
   adminForm.id = 0
@@ -451,7 +462,14 @@ const fetchRoles = async () => {
   loadingRoles.value = true
   try {
     const res = await adminAPI.listAuthzRoles()
-    roles.value = Array.isArray(res.data.data) ? res.data.data : []
+    const items: AdminAuthzRole[] = Array.isArray(res.data.data) ? res.data.data : []
+    roles.value = items.map((item) => item.role.trim()).filter((item) => !!item)
+    immutableRoles.value = new Set(
+      items
+        .filter((item) => item.immutable)
+        .map((item) => item.role.trim())
+        .filter((item) => !!item),
+    )
     if (selectedRole.value && !roles.value.includes(selectedRole.value)) {
       selectedRole.value = ''
       policies.value = []
@@ -576,6 +594,10 @@ const handleCreateRole = async () => {
 }
 
 const handleDeleteRole = async (role: string) => {
+  if (isRoleImmutable(role)) {
+    notifyError(text.value.immutableRoleHint)
+    return
+  }
   const confirmed = await confirmAction({
     description: formatText(text.value.confirmDeleteRole, { role: stripRolePrefix(role) }),
     confirmText: text.value.delete,
@@ -603,6 +625,10 @@ const handleGrantPolicy = async () => {
     notifyError(text.value.selectRoleFirst)
     return
   }
+  if (selectedRoleImmutable.value) {
+    notifyError(text.value.immutableRoleHint)
+    return
+  }
   const object = policyForm.object.trim()
   if (!object) {
     notifyError(text.value.objectRequired)
@@ -626,6 +652,10 @@ const handleGrantCatalogPolicy = async (item: AdminPermissionCatalogItem) => {
     notifyError(text.value.selectRoleFirst)
     return
   }
+  if (selectedRoleImmutable.value) {
+    notifyError(text.value.immutableRoleHint)
+    return
+  }
   if (hasCoveredPolicy(item)) {
     return
   }
@@ -645,6 +675,10 @@ const handleGrantCatalogPolicy = async (item: AdminPermissionCatalogItem) => {
 }
 
 const handleRevokePolicy = async (item: AdminAuthzPolicy) => {
+  if (selectedRoleImmutable.value) {
+    notifyError(text.value.immutableRoleHint)
+    return
+  }
   const confirmed = await confirmAction({
     description: formatText(text.value.confirmRevokePolicy, { object: item.object, action: item.action }),
     confirmText: text.value.delete,
@@ -957,7 +991,13 @@ onMounted(async () => {
           >
             <div class="flex items-center justify-between gap-2">
               <span class="font-medium">{{ stripRolePrefix(role) }}</span>
-              <Button size="sm" variant="ghost" class="h-7 px-2 text-destructive" @click.stop="handleDeleteRole(role)">
+              <Button
+                size="sm"
+                variant="ghost"
+                class="h-7 px-2 text-destructive"
+                :disabled="isRoleImmutable(role)"
+                @click.stop="handleDeleteRole(role)"
+              >
                 {{ text.delete }}
               </Button>
             </div>
@@ -974,9 +1014,12 @@ onMounted(async () => {
         <div v-if="!selectedRole" class="text-sm text-muted-foreground">{{ text.selectRoleHint }}</div>
 
         <template v-else>
+          <div v-if="selectedRoleImmutable" class="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            {{ text.immutableRoleHint }}
+          </div>
           <div class="grid grid-cols-1 md:grid-cols-[1fr_140px_auto] gap-2">
-            <Input v-model="policyForm.object" :placeholder="text.objectPlaceholder" />
-            <Select v-model="policyForm.action">
+            <Input v-model="policyForm.object" :placeholder="text.objectPlaceholder" :disabled="selectedRoleImmutable" />
+            <Select v-model="policyForm.action" :disabled="selectedRoleImmutable">
               <SelectTrigger class="h-10">
                 <SelectValue />
               </SelectTrigger>
@@ -984,7 +1027,7 @@ onMounted(async () => {
                 <SelectItem v-for="action in actionOptions" :key="action" :value="action">{{ action }}</SelectItem>
               </SelectContent>
             </Select>
-            <Button @click="handleGrantPolicy">{{ text.addPolicy }}</Button>
+            <Button :disabled="selectedRoleImmutable" @click="handleGrantPolicy">{{ text.addPolicy }}</Button>
           </div>
 
           <div class="rounded-lg border border-border p-3 space-y-3">
@@ -1025,7 +1068,7 @@ onMounted(async () => {
                     <Button
                       size="sm"
                       :variant="hasCoveredPolicy(item) ? 'outline' : 'default'"
-                      :disabled="hasCoveredPolicy(item)"
+                      :disabled="selectedRoleImmutable || hasCoveredPolicy(item)"
                       @click="handleGrantCatalogPolicy(item)"
                     >
                       {{ hasCoveredPolicy(item) ? text.catalogAdded : text.catalogAdd }}
@@ -1056,7 +1099,7 @@ onMounted(async () => {
                   <TableCell class="min-w-[320px] px-4 py-3 font-mono text-xs text-muted-foreground break-all">{{ item.object }}</TableCell>
                   <TableCell class="min-w-[140px] px-4 py-3 font-medium break-words">{{ item.action }}</TableCell>
                   <TableCell class="min-w-[140px] px-4 py-3 text-right">
-                    <Button size="sm" variant="outline" @click="handleRevokePolicy(item)">
+                    <Button size="sm" variant="outline" :disabled="selectedRoleImmutable" @click="handleRevokePolicy(item)">
                       {{ text.delete }}
                     </Button>
                   </TableCell>

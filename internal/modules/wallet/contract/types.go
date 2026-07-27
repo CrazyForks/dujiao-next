@@ -48,10 +48,11 @@ type RechargeInput struct {
 }
 
 type AdjustBalanceInput struct {
-	UserID   uint
-	Delta    money.Amount
-	Currency string
-	Remark   string
+	UserID          uint
+	OperatorAdminID uint
+	Delta           money.Amount
+	Currency        string
+	Remark          string
 }
 
 type CreditInput struct {

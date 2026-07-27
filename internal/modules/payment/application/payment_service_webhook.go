@@ -66,6 +66,7 @@ func (s *PaymentService) HandleSyncCallback(
 
 	callbackInput := PaymentCallbackInput{
 		PaymentID:   payment.ID,
+		OrderNo:     result.OrderNo,
 		ChannelID:   channel.ID,
 		Status:      result.Status,
 		ProviderRef: pickFirstNonEmpty(result.ProviderRef, payment.ProviderRef),
@@ -336,9 +337,25 @@ func (s *PaymentService) commitVerifiedWebhook(
 	if result.Payload != nil {
 		payload = result.Payload
 	}
+	verifiedLegacyCurrency := ""
+	if channel.ProviderType == constants.PaymentProviderDujiaoPay &&
+		result.Status == constants.PaymentStatusSuccess &&
+		payment.Status != constants.PaymentStatusSuccess &&
+		!strings.EqualFold(strings.TrimSpace(payment.Currency), strings.TrimSpace(result.Currency)) {
+		if _, hasSnapshot := payment.ProviderPayload[paymentcontract.GatewayPayloadFiatCurrencySent]; !hasSnapshot {
+			verifiedLegacyCurrency = strings.ToUpper(strings.TrimSpace(result.Currency))
+			log.Warnw(
+				"payment_webhook_legacy_dujiaopay_currency_adoption",
+				"payment_id", payment.ID,
+				"stored_currency", payment.Currency,
+				"verified_currency", verifiedLegacyCurrency,
+			)
+		}
+	}
 
 	callbackInput := PaymentCallbackInput{
 		PaymentID:   payment.ID,
+		OrderNo:     result.OrderNo,
 		ChannelID:   channel.ID,
 		Status:      result.Status,
 		ProviderRef: pickFirstNonEmpty(result.ProviderRef, payment.ProviderRef),
@@ -346,6 +363,8 @@ func (s *PaymentService) commitVerifiedWebhook(
 		Currency:    strings.ToUpper(strings.TrimSpace(result.Currency)),
 		PaidAt:      result.PaidAt,
 		Payload:     payload,
+
+		verifiedLegacyDujiaoPayCurrency: verifiedLegacyCurrency,
 	}
 
 	updated, err := s.HandleCallback(callbackInput)

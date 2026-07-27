@@ -167,6 +167,11 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*or
 	if order.Status == target {
 		return order, nil
 	}
+	// “已支付”只能由钱包原子扣款或经过验签、金额校验的支付回调驱动。
+	// 管理端通用状态接口不得绕过支付事实直接触发库存、累计消费和交付副作用。
+	if target == constants.OrderStatusPaid {
+		return nil, ErrOrderStatusInvalid
+	}
 	isParent := order.ParentID == nil && len(order.Children) > 0
 	if isParent {
 		switch target {
@@ -188,67 +193,6 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*or
 						"order_id", order.ID,
 						"target_order_id", order.ID,
 						"status", constants.OrderStatusCanceled,
-						"error", err,
-					)
-				}
-			}
-			return order, nil
-		case constants.OrderStatusPaid:
-			if order.Status != constants.OrderStatusPendingPayment {
-				return nil, ErrOrderStatusInvalid
-			}
-			now := time.Now()
-			err = s.orderStore.WithinTransaction(func(tx ordercontract.Transaction) error {
-				if err := s.updateOrderToPaidInTx(tx, order.ID, nil, now); err != nil {
-					return err
-				}
-				for _, child := range order.Children {
-					if err := s.updateOrderToPaidInTx(tx, child.ID, child.Items, now); err != nil {
-						return err
-					}
-				}
-				if s.resellerAccounting != nil {
-					if err := s.resellerAccounting.PostOrderProfitForOrder(tx.ResellerAccounting(), order); err != nil {
-						return err
-					}
-				}
-				return nil
-			})
-			if err != nil {
-				return nil, ErrOrderUpdateFailed
-			}
-			order.Status = constants.OrderStatusPaid
-			order.PaidAt = &now
-			order.UpdatedAt = now
-			for i := range order.Children {
-				order.Children[i].Status = constants.OrderStatusPaid
-				order.Children[i].PaidAt = &now
-				order.Children[i].UpdatedAt = now
-			}
-			if s.queueClient != nil {
-				if _, err := EnqueueStatusEmailTaskIfEligible(s.orderStore, s.queueClient, s.settingService, s.defaultEmailConfig, order.ID, constants.OrderStatusPaid); err != nil {
-					logger.Warnw("order_enqueue_status_email_failed",
-						"order_id", order.ID,
-						"target_order_id", order.ID,
-						"status", constants.OrderStatusPaid,
-						"error", err,
-					)
-				}
-			}
-			if s.affiliateSvc != nil {
-				if err := s.affiliateSvc.HandleOrderPaid(order.ID); err != nil {
-					logger.Warnw("affiliate_handle_order_paid_failed",
-						"order_id", order.ID,
-						"error", err,
-					)
-				}
-			}
-			if s.memberLevelService != nil && order.UserID > 0 {
-				if err := s.memberLevelService.OnOrderPaid(order.UserID, order.TotalAmount.Decimal); err != nil {
-					logger.Warnw("member_level_order_paid_failed",
-						"order_id", order.ID,
-						"user_id", order.UserID,
-						"amount", order.TotalAmount.Decimal.String(),
 						"error", err,
 					)
 				}
@@ -343,10 +287,7 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*or
 	updates := map[string]interface{}{
 		"updated_at": now,
 	}
-	switch target {
-	case constants.OrderStatusPaid:
-		updates["paid_at"] = now
-	case constants.OrderStatusCanceled:
+	if target == constants.OrderStatusCanceled {
 		updates["canceled_at"] = now
 	}
 
@@ -354,33 +295,11 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*or
 		err = s.orderStore.WithinTransaction(func(tx ordercontract.Transaction) error {
 			return s.cancelSingleOrderInTx(tx, order, target, updates)
 		})
-	} else if target == constants.OrderStatusPaid {
-		err = s.orderStore.WithinTransaction(func(tx ordercontract.Transaction) error {
-			return s.updateOrderToPaidInTx(tx, order.ID, order.Items, now)
-		})
 	} else {
 		err = s.orderStore.UpdateStatus(order.ID, target, updates)
 	}
 	if err != nil {
 		return nil, ErrOrderUpdateFailed
-	}
-	if target == constants.OrderStatusPaid && s.affiliateSvc != nil {
-		if err := s.affiliateSvc.HandleOrderPaid(order.ID); err != nil {
-			logger.Warnw("affiliate_handle_order_paid_failed",
-				"order_id", order.ID,
-				"error", err,
-			)
-		}
-	}
-	if target == constants.OrderStatusPaid && s.memberLevelService != nil && order.UserID > 0 {
-		if err := s.memberLevelService.OnOrderPaid(order.UserID, order.TotalAmount.Decimal); err != nil {
-			logger.Warnw("member_level_order_paid_failed",
-				"order_id", order.ID,
-				"user_id", order.UserID,
-				"amount", order.TotalAmount.Decimal.String(),
-				"error", err,
-			)
-		}
 	}
 	if target == constants.OrderStatusCanceled && s.affiliateSvc != nil {
 		if err := s.affiliateSvc.HandleOrderCanceled(order.ID, "order_canceled_by_admin"); err != nil {
@@ -392,11 +311,6 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*or
 	}
 	order.Status = target
 	order.UpdatedAt = now
-	if v, ok := updates["paid_at"]; ok {
-		if t, ok := v.(time.Time); ok {
-			order.PaidAt = &t
-		}
-	}
 	if v, ok := updates["canceled_at"]; ok {
 		if t, ok := v.(time.Time); ok {
 			order.CanceledAt = &t
@@ -458,23 +372,6 @@ func (s *OrderService) completeParentOrderInTx(tx ordercontract.Transaction, ord
 		if err := orderStore.UpdateStatus(child.ID, constants.OrderStatusCompleted, updates); err != nil {
 			return ErrOrderUpdateFailed
 		}
-	}
-	return nil
-}
-
-func (s *OrderService) updateOrderToPaidInTx(tx ordercontract.Transaction, orderID uint, items []orderdomain.OrderItem, now time.Time) error {
-	orderStore := tx.Orders()
-	productRepo := tx.Products()
-	productSKURepo := tx.ProductSKUs()
-	updates := map[string]interface{}{
-		"paid_at":    now,
-		"updated_at": now,
-	}
-	if err := orderStore.UpdateStatus(orderID, constants.OrderStatusPaid, updates); err != nil {
-		return ErrOrderUpdateFailed
-	}
-	if err := ConsumeManualStockByItems(productRepo, productSKURepo, items); err != nil {
-		return err
 	}
 	return nil
 }

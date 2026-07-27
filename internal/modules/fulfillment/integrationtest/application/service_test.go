@@ -108,7 +108,7 @@ func TestCreateAutoFulfillmentRespectsSKUBoundary(t *testing.T) {
 	}
 
 	svc := New(Options{
-		OrderStore:       ordergormstore.New(db),
+		OrderStore:       ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes"),
 		FulfillmentStore: fulfillmentgormstore.New(db),
 	})
 

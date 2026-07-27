@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const callbackLogValueLimit = 4096
+const maxCallbackBodyBytes = 1 << 20
 
 // WechatWebhookInput is the transport-owned input for a WeChat callback.
 type WechatWebhookInput struct {
@@ -63,6 +63,9 @@ func NewHandler(service Service, payments PaymentLookup, channels ChannelLookup,
 
 // PaymentCallback preserves the historical provider detection order on the shared endpoint.
 func (h *Handler) PaymentCallback(c *gin.Context) {
+	if c.Request.Body != nil {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxCallbackBodyBytes)
+	}
 	ginutil.RequestLog(c).Infow("payment_callback_received",
 		"method", c.Request.Method,
 		"client_ip", c.ClientIP(),
@@ -118,41 +121,4 @@ func getFirstValue(form map[string][]string, key string) string {
 		return values[0]
 	}
 	return ""
-}
-
-func truncateCallbackLogValue(raw string) string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return ""
-	}
-	if len(raw) <= callbackLogValueLimit {
-		return raw
-	}
-	return raw[:callbackLogValueLimit] + "...(truncated)"
-}
-
-func callbackRawBodyForLog(body []byte) string {
-	if len(body) == 0 {
-		return ""
-	}
-	return truncateCallbackLogValue(string(body))
-}
-
-func callbackRawFormForLog(form map[string][]string) map[string]interface{} {
-	result := make(map[string]interface{}, len(form))
-	for key, values := range form {
-		switch len(values) {
-		case 0:
-			result[key] = ""
-		case 1:
-			result[key] = truncateCallbackLogValue(values[0])
-		default:
-			copied := make([]string, 0, len(values))
-			for _, value := range values {
-				copied = append(copied, truncateCallbackLogValue(value))
-			}
-			result[key] = copied
-		}
-	}
-	return result
 }

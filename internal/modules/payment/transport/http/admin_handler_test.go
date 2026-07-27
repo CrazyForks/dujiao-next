@@ -90,6 +90,136 @@ type fakeAdminOrderLookup struct {
 	orderNos map[uint]string
 }
 
+type fakeAdminChannelCatalog struct {
+	channel *paymentdomain.PaymentChannel
+}
+
+func (f *fakeAdminChannelCatalog) ValidateChannel(*paymentdomain.PaymentChannel) error { return nil }
+func (f *fakeAdminChannelCatalog) GetChannel(uint) (*paymentdomain.PaymentChannel, error) {
+	copied := *f.channel
+	copied.ConfigJSON = jsonmap.JSON{}
+	for key, value := range f.channel.ConfigJSON {
+		copied.ConfigJSON[key] = value
+	}
+	return &copied, nil
+}
+func (f *fakeAdminChannelCatalog) ListChannels(AdminChannelListFilter) ([]paymentdomain.PaymentChannel, int64, error) {
+	copied, _ := f.GetChannel(f.channel.ID)
+	return []paymentdomain.PaymentChannel{*copied}, 1, nil
+}
+func (f *fakeAdminChannelCatalog) Create(channel *paymentdomain.PaymentChannel) error {
+	f.channel = channel
+	return nil
+}
+func (f *fakeAdminChannelCatalog) Update(channel *paymentdomain.PaymentChannel) error {
+	f.channel = channel
+	return nil
+}
+func (f *fakeAdminChannelCatalog) Delete(uint) error { return nil }
+
+func TestGetPaymentChannelRedactsSecrets(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	catalog := &fakeAdminChannelCatalog{channel: &paymentdomain.PaymentChannel{
+		ID: 1,
+		ConfigJSON: jsonmap.JSON{
+			"api_base_url":   "https://pay.example",
+			"api_key_id":     "key-id",
+			"api_secret":     "api-secret-value",
+			"webhook_secret": "webhook-secret-value",
+			"token":          "usdt",
+		},
+	}}
+	handler := NewAdminChannelHandler(catalog)
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Params = gin.Params{{Key: "id", Value: "1"}}
+	ctx.Request = httptest.NewRequest(http.MethodGet, "/admin/payment-channels/1", nil)
+
+	handler.GetPaymentChannel(ctx)
+
+	body := recorder.Body.String()
+	if strings.Contains(body, "api-secret-value") || strings.Contains(body, "webhook-secret-value") {
+		t.Fatalf("payment channel response leaked a secret: %s", body)
+	}
+	if !strings.Contains(body, redactedPaymentConfigValue) {
+		t.Fatalf("payment channel response should expose only a redaction marker: %s", body)
+	}
+	if !strings.Contains(body, "https://pay.example") || !strings.Contains(body, "key-id") {
+		t.Fatalf("non-sensitive config should remain editable: %s", body)
+	}
+	if !strings.Contains(body, `"token":"usdt"`) {
+		t.Fatalf("coin token selector is not a credential and must remain editable: %s", body)
+	}
+}
+
+func TestUpdatePaymentChannelPreservesRedactedSecrets(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	catalog := &fakeAdminChannelCatalog{channel: &paymentdomain.PaymentChannel{
+		ID:           1,
+		Name:         "DujiaoPay",
+		ProviderType: "dujiaopay",
+		ChannelType:  "dujiaopay",
+		ConfigJSON: jsonmap.JSON{
+			"api_base_url":   "https://old.example",
+			"api_secret":     "api-secret-value",
+			"webhook_secret": "webhook-secret-value",
+		},
+	}}
+	handler := NewAdminChannelHandler(catalog)
+	payload, err := json.Marshal(map[string]interface{}{
+		"name": "Updated",
+		"config_json": map[string]interface{}{
+			"api_base_url":   "https://new.example",
+			"api_secret":     redactedPaymentConfigValue,
+			"webhook_secret": "",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Params = gin.Params{{Key: "id", Value: "1"}}
+	ctx.Request = httptest.NewRequest(http.MethodPut, "/admin/payment-channels/1", strings.NewReader(string(payload)))
+	ctx.Request.Header.Set("Content-Type", "application/json")
+
+	handler.UpdatePaymentChannel(ctx)
+
+	if got := catalog.channel.ConfigJSON["api_secret"]; got != "api-secret-value" {
+		t.Fatalf("api_secret should be preserved, got %#v", got)
+	}
+	if got := catalog.channel.ConfigJSON["webhook_secret"]; got != "webhook-secret-value" {
+		t.Fatalf("webhook_secret should be preserved, got %#v", got)
+	}
+	if got := catalog.channel.ConfigJSON["api_base_url"]; got != "https://new.example" {
+		t.Fatalf("non-sensitive config should update, got %#v", got)
+	}
+}
+
+func TestMergePaymentChannelConfigExplicitNullClearsSecret(t *testing.T) {
+	merged := mergePaymentChannelConfig(
+		jsonmap.JSON{
+			"api_base_url":   "https://old.example",
+			"api_secret":     "api-secret-value",
+			"webhook_secret": "webhook-secret-value",
+		},
+		map[string]interface{}{
+			"api_base_url":   "https://new.example",
+			"api_secret":     nil,
+			"webhook_secret": redactedPaymentConfigValue,
+		},
+	)
+	if _, exists := merged["api_secret"]; exists {
+		t.Fatalf("explicit null should remove api_secret, got %#v", merged["api_secret"])
+	}
+	if got := merged["webhook_secret"]; got != "webhook-secret-value" {
+		t.Fatalf("redacted webhook_secret should be preserved, got %#v", got)
+	}
+	if got := merged["api_base_url"]; got != "https://new.example" {
+		t.Fatalf("non-sensitive config should update, got %#v", got)
+	}
+}
+
 func (f fakeAdminOrderLookup) GetByIDs(ids []uint) ([]orderdomain.Order, error) {
 	out := make([]orderdomain.Order, 0, len(ids))
 	for _, id := range ids {
@@ -220,6 +350,14 @@ func TestBuildAdminPaymentFilterInvalidOrderID(t *testing.T) {
 
 func TestGetAdminPaymentsFiltersByUserID(t *testing.T) {
 	h, fixture := setupAdminPaymentHandlerTest(t)
+	query := h.payments.(*fakeAdminPaymentQuery)
+	for i := range query.payments {
+		if query.payments[i].ID == fixture.OrderPaymentID {
+			query.payments[i].ProviderPayload = jsonmap.JSON{"raw_secret": "must-not-leak"}
+			query.payments[i].PayURL = "https://checkout.example/private-token"
+			query.payments[i].QRCode = "private-qr-payload"
+		}
+	}
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -270,6 +408,12 @@ func TestGetAdminPaymentsFiltersByUserID(t *testing.T) {
 	}
 	if _, ok := gotIDs[fixture.RechargePaymentUser2]; ok {
 		t.Fatalf("unexpected user2 recharge payment id %d", fixture.RechargePaymentUser2)
+	}
+	body := w.Body.String()
+	for _, secret := range []string{"must-not-leak", "private-token", "private-qr-payload"} {
+		if strings.Contains(body, secret) {
+			t.Fatalf("admin payment response leaked %q: %s", secret, body)
+		}
 	}
 }
 

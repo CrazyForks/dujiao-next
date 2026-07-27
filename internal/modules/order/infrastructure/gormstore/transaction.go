@@ -1,6 +1,7 @@
 package gormstore
 
 import (
+	"strings"
 	"time"
 
 	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
@@ -27,22 +28,34 @@ import (
 )
 
 type transaction struct {
-	db *gorm.DB
+	db                    *gorm.DB
+	guestCredentialSecret []byte
 }
 
 var _ ordercontract.Transaction = transaction{}
 
 // UseTransaction 把调用方已打开的数据库事务适配为订单工作单元。
 // 跨领域工作流通过该入口保持同库原子性，同时不把 GORM 暴露给订单应用层。
-func UseTransaction(tx *gorm.DB) ordercontract.Transaction {
+func UseTransaction(tx *gorm.DB, guestCredentialSecret string) ordercontract.Transaction {
 	if tx == nil {
 		return nil
 	}
-	return transaction{db: tx}
+	secret := []byte(strings.TrimSpace(guestCredentialSecret))
+	if len(secret) == 0 {
+		panic("order transaction: guest credential secret is required")
+	}
+	return useTransaction(tx, secret)
+}
+
+func useTransaction(tx *gorm.DB, guestCredentialSecret []byte) ordercontract.Transaction {
+	if tx == nil {
+		return nil
+	}
+	return transaction{db: tx, guestCredentialSecret: guestCredentialSecret}
 }
 
 func (tx transaction) Orders() ordercontract.Store {
-	return New(tx.db)
+	return &Store{db: tx.db, guestCredentialSecret: tx.guestCredentialSecret}
 }
 
 func (tx transaction) Products() productcontract.Repository {
@@ -104,6 +117,6 @@ func (s *Store) WithinTransaction(fn func(ordercontract.Transaction) error) erro
 		return nil
 	}
 	return s.db.Transaction(func(tx *gorm.DB) error {
-		return fn(UseTransaction(tx))
+		return fn(useTransaction(tx, s.guestCredentialSecret))
 	})
 }

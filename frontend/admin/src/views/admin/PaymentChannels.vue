@@ -108,6 +108,7 @@ const channelTypeLabel = (value?: string) => {
     'ethereum-usdc': t('admin.paymentChannels.channelTypes.ethereumUsdc'),
     'ethereum-eth': t('admin.paymentChannels.channelTypes.ethereumEth'),
     'bsc-usdt': t('admin.paymentChannels.channelTypes.bscUsdt'),
+    'bsc-usdc': t('admin.paymentChannels.channelTypes.bscUsdc'),
     'bsc-bnb': t('admin.paymentChannels.channelTypes.bscBnb'),
     'polygon-usdc': t('admin.paymentChannels.channelTypes.polygonUsdc'),
     'polygon-usdt0': t('admin.paymentChannels.channelTypes.polygonUsdt0'),

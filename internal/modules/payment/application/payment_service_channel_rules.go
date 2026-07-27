@@ -287,3 +287,36 @@ func matchesChannelPaymentType(channel paymentdomain.PaymentChannel, paymentType
 	}
 	return false
 }
+
+// validateOrderChannelEligibility 对写路径重复执行列表页使用的角色、会员等级和付款类型规则。
+// 订单快照是授权事实，不能信任客户端提交的角色或等级。
+func validateOrderChannelEligibility(channel paymentdomain.PaymentChannel, order *orderdomain.Order) error {
+	if order == nil {
+		return ErrPaymentInvalid
+	}
+	var user *userdomain.User
+	if order.UserID > 0 {
+		user = &userdomain.User{ID: order.UserID}
+		if order.MemberLevelID != nil {
+			user.MemberLevelID = *order.MemberLevelID
+		}
+	}
+	if !matchesChannelRole(channel, user) ||
+		!matchesChannelMemberLevel(channel, user) ||
+		!matchesChannelPaymentType(channel, constants.PaymentTypeOrder) {
+		return ErrPaymentChannelNotAllowedForProduct
+	}
+	return nil
+}
+
+func validateWalletChannelEligibility(channel paymentdomain.PaymentChannel, user *userdomain.User) error {
+	if user == nil || user.ID == 0 {
+		return ErrPaymentInvalid
+	}
+	if !matchesChannelRole(channel, user) ||
+		!matchesChannelMemberLevel(channel, user) ||
+		!matchesChannelPaymentType(channel, constants.PaymentTypeWallet) {
+		return ErrPaymentChannelNotAllowedForRecharge
+	}
+	return nil
+}

@@ -2,7 +2,6 @@ package paymenthttp
 
 import (
 	"errors"
-	"strings"
 	"time"
 
 	paymentpresenter "github.com/dujiao-next/internal/modules/payment/transport/presenter"
@@ -44,9 +43,7 @@ type PendingPaymentLookup interface {
 
 // LatestGuestPaymentQuery 游客最新待支付查询参数。
 type LatestGuestPaymentQuery struct {
-	Email         string `form:"email" binding:"required"`
-	OrderPassword string `form:"order_password" binding:"required"`
-	OrderNo       string `form:"order_no" binding:"required"`
+	OrderNo string `form:"order_no" binding:"required"`
 }
 
 // LatestPaymentQuery 用户最新待支付查询参数。
@@ -84,9 +81,8 @@ func (h *LatestHandler) GetGuestLatestPayment(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	email := strings.TrimSpace(query.Email)
-	password := strings.TrimSpace(query.OrderPassword)
-	if email == "" {
+	email, password, ok := ginutil.GetGuestCredentials(c)
+	if !ok || email == "" {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.guest_email_required", nil)
 		return
 	}

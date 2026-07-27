@@ -83,7 +83,7 @@ function createClient(injectAuth: boolean) {
 
         if (injectAuth) {
             const token = localStorage.getItem('user_token')
-            if (token) {
+            if (token && !headers['Authorization']) {
                 headers['Authorization'] = `Bearer ${token}`
             }
         }

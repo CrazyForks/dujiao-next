@@ -2,6 +2,7 @@ package paymenthttp
 
 import (
 	"errors"
+	"strings"
 
 	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
 
@@ -14,6 +15,22 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+const redactedPaymentConfigValue = "••••••••"
+
+var sensitivePaymentConfigKeys = map[string]struct{}{
+	"api_secret":           {},
+	"api_v3_key":           {},
+	"auth_token":           {},
+	"client_secret":        {},
+	"merchant_key":         {},
+	"merchant_private_key": {},
+	"merchant_token":       {},
+	"notify_secret":        {},
+	"private_key":          {},
+	"secret_key":           {},
+	"webhook_secret":       {},
+}
 
 // AdminChannelListFilter 后台支付渠道列表过滤条件。
 type AdminChannelListFilter struct {
@@ -146,7 +163,7 @@ func (h *AdminChannelHandler) CreatePaymentChannel(c *gin.Context) {
 	}
 	_ = cache.DelAllPublicConfig(c.Request.Context())
 
-	response.Success(c, channel)
+	response.Success(c, redactPaymentChannel(channel))
 }
 
 // UpdatePaymentChannel 更新支付渠道
@@ -211,7 +228,7 @@ func (h *AdminChannelHandler) UpdatePaymentChannel(c *gin.Context) {
 		channel.PaymentTypes = req.PaymentTypes
 	}
 	if req.ConfigJSON != nil {
-		channel.ConfigJSON = jsonmap.JSON(req.ConfigJSON)
+		channel.ConfigJSON = mergePaymentChannelConfig(channel.ConfigJSON, req.ConfigJSON)
 	}
 	if req.IsActive != nil {
 		channel.IsActive = *req.IsActive
@@ -241,7 +258,7 @@ func (h *AdminChannelHandler) UpdatePaymentChannel(c *gin.Context) {
 	}
 	_ = cache.DelAllPublicConfig(c.Request.Context())
 
-	response.Success(c, channel)
+	response.Success(c, redactPaymentChannel(channel))
 }
 
 // DeletePaymentChannel 删除支付渠道
@@ -280,7 +297,7 @@ func (h *AdminChannelHandler) GetPaymentChannel(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, channel)
+	response.Success(c, redactPaymentChannel(channel))
 }
 
 // GetPaymentChannels 获取支付渠道列表
@@ -307,6 +324,74 @@ func (h *AdminChannelHandler) GetPaymentChannels(c *gin.Context) {
 		return
 	}
 
+	redacted := make([]paymentdomain.PaymentChannel, 0, len(channels))
+	for idx := range channels {
+		redacted = append(redacted, *redactPaymentChannel(&channels[idx]))
+	}
 	pagination := response.BuildPagination(page, pageSize, total)
-	response.SuccessWithPage(c, channels, pagination)
+	response.SuccessWithPage(c, redacted, pagination)
+}
+
+func isSensitivePaymentConfigKey(key string) bool {
+	_, ok := sensitivePaymentConfigKeys[strings.ToLower(strings.TrimSpace(key))]
+	return ok
+}
+
+func redactPaymentChannel(channel *paymentdomain.PaymentChannel) *paymentdomain.PaymentChannel {
+	if channel == nil {
+		return nil
+	}
+	redacted := *channel
+	if channel.ConfigJSON == nil {
+		return &redacted
+	}
+	redacted.ConfigJSON = make(jsonmap.JSON, len(channel.ConfigJSON))
+	for key, value := range channel.ConfigJSON {
+		if isSensitivePaymentConfigKey(key) {
+			if strings.TrimSpace(asConfigString(value)) != "" {
+				redacted.ConfigJSON[key] = redactedPaymentConfigValue
+			}
+			continue
+		}
+		redacted.ConfigJSON[key] = value
+	}
+	return &redacted
+}
+
+func mergePaymentChannelConfig(existing jsonmap.JSON, incoming map[string]interface{}) jsonmap.JSON {
+	merged := make(jsonmap.JSON, len(incoming)+len(existing))
+	explicitlyCleared := make(map[string]struct{})
+	for key, value := range incoming {
+		if isSensitivePaymentConfigKey(key) {
+			if value == nil {
+				explicitlyCleared[key] = struct{}{}
+				continue
+			}
+			trimmed := strings.TrimSpace(asConfigString(value))
+			if trimmed == "" || trimmed == redactedPaymentConfigValue {
+				if current, ok := existing[key]; ok {
+					merged[key] = current
+				}
+				continue
+			}
+		}
+		merged[key] = value
+	}
+	for key, value := range existing {
+		if !isSensitivePaymentConfigKey(key) {
+			continue
+		}
+		if _, cleared := explicitlyCleared[key]; cleared {
+			continue
+		}
+		if _, exists := merged[key]; !exists {
+			merged[key] = value
+		}
+	}
+	return merged
+}
+
+func asConfigString(value interface{}) string {
+	text, _ := value.(string)
+	return text
 }

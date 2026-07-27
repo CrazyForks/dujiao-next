@@ -37,7 +37,7 @@ func setupOrderRefundRecordRepositoryTest(t *testing.T) (*Store, *gorm.DB) {
 	); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
 	}
-	return New(db), db
+	return New(db, "test-guest-credential-secret-with-32-bytes"), db
 }
 
 func TestOrderRefundRecordRepositoryListAdminFilters(t *testing.T) {

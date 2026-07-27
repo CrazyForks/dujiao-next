@@ -82,3 +82,14 @@ func TestRespondPaymentCallbackError(t *testing.T) {
 		})
 	}
 }
+
+func TestReadWebhookBodyRejectsOversizedPayload(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", strings.NewReader(strings.Repeat("x", maxWebhookBodyBytes+1)))
+
+	if _, err := readWebhookBody(c); err == nil {
+		t.Fatalf("oversized webhook body must be rejected")
+	}
+}

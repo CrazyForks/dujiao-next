@@ -159,8 +159,8 @@ func newOkpayCallbackFixture(t *testing.T) *okpayCallbackFixture {
 		t.Fatalf("create payment failed: %v", err)
 	}
 
-	orderRepo := ordergormstore.New(db)
-	paymentRepo := paymentgormstore.New(db)
+	orderRepo := ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes")
+	paymentRepo := paymentgormstore.New(db, "test-guest-credential-secret-with-32-bytes")
 	channelRepo := paymentgormstore.NewChannelStore(db)
 	productRepo := productgormstore.NewProductStore(db)
 	productSKURepo := productgormstore.NewSKUStore(db)
@@ -219,6 +219,30 @@ func TestPaymentCallbackHandlesOkpay(t *testing.T) {
 	}
 	if updatedOrder == nil || updatedOrder.Status != constants.OrderStatusPaid {
 		t.Fatalf("order status not updated: %+v", updatedOrder)
+	}
+}
+
+func TestPaymentCallbackRejectsOkpayMismatchedMerchantOrder(t *testing.T) {
+	fixture := newOkpayCallbackFixture(t)
+	bodyWithoutSign := "code=200&data[order_id]=OKPAY-ORDER-1&data[unique_id]=WRONG-MERCHANT-ORDER&data[pay_user_id]=7238234930&data[amount]=616.00000000&data[coin]=USDT&data[status]=1&data[type]=deposit&id=shop-1&status=success"
+	sign := md5HexUpper(bodyWithoutSign + "&token=token-1")
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/payments/callback", strings.NewReader(bodyWithoutSign+"&sign="+sign))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	fixture.handler.PaymentCallback(c)
+
+	if strings.TrimSpace(w.Body.String()) != constants.OkpayCallbackFail {
+		t.Fatalf("mismatched merchant order must return provider failure acknowledgement, status=%d body=%s", w.Code, w.Body.String())
+	}
+	updatedPayment, err := fixture.paymentRepo.GetByID(fixture.payment.ID)
+	if err != nil {
+		t.Fatalf("reload payment failed: %v", err)
+	}
+	if updatedPayment == nil || updatedPayment.Status != constants.PaymentStatusPending {
+		t.Fatalf("mismatched callback changed payment state: %+v", updatedPayment)
 	}
 }
 

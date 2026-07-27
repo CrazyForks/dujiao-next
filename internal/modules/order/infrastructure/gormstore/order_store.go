@@ -1,7 +1,11 @@
 package gormstore
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -17,21 +21,28 @@ import (
 
 // Store 是订单与退款记录端口的 GORM 实现。
 type Store struct {
-	db *gorm.DB
+	db                    *gorm.DB
+	guestCredentialSecret []byte
 }
 
 var _ ordercontract.Store = (*Store)(nil)
 
-// New 创建订单存储。
-func New(db *gorm.DB) *Store {
-	return &Store{db: db}
+const guestCredentialHashPrefix = "hmac-sha256:"
+
+// New 创建订单存储。访客凭据密钥是强制依赖，禁止退化为明文存储。
+func New(db *gorm.DB, guestCredentialSecret string) *Store {
+	secret := strings.TrimSpace(guestCredentialSecret)
+	if secret == "" {
+		panic("order store: guest credential secret is required")
+	}
+	return &Store{db: db, guestCredentialSecret: []byte(secret)}
 }
 
 func (r *Store) bind(tx *gorm.DB) *Store {
 	if tx == nil {
 		return r
 	}
-	return New(tx)
+	return &Store{db: tx, guestCredentialSecret: r.guestCredentialSecret}
 }
 
 func (r *Store) withChildren(query *gorm.DB) *gorm.DB {
@@ -46,6 +57,12 @@ func (r *Store) withChildren(query *gorm.DB) *gorm.DB {
 
 // Create 创建订单与订单项
 func (r *Store) Create(order *orderdomain.Order, items []orderdomain.OrderItem) error {
+	if order != nil && order.UserID == 0 && strings.TrimSpace(order.GuestPassword) != "" {
+		if len(r.guestCredentialSecret) == 0 {
+			return errors.New("guest credential secret is required")
+		}
+		order.GuestPassword = r.hashGuestCredential(order.GuestEmail, order.GuestPassword)
+	}
 	if err := r.db.Create(order).Error; err != nil {
 		return err
 	}
@@ -58,6 +75,104 @@ func (r *Store) Create(order *orderdomain.Order, items []orderdomain.OrderItem) 
 		}
 	}
 	return nil
+}
+
+func (r *Store) hashGuestCredential(email, password string) string {
+	if len(r.guestCredentialSecret) == 0 {
+		panic("order store: guest credential secret is required")
+	}
+	mac := hmac.New(sha256.New, r.guestCredentialSecret)
+	_, _ = mac.Write([]byte(strings.ToLower(strings.TrimSpace(email))))
+	_, _ = mac.Write([]byte{0})
+	_, _ = mac.Write([]byte(password))
+	return guestCredentialHashPrefix + hex.EncodeToString(mac.Sum(nil))
+}
+
+func isGuestCredentialHash(value string) bool {
+	if !strings.HasPrefix(value, guestCredentialHashPrefix) {
+		return false
+	}
+	encoded := strings.TrimPrefix(value, guestCredentialHashPrefix)
+	if len(encoded) != sha256.Size*2 {
+		return false
+	}
+	_, err := hex.DecodeString(encoded)
+	return err == nil
+}
+
+// BackfillGuestCredentialHashes 把历史游客订单明文凭证迁移为不可逆的密钥化摘要。
+// 应用密钥缺失时拒绝执行，避免启动后继续以明文模式运行。
+func (r *Store) BackfillGuestCredentialHashes() (int64, error) {
+	if len(r.guestCredentialSecret) == 0 {
+		return 0, errors.New("guest credential secret is required")
+	}
+	type guestCredentialRow struct {
+		ID            uint
+		GuestEmail    string
+		GuestPassword string
+	}
+	const batchSize = 500
+	var migrated int64
+	var lastID uint
+	candidateSQL, candidateArgs := guestCredentialBackfillCandidateSQL(r.db.Dialector.Name())
+	for {
+		var rows []guestCredentialRow
+		if err := r.db.Model(&orderdomain.Order{}).
+			Select("id", "guest_email", "guest_password").
+			Where("user_id = 0 AND guest_password <> '' AND id > ?", lastID).
+			Where(candidateSQL, candidateArgs...).
+			Order("id ASC").
+			Limit(batchSize).
+			Find(&rows).Error; err != nil {
+			return migrated, err
+		}
+		if len(rows) == 0 {
+			return migrated, nil
+		}
+
+		err := r.db.Transaction(func(tx *gorm.DB) error {
+			for _, row := range rows {
+				if isGuestCredentialHash(row.GuestPassword) {
+					continue
+				}
+				result := tx.Model(&orderdomain.Order{}).
+					Where("id = ? AND guest_password = ?", row.ID, row.GuestPassword).
+					UpdateColumn("guest_password", r.hashGuestCredential(row.GuestEmail, row.GuestPassword))
+				if result.Error != nil {
+					return result.Error
+				}
+				if result.RowsAffected != 1 {
+					return fmt.Errorf("guest credential migration lost update for order %d", row.ID)
+				}
+				migrated += result.RowsAffected
+			}
+			return nil
+		})
+		if err != nil {
+			return migrated, err
+		}
+		lastID = rows[len(rows)-1].ID
+	}
+}
+
+// guestCredentialBackfillCandidateSQL 保证数据库候选集不比
+// isGuestCredentialHash 的严格判定更窄。SQLite 与 PostgreSQL 使用各自的
+// 字符类语法筛出含非十六进制字符的伪摘要；未知方言宁可分批扫描全部游客凭据，
+// 也不能把形似摘要的历史明文永久排除在迁移之外。
+func guestCredentialBackfillCandidateSQL(dialect string) (string, []interface{}) {
+	prefixPattern := guestCredentialHashPrefix + "%"
+	expectedLength := len(guestCredentialHashPrefix) + sha256.Size*2
+	hashStart := len(guestCredentialHashPrefix) + 1
+	switch strings.ToLower(strings.TrimSpace(dialect)) {
+	case "sqlite":
+		return "(guest_password NOT LIKE ? OR LENGTH(guest_password) <> ? OR SUBSTR(guest_password, ?) GLOB ?)",
+			[]interface{}{prefixPattern, expectedLength, hashStart, "*[^0-9A-Fa-f]*"}
+	case "postgres":
+		return "(guest_password NOT LIKE ? OR LENGTH(guest_password) <> ? OR SUBSTRING(guest_password FROM ?) !~ ?)",
+			[]interface{}{prefixPattern, expectedLength, hashStart, "^[0-9A-Fa-f]+$"}
+	default:
+		return "1 = 1", nil
+	}
 }
 
 // GetByID 根据 ID 获取订单
@@ -164,7 +279,7 @@ func (r *Store) GetAnyByOrderNoAndUser(orderNo string, userID uint) (*orderdomai
 func (r *Store) GetAnyByOrderNoAndGuest(orderNo, email, password string) (*orderdomain.Order, error) {
 	var order orderdomain.Order
 	query := r.withChildren(r.db)
-	if err := query.Where("order_no = ? AND user_id = 0 AND guest_email = ? AND guest_password = ?", orderNo, email, password).First(&order).Error; err != nil {
+	if err := query.Where("order_no = ? AND user_id = 0 AND guest_email = ? AND guest_password = ?", orderNo, email, r.hashGuestCredential(email, password)).First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -178,7 +293,7 @@ func (r *Store) GetByIDAndGuest(id uint, email, password string) (*orderdomain.O
 	var order orderdomain.Order
 	query := r.withChildren(r.db)
 	if err := query.
-		Where("id = ? AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", id, email, password).
+		Where("id = ? AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", id, email, r.hashGuestCredential(email, password)).
 		First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -193,7 +308,7 @@ func (r *Store) GetByOrderNoAndGuest(orderNo, email, password string) (*orderdom
 	var order orderdomain.Order
 	query := r.withChildren(r.db)
 	if err := query.
-		Where("order_no = ? AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", orderNo, email, password).
+		Where("order_no = ? AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", orderNo, email, r.hashGuestCredential(email, password)).
 		First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -256,7 +371,7 @@ func (r *Store) GetAnyByOrderNoAndUserScoped(orderNo string, userID uint, scope 
 func (r *Store) GetByIDAndGuestScoped(id uint, email, password string, scope ordercontract.TenantScope) (*orderdomain.Order, error) {
 	var order orderdomain.Order
 	query := r.withChildren(r.db)
-	query = applyTenantScope(query.Where("id = ? AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", id, email, password), scope)
+	query = applyTenantScope(query.Where("id = ? AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", id, email, r.hashGuestCredential(email, password)), scope)
 	if err := query.First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -270,7 +385,7 @@ func (r *Store) GetByIDAndGuestScoped(id uint, email, password string, scope ord
 func (r *Store) GetByOrderNoAndGuestScoped(orderNo, email, password string, scope ordercontract.TenantScope) (*orderdomain.Order, error) {
 	var order orderdomain.Order
 	query := r.withChildren(r.db)
-	query = applyTenantScope(query.Where("order_no = ? AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", orderNo, email, password), scope)
+	query = applyTenantScope(query.Where("order_no = ? AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", orderNo, email, r.hashGuestCredential(email, password)), scope)
 	if err := query.First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -284,7 +399,7 @@ func (r *Store) GetByOrderNoAndGuestScoped(orderNo, email, password string, scop
 func (r *Store) GetAnyByOrderNoAndGuestScoped(orderNo, email, password string, scope ordercontract.TenantScope) (*orderdomain.Order, error) {
 	var order orderdomain.Order
 	query := r.withChildren(r.db)
-	query = applyTenantScope(query.Where("order_no = ? AND user_id = 0 AND guest_email = ? AND guest_password = ?", orderNo, email, password), scope)
+	query = applyTenantScope(query.Where("order_no = ? AND user_id = 0 AND guest_email = ? AND guest_password = ?", orderNo, email, r.hashGuestCredential(email, password)), scope)
 	if err := query.First(&order).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -512,9 +627,10 @@ func (r *Store) StatsByUserScoped(filter ordercontract.ListFilter, scope orderco
 
 // ListByGuest 获取游客订单列表
 func (r *Store) ListByGuest(email, password string, page, pageSize int) ([]orderdomain.Order, int64, error) {
+	credentialHash := r.hashGuestCredential(email, password)
 	var total int64
 	if err := r.db.Model(&orderdomain.Order{}).
-		Where("orders.deleted_at IS NULL AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", email, password).
+		Where("orders.deleted_at IS NULL AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", email, credentialHash).
 		Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
@@ -522,7 +638,7 @@ func (r *Store) ListByGuest(email, password string, page, pageSize int) ([]order
 	var orders []orderdomain.Order
 	query := r.withChildren(r.db)
 	if err := query.
-		Where("user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", email, password).
+		Where("user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", email, credentialHash).
 		Order("id desc").
 		Limit(pageSize).
 		Offset((page - 1) * pageSize).
@@ -534,7 +650,7 @@ func (r *Store) ListByGuest(email, password string, page, pageSize int) ([]order
 
 // ListByGuestScoped 获取游客订单列表，并强制限定当前前台租户范围。
 func (r *Store) ListByGuestScoped(email, password string, page, pageSize int, scope ordercontract.TenantScope) ([]orderdomain.Order, int64, error) {
-	base := r.db.Model(&orderdomain.Order{}).Where("orders.deleted_at IS NULL AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", email, password)
+	base := r.db.Model(&orderdomain.Order{}).Where("orders.deleted_at IS NULL AND user_id = 0 AND guest_email = ? AND guest_password = ? AND parent_id IS NULL", email, r.hashGuestCredential(email, password))
 	base = applyTenantScope(base, scope)
 
 	var total int64

@@ -67,10 +67,11 @@ type AdminRechargeListFilter struct {
 
 // AdjustBalanceInput 管理端余额调整输入。
 type AdjustBalanceInput struct {
-	UserID   uint
-	Delta    money.Amount
-	Currency string
-	Remark   string
+	UserID          uint
+	OperatorAdminID uint
+	Delta           money.Amount
+	Currency        string
+	Remark          string
 }
 
 // AdminAdjustUserWalletRequest 管理端用户余额调整请求
@@ -311,6 +312,10 @@ func (h *AdminHandler) GetRecharges(c *gin.Context) {
 
 // AdjustUserWallet 管理端增减用户余额
 func (h *AdminHandler) AdjustUserWallet(c *gin.Context) {
+	adminID, ok := ginutil.GetAdminID(c)
+	if !ok {
+		return
+	}
 	userID, err := ginutil.ParseParamUint(c, "id")
 	if err != nil {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
@@ -333,13 +338,19 @@ func (h *AdminHandler) AdjustUserWallet(c *gin.Context) {
 	op := strings.ToLower(strings.TrimSpace(req.Operation))
 	delta := amount
 	if op == "" {
-		op = "add"
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		return
 	}
 	if op == "subtract" {
 		delta = amount.Neg()
 	}
 	if op != "add" && op != "subtract" {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", nil)
+		return
+	}
+	remark := strings.TrimSpace(req.Remark)
+	if remark == "" {
+		ginutil.RespondError(c, response.CodeBadRequest, "error.wallet_adjust_remark_required", nil)
 		return
 	}
 	currency := strings.TrimSpace(req.Currency)
@@ -351,10 +362,11 @@ func (h *AdminHandler) AdjustUserWallet(c *gin.Context) {
 	}
 
 	account, txn, err := h.wallets.AdminAdjustBalance(AdjustBalanceInput{
-		UserID:   userID,
-		Delta:    money.FromDecimal(delta),
-		Currency: currency,
-		Remark:   strings.TrimSpace(req.Remark),
+		UserID:          userID,
+		OperatorAdminID: adminID,
+		Delta:           money.FromDecimal(delta),
+		Currency:        currency,
+		Remark:          remark,
 	})
 	if err != nil {
 		switch {

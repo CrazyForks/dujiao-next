@@ -34,7 +34,6 @@ func (h *Handler) handleAlipayCallback(c *gin.Context) bool {
 		"out_trade_no", strings.TrimSpace(getFirstValue(form, "out_trade_no")),
 		"trade_no", strings.TrimSpace(getFirstValue(form, "trade_no")),
 		"trade_status", strings.TrimSpace(getFirstValue(form, "trade_status")),
-		"raw_form", callbackRawFormForLog(form),
 	)
 
 	payment, channel, err := h.findAlipayCallbackPayment(form)
@@ -86,7 +85,7 @@ func (h *Handler) handleEpayCallback(c *gin.Context) bool {
 	}
 	log.Infow("epay_callback_received", "client_ip", c.ClientIP(), "out_trade_no", outTradeNo,
 		"trade_no", strings.TrimSpace(getFirstValue(form, "trade_no")),
-		"trade_status", strings.TrimSpace(getFirstValue(form, "trade_status")), "raw_form", callbackRawFormForLog(form))
+		"trade_status", strings.TrimSpace(getFirstValue(form, "trade_status")))
 
 	payment, err := h.payments.GetByGatewayOrderNo(outTradeNo)
 	if err != nil || payment == nil {

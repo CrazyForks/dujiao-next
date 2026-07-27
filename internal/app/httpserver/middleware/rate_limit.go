@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/dujiao-next/internal/i18n"
+	"github.com/dujiao-next/internal/logger"
 	"github.com/dujiao-next/internal/platform/http/response"
 
 	"github.com/gin-gonic/gin"
@@ -38,10 +41,88 @@ local ttl = redis.call("TTL", KEYS[1])
 return {current, ttl}
 `)
 
-// RateLimitMiddleware Redis 频率限制中间件
+type localRateLimitEntry struct {
+	count     int64
+	expiresAt time.Time
+}
+
+type localRateLimiter struct {
+	mu                      sync.Mutex
+	entries                 map[string]localRateLimitEntry
+	lastCapacityWarningAt   time.Time
+	lastRedisFallbackWarnAt time.Time
+}
+
+const localRateLimitMaxEntries = 10000
+const localRateLimitWarningInterval = time.Minute
+
+func (l *localRateLimiter) increment(key string, rule RateLimitRule, now time.Time) (int64, int64, bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.entries == nil {
+		l.entries = make(map[string]localRateLimitEntry)
+	}
+
+	entry, exists := l.entries[key]
+	if exists && (entry.expiresAt.IsZero() || !now.Before(entry.expiresAt)) {
+		delete(l.entries, key)
+		exists = false
+	}
+	if !exists {
+		if len(l.entries) >= localRateLimitMaxEntries {
+			for existingKey, existing := range l.entries {
+				if existing.expiresAt.IsZero() || !now.Before(existing.expiresAt) {
+					delete(l.entries, existingKey)
+				}
+			}
+		}
+		if len(l.entries) >= localRateLimitMaxEntries {
+			// 不淘汰仍在窗口内的计数器；容量耗尽时仅拒绝新的 key，
+			// 防止攻击者用高基数 IP/标识绕过已有 key 的频率限制。
+			ttl := int64(rule.WindowSeconds)
+			if ttl < 1 {
+				ttl = 1
+			}
+			shouldWarn := l.lastCapacityWarningAt.IsZero() ||
+				now.Sub(l.lastCapacityWarningAt) >= localRateLimitWarningInterval
+			if shouldWarn {
+				l.lastCapacityWarningAt = now
+			}
+			return int64(rule.MaxRequests) + 1, ttl, shouldWarn
+		}
+		entry = localRateLimitEntry{expiresAt: now.Add(time.Duration(rule.WindowSeconds) * time.Second)}
+	}
+	entry.count++
+	if entry.count == int64(rule.MaxRequests)+1 && rule.BlockSeconds > 0 {
+		entry.expiresAt = now.Add(time.Duration(rule.BlockSeconds) * time.Second)
+	}
+	l.entries[key] = entry
+	ttl := int64(entry.expiresAt.Sub(now).Seconds())
+	if ttl < 1 {
+		ttl = 1
+	}
+	return entry.count, ttl, false
+}
+
+func (l *localRateLimiter) shouldWarnRedisFallback(now time.Time) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if !l.lastRedisFallbackWarnAt.IsZero() &&
+		now.Sub(l.lastRedisFallbackWarnAt) < localRateLimitWarningInterval {
+		return false
+	}
+	l.lastRedisFallbackWarnAt = now
+	return true
+}
+
+// RateLimitMiddleware Redis 频率限制中间件。
+// Redis 未配置或运行时暂时不可用时使用进程内兜底；该兜底仅对当前实例生效，
+// 多实例部署必须配置共享 Redis 才能获得全局一致的计数。Redis 故障降级和
+// 本地容量耗尽都会输出节流后的 warning，避免故障期间产生日志洪泛。
 func RateLimitMiddleware(client *redis.Client, rule RateLimitRule, keyFunc RateLimitKeyFunc) gin.HandlerFunc {
+	local := &localRateLimiter{}
 	return func(c *gin.Context) {
-		if client == nil || rule.WindowSeconds <= 0 || rule.MaxRequests <= 0 {
+		if rule.WindowSeconds <= 0 || rule.MaxRequests <= 0 {
 			c.Next()
 			return
 		}
@@ -57,48 +138,64 @@ func RateLimitMiddleware(client *redis.Client, rule RateLimitRule, keyFunc RateL
 			key = fmt.Sprintf("%s:%s", rule.Prefix, key)
 		}
 
-		result, err := rateLimitScript.Run(
-			c.Request.Context(),
-			client,
-			[]string{key},
-			rule.WindowSeconds,
-			rule.MaxRequests,
-			rule.BlockSeconds,
-		).Result()
-		if err != nil {
-			msg := i18n.T(i18n.ResolveLocale(c), "error.rate_limit_unavailable")
-			if isChannelAPIRequest(c) {
-				response.ChannelError(c, 500, response.CodeInternal, msg, "internal_error")
-			} else {
-				response.Error(c, response.CodeInternal, msg)
+		var count, ttlSeconds int64
+		now := time.Now()
+		incrementLocal := func() {
+			var capacityWarning bool
+			count, ttlSeconds, capacityWarning = local.increment(key, rule, now)
+			if capacityWarning {
+				logger.Warnw(
+					"rate_limit_local_capacity_exhausted",
+					"prefix", rule.Prefix,
+					"max_entries", localRateLimitMaxEntries,
+					"window_seconds", rule.WindowSeconds,
+				)
 			}
-			c.Abort()
-			return
 		}
-
-		values, ok := result.([]interface{})
-		if !ok || len(values) < 2 {
-			msg := i18n.T(i18n.ResolveLocale(c), "error.rate_limit_unavailable")
-			if isChannelAPIRequest(c) {
-				response.ChannelError(c, 500, response.CodeInternal, msg, "internal_error")
+		if client == nil {
+			incrementLocal()
+		} else {
+			result, err := rateLimitScript.Run(
+				c.Request.Context(),
+				client,
+				[]string{key},
+				rule.WindowSeconds,
+				rule.MaxRequests,
+				rule.BlockSeconds,
+			).Result()
+			if err != nil {
+				if local.shouldWarnRedisFallback(now) {
+					logger.Warnw("rate_limit_redis_fallback", "prefix", rule.Prefix, "error", err)
+				}
+				incrementLocal()
 			} else {
-				response.Error(c, response.CodeInternal, msg)
+				values, ok := result.([]interface{})
+				if !ok || len(values) < 2 {
+					if local.shouldWarnRedisFallback(now) {
+						logger.Warnw(
+							"rate_limit_redis_fallback",
+							"prefix", rule.Prefix,
+							"error", fmt.Sprintf("unexpected result shape %T", result),
+						)
+					}
+					incrementLocal()
+				} else {
+					count, ok = toInt64(values[0])
+					if !ok {
+						if local.shouldWarnRedisFallback(now) {
+							logger.Warnw(
+								"rate_limit_redis_fallback",
+								"prefix", rule.Prefix,
+								"error", fmt.Sprintf("invalid count type %T", values[0]),
+							)
+						}
+						incrementLocal()
+					} else {
+						ttlSeconds, _ = toInt64(values[1])
+					}
+				}
 			}
-			c.Abort()
-			return
 		}
-		count, ok := toInt64(values[0])
-		if !ok {
-			msg := i18n.T(i18n.ResolveLocale(c), "error.rate_limit_unavailable")
-			if isChannelAPIRequest(c) {
-				response.ChannelError(c, 500, response.CodeInternal, msg, "internal_error")
-			} else {
-				response.Error(c, response.CodeInternal, msg)
-			}
-			c.Abort()
-			return
-		}
-		ttlSeconds, _ := toInt64(values[1])
 		if count > int64(rule.MaxRequests) {
 			waitSeconds := int(ttlSeconds)
 			if waitSeconds < 1 {
@@ -115,7 +212,7 @@ func RateLimitMiddleware(client *redis.Client, rule RateLimitRule, keyFunc RateL
 			if isChannelAPIRequest(c) {
 				response.ChannelError(c, 429, response.CodeTooManyRequests, msg, "rate_limit_exceeded")
 			} else {
-				response.Error(c, response.CodeTooManyRequests, msg)
+				response.ErrorWithHTTPStatus(c, 429, response.CodeTooManyRequests, msg)
 			}
 			c.Abort()
 			return

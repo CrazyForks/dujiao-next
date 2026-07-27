@@ -3,6 +3,7 @@ package paymenthttp
 import (
 	"context"
 	"io"
+	"net/http"
 	"strings"
 
 	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
@@ -16,7 +17,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const webhookLogValueLimit = 4096
+const maxWebhookBodyBytes = 1 << 20
 
 // WebhookCallbackInput webhook 回调输入。
 type WebhookCallbackInput struct {
@@ -75,7 +76,7 @@ func (h *WebhookHandler) PaypalWebhook(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := readWebhookBody(c)
 	if err != nil {
 		log.Warnw("paypal_webhook_body_read_failed", "channel_id", query.ChannelID, "error", err)
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
@@ -88,9 +89,6 @@ func (h *WebhookHandler) PaypalWebhook(c *gin.Context) {
 		"paypal_transmission_id", strings.TrimSpace(c.GetHeader("Paypal-Transmission-Id")),
 		"paypal_transmission_time", strings.TrimSpace(c.GetHeader("Paypal-Transmission-Time")),
 		"paypal_auth_algo", strings.TrimSpace(c.GetHeader("Paypal-Auth-Algo")),
-		"paypal_cert_url", truncateWebhookLogValue(strings.TrimSpace(c.GetHeader("Paypal-Cert-Url"))),
-		"paypal_transmission_sig", truncateWebhookLogValue(strings.TrimSpace(c.GetHeader("Paypal-Transmission-Sig"))),
-		"raw_body", webhookRawBodyForLog(body),
 	)
 	payment, eventType, err := h.webhooks.HandlePaypalWebhook(WebhookCallbackInput{
 		ChannelID: query.ChannelID,
@@ -122,7 +120,7 @@ func (h *WebhookHandler) StripeWebhook(c *gin.Context) {
 	var query StripeWebhookQuery
 	_ = c.ShouldBindQuery(&query)
 
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := readWebhookBody(c)
 	if err != nil {
 		log.Warnw("stripe_webhook_body_read_failed", "channel_id", query.ChannelID, "error", err)
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
@@ -132,8 +130,6 @@ func (h *WebhookHandler) StripeWebhook(c *gin.Context) {
 		"channel_id", query.ChannelID,
 		"client_ip", c.ClientIP(),
 		"body_size", len(body),
-		"stripe_signature", truncateWebhookLogValue(strings.TrimSpace(c.GetHeader("Stripe-Signature"))),
-		"raw_body", webhookRawBodyForLog(body),
 	)
 
 	payment, eventType, err := h.webhooks.HandleStripeWebhook(WebhookCallbackInput{
@@ -166,7 +162,7 @@ func (h *WebhookHandler) DujiaoPayWebhook(c *gin.Context) {
 	var query DujiaoPayWebhookQuery
 	_ = c.ShouldBindQuery(&query)
 
-	body, err := io.ReadAll(c.Request.Body)
+	body, err := readWebhookBody(c)
 	if err != nil {
 		log.Warnw("dujiaopay_webhook_body_read_failed", "channel_id", query.ChannelID, "error", err)
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
@@ -178,8 +174,6 @@ func (h *WebhookHandler) DujiaoPayWebhook(c *gin.Context) {
 		"body_size", len(body),
 		"dujiaopay_webhook_id", strings.TrimSpace(c.GetHeader("DJP-Webhook-ID")),
 		"dujiaopay_webhook_timestamp", strings.TrimSpace(c.GetHeader("DJP-Webhook-Timestamp")),
-		"dujiaopay_webhook_signature", truncateWebhookLogValue(strings.TrimSpace(c.GetHeader("DJP-Webhook-Signature"))),
-		"raw_body", webhookRawBodyForLog(body),
 	)
 
 	payment, eventType, err := h.webhooks.HandleDujiaoPayWebhook(WebhookCallbackInput{
@@ -204,6 +198,14 @@ func (h *WebhookHandler) DujiaoPayWebhook(c *gin.Context) {
 		return
 	}
 	respondWebhookSuccess(c, log, "dujiaopay_webhook", query.ChannelID, eventType, payment)
+}
+
+func readWebhookBody(c *gin.Context) ([]byte, error) {
+	if c == nil || c.Request == nil || c.Request.Body == nil {
+		return nil, nil
+	}
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxWebhookBodyBytes)
+	return io.ReadAll(c.Request.Body)
 }
 
 func collectRequestHeaders(c *gin.Context) map[string]string {
@@ -265,24 +267,6 @@ func (h *WebhookHandler) enqueuePaymentExceptionAlert(c *gin.Context, data jsonm
 	); err != nil {
 		ginutil.RequestLog(c).Warnw("enqueue_payment_exception_alert_failed", "error", err)
 	}
-}
-
-func truncateWebhookLogValue(raw string) string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return ""
-	}
-	if len(raw) <= webhookLogValueLimit {
-		return raw
-	}
-	return raw[:webhookLogValueLimit] + "...(truncated)"
-}
-
-func webhookRawBodyForLog(body []byte) string {
-	if len(body) == 0 {
-		return ""
-	}
-	return truncateWebhookLogValue(string(body))
 }
 
 func respondPaymentCallbackError(c *gin.Context, err error) {

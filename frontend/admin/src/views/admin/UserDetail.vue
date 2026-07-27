@@ -331,12 +331,17 @@ const submitWalletAdjust = async () => {
     walletError.value = t('admin.userDetail.wallet.errors.invalidAmount')
     return
   }
+  const remark = walletAdjustForm.remark.trim()
+  if (!remark) {
+    walletError.value = t('admin.userDetail.wallet.errors.remarkRequired')
+    return
+  }
   walletSubmitting.value = true
   try {
     const response = await adminAPI.adjustUserWallet(userId.value, {
       operation: walletAdjustForm.operation as 'add' | 'subtract',
       amount,
-      remark: walletAdjustForm.remark.trim() || undefined,
+      remark,
     })
     walletAccount.value = response.data.data?.account || walletAccount.value
     walletAdjustForm.amount = ''
@@ -915,8 +920,10 @@ watch(
             <Input v-model="walletAdjustForm.amount" :placeholder="t('admin.userDetail.wallet.amountPlaceholder')" />
           </div>
           <div>
-            <label class="mb-1.5 block text-xs text-muted-foreground">{{ t('admin.userDetail.wallet.remarkLabel') }}</label>
-            <Input v-model="walletAdjustForm.remark" :placeholder="t('admin.userDetail.wallet.remarkPlaceholder')" />
+            <label class="mb-1.5 block text-xs text-muted-foreground">
+              {{ t('admin.userDetail.wallet.remarkLabel') }} <span class="text-destructive" aria-hidden="true">*</span>
+            </label>
+            <Input v-model="walletAdjustForm.remark" required :placeholder="t('admin.userDetail.wallet.remarkPlaceholder')" />
           </div>
           <div class="flex items-end">
             <Button type="submit" class="w-full md:w-auto" :disabled="walletSubmitting">

@@ -49,7 +49,7 @@ func releaseManualStockByItems(productRepo productcontract.Repository, productSK
 	if productRepo != nil {
 		productOp = productRepo.ReleaseManualStock
 	}
-	return applyManualStockByItems(productRepo, productSKURepo, items, skuOp, productOp)
+	return applyManualStockByItems(productRepo, productSKURepo, items, skuOp, productOp, false)
 }
 
 func ConsumeManualStockByItems(productRepo productcontract.Repository, productSKURepo productcontract.SKURepository, items []orderdomain.OrderItem) error {
@@ -61,7 +61,7 @@ func ConsumeManualStockByItems(productRepo productcontract.Repository, productSK
 	if productRepo != nil {
 		productOp = productRepo.ConsumeManualStock
 	}
-	return applyManualStockByItems(productRepo, productSKURepo, items, skuOp, productOp)
+	return applyManualStockByItems(productRepo, productSKURepo, items, skuOp, productOp, true)
 }
 
 func applyManualStockByItems(
@@ -70,6 +70,7 @@ func applyManualStockByItems(
 	items []orderdomain.OrderItem,
 	updateSKU func(uint, int) (int64, error),
 	updateProduct func(uint, int) (int64, error),
+	requireAffected bool,
 ) error {
 	summary := summarizeManualStockItems(items)
 	if productSKURepo != nil && updateSKU != nil {
@@ -81,8 +82,12 @@ func applyManualStockByItems(
 			if sku == nil || sku.ManualStockTotal == constants.ManualStockUnlimited {
 				continue
 			}
-			if _, err := updateSKU(skuID, quantity); err != nil {
+			affected, err := updateSKU(skuID, quantity)
+			if err != nil {
 				return err
+			}
+			if requireAffected && affected != 1 {
+				return ErrManualStockInsufficient
 			}
 		}
 	}
@@ -102,8 +107,12 @@ func applyManualStockByItems(
 		if product == nil || product.ManualStockTotal == constants.ManualStockUnlimited {
 			continue
 		}
-		if _, err := updateProduct(productID, quantity); err != nil {
+		affected, err := updateProduct(productID, quantity)
+		if err != nil {
 			return err
+		}
+		if requireAffected && affected != 1 {
+			return ErrManualStockInsufficient
 		}
 	}
 	return nil

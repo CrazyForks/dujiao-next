@@ -82,6 +82,11 @@ export interface AdminAuthzPolicy {
   action: string
 }
 
+export interface AdminAuthzRole {
+  role: string
+  immutable: boolean
+}
+
 export interface AdminAuthzMeResponse {
   admin_id: number
   is_super: boolean
@@ -192,7 +197,7 @@ export interface AdminAdjustWalletPayload {
   amount: string
   operation?: 'add' | 'subtract'
   currency?: string
-  remark?: string
+  remark: string
 }
 
 export interface AdminRefundToWalletPayload {
@@ -304,7 +309,7 @@ export const adminAPI = {
   regenerateRecoveryCodes: (data: { code: string }) => api.post('/admin/2fa/recovery-codes/regenerate', data),
   resetAdmin2FA: (id: number) => api.post(`/admin/authz/admins/${id}/2fa/reset`, {}),
   getAuthzMe: () => api.get('/admin/authz/me'),
-  listAuthzRoles: () => api.get('/admin/authz/roles'),
+  listAuthzRoles: () => api.get('/admin/authz/roles', { params: { include_metadata: true } }),
   listAuthzAdmins: () => api.get("/admin/authz/admins"),
   createAuthzAdmin: (data: AuthzCreateAdminRequest) => api.post("/admin/authz/admins", data),
   updateAuthzAdmin: (id: number, data: AuthzUpdateAdminRequest) => api.put(`/admin/authz/admins/${id}`, data),

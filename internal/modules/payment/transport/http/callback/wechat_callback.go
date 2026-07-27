@@ -34,10 +34,8 @@ func (h *Handler) handleWechatCallback(c *gin.Context) bool {
 	var query wechatCallbackQuery
 	_ = c.ShouldBindQuery(&query)
 	log.Infow("wechat_callback_received", "channel_id", query.ChannelID, "client_ip", c.ClientIP(), "body_size", len(body),
-		"wechatpay_signature", truncateCallbackLogValue(strings.TrimSpace(c.GetHeader("Wechatpay-Signature"))),
 		"wechatpay_timestamp", strings.TrimSpace(c.GetHeader("Wechatpay-Timestamp")),
-		"wechatpay_nonce", truncateCallbackLogValue(strings.TrimSpace(c.GetHeader("Wechatpay-Nonce"))),
-		"wechatpay_serial", strings.TrimSpace(c.GetHeader("Wechatpay-Serial")), "raw_body", callbackRawBodyForLog(body))
+		"wechatpay_serial", strings.TrimSpace(c.GetHeader("Wechatpay-Serial")))
 
 	payment, _, err := h.service.HandleWechatWebhook(WechatWebhookInput{
 		ChannelID: query.ChannelID, Headers: collectRequestHeaders(c), Body: body, Context: c.Request.Context(),

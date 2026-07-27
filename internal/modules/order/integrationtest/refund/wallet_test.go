@@ -66,7 +66,7 @@ func setupOrderRefundWalletTest(t *testing.T) (*Service, *gorm.DB) {
 	}
 	gormdb.DB = db
 	walletService := walletServiceForTest(db)
-	orderStore := ordergormstore.New(db)
+	orderStore := ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes")
 	userRepo := userstore.New(db)
 	affiliateSvc := affiliateapp.NewService(affiliategormstore.New(db), nil, nil, nil, nil)
 	settingSvc := settingsapp.NewService(settingsstore.New(db))
@@ -299,9 +299,10 @@ func TestWalletServiceAdminAdjustInsufficient(t *testing.T) {
 	}
 
 	_, _, err := walletServiceForTest(db).AdminAdjustBalance(walletcontract.AdjustBalanceInput{
-		UserID: 102,
-		Delta:  money.FromDecimal(decimal.NewFromInt(-20)),
-		Remark: "测试扣减",
+		UserID:          102,
+		OperatorAdminID: 1,
+		Delta:           money.FromDecimal(decimal.NewFromInt(-20)),
+		Remark:          "测试扣减",
 	})
 	if !errors.Is(err, walletcontract.ErrInsufficientBalance) {
 		t.Fatalf("expected insufficient balance, got: %v", err)
@@ -321,7 +322,7 @@ func TestWalletServiceApplyAndReleaseOrderBalance(t *testing.T) {
 	}
 
 	if err := db.Transaction(func(tx *gorm.DB) error {
-		deducted, err := orderapp.ApplyWalletBalance(walletServiceForTest(db), ordergormstore.UseTransaction(tx), order, true)
+		deducted, err := orderapp.ApplyWalletBalance(walletServiceForTest(db), ordergormstore.UseTransaction(tx, "test-guest-credential-secret-with-32-bytes"), order, true)
 		if err != nil {
 			return err
 		}
@@ -351,7 +352,7 @@ func TestWalletServiceApplyAndReleaseOrderBalance(t *testing.T) {
 	if err := db.Transaction(func(tx *gorm.DB) error {
 		refunded, err := orderapp.ReleaseWalletBalance(
 			walletServiceForTest(db),
-			ordergormstore.UseTransaction(tx),
+			ordergormstore.UseTransaction(tx, "test-guest-credential-secret-with-32-bytes"),
 			order,
 			constants.WalletTxnTypeOrderRefund,
 			"测试回退",

@@ -75,7 +75,7 @@ func assertOrderMissing(t *testing.T, order *orderdomain.Order) {
 
 func TestOrderRepositoryTenantScopePointQueriesAndLists(t *testing.T) {
 	db := openOrderTenantScopeTestDB(t)
-	repo := New(db)
+	repo := New(db, "test-guest-credential-secret-with-32-bytes")
 	user := userdomain.User{Email: "scope-user@example.com", PasswordHash: "hash"}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("create user failed: %v", err)
@@ -96,6 +96,9 @@ func TestOrderRepositoryTenantScopePointQueriesAndLists(t *testing.T) {
 	_ = child
 	_ = guestMain
 	_ = guestReseller
+	if _, err := repo.BackfillGuestCredentialHashes(); err != nil {
+		t.Fatalf("hash seeded guest credentials failed: %v", err)
+	}
 
 	got, err := repo.GetByOrderNoAndUserScoped(mainOrder.OrderNo, user.ID, mainScope)
 	if err != nil {
@@ -197,7 +200,7 @@ func TestOrderRepositoryTenantScopePointQueriesAndLists(t *testing.T) {
 
 func TestOrderStoreExcludesSoftDeletedAggregatesAndAssociations(t *testing.T) {
 	db := openOrderTenantScopeTestDB(t)
-	store := New(db)
+	store := New(db, "test-guest-credential-secret-with-32-bytes")
 	now := time.Now().UTC().Truncate(time.Second)
 
 	deletedRoot := seedScopedOrder(t, db, "SOFT-DELETED-ROOT", 1, "", "", constants.OrderStatusPaid, nil, nil)

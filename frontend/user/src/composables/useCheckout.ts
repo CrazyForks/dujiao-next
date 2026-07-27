@@ -13,6 +13,7 @@ import { buildSkuDisplayText, normalizeSkuId } from '../utils/sku'
 import { refreshCartStockSnapshots, cartItemPurchaseLimit as itemPurchaseLimit, cartItemPurchaseMin as itemPurchaseMin } from '../utils/cartStock'
 import { getImageUrl } from '../utils/image'
 import { getAffiliateCode, getAffiliateVisitorKey } from '../utils/affiliate'
+import { saveGuestOrderAuth } from '../utils/guestOrderAuth'
 import ImageCaptcha from '../components/captcha/ImageCaptcha.vue'
 import TurnstileCaptcha from '../components/captcha/TurnstileCaptcha.vue'
 import { useLocalized, useProductLabels } from './useProduct'
@@ -831,10 +832,10 @@ export function useCheckout() {
           order_password: guestPassword.value,
           captcha_payload: getGuestCaptchaPayload(),
         })
-        localStorage.setItem('guest_order_auth', JSON.stringify({
+        saveGuestOrderAuth({
           email: guestEmail.value.trim(),
           order_password: guestPassword.value,
-        }))
+        })
         responseData = response.data.data
       }
 

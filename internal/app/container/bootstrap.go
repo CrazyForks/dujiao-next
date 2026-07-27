@@ -1,6 +1,8 @@
 package container
 
 import (
+	"errors"
+
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
@@ -20,7 +22,10 @@ import (
 )
 
 // NewContainer 初始化应用依赖容器。
-func NewContainer(cfg *config.Config) *Container {
+func NewContainer(cfg *config.Config) (*Container, error) {
+	if cfg == nil {
+		return nil, errors.New("container config is nil")
+	}
 	if err := cache.InitRedis(&cfg.Redis); err != nil {
 		logger.Warnw("provider_init_redis_failed", "error", err)
 	}
@@ -40,9 +45,11 @@ func NewContainer(cfg *config.Config) *Container {
 		QueueClient:             queueClient,
 		PaymentProviderRegistry: newPaymentProviderRegistry(),
 	}
-	c.initRepositories()
+	if err := c.initRepositories(); err != nil {
+		return nil, err
+	}
 	c.initServices()
-	return c
+	return c, nil
 }
 
 // newPaymentProviderRegistry 注册应用支持的全部支付适配器。

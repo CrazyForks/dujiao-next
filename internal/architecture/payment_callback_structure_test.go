@@ -1,6 +1,7 @@
 package architecture
 
 import (
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -13,10 +14,13 @@ func TestPaymentCallbackImplementationIsSplitByResponsibility(t *testing.T) {
 	expected := map[string][]string{
 		"payment_service_callback.go": {
 			"HandleCallback", "updateCallbackMeta", "applyPaymentUpdate",
-			"mergeProviderPayload", "markOrderPaid",
+			"mergeProviderPayload", "markOrderPaid", "validateCallbackPaymentFacts",
+			"updateCallbackMetaWithRepo", "canAdoptVerifiedLegacyDujiaoPayCurrency",
+			"adoptVerifiedLegacyDujiaoPayCurrency",
 		},
 		"payment_service_callback_wallet.go": {
 			"handleWalletRechargeCallback", "applyWalletRechargePaymentUpdate", "canApplyWalletRechargeCallback",
+			"validateWalletCallbackPaymentFacts",
 		},
 		"payment_service_callback_dispatch.go": {
 			"enqueueOrderPaidAsync", "enqueueProcurementAsync", "enqueueDownstreamCallbackAsync",
@@ -70,6 +74,36 @@ func TestPaymentCallbackTypesLiveWithTheirResponsibilities(t *testing.T) {
 		gotFiles := actualOwner[typeName]
 		if len(gotFiles) != 1 || gotFiles[0] != wantFile {
 			t.Errorf("%s ownership mismatch: want [%s], got %v", typeName, wantFile, gotFiles)
+		}
+	}
+}
+
+func TestPaymentCallbackTransportDoesNotLogRawAuthenticationMaterial(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	files := []string{
+		filepath.Join(repositoryRoot, "internal", "modules", "payment", "transport", "http", "webhook_handler.go"),
+		filepath.Join(repositoryRoot, "internal", "modules", "payment", "transport", "http", "callback", "form_callbacks.go"),
+		filepath.Join(repositoryRoot, "internal", "modules", "payment", "transport", "http", "callback", "json_callbacks.go"),
+		filepath.Join(repositoryRoot, "internal", "modules", "payment", "transport", "http", "callback", "wechat_callback.go"),
+	}
+	forbidden := []string{
+		`"raw_body"`,
+		`"raw_form"`,
+		`"paypal_transmission_sig"`,
+		`"stripe_signature"`,
+		`"dujiaopay_webhook_signature"`,
+		`"wechatpay_signature"`,
+		`"wechatpay_nonce"`,
+	}
+	for _, file := range files {
+		source, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("read %s: %v", file, err)
+		}
+		for _, token := range forbidden {
+			if strings.Contains(string(source), token) {
+				t.Errorf("%s must not log sensitive callback field %s", filepath.Base(file), token)
+			}
 		}
 	}
 }

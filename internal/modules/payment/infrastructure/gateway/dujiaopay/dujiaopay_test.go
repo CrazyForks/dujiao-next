@@ -155,11 +155,19 @@ func TestValidateConfigCashierMode(t *testing.T) {
 		t.Fatalf("AllowedMethodList = %v, want [tron-usdt base-usdc]", methods)
 	}
 
+	// 未收录但符合 "<chain>-<token>" 约定的 token_id 允许配置，避免上游新增链时必须改代码。
+	unlistedMethod := base()
+	unlistedMethod.OrderMode = "cashier"
+	unlistedMethod.AllowedMethods = "doge-usdt"
+	if err := ValidateConfig(unlistedMethod); err != nil {
+		t.Fatalf("unlisted but resolvable allowed method should pass: %v", err)
+	}
+
 	badMethod := base()
 	badMethod.OrderMode = "cashier"
-	badMethod.AllowedMethods = "doge-usdt"
+	badMethod.AllowedMethods = "dogeusdt"
 	if err := ValidateConfig(badMethod); !errors.Is(err, ErrUnsupportedToken) {
-		t.Fatalf("invalid allowed method should fail with ErrUnsupportedToken, got %v", err)
+		t.Fatalf("unresolvable allowed method should fail with ErrUnsupportedToken, got %v", err)
 	}
 
 	badMode := base()
@@ -174,6 +182,39 @@ func TestValidateConfigCashierMode(t *testing.T) {
 	}
 	if transaction.AllowedMethods != "" {
 		t.Fatalf("transaction should clear allowed_methods")
+	}
+}
+
+func TestResolveChainSupportsBSCUSDC(t *testing.T) {
+	if got := ResolveChain("bsc-usdc"); got != "bsc" {
+		t.Fatalf("ResolveChain(bsc-usdc) = %q, want bsc", got)
+	}
+	if !IsSupportedTokenID("BSC-USDC") {
+		t.Fatalf("IsSupportedTokenID should accept bsc-usdc case-insensitively")
+	}
+}
+
+// ResolveChain 对未收录的 token_id 按最后一个连字符切分，使 DujiaoPay 新增链或代币时
+// 管理员直接填写即可；无法切分出 chain 的值必须返回空以便上层拒绝。
+func TestResolveChainFallsBackToNamingConvention(t *testing.T) {
+	cases := []struct {
+		tokenID string
+		want    string
+	}{
+		{"x-layer-usdt0", "x-layer"}, // 内置项，chain 自身含连字符
+		{"doge-usdt", "doge"},        // 未收录但符合约定
+		{"SUI-USDC", "sui"},          // 大小写与空白规范化
+		{" sui-usdc ", "sui"},
+		{"new-chain-usdt", "new-chain"},
+		{"dogeusdt", ""}, // 缺少连字符
+		{"-usdt", ""},    // chain 为空
+		{"tron-", ""},    // token 为空
+		{"", ""},
+	}
+	for _, tc := range cases {
+		if got := ResolveChain(tc.tokenID); got != tc.want {
+			t.Fatalf("ResolveChain(%q) = %q, want %q", tc.tokenID, got, tc.want)
+		}
 	}
 }
 
@@ -270,7 +311,7 @@ func TestCreatePaymentCashierWithoutAllowedMethodsOmitsField(t *testing.T) {
 }
 
 func TestParseWebhookVerifiesSignatureAndMapsPaidEvent(t *testing.T) {
-	body := []byte(`{"event_id":"evt_1","event_type":"order.paid","event_version":"v1","created_at":"2026-06-06T12:00:00Z","data":{"order_id":"do_1001","merchant_order_id":"PAY-1001","tx_hash":"0xabc"}}`)
+	body := []byte(`{"event_id":"evt_1","event_type":"order.paid","event_version":"v1","created_at":"2026-06-06T12:00:00Z","data":{"order_id":"do_1001","merchant_order_id":"PAY-1001","fiat_currency":"usd","fiat_amount":"20.00","payable_amount":"20.145","tx_id":"0xabc"}}`)
 	mac := hmac.New(sha256.New, []byte("whsec-1"))
 	mac.Write([]byte("1750000000."))
 	mac.Write(body)
@@ -293,8 +334,30 @@ func TestParseWebhookVerifiesSignatureAndMapsPaidEvent(t *testing.T) {
 	if event.OrderID != "do_1001" || event.MerchantOrderID != "PAY-1001" {
 		t.Fatalf("unexpected ids: %+v", event)
 	}
-	if event.TxHash != "0xabc" {
-		t.Fatalf("TxHash = %q, want 0xabc", event.TxHash)
+	if event.FiatCurrency != "USD" || event.FiatAmount != "20.00" {
+		t.Fatalf("unexpected fiat facts: currency=%q amount=%q", event.FiatCurrency, event.FiatAmount)
+	}
+	if event.TransactionID != "0xabc" {
+		t.Fatalf("TransactionID = %q, want 0xabc", event.TransactionID)
+	}
+}
+
+func TestParseWebhookAcceptsLegacyTxHash(t *testing.T) {
+	body := []byte(`{"event_id":"evt_legacy","event_type":"order.paid","event_version":"v1","created_at":"2026-06-06T12:00:00Z","data":{"order_id":"do_legacy","merchant_order_id":"PAY-LEGACY","fiat_currency":"CNY","fiat_amount":"88.00","tx_hash":"0xlegacy"}}`)
+	mac := hmac.New(sha256.New, []byte("whsec-1"))
+	mac.Write([]byte("1750000000."))
+	mac.Write(body)
+	signature := hex.EncodeToString(mac.Sum(nil))
+
+	event, err := ParseWebhook(&Config{WebhookSecret: "whsec-1"}, map[string]string{
+		"DJP-Webhook-Timestamp": "1750000000",
+		"DJP-Webhook-Signature": signature,
+	}, body, time.Unix(1750000010, 0))
+	if err != nil {
+		t.Fatalf("ParseWebhook failed: %v", err)
+	}
+	if event.TransactionID != "0xlegacy" {
+		t.Fatalf("TransactionID = %q, want legacy tx_hash", event.TransactionID)
 	}
 }
 
@@ -319,5 +382,21 @@ func TestParseWebhookMethodSelectedEventMapsToEmptyStatus(t *testing.T) {
 	// 延迟分配订单选定链/币事件不改变支付状态，service 层按空 status 忽略。
 	if event.Status != "" {
 		t.Fatalf("Status = %q, want empty", event.Status)
+	}
+}
+
+func TestParseWebhookRejectsProcessableEventWithoutBoundIdentifiers(t *testing.T) {
+	body := []byte(`{"event_id":"evt_missing","event_type":"order.paid","event_version":"v1","created_at":"2026-06-06T12:00:00Z","data":{"merchant_order_id":"PAY-1001","tx_hash":"0xabc"}}`)
+	mac := hmac.New(sha256.New, []byte("whsec-1"))
+	mac.Write([]byte("1750000000."))
+	mac.Write(body)
+	signature := hex.EncodeToString(mac.Sum(nil))
+
+	_, err := ParseWebhook(&Config{WebhookSecret: "whsec-1"}, map[string]string{
+		"DJP-Webhook-Timestamp": "1750000000",
+		"DJP-Webhook-Signature": signature,
+	}, body, time.Unix(1750000010, 0))
+	if !errors.Is(err, ErrResponseInvalid) {
+		t.Fatalf("processable event without order binding must fail with ErrResponseInvalid, got %v", err)
 	}
 }

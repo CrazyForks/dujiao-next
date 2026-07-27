@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/dujiao-next/internal/authz"
 	"github.com/dujiao-next/internal/i18n"
 	"github.com/dujiao-next/internal/logger"
 	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
@@ -45,6 +46,13 @@ type Policy struct {
 	Subject string `json:"subject"`
 	Object  string `json:"object"`
 	Action  string `json:"action"`
+}
+
+// AuthzRoleItem 是角色列表的管理端响应；immutable 由后端内置角色种子计算，
+// 避免前端维护第二份角色名单。
+type AuthzRoleItem struct {
+	Role      string `json:"role"`
+	Immutable bool   `json:"immutable"`
 }
 
 // RolePolicyService 角色与策略管理端口。
@@ -199,7 +207,35 @@ func (h *AdminHandler) ListAuthzRoles(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeInternal, "error.config_fetch_failed", err)
 		return
 	}
-	response.Success(c, roles)
+	includeMetadata, err := ginutil.ParseQueryBool(c, "include_metadata")
+	if err != nil {
+		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
+		return
+	}
+	if !includeMetadata {
+		// 保持旧版管理端客户端使用的字符串数组响应。
+		response.Success(c, buildAuthzRoleListPayload(roles, false))
+		return
+	}
+	response.Success(c, buildAuthzRoleListPayload(roles, true))
+}
+
+func buildAuthzRoleListPayload(roles []string, includeMetadata bool) interface{} {
+	if !includeMetadata {
+		return roles
+	}
+	return buildAuthzRoleItems(roles)
+}
+
+func buildAuthzRoleItems(roles []string) []AuthzRoleItem {
+	items := make([]AuthzRoleItem, 0, len(roles))
+	for _, role := range roles {
+		items = append(items, AuthzRoleItem{
+			Role:      role,
+			Immutable: authz.IsImmutableBuiltinRole(role),
+		})
+	}
+	return items
 }
 
 // ListAuthzAdmins 获取管理员列表
@@ -274,6 +310,10 @@ func (h *AdminHandler) DeleteAuthzRole(c *gin.Context) {
 	}
 
 	if err := h.authz.DeleteRole(role); err != nil {
+		if errors.Is(err, authz.ErrImmutableBuiltinRole) {
+			ginutil.RespondError(c, response.CodeBadRequest, "error.authz_builtin_role_immutable", err)
+			return
+		}
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
@@ -322,6 +362,10 @@ func (h *AdminHandler) GrantAuthzPolicy(c *gin.Context) {
 	}
 
 	if err := h.authz.GrantRolePolicy(req.Role, req.Object, req.Action); err != nil {
+		if errors.Is(err, authz.ErrImmutableBuiltinRole) {
+			ginutil.RespondError(c, response.CodeBadRequest, "error.authz_builtin_role_immutable", err)
+			return
+		}
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}
@@ -347,6 +391,10 @@ func (h *AdminHandler) RevokeAuthzPolicy(c *gin.Context) {
 	}
 
 	if err := h.authz.RevokeRolePolicy(req.Role, req.Object, req.Action); err != nil {
+		if errors.Is(err, authz.ErrImmutableBuiltinRole) {
+			ginutil.RespondError(c, response.CodeBadRequest, "error.authz_builtin_role_immutable", err)
+			return
+		}
 		ginutil.RespondError(c, response.CodeBadRequest, "error.bad_request", err)
 		return
 	}

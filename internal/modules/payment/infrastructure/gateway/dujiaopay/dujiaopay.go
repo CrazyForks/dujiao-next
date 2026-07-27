@@ -83,7 +83,9 @@ type WebhookEvent struct {
 	CreatedAt       *time.Time
 	OrderID         string
 	MerchantOrderID string
-	TxHash          string
+	FiatCurrency    string
+	FiatAmount      string
+	TransactionID   string
 	Status          string
 	PaidAt          *time.Time
 	Raw             map[string]interface{}
@@ -184,7 +186,8 @@ func ValidateConfig(cfg *Config) error {
 	}
 	if cfg.OrderMode == constants.PaymentDujiaoPayOrderModeCashier {
 		for _, tokenID := range cfg.AllowedMethodList() {
-			if !IsSupportedTokenID(tokenID) {
+			// 只要求能推导出 chain，不限定在内置映射表内，便于上游新增链或代币时直接配置。
+			if ResolveChain(tokenID) == "" {
 				return fmt.Errorf("%w: %s", ErrUnsupportedToken, tokenID)
 			}
 		}
@@ -193,11 +196,8 @@ func ValidateConfig(cfg *Config) error {
 	if cfg.TokenID == "" {
 		return fmt.Errorf("%w: token_id is required", ErrConfigInvalid)
 	}
-	if !IsSupportedTokenID(cfg.TokenID) {
-		return fmt.Errorf("%w: %s", ErrUnsupportedToken, cfg.TokenID)
-	}
 	if cfg.Chain == "" {
-		return fmt.Errorf("%w: chain is required", ErrConfigInvalid)
+		return fmt.Errorf("%w: %s", ErrUnsupportedToken, cfg.TokenID)
 	}
 	return nil
 }
@@ -224,15 +224,23 @@ func (c *Config) AllowedMethodList() []string {
 }
 
 // ResolveChain 根据 DujiaoPay token_id 推导 chain。
+// 内置映射命中时直接返回；未收录的 token_id 按 DujiaoPay 的 "<chain>-<token>" 命名约定，
+// 从最后一个连字符处切分（x-layer-usdt0 -> x-layer），使上游新增链或代币时无需同步改代码。
+// 无法推导出 chain 的值返回空字符串，由 ValidateConfig 拒绝。
 func ResolveChain(tokenID string) string {
 	tokenID = strings.ToLower(strings.TrimSpace(tokenID))
 	if chain, ok := supportedTokenChains[tokenID]; ok {
 		return chain
 	}
+	if idx := strings.LastIndex(tokenID, "-"); idx > 0 && idx < len(tokenID)-1 {
+		return tokenID[:idx]
+	}
 	return ""
 }
 
-// IsSupportedTokenID 判断 token_id 是否在 DujiaoPay 文档列出的支持范围内。
+// IsSupportedTokenID 判断 token_id 是否已收录在内置映射表中。
+// 该表仅用于精确解析 chain，不再作为准入白名单：未收录但符合命名约定的 token_id
+// 同样可用，准入条件是 ResolveChain 能推导出非空 chain。
 func IsSupportedTokenID(tokenID string) bool {
 	_, ok := supportedTokenChains[strings.ToLower(strings.TrimSpace(tokenID))]
 	return ok
@@ -246,6 +254,7 @@ var supportedTokenChains = map[string]string{
 	"ethereum-usdc":  "ethereum",
 	"bsc-bnb":        "bsc",
 	"bsc-usdt":       "bsc",
+	"bsc-usdc":       "bsc",
 	"polygon-usdc":   "polygon",
 	"polygon-usdt0":  "polygon",
 	"base-usdc":      "base",
@@ -439,16 +448,29 @@ func ParseWebhook(cfg *Config, headers map[string]string, body []byte, now time.
 	if eventID == "" {
 		eventID = strings.TrimSpace(headerValue(headers, "DJP-Webhook-ID"))
 	}
+	eventType := strings.TrimSpace(envelope.EventType)
+	status := toPaymentStatus(eventType)
+	orderID := strings.TrimSpace(envelope.Data.OrderID)
+	merchantOrderID := strings.TrimSpace(envelope.Data.MerchantOrderID)
+	if status != "" && (eventID == "" || orderID == "" || merchantOrderID == "") {
+		return nil, fmt.Errorf("%w: missing event_id/order_id/merchant_order_id", ErrResponseInvalid)
+	}
+	transactionID := strings.TrimSpace(envelope.Data.TxID)
+	if transactionID == "" {
+		transactionID = strings.TrimSpace(envelope.Data.TxHash)
+	}
 
 	return &WebhookEvent{
 		EventID:         eventID,
-		EventType:       strings.TrimSpace(envelope.EventType),
+		EventType:       eventType,
 		EventVersion:    strings.TrimSpace(envelope.EventVersion),
 		CreatedAt:       createdAt,
-		OrderID:         strings.TrimSpace(envelope.Data.OrderID),
-		MerchantOrderID: strings.TrimSpace(envelope.Data.MerchantOrderID),
-		TxHash:          strings.TrimSpace(envelope.Data.TxHash),
-		Status:          toPaymentStatus(envelope.EventType),
+		OrderID:         orderID,
+		MerchantOrderID: merchantOrderID,
+		FiatCurrency:    strings.ToUpper(strings.TrimSpace(envelope.Data.FiatCurrency)),
+		FiatAmount:      strings.TrimSpace(envelope.Data.FiatAmount),
+		TransactionID:   transactionID,
+		Status:          status,
 		PaidAt:          paidAt,
 		Raw:             raw,
 	}, nil
@@ -465,8 +487,12 @@ type webhookEnvelope struct {
 type webhookData struct {
 	OrderID         string `json:"order_id"`
 	MerchantOrderID string `json:"merchant_order_id"`
-	TxHash          string `json:"tx_hash"`
-	PaidAt          string `json:"paid_at"`
+	FiatCurrency    string `json:"fiat_currency"`
+	FiatAmount      string `json:"fiat_amount"`
+	TxID            string `json:"tx_id"`
+	// TxHash 兼容早期 DujiaoPay webhook 字段；当前公开契约使用 tx_id。
+	TxHash string `json:"tx_hash"`
+	PaidAt string `json:"paid_at"`
 }
 
 func parseCreateResult(raw map[string]interface{}) *CreateResult {

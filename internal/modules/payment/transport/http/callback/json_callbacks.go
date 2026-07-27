@@ -94,7 +94,7 @@ func (h *Handler) handleOkpayCallback(c *gin.Context) bool {
 		ginutil.RequestLog(c).Debugw("okpay_callback_not_matched", "reason", "missing_sign_or_ids")
 		return false
 	}
-	ginutil.RequestLog(c).Infow("okpay_callback_received", "unique_id", uniqueID, "order_id", orderID, "raw_body", callbackRawBodyForLog(body))
+	ginutil.RequestLog(c).Infow("okpay_callback_received", "unique_id", uniqueID, "order_id", orderID, "body_size", len(body))
 	return h.processBodyCallback(c, body, bodyCallback{
 		providerType: constants.PaymentProviderOkpay, logPrefix: "okpay",
 		orderNo: uniqueID, providerRef: orderID,
@@ -122,7 +122,7 @@ func (h *Handler) handleTokenPayCallback(c *gin.Context) bool {
 		ginutil.RequestLog(c).Debugw("tokenpay_callback_not_matched")
 		return false
 	}
-	ginutil.RequestLog(c).Infow("tokenpay_callback_received", "out_order_id", probe.OrderID, "token_order_id", probe.TokenID, "raw_body", callbackRawBodyForLog(body))
+	ginutil.RequestLog(c).Infow("tokenpay_callback_received", "out_order_id", probe.OrderID, "token_order_id", probe.TokenID, "body_size", len(body))
 	return h.processBodyCallback(c, body, bodyCallback{
 		providerType: constants.PaymentProviderTokenpay, logPrefix: "tokenpay",
 		orderNo: probe.OrderID, providerRef: probe.TokenID,
@@ -148,7 +148,7 @@ func (h *Handler) handleEpusdtCallback(c *gin.Context) bool {
 		ginutil.RequestLog(c).Debugw("epusdt_callback_feature_missing", "has_pid", strings.TrimSpace(probe.PID) != "", "has_trade_id", probe.TradeID != "", "has_order_id", probe.OrderID != "")
 		return false
 	}
-	ginutil.RequestLog(c).Infow("epusdt_callback_received", "pid", probe.PID, "trade_id", probe.TradeID, "order_id", probe.OrderID, "raw_body", callbackRawBodyForLog(body))
+	ginutil.RequestLog(c).Infow("epusdt_callback_received", "pid", probe.PID, "trade_id", probe.TradeID, "order_id", probe.OrderID, "body_size", len(body))
 	return h.processBodyCallback(c, body, bodyCallback{
 		providerType: constants.PaymentProviderEpusdt, logPrefix: "epusdt",
 		orderNo: probe.OrderID, providerRef: probe.TradeID,
@@ -173,7 +173,7 @@ func (h *Handler) handleBepusdtCallback(c *gin.Context) bool {
 		ginutil.RequestLog(c).Debugw("bepusdt_callback_missing_fields", "trade_id", probe.TradeID, "order_id", probe.OrderID)
 		return false
 	}
-	ginutil.RequestLog(c).Infow("bepusdt_callback_received", "trade_id", probe.TradeID, "order_id", probe.OrderID, "raw_body", callbackRawBodyForLog(body))
+	ginutil.RequestLog(c).Infow("bepusdt_callback_received", "trade_id", probe.TradeID, "order_id", probe.OrderID, "body_size", len(body))
 	return h.processBodyCallback(c, body, bodyCallback{
 		providerType: constants.PaymentProviderBepusdt, logPrefix: "bepusdt",
 		orderNo: probe.OrderID, providerRef: probe.TradeID,

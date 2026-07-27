@@ -2,10 +2,14 @@ package dujiaopayadapter
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	paymentcontract "github.com/dujiao-next/internal/modules/payment/contract"
 
@@ -26,18 +30,36 @@ func TestDujiaoPayAdapter_Type(t *testing.T) {
 
 func TestDujiaoPayAdapter_ValidateConfig_UnsupportedToken(t *testing.T) {
 	a := NewDujiaoPayAdapter()
-	err := a.ValidateConfig(jsonmap.JSON{
+	base := jsonmap.JSON{
 		"api_base_url":   "https://api.example.com",
 		"api_key_id":     "key-1",
 		"api_secret":     "secret-1",
 		"webhook_secret": "whsec-1",
 		"fiat_currency":  "USD",
-	}, "doge-usdt")
+	}
+
+	// 未收录但符合 "<chain>-<token>" 约定的 token_id 允许配置，DujiaoPay 新增链时无需改代码。
+	if err := a.ValidateConfig(base, "doge-usdt"); err != nil {
+		t.Fatalf("unlisted but resolvable token_id should pass: %v", err)
+	}
+
+	// 无法推导出 chain 的 token_id 仍然拒绝，避免发出 chain 为空的建单请求。
+	err := a.ValidateConfig(base, "dogeusdt")
 	if err == nil {
 		t.Fatalf("expected unsupported token error")
 	}
 	if !errors.Is(err, paymentcontract.ErrGatewayUnsupportedChannel) {
 		t.Fatalf("expected paymentcontract.ErrGatewayUnsupportedChannel, got %v", err)
+	}
+
+	// 逃生舱：命名不符合约定时，显式配置 chain 后仍可使用。
+	withExplicitChain := jsonmap.JSON{}
+	for k, v := range base {
+		withExplicitChain[k] = v
+	}
+	withExplicitChain["chain"] = "doge"
+	if err := a.ValidateConfig(withExplicitChain, "dogeusdt"); err != nil {
+		t.Fatalf("explicit chain should allow an unconventional token_id: %v", err)
 	}
 }
 
@@ -175,5 +197,43 @@ func TestDujiaoPayAdapter_CreatePaymentQRCodeModeUsesWalletAddress(t *testing.T)
 	}
 	if result.Payload["token_id"] != "tron-usdt" {
 		t.Fatalf("payload token_id = %v", result.Payload["token_id"])
+	}
+	if result.AmountSent != "10" || result.CurrencySent != "USD" {
+		t.Fatalf("sent payment facts = %s %s, want 10 USD", result.AmountSent, result.CurrencySent)
+	}
+	if got := result.Payload[paymentcontract.GatewayPayloadFiatCurrencySent]; got != "USD" {
+		t.Fatalf("gateway fiat currency snapshot = %#v, want USD", got)
+	}
+}
+
+func TestDujiaoPayAdapter_ParseWebhookMapsFiatFactsAndTransactionID(t *testing.T) {
+	body := []byte(`{"event_id":"evt_paid","event_type":"order.paid","event_version":"v1","created_at":"2026-06-06T12:00:00Z","data":{"order_id":"do_paid","merchant_order_id":"PAY-PAID","fiat_currency":"usd","fiat_amount":"20.00","payable_amount":"20.145","tx_id":"0xpaid","paid_at":"2026-06-06T12:00:01Z"}}`)
+	mac := hmac.New(sha256.New, []byte("whsec-1"))
+	mac.Write([]byte("1750000000."))
+	mac.Write(body)
+	signature := hex.EncodeToString(mac.Sum(nil))
+
+	a := NewDujiaoPayAdapter()
+	webhooker, ok := a.(paymentcontract.GatewayWebhooker)
+	if !ok {
+		t.Fatalf("DujiaoPay adapter must implement GatewayWebhooker")
+	}
+	result, err := webhooker.ParseWebhook(context.Background(), jsonmap.JSON{
+		"webhook_secret": "whsec-1",
+	}, map[string]string{
+		"DJP-Webhook-Timestamp": "1750000000",
+		"DJP-Webhook-Signature": signature,
+	}, body, time.Unix(1750000010, 0))
+	if err != nil {
+		t.Fatalf("ParseWebhook failed: %v", err)
+	}
+	if result.Amount.Decimal.Cmp(decimal.RequireFromString("20.00")) != 0 {
+		t.Fatalf("Amount = %s, want 20.00", result.Amount.String())
+	}
+	if result.Currency != "USD" {
+		t.Fatalf("Currency = %q, want USD", result.Currency)
+	}
+	if result.Payload["tx_id"] != "0xpaid" {
+		t.Fatalf("payload tx_id = %v, want 0xpaid", result.Payload["tx_id"])
 	}
 }

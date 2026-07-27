@@ -182,7 +182,7 @@ func newOrderResellerSnapshotFixture(t *testing.T) orderResellerSnapshotFixture 
 	}
 
 	resellerRepo := resellergormstore.New(db)
-	orderStore := ordergormstore.New(db)
+	orderStore := ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes")
 	q := &fakeOrderTimeoutQueue{}
 	svc := NewOrderService(OrderServiceOptions{
 		OrderStore:              orderStore,
@@ -618,10 +618,11 @@ func TestOrderServiceTenantScopedGuestQueries(t *testing.T) {
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	if err := f.db.Create(&mainOrder).Error; err != nil {
+	orderStore := ordergormstore.New(f.db, "test-guest-credential-secret-with-32-bytes")
+	if err := orderStore.Create(&mainOrder, nil); err != nil {
 		t.Fatalf("create main guest order failed: %v", err)
 	}
-	if err := f.db.Create(&resellerOrder).Error; err != nil {
+	if err := orderStore.Create(&resellerOrder, nil); err != nil {
 		t.Fatalf("create reseller guest order failed: %v", err)
 	}
 

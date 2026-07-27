@@ -1,6 +1,7 @@
 package authz
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,6 +12,8 @@ import (
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"gorm.io/gorm"
 )
+
+var ErrImmutableBuiltinRole = errors.New("immutable builtin role")
 
 const (
 	apiV1Prefix     = "/api/v1"
@@ -181,6 +184,9 @@ func (s *Service) DeleteRole(role string) error {
 	if normalized == roleAnchor {
 		return fmt.Errorf("reserved role is not allowed")
 	}
+	if IsImmutableBuiltinRole(normalized) {
+		return ErrImmutableBuiltinRole
+	}
 	if s == nil || s.enforcer == nil {
 		return fmt.Errorf("authz service unavailable")
 	}
@@ -212,6 +218,9 @@ func (s *Service) DeleteRole(role string) error {
 
 // GrantRolePolicy 为角色授予策略
 func (s *Service) GrantRolePolicy(role, object, action string) error {
+	if IsImmutableBuiltinRole(role) {
+		return ErrImmutableBuiltinRole
+	}
 	normalizedRole, err := s.EnsureRole(role)
 	if err != nil {
 		return err
@@ -242,6 +251,9 @@ func (s *Service) RevokeRolePolicy(role, object, action string) error {
 	normalizedRole, err := NormalizeRole(role)
 	if err != nil {
 		return err
+	}
+	if IsImmutableBuiltinRole(normalizedRole) {
+		return ErrImmutableBuiltinRole
 	}
 	normalizedObject := NormalizeObject(object)
 	normalizedAction := NormalizeAction(action)
@@ -424,6 +436,25 @@ func NormalizeRole(role string) (string, error) {
 		return "", fmt.Errorf("role is required")
 	}
 	return normalized, nil
+}
+
+// IsImmutableBuiltinRole 判断角色是否由启动引导流程完全托管。
+// 这类角色允许分配给管理员，但不允许通过通用角色 API 改写或删除。
+func IsImmutableBuiltinRole(role string) bool {
+	normalized, err := NormalizeRole(role)
+	if err != nil {
+		return false
+	}
+	for _, seed := range BuiltinRoleSeeds() {
+		if !seed.Immutable {
+			continue
+		}
+		seedRole, err := NormalizeRole(seed.Role)
+		if err == nil && seedRole == normalized {
+			return true
+		}
+	}
+	return false
 }
 
 // NormalizeObject 统一授权资源路径

@@ -36,34 +36,8 @@ func (s *PaymentService) handleWalletRechargeCallback(payment *paymentdomain.Pay
 		return nil, walletcontract.ErrRechargeNotFound
 	}
 
-	if input.ChannelID != 0 && input.ChannelID != payment.ChannelID {
-		log.Warnw("wallet_recharge_callback_channel_mismatch",
-			"stored_channel_id", payment.ChannelID,
-			"callback_channel_id", input.ChannelID,
-		)
-		return nil, ErrPaymentInvalid
-	}
-	if !matchesBusinessOrderNo(input.OrderNo, recharge.RechargeNo, payment) {
-		log.Warnw("wallet_recharge_callback_order_no_mismatch",
-			"stored_recharge_no", recharge.RechargeNo,
-			"stored_gateway_order_no", payment.GatewayOrderNo,
-			"callback_order_no", input.OrderNo,
-		)
-		return nil, ErrPaymentInvalid
-	}
-	if input.Currency != "" && !strings.EqualFold(strings.TrimSpace(input.Currency), strings.TrimSpace(payment.Currency)) {
-		log.Warnw("wallet_recharge_callback_currency_mismatch",
-			"stored_currency", payment.Currency,
-			"callback_currency", input.Currency,
-		)
-		return nil, ErrPaymentCurrencyMismatch
-	}
-	if !input.Amount.Decimal.IsZero() && input.Amount.Decimal.Cmp(payment.Amount.Decimal) != 0 {
-		log.Warnw("wallet_recharge_callback_amount_mismatch",
-			"stored_amount", payment.Amount.String(),
-			"callback_amount", input.Amount.String(),
-		)
-		return nil, ErrPaymentAmountMismatch
+	if err := validateWalletCallbackPaymentFacts(payment, recharge.RechargeNo, status, input); err != nil {
+		return nil, err
 	}
 
 	// 幂等处理：已成功状态仅更新回调元信息。
@@ -89,7 +63,7 @@ func (s *PaymentService) handleWalletRechargeCallback(payment *paymentdomain.Pay
 	}
 
 	now := time.Now()
-	updated, err := s.applyWalletRechargePaymentUpdate(payment, status, input, now)
+	updated, newlySucceeded, err := s.applyWalletRechargePaymentUpdate(payment, status, input, now)
 	if err != nil {
 		log.Errorw("wallet_recharge_callback_apply_failed", "error", err)
 		return nil, err
@@ -97,43 +71,49 @@ func (s *PaymentService) handleWalletRechargeCallback(payment *paymentdomain.Pay
 	log.Infow("wallet_recharge_callback_processed",
 		"new_status", updated.Status,
 	)
-	if updated.Status == constants.PaymentStatusSuccess {
+	if newlySucceeded {
+		reloadedRecharge, reloadErr := s.walletRepo.GetRechargeOrderByPaymentID(payment.ID)
+		if reloadErr != nil {
+			log.Warnw("wallet_recharge_callback_reload_failed", "error", reloadErr)
+		} else if reloadedRecharge != nil {
+			recharge = reloadedRecharge
+		}
+		if recharge != nil {
+			recharge.Status = constants.WalletRechargeStatusSuccess
+			recharge.PaidAt = updated.PaidAt
+			recharge.UpdatedAt = updated.UpdatedAt
+		}
+		if s.memberLevelSvc != nil && recharge != nil && recharge.UserID > 0 {
+			if err := s.memberLevelSvc.OnRechargeCompleted(recharge.UserID, recharge.Amount.Decimal); err != nil {
+				paymentLogger().Warnw("member_level_recharge_completed_failed",
+					"payment_id", payment.ID,
+					"user_id", recharge.UserID,
+					"amount", recharge.Amount.Decimal.String(),
+					"error", err,
+				)
+			}
+		}
 		s.enqueueWalletRechargeSuccessAsync(recharge, updated, log)
 		s.enqueueWalletRechargeBotNotifyAsync(recharge, log)
 	}
 	return updated, nil
 }
 
-func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *paymentdomain.Payment, status string, input PaymentCallbackInput, now time.Time) (*paymentdomain.Payment, error) {
+func validateWalletCallbackPaymentFacts(payment *paymentdomain.Payment, rechargeNo, status string, input PaymentCallbackInput) error {
+	return validateCallbackPaymentFacts(payment, rechargeNo, status, input)
+}
+
+func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *paymentdomain.Payment, status string, input PaymentCallbackInput, now time.Time) (*paymentdomain.Payment, bool, error) {
 	paymentVal := payment
-
-	switch status {
-	case constants.PaymentStatusSuccess:
-		paidAt := now
-		if input.PaidAt != nil {
-			paidAt = *input.PaidAt
-		}
-		payment.PaidAt = &paidAt
-	case constants.PaymentStatusExpired:
-		payment.ExpiredAt = &now
-	}
-
-	payment.Status = status
-	payment.CallbackAt = &now
-	payment.UpdatedAt = now
-	if input.ProviderRef != "" {
-		payment.ProviderRef = input.ProviderRef
-	}
-	if input.Payload != nil {
-		payment.ProviderPayload = mergeProviderPayload(payment.ProviderPayload, input.Payload)
-	}
+	newlySucceeded := false
 
 	err := s.paymentRepo.WithinTransaction(func(tx paymentcontract.Transaction) error {
 		paymentRepo := tx.Payments()
 		walletTx := tx.Wallets()
 		rechargeRepo := walletTx.Wallets()
 
-		if err := paymentRepo.Update(payment); err != nil {
+		lockedPayment, err := paymentRepo.GetByIDForUpdate(payment.ID)
+		if err != nil {
 			return ErrPaymentUpdateFailed
 		}
 		recharge, err := rechargeRepo.GetRechargeOrderByPaymentIDForUpdate(payment.ID)
@@ -142,6 +122,46 @@ func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *paymentdomain
 		}
 		if recharge == nil {
 			return walletcontract.ErrRechargeNotFound
+		}
+		if err := validateWalletCallbackPaymentFacts(lockedPayment, recharge.RechargeNo, status, input); err != nil {
+			return err
+		}
+		adoptVerifiedLegacyDujiaoPayCurrency(lockedPayment, status, input)
+		paymentVal = lockedPayment
+		if lockedPayment.Status == constants.PaymentStatusSuccess {
+			_, err := updateCallbackMetaWithRepo(paymentRepo, lockedPayment, constants.PaymentStatusSuccess, input)
+			return err
+		}
+		if lockedPayment.Status == status {
+			_, err := updateCallbackMetaWithRepo(paymentRepo, lockedPayment, status, input)
+			return err
+		}
+		if !canApplyWalletRechargeCallback(lockedPayment.Status, recharge.Status, status) {
+			_, err := updateCallbackMetaWithRepo(paymentRepo, lockedPayment, lockedPayment.Status, input)
+			return err
+		}
+
+		switch status {
+		case constants.PaymentStatusSuccess:
+			paidAt := now
+			if input.PaidAt != nil {
+				paidAt = *input.PaidAt
+			}
+			lockedPayment.PaidAt = &paidAt
+		case constants.PaymentStatusExpired:
+			lockedPayment.ExpiredAt = &now
+		}
+		lockedPayment.Status = status
+		lockedPayment.CallbackAt = &now
+		lockedPayment.UpdatedAt = now
+		if input.ProviderRef != "" {
+			lockedPayment.ProviderRef = input.ProviderRef
+		}
+		if input.Payload != nil {
+			lockedPayment.ProviderPayload = mergeProviderPayload(lockedPayment.ProviderPayload, input.Payload)
+		}
+		if err := paymentRepo.Update(lockedPayment); err != nil {
+			return ErrPaymentUpdateFailed
 		}
 		if recharge.Status == constants.WalletRechargeStatusSuccess {
 			return nil
@@ -155,10 +175,11 @@ func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *paymentdomain
 			if _, err := s.walletSvc.ApplyRechargePayment(walletTx, recharge); err != nil {
 				return err
 			}
+			newlySucceeded = true
 			recharge.Status = constants.WalletRechargeStatusSuccess
 			paidAt := now
-			if payment.PaidAt != nil {
-				paidAt = *payment.PaidAt
+			if lockedPayment.PaidAt != nil {
+				paidAt = *lockedPayment.PaidAt
 			}
 			recharge.PaidAt = &paidAt
 		case constants.PaymentStatusFailed:
@@ -175,25 +196,9 @@ func (s *PaymentService) applyWalletRechargePaymentUpdate(payment *paymentdomain
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-
-	// 充值成功后触发会员等级升级检查（事务已提交）
-	if status == constants.PaymentStatusSuccess && s.memberLevelSvc != nil {
-		if recharge, _ := s.walletRepo.GetRechargeOrderByPaymentID(payment.ID); recharge != nil &&
-			recharge.Status == constants.WalletRechargeStatusSuccess && recharge.UserID > 0 {
-			if err := s.memberLevelSvc.OnRechargeCompleted(recharge.UserID, recharge.Amount.Decimal); err != nil {
-				paymentLogger().Warnw("member_level_recharge_completed_failed",
-					"payment_id", payment.ID,
-					"user_id", recharge.UserID,
-					"amount", recharge.Amount.Decimal.String(),
-					"error", err,
-				)
-			}
-		}
-	}
-
-	return paymentVal, nil
+	return paymentVal, newlySucceeded, nil
 }
 
 func canApplyWalletRechargeCallback(paymentStatus string, rechargeStatus string, targetStatus string) bool {

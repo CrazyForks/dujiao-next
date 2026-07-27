@@ -119,6 +119,9 @@ func (s *PaymentService) CreatePayment(input CreatePaymentInput) (*CreatePayment
 				channel = resolvedChannel
 				feeRate = resolvedFeeRate
 			}
+			if err := validateOrderChannelEligibility(*channel, &lockedOrder); err != nil {
+				return err
+			}
 
 			// 校验商品是否允许该支付渠道（传入 tx 避免 SQLite 自锁）
 			allItems := lockedOrder.Items
