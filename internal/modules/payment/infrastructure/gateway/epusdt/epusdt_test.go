@@ -2,7 +2,8 @@ package epusdt
 
 import (
 	"context"
-	cmd5 "crypto/md5"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -115,7 +116,7 @@ func TestSignDeterministicAndOmitsEmptyAndSignature(t *testing.T) {
 		"signature":    "should-be-ignored",
 	}
 	got := Sign(params, "sk-test")
-	expected := md5LowerHex("amount=100&currency=cny&network=tron&notify_url=https://example.com/notify&order_id=ORD-1&pid=1000&token=usdtsk-test")
+	expected := hmacSHA256LowerHex("amount=100&currency=cny&network=tron&notify_url=https://example.com/notify&order_id=ORD-1&pid=1000&token=usdt", "sk-test")
 	if got != expected {
 		t.Fatalf("signature mismatch:\n  got:  %s\n want: %s", got, expected)
 	}
@@ -141,10 +142,11 @@ func TestToPaymentStatus(t *testing.T) {
 	}
 }
 
-// md5LowerHex 测试辅助：避免和 Sign 内部实现耦合，独立计算 MD5
-func md5LowerHex(s string) string {
-	sum := cmd5.Sum([]byte(s))
-	return hex.EncodeToString(sum[:])
+// hmacSHA256LowerHex 测试辅助：避免和 Sign 内部实现耦合，独立计算 HMAC-SHA256
+func hmacSHA256LowerHex(s, key string) string {
+	mac := hmac.New(sha256.New, []byte(key))
+	_, _ = mac.Write([]byte(s))
+	return hex.EncodeToString(mac.Sum(nil))
 }
 
 func TestCreatePayment_BuildsRequestAndConstructsPaymentURL(t *testing.T) {
