@@ -84,6 +84,34 @@ func ValidateAdminPath(p string) error {
 // 占位符：admin/index.html 中的 __DJ_ADMIN_BASE__ 启动时被替换为实际 admin path
 const adminBasePlaceholder = "__DJ_ADMIN_BASE__"
 
+const (
+	// SPA 入口必须每次回源校验。带内容 hash 的 chunk 文件名只记录在 index.html 里，
+	// 入口一旦被长期缓存，升级后的浏览器会继续加载上一版 chunk，与新后端形成契约错配
+	// （例如旧前端仍用查询参数传游客订单凭证，而新后端只认 Authorization 头）。
+	// 不设该头时，Cloudflare 这类 CDN 会按自己的 Browser Cache TTL 补一个长缓存。
+	indexCacheControl = "no-cache"
+
+	// assets/ 下的产物由 Vite 保证带内容 hash，内容变化必然改名，可以安全长期强缓存。
+	hashedAssetCacheControl = "public, max-age=31536000, immutable"
+)
+
+// serveIndex 返回 SPA 入口，并禁止浏览器与中间 CDN 长期缓存。
+func serveIndex(c *gin.Context, body []byte) {
+	c.Header("Cache-Control", indexCacheControl)
+	c.Data(http.StatusOK, "text/html; charset=utf-8", body)
+}
+
+// serveAsset 返回真实静态文件。assets/ 下是内容寻址的构建产物，可长期强缓存；
+// 其余（favicon.ico、robots.txt 等固定文件名）必须回源校验，否则替换后不会生效。
+func serveAsset(c *gin.Context, fileServer http.Handler, fp string) {
+	if strings.HasPrefix(fp, "assets/") {
+		c.Header("Cache-Control", hashedAssetCacheControl)
+	} else {
+		c.Header("Cache-Control", indexCacheControl)
+	}
+	fileServer.ServeHTTP(c.Writer, c.Request)
+}
+
 // RegisterAdmin 在 prefix 前缀下挂载 admin SPA。
 //
 // 启动时从 fsys 读取 index.html，把 __DJ_ADMIN_BASE__ 一次性替换为 strings.Trim(prefix, "/")，
@@ -116,14 +144,14 @@ func RegisterAdmin(r *gin.Engine, prefix string, fsys fs.FS) error {
 	r.GET(prefix+"/*filepath", func(c *gin.Context) {
 		fp := strings.TrimPrefix(c.Param("filepath"), "/")
 		if fp == "" || fp == "index.html" {
-			c.Data(http.StatusOK, "text/html; charset=utf-8", cached)
+			serveIndex(c, cached)
 			return
 		}
 		if hasFile(fsys, fp) {
-			fileServer.ServeHTTP(c.Writer, c.Request)
+			serveAsset(c, fileServer, fp)
 			return
 		}
-		c.Data(http.StatusOK, "text/html; charset=utf-8", cached)
+		serveIndex(c, cached)
 	})
 	return nil
 }
@@ -158,14 +186,14 @@ func RegisterUser(r *gin.Engine, fsys fs.FS) error {
 
 		fp := strings.TrimPrefix(c.Request.URL.Path, "/")
 		if fp == "" || fp == "index.html" {
-			c.Data(http.StatusOK, "text/html; charset=utf-8", indexCached)
+			serveIndex(c, indexCached)
 			return
 		}
 		if hasFile(fsys, fp) {
-			fileServer.ServeHTTP(c.Writer, c.Request)
+			serveAsset(c, fileServer, fp)
 			return
 		}
-		c.Data(http.StatusOK, "text/html; charset=utf-8", indexCached)
+		serveIndex(c, indexCached)
 	})
 	return nil
 }

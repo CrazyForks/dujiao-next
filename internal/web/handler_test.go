@@ -354,3 +354,46 @@ func TestRegisterUser_DoesNotShadowExistingRoutes(t *testing.T) {
 		t.Fatalf("body = %s, want pong", w.Body.String())
 	}
 }
+
+// SPA 入口被长期缓存会让升级后的浏览器继续加载上一版 chunk，与新后端形成契约错配，
+// 因此入口必须回源校验；只有 assets/ 下带内容 hash 的产物才允许强缓存。
+func TestCacheControlHeaders(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cases := []struct {
+		name string
+		path string
+		want string
+	}{
+		{"user index", "/", indexCacheControl},
+		{"user history fallback", "/products/1", indexCacheControl},
+		{"user hashed asset", "/assets/u.js", hashedAssetCacheControl},
+		{"user unhashed file", "/robots.txt", indexCacheControl},
+		{"admin index", "/admin/", indexCacheControl},
+		{"admin history fallback", "/admin/orders/1", indexCacheControl},
+		{"admin hashed asset", "/admin/assets/app.js", hashedAssetCacheControl},
+	}
+
+	r := gin.New()
+	if err := RegisterAdmin(r, "/admin", newAdminFS("<html>admin-spa</html>")); err != nil {
+		t.Fatalf("RegisterAdmin: %v", err)
+	}
+	if err := RegisterUser(r, newUserFS()); err != nil {
+		t.Fatalf("RegisterUser: %v", err)
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("status = %d", w.Code)
+			}
+			if got := w.Header().Get("Cache-Control"); got != tc.want {
+				t.Fatalf("Cache-Control = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
