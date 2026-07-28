@@ -19,15 +19,19 @@ import (
 	"github.com/dujiao-next/internal/logger"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	"github.com/dujiao-next/internal/shared/mailbrand"
 	"github.com/dujiao-next/internal/telegramidentity"
 )
 
 // writeStandardHeaders 写入 RFC 5322 要求的通用邮件头（Date、Message-ID、From、To、Subject、MIME-Version）。
-func writeStandardHeaders(buf *bytes.Buffer, from, to, subject string) {
+func writeStandardHeaders(buf *bytes.Buffer, from, to, subject, replyTo string) {
 	buf.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z)))
 	buf.WriteString(fmt.Sprintf("Message-ID: %s\r\n", generateMessageID(from)))
 	buf.WriteString(fmt.Sprintf("From: %s\r\n", from))
 	buf.WriteString(fmt.Sprintf("To: %s\r\n", to))
+	if normalized := normalizeReplyToHeader(replyTo); normalized != "" {
+		buf.WriteString(fmt.Sprintf("Reply-To: %s\r\n", normalized))
+	}
 	buf.WriteString(fmt.Sprintf("Subject: %s\r\n", mime.QEncoding.Encode("UTF-8", subject)))
 	buf.WriteString("MIME-Version: 1.0\r\n")
 }
@@ -64,18 +68,18 @@ func (s *Service) SetConfig(cfg *config.EmailConfig) {
 }
 
 // SendVerifyCode 发送邮箱验证码
-func (s *Service) SendVerifyCode(toEmail, code, purpose, locale string) error {
-	subject, body := buildVerifyCodeContent(code, purpose, locale)
-	return s.sendTextEmail(toEmail, subject, body)
+func (s *Service) SendVerifyCode(toEmail, code, purpose, locale string, brand mailbrand.Brand) error {
+	subject, body := buildVerifyCodeContent(code, purpose, locale, brand)
+	return s.sendTextEmail(toEmail, subject, body, brand)
 }
 
 // SendOrderStatusEmail 发送订单状态通知
 func (s *Service) SendOrderStatusEmail(toEmail string, input notificationcontract.OrderStatusEmailInput, locale string) error {
 	subject, body := buildOrderStatusContent(input, locale)
 	if input.AttachmentName != "" && input.AttachmentContent != "" {
-		return s.sendEmailWithAttachment(toEmail, subject, body, input.AttachmentName, input.AttachmentContent)
+		return s.sendEmailWithAttachment(toEmail, subject, body, input.AttachmentName, input.AttachmentContent, input.MailBrand)
 	}
-	return s.sendTextEmail(toEmail, subject, body)
+	return s.sendTextEmail(toEmail, subject, body, input.MailBrand)
 }
 
 // SendOrderStatusEmailWithTemplate 使用可配置模板发送订单状态通知
@@ -85,9 +89,9 @@ func (s *Service) SendOrderStatusEmailWithTemplate(toEmail string, input notific
 	}
 	subject, body := buildOrderStatusContentFromTemplate(input, locale, *tmplSetting)
 	if input.AttachmentName != "" && input.AttachmentContent != "" {
-		return s.sendEmailWithAttachment(toEmail, subject, body, input.AttachmentName, input.AttachmentContent)
+		return s.sendEmailWithAttachment(toEmail, subject, body, input.AttachmentName, input.AttachmentContent, input.MailBrand)
 	}
-	return s.sendTextEmail(toEmail, subject, body)
+	return s.sendTextEmail(toEmail, subject, body, input.MailBrand)
 }
 
 func buildOrderStatusContentFromTemplate(input notificationcontract.OrderStatusEmailInput, locale string, tmplSetting settingsmessaging.OrderEmailTemplateSetting) (string, string) {
@@ -182,32 +186,34 @@ func (s *Service) SendCustomEmail(toEmail, subject, body string) error {
 	return s.sendTextEmail(toEmail, subject, body)
 }
 
-func (s *Service) sendTextEmail(toEmail, subject, body string) error {
+func (s *Service) sendTextEmail(toEmail, subject, body string, brands ...mailbrand.Brand) error {
 	if telegramidentity.IsPlaceholderEmail(toEmail) {
 		return nil
 	}
-	from, addr, err := s.prepareSMTPEnvelope(toEmail)
+	brand := firstMailBrand(brands)
+	from, addr, err := s.prepareSMTPEnvelope(toEmail, brand.FromName)
 	if err != nil {
 		return err
 	}
-	msg := buildEmailMessage(from, toEmail, subject, body)
+	msg := buildEmailMessage(from, toEmail, subject, body, brand.ReplyTo)
 	return s.sendSMTPMessage(addr, toEmail, []byte(msg))
 }
 
-func (s *Service) sendEmailWithAttachment(toEmail, subject, body, attachName, attachContent string) error {
+func (s *Service) sendEmailWithAttachment(toEmail, subject, body, attachName, attachContent string, brands ...mailbrand.Brand) error {
 	if telegramidentity.IsPlaceholderEmail(toEmail) {
 		return nil
 	}
-	from, addr, err := s.prepareSMTPEnvelope(toEmail)
+	brand := firstMailBrand(brands)
+	from, addr, err := s.prepareSMTPEnvelope(toEmail, brand.FromName)
 	if err != nil {
 		return err
 	}
-	msg := buildEmailMessageWithAttachment(from, toEmail, subject, body, attachName, attachContent)
+	msg := buildEmailMessageWithAttachment(from, toEmail, subject, body, attachName, attachContent, brand.ReplyTo)
 	return s.sendSMTPMessage(addr, toEmail, []byte(msg))
 }
 
 // prepareSMTPEnvelope 校验配置与收件人，并返回发件地址与 SMTP 服务器地址。
-func (s *Service) prepareSMTPEnvelope(toEmail string) (string, string, error) {
+func (s *Service) prepareSMTPEnvelope(toEmail, fromNameOverride string) (string, string, error) {
 	if s.cfg == nil || !s.cfg.Enabled {
 		return "", "", notificationcontract.ErrEmailServiceDisabled
 	}
@@ -217,7 +223,11 @@ func (s *Service) prepareSMTPEnvelope(toEmail string) (string, string, error) {
 	if _, err := mail.ParseAddress(toEmail); err != nil {
 		return "", "", notificationcontract.ErrInvalidEmail
 	}
-	from := buildFromAddress(s.cfg.From, s.cfg.FromName)
+	fromName := strings.TrimSpace(fromNameOverride)
+	if fromName == "" {
+		fromName = s.cfg.FromName
+	}
+	from := buildFromAddress(s.cfg.From, fromName)
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
 	return from, addr, nil
 }
@@ -234,11 +244,11 @@ func (s *Service) sendSMTPMessage(addr, toEmail string, msg []byte) error {
 	return normalizeEmailSendError(sendMailPlain(addr, s.cfg.Host, s.cfg.From, recipients, msg, s.cfg.Username, s.cfg.Password))
 }
 
-func buildEmailMessageWithAttachment(from, to, subject, body, attachName, attachContent string) string {
+func buildEmailMessageWithAttachment(from, to, subject, body, attachName, attachContent, replyTo string) string {
 	boundary := "----=_DujiaoNextBoundary_" + fmt.Sprintf("%d", len(body)+len(attachContent))
 
 	var buf bytes.Buffer
-	writeStandardHeaders(&buf, from, to, subject)
+	writeStandardHeaders(&buf, from, to, subject, replyTo)
 	buf.WriteString(fmt.Sprintf("Content-Type: multipart/mixed; boundary=\"%s\"\r\n", boundary))
 	buf.WriteString("\r\n")
 
@@ -265,9 +275,10 @@ func buildEmailMessageWithAttachment(from, to, subject, body, attachName, attach
 	return buf.String()
 }
 
-func buildVerifyCodeContent(code, purpose, locale string) (string, string) {
+func buildVerifyCodeContent(code, purpose, locale string, brands ...mailbrand.Brand) (string, string) {
 	normalized := normalizeLocale(locale)
 	purposeKey := strings.ToLower(strings.TrimSpace(purpose))
+	brand := firstMailBrand(brands)
 	switch normalized {
 	case i18n.LocaleTW:
 		subject := "郵箱驗證碼"
@@ -287,7 +298,7 @@ func buildVerifyCodeContent(code, purpose, locale string) (string, string) {
 			purposeText = "更換郵箱"
 		}
 		body := fmt.Sprintf("您的驗證碼是：%s\n\n該驗證碼用於 %s，請勿洩露。", code, purposeText)
-		return subject, body
+		return applyVerifyCodeBrand(normalized, subject, body, brand)
 	case i18n.LocaleEN:
 		subject := "Email Verification Code"
 		purposeText := "email verification"
@@ -306,7 +317,7 @@ func buildVerifyCodeContent(code, purpose, locale string) (string, string) {
 			purposeText = "change email"
 		}
 		body := fmt.Sprintf("Your verification code is: %s\n\nThis code is for %s. Do not share it.", code, purposeText)
-		return subject, body
+		return applyVerifyCodeBrand(normalized, subject, body, brand)
 	default:
 		subject := "邮箱验证码"
 		purposeText := "邮箱验证"
@@ -325,8 +336,50 @@ func buildVerifyCodeContent(code, purpose, locale string) (string, string) {
 			purposeText = "更换邮箱"
 		}
 		body := fmt.Sprintf("您的验证码是：%s\n\n该验证码用于 %s，请勿泄露。", code, purposeText)
+		return applyVerifyCodeBrand(normalized, subject, body, brand)
+	}
+}
+
+func firstMailBrand(brands []mailbrand.Brand) mailbrand.Brand {
+	if len(brands) == 0 {
+		return mailbrand.Brand{}
+	}
+	return brands[0]
+}
+
+func applyVerifyCodeBrand(locale, subject, body string, brand mailbrand.Brand) (string, string) {
+	siteName := strings.TrimSpace(brand.SiteName)
+	siteURL := strings.TrimRight(strings.TrimSpace(brand.SiteURL), "/")
+	if siteName == "" && siteURL == "" {
 		return subject, body
 	}
+	if siteName != "" {
+		subject = siteName + " - " + subject
+	}
+	switch locale {
+	case i18n.LocaleTW:
+		if siteName != "" {
+			body += "\n\n站點：" + siteName
+		}
+		if siteURL != "" {
+			body += "\n網址：" + siteURL
+		}
+	case i18n.LocaleEN:
+		if siteName != "" {
+			body += "\n\nSite: " + siteName
+		}
+		if siteURL != "" {
+			body += "\nURL: " + siteURL
+		}
+	default:
+		if siteName != "" {
+			body += "\n\n站点：" + siteName
+		}
+		if siteURL != "" {
+			body += "\n网址：" + siteURL
+		}
+	}
+	return subject, body
 }
 
 func buildOrderStatusContent(input notificationcontract.OrderStatusEmailInput, locale string) (string, string) {
@@ -408,16 +461,30 @@ func normalizeLocale(locale string) string {
 }
 
 func buildFromAddress(from, name string) string {
-	if strings.TrimSpace(name) == "" {
+	name = strings.TrimSpace(strings.NewReplacer("\r", " ", "\n", " ").Replace(name))
+	if name == "" {
 		return from
 	}
-	encoded := mime.QEncoding.Encode("UTF-8", name)
-	return (&mail.Address{Name: encoded, Address: from}).String()
+	// mail.Address.String performs the required RFC 2047 encoding itself.
+	// Pre-encoding here would make clients display the encoded-word literally.
+	return (&mail.Address{Name: name, Address: from}).String()
 }
 
-func buildEmailMessage(from, to, subject, body string) string {
+func normalizeReplyToHeader(raw string) string {
+	addr, err := mail.ParseAddress(strings.TrimSpace(raw))
+	if err != nil {
+		return ""
+	}
+	return addr.Address
+}
+
+func buildEmailMessage(from, to, subject, body string, replyTo ...string) string {
 	var buf bytes.Buffer
-	writeStandardHeaders(&buf, from, to, subject)
+	resolvedReplyTo := ""
+	if len(replyTo) > 0 {
+		resolvedReplyTo = replyTo[0]
+	}
+	writeStandardHeaders(&buf, from, to, subject, resolvedReplyTo)
 	buf.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
 	buf.WriteString("\r\n")
 	buf.WriteString(body)

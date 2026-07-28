@@ -3,6 +3,7 @@ package container
 import (
 	"github.com/dujiao-next/internal/authz"
 	catalogproductbootstrap "github.com/dujiao-next/internal/bootstrap/catalogproduct"
+	mailbrandwiring "github.com/dujiao-next/internal/bootstrap/mailbrand"
 	telegramauthcache "github.com/dujiao-next/internal/bootstrap/telegramauthcache"
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/logger"
@@ -40,6 +41,7 @@ func (c *Container) initPolicyAndSettingServices() {
 	}
 
 	c.SettingService = settingsapp.NewService(c.SettingRepo, c.Config.Order)
+	c.EmailBrandResolver = mailbrandwiring.New(c.SettingService, c.ResellerStore)
 	c.ResellerDomainResolver = reseller.NewDomainResolver(c.ResellerStore, c.Config.Reseller)
 	c.ResellerPricingResolver = orderapp.NewResellerPricingResolver(c.ResellerStore)
 	c.ResellerManagementService = reseller.NewManagementService(c.ResellerStore, c.Config.Reseller)
@@ -89,6 +91,7 @@ func (c *Container) initIdentityAndCatalogServices() {
 	c.UserTOTPService = usertotpapp.NewService(c.Config, c.UserStore, cache.Client())
 	c.TelegramAuthService = telegramauthapp.NewService(c.Config.TelegramAuth, telegramauthcache.Options()...)
 	c.UserAuthService = userauthapp.NewService(c.Config, c.UserStore, c.ExternalIdentityStore, c.EmailVerificationStore, c.SettingService, c.EmailSender, c.TelegramAuthService)
+	c.UserAuthService.SetEmailBrandResolver(c.EmailBrandResolver)
 	c.UploadService = uploadapp.NewService(uploadapp.Policy{
 		MaxSize:           c.Config.Upload.MaxSize,
 		AllowedTypes:      c.Config.Upload.AllowedTypes,

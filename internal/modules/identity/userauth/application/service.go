@@ -26,6 +26,7 @@ import (
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
 	"github.com/dujiao-next/internal/modules/identity/jwttoken"
 	"github.com/dujiao-next/internal/modules/identity/userauth/challenge"
+	"github.com/dujiao-next/internal/shared/mailbrand"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -40,6 +41,7 @@ type Service struct {
 	codeRepo              emailverificationcontract.Store
 	settingService        *settingsapp.Service
 	emailService          VerificationEmailSender
+	emailBrandResolver    mailbrand.Resolver
 	telegramAuthService   *telegramauthapp.Service
 	memberLevelSvc        MemberLevelAssigner
 }
@@ -51,6 +53,12 @@ type MemberLevelAssigner interface {
 // SetMemberLevelService 设置会员等级服务
 func (s *Service) SetMemberLevelService(svc MemberLevelAssigner) {
 	s.memberLevelSvc = svc
+}
+
+// SetEmailBrandResolver enables request-scoped storefront branding for
+// verification emails.
+func (s *Service) SetEmailBrandResolver(resolver mailbrand.Resolver) {
+	s.emailBrandResolver = resolver
 }
 
 // NewService 创建用户认证服务
@@ -162,7 +170,7 @@ func (s *Service) ParseUserJWT(tokenString string) (*UserJWTClaims, error) {
 }
 
 // SendVerifyCode 发送邮箱验证码
-func (s *Service) SendVerifyCode(email, purpose, locale string) error {
+func (s *Service) SendVerifyCode(ctx context.Context, email, purpose, locale string) error {
 	if s.emailService == nil {
 		return ErrEmailServiceNotConfigured
 	}
@@ -214,7 +222,7 @@ func (s *Service) SendVerifyCode(email, purpose, locale string) error {
 		}
 	}
 
-	return s.sendVerifyCode(normalized, purpose, locale)
+	return s.sendVerifyCode(ctx, normalized, purpose, locale)
 }
 
 func (s *Service) checkRegistrationEmailDomain(email string) error {
@@ -462,7 +470,7 @@ func (s *Service) verifyCode(email, purpose, code string) (*emailverificationdom
 	return record, nil
 }
 
-func (s *Service) sendVerifyCode(email, purpose, locale string) error {
+func (s *Service) sendVerifyCode(ctx context.Context, email, purpose, locale string) error {
 	latest, err := s.codeRepo.GetLatest(email, purpose)
 	if err != nil {
 		return err
@@ -479,6 +487,13 @@ func (s *Service) sendVerifyCode(email, purpose, locale string) error {
 	if err != nil {
 		return err
 	}
+	brand := mailbrand.Brand{}
+	if s.emailBrandResolver != nil {
+		brand, err = s.emailBrandResolver.ResolveEmailBrand(ctx, mailbrand.Scope{})
+		if err != nil {
+			return err
+		}
+	}
 
 	record := &emailverificationdomain.Code{
 		Email:     email,
@@ -488,7 +503,7 @@ func (s *Service) sendVerifyCode(email, purpose, locale string) error {
 		SentAt:    now,
 		CreatedAt: now,
 	}
-	if err := s.emailService.SendVerifyCode(email, code, purpose, locale); err != nil {
+	if err := s.emailService.SendVerifyCode(email, code, purpose, locale, brand); err != nil {
 		return err
 	}
 

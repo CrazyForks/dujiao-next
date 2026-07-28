@@ -151,6 +151,7 @@ func TestResellerSiteConfigServiceApplyPublicConfigOverlay(t *testing.T) {
 		"brand": map[string]interface{}{
 			"site_name": "Main Store",
 			"site_icon": "/dj.svg",
+			"site_url":  "https://main.example.test",
 		},
 		"currency": "CNY",
 		"seo": map[string]interface{}{
@@ -167,6 +168,9 @@ func TestResellerSiteConfigServiceApplyPublicConfigOverlay(t *testing.T) {
 	brand := out["brand"].(map[string]interface{})
 	if brand["site_name"] != "Overlay Store" || brand["site_icon"] != "/uploads/reseller/favicon.png" {
 		t.Fatalf("unexpected brand overlay: %+v", brand)
+	}
+	if brand["site_url"] != "https://shop.example.test" {
+		t.Fatalf("reseller brand must not inherit the main site URL: %+v", brand)
 	}
 	if out["currency"] != "CNY" {
 		t.Fatalf("global inherited fields should remain, got currency=%v", out["currency"])

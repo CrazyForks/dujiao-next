@@ -1,6 +1,7 @@
 package userauthhttp
 
 import (
+	"context"
 	"errors"
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
@@ -28,7 +29,7 @@ var (
 
 // UserEmailService 是更换邮箱端点所需的最小端口。
 type UserEmailService interface {
-	SendChangeEmailCode(userID uint, kind, newEmail, locale string) error
+	SendChangeEmailCode(ctx context.Context, userID uint, kind, newEmail, locale string) error
 	ChangeEmail(userID uint, newEmail, oldCode, newCode string) (*userdomain.User, error)
 	ResolveEmailChangeMode(user *userdomain.User) (string, error)
 	ResolvePasswordChangeMode(user *userdomain.User) (string, error)
@@ -66,7 +67,7 @@ func (h *UserEmailHandler) SendChangeEmailCode(c *gin.Context) {
 	}
 
 	locale := i18n.ResolveLocale(c)
-	if err := h.service.SendChangeEmailCode(id, req.Kind, req.NewEmail, locale); err != nil {
+	if err := h.service.SendChangeEmailCode(c.Request.Context(), id, req.Kind, req.NewEmail, locale); err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidEmail):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)

@@ -1,6 +1,7 @@
 package userauthhttp
 
 import (
+	"context"
 	"errors"
 	"strings"
 
@@ -33,7 +34,7 @@ type UserVerifySettings interface {
 
 // UserVerifyAuth 是发送邮箱验证码端口。
 type UserVerifyAuth interface {
-	SendVerifyCode(email, purpose, locale string) error
+	SendVerifyCode(ctx context.Context, email, purpose, locale string) error
 }
 
 // UserVerifyHandler 处理公开的发送邮箱验证码 HTTP 请求。
@@ -107,7 +108,7 @@ func (h *UserVerifyHandler) SendUserVerifyCode(c *gin.Context) {
 	}
 
 	locale := i18n.ResolveLocale(c)
-	if err := h.auth.SendVerifyCode(req.Email, req.Purpose, locale); err != nil {
+	if err := h.auth.SendVerifyCode(c.Request.Context(), req.Email, req.Purpose, locale); err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidEmail):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.email_invalid", nil)

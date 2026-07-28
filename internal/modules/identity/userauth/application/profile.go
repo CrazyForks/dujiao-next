@@ -141,7 +141,7 @@ func (s *Service) UpdateProfile(userID uint, nickname, locale *string) (*userdom
 }
 
 // SendChangeEmailCode 发送更换邮箱验证码
-func (s *Service) SendChangeEmailCode(userID uint, kind, newEmail, locale string) error {
+func (s *Service) SendChangeEmailCode(ctx context.Context, userID uint, kind, newEmail, locale string) error {
 	if s.emailService == nil {
 		return ErrEmailServiceNotConfigured
 	}
@@ -166,7 +166,7 @@ func (s *Service) SendChangeEmailCode(userID uint, kind, newEmail, locale string
 		if mode == EmailChangeModeBindOnly {
 			return ErrEmailChangeInvalid
 		}
-		return s.sendVerifyCode(user.Email, constants.VerifyPurposeChangeEmailOld, locale)
+		return s.sendVerifyCode(ctx, user.Email, constants.VerifyPurposeChangeEmailOld, locale)
 	case "new":
 		normalized, err := normalizeEmail(newEmail)
 		if err != nil {
@@ -182,7 +182,7 @@ func (s *Service) SendChangeEmailCode(userID uint, kind, newEmail, locale string
 		if exist != nil {
 			return ErrEmailChangeExists
 		}
-		return s.sendVerifyCode(normalized, constants.VerifyPurposeChangeEmailNew, locale)
+		return s.sendVerifyCode(ctx, normalized, constants.VerifyPurposeChangeEmailNew, locale)
 	default:
 		return ErrEmailChangeInvalid
 	}

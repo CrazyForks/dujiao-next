@@ -14,6 +14,7 @@ import (
 	notificationsmtp "github.com/dujiao-next/internal/modules/notification/infrastructure/smtp"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/mailbrand"
 )
 
 func TestBuildBotNotifyRequestURLReplacesPath(t *testing.T) {
@@ -151,6 +152,62 @@ type orderStatusEmailWorkerOrderRepoStub struct {
 
 func (s orderStatusEmailWorkerOrderRepoStub) GetByID(_ uint) (*orderdomain.Order, error) {
 	return s.order, s.err
+}
+
+type orderEmailBrandResolverStub struct {
+	brand mailbrand.Brand
+	scope mailbrand.Scope
+}
+
+func (s *orderEmailBrandResolverStub) ResolveEmailBrand(_ context.Context, scope mailbrand.Scope) (mailbrand.Brand, error) {
+	s.scope = scope
+	return s.brand, nil
+}
+
+func TestResolveOrderEmailBrandUsesResellerScope(t *testing.T) {
+	resellerID := uint(17)
+	resolver := &orderEmailBrandResolverStub{brand: mailbrand.Brand{
+		SiteName: "White Label Store",
+		SiteURL:  "https://shop.example.test",
+		FromName: "White Label Store",
+		ReplyTo:  "support@example.test",
+	}}
+	consumer := &Consumer{
+		Container: &container.Container{EmailBrandResolver: resolver},
+	}
+	order := &orderdomain.Order{
+		ResellerID:     &resellerID,
+		ResellerDomain: "shop.example.test",
+	}
+
+	got, err := consumer.resolveOrderEmailBrand(context.Background(), order)
+	if err != nil {
+		t.Fatalf("resolve order email brand failed: %v", err)
+	}
+	if resolver.scope.ResellerID == nil || *resolver.scope.ResellerID != resellerID || resolver.scope.Host != "shop.example.test" {
+		t.Fatalf("unexpected resolver scope: %+v", resolver.scope)
+	}
+	if got.SiteName != "White Label Store" || got.SiteURL != "https://shop.example.test" || got.FromName != "White Label Store" {
+		t.Fatalf("unexpected reseller brand: %+v", got)
+	}
+}
+
+func TestResolveOrderEmailBrandNeverFallsBackToMainBrandForReseller(t *testing.T) {
+	resellerID := uint(23)
+	consumer := &Consumer{
+		Container: &container.Container{},
+	}
+
+	got, err := consumer.resolveOrderEmailBrand(context.Background(), &orderdomain.Order{
+		ResellerID:     &resellerID,
+		ResellerDomain: "fallback.example.test",
+	})
+	if err != nil {
+		t.Fatalf("resolve safe fallback failed: %v", err)
+	}
+	if got.SiteName != "fallback.example.test" || got.SiteURL != "https://fallback.example.test" || got.FromName != "fallback.example.test" {
+		t.Fatalf("unexpected safe reseller fallback: %+v", got)
+	}
 }
 
 func TestHandleOrderStatusEmailSkipsNonRetryableEmailErrors(t *testing.T) {

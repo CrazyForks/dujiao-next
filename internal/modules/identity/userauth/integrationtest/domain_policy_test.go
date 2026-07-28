@@ -1,6 +1,7 @@
 package integrationtest
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -20,6 +21,8 @@ import (
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
+	"github.com/dujiao-next/internal/shared/mailbrand"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
@@ -27,9 +30,39 @@ import (
 
 type verificationEmailSenderStub struct{}
 
-func (verificationEmailSenderStub) SendVerifyCode(_, _, _, _ string) error { return nil }
+func (verificationEmailSenderStub) SendVerifyCode(_, _, _, _ string, _ mailbrand.Brand) error {
+	return nil
+}
+
+type capturingVerificationEmailSender struct {
+	brand mailbrand.Brand
+}
+
+func (s *capturingVerificationEmailSender) SendVerifyCode(_, _, _, _ string, brand mailbrand.Brand) error {
+	s.brand = brand
+	return nil
+}
+
+type verificationEmailBrandResolverStub struct {
+	brand       mailbrand.Brand
+	resellerID  uint
+	resolverRun bool
+}
+
+func (s *verificationEmailBrandResolverStub) ResolveEmailBrand(ctx context.Context, _ mailbrand.Scope) (mailbrand.Brand, error) {
+	s.resolverRun = true
+	tenant, ok := resellercontract.TenantFromContext(ctx)
+	if ok && tenant.ResellerID != nil {
+		s.resellerID = *tenant.ResellerID
+	}
+	return s.brand, nil
+}
 
 func newRegistrationDomainPolicyAuthService(t *testing.T) (*userauthapp.Service, *settingsapp.Service, *gorm.DB) {
+	return newRegistrationDomainPolicyAuthServiceWithSender(t, verificationEmailSenderStub{})
+}
+
+func newRegistrationDomainPolicyAuthServiceWithSender(t *testing.T, sender userauthapp.VerificationEmailSender) (*userauthapp.Service, *settingsapp.Service, *gorm.DB) {
 	t.Helper()
 	dsn := fmt.Sprintf("file:user_auth_domain_policy_%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
@@ -51,7 +84,7 @@ func newRegistrationDomainPolicyAuthService(t *testing.T) (*userauthapp.Service,
 		externalidentitystore.New(db),
 		emailverificationstore.New(db),
 		settingSvc,
-		verificationEmailSenderStub{},
+		sender,
 		nil,
 	), settingSvc, db
 }
@@ -98,8 +131,31 @@ func TestSendVerifyCodeRejectsEmailDomainBeforeEmailSend(t *testing.T) {
 		t.Fatalf("update registration config failed: %v", err)
 	}
 
-	err := svc.SendVerifyCode("buyer@example.com", constants.VerifyPurposeRegister, constants.LocaleZhCN)
+	err := svc.SendVerifyCode(context.Background(), "buyer@example.com", constants.VerifyPurposeRegister, constants.LocaleZhCN)
 	if !errors.Is(err, settingsapp.ErrEmailDomainNotAllowed) {
 		t.Fatalf("expected ErrEmailDomainNotAllowed, got %v", err)
+	}
+}
+
+func TestSendVerifyCodePropagatesRequestTenantBrandToSender(t *testing.T) {
+	sender := &capturingVerificationEmailSender{}
+	svc, _, _ := newRegistrationDomainPolicyAuthServiceWithSender(t, sender)
+	resolver := &verificationEmailBrandResolverStub{brand: mailbrand.Brand{
+		SiteName: "White Label Store",
+		SiteURL:  "https://shop.example.test",
+		FromName: "White Label Store",
+	}}
+	svc.SetEmailBrandResolver(resolver)
+	tenant := resellercontract.ResellerTenantContext("shop.example.test", 31, 310, "shop.example.test")
+	ctx := resellercontract.WithTenantContext(context.Background(), tenant)
+
+	if err := svc.SendVerifyCode(ctx, "brand-buyer@example.com", constants.VerifyPurposeRegister, constants.LocaleZhCN); err != nil {
+		t.Fatalf("send verify code failed: %v", err)
+	}
+	if !resolver.resolverRun || resolver.resellerID != 31 {
+		t.Fatalf("request tenant did not reach brand resolver: %+v", resolver)
+	}
+	if sender.brand.SiteName != "White Label Store" || sender.brand.SiteURL != "https://shop.example.test" || sender.brand.FromName != "White Label Store" {
+		t.Fatalf("resolved brand did not reach sender: %+v", sender.brand)
 	}
 }

@@ -57,8 +57,8 @@ type userEmailTransportAdapter struct {
 	service *userauthapp.Service
 }
 
-func (a userEmailTransportAdapter) SendChangeEmailCode(userID uint, kind, newEmail, locale string) error {
-	return mapUserAuthTransportError(a.service.SendChangeEmailCode(userID, kind, newEmail, locale))
+func (a userEmailTransportAdapter) SendChangeEmailCode(ctx context.Context, userID uint, kind, newEmail, locale string) error {
+	return mapUserAuthTransportError(a.service.SendChangeEmailCode(ctx, userID, kind, newEmail, locale))
 }
 
 func (a userEmailTransportAdapter) ChangeEmail(userID uint, newEmail, oldCode, newCode string) (*userdomain.User, error) {
@@ -108,8 +108,8 @@ func (a userVerifyTransportAdapter) GetRegistrationEnabled(defaultValue bool) (b
 	return a.settings.GetRegistrationEnabled(defaultValue)
 }
 
-func (a userVerifyTransportAdapter) SendVerifyCode(email, purpose, locale string) error {
-	return mapUserAuthTransportError(a.auth.SendVerifyCode(email, purpose, locale))
+func (a userVerifyTransportAdapter) SendVerifyCode(ctx context.Context, email, purpose, locale string) error {
+	return mapUserAuthTransportError(a.auth.SendVerifyCode(ctx, email, purpose, locale))
 }
 
 // userTelegramTransportAdapter 将用户认证服务适配为 Telegram widget/MiniApp transport 端口。

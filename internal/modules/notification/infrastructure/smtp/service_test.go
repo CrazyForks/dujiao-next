@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"net/mail"
 	"net/smtp"
 	"os"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"github.com/dujiao-next/internal/i18n"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
+	"github.com/dujiao-next/internal/shared/mailbrand"
 	"github.com/dujiao-next/internal/shared/money"
 
 	"github.com/shopspring/decimal"
@@ -263,6 +265,42 @@ func TestBuildOrderStatusContentFromTemplateIncludesSiteBrand(t *testing.T) {
 	}
 	if !strings.Contains(body, "站点：示例站点 https://example.com/shop") {
 		t.Fatalf("body should contain site_name and site_url, got: %s", body)
+	}
+}
+
+func TestBuildVerifyCodeContentUsesResolvedWhiteLabelBrand(t *testing.T) {
+	subject, body := buildVerifyCodeContent("123456", "register", i18n.LocaleZH, mailbrand.Brand{
+		SiteName: "白标商店",
+		SiteURL:  "https://shop.example.test",
+	})
+
+	if !strings.Contains(subject, "白标商店") {
+		t.Fatalf("subject should contain white-label site name, got: %s", subject)
+	}
+	if !strings.Contains(body, "白标商店") || !strings.Contains(body, "https://shop.example.test") {
+		t.Fatalf("body should contain white-label brand only, got: %s", body)
+	}
+	if strings.Contains(body, "Dujiao-Next") || strings.Contains(body, "main.example.test") {
+		t.Fatalf("body leaked main-site brand: %s", body)
+	}
+}
+
+func TestBuildEmailMessageSupportsPerMessageFromNameAndReplyTo(t *testing.T) {
+	from := buildFromAddress("mailer@service.example", "白标商店")
+	parsedFrom, err := mail.ParseAddress(from)
+	if err != nil {
+		t.Fatalf("parse from address failed: %v", err)
+	}
+	if parsedFrom.Name != "白标商店" {
+		t.Fatalf("from display name was encoded incorrectly: %q", parsedFrom.Name)
+	}
+	message := buildEmailMessage(from, "buyer@example.com", "subject", "body", "support@shop.example.test")
+
+	if !strings.Contains(message, "From: ") || !strings.Contains(message, "<mailer@service.example>") {
+		t.Fatalf("message should retain the authenticated shared sender address: %s", message)
+	}
+	if !strings.Contains(message, "Reply-To: support@shop.example.test\r\n") {
+		t.Fatalf("message should contain tenant reply-to: %s", message)
 	}
 }
 

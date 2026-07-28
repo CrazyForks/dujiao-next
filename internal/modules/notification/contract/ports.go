@@ -10,6 +10,7 @@ import (
 	settingsstorefront "github.com/dujiao-next/internal/modules/settings/schema/storefront"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/mailbrand"
 	"github.com/dujiao-next/internal/shared/money"
 )
 
@@ -37,6 +38,7 @@ type OrderStatusEmailInput struct {
 	IsGuest           bool
 	AttachmentName    string
 	AttachmentContent string
+	MailBrand         mailbrand.Brand
 }
 
 type DispatchQueue interface {

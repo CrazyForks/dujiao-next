@@ -18,18 +18,18 @@ import (
 	"github.com/dujiao-next/internal/htmltext"
 	"github.com/dujiao-next/internal/logger"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
-	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
 	settingsmessaging "github.com/dujiao-next/internal/modules/settings/schema/messaging"
 	walletcontract "github.com/dujiao-next/internal/modules/wallet/contract"
 	"github.com/dujiao-next/internal/queue"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/mailbrand"
 	"github.com/dujiao-next/internal/telegramidentity"
 
 	"github.com/hibiken/asynq"
 )
 
 // handleOrderStatusEmail 处理订单状态邮件发送任务。
-func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) error {
+func (c *Consumer) handleOrderStatusEmail(ctx context.Context, task *asynq.Task) error {
 	if c == nil || task == nil {
 		logger.Debugw("worker_order_status_email_skip_nil", "consumer_nil", c == nil, "task_nil", task == nil)
 		return nil
@@ -129,14 +129,10 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 		status = order.Status
 	}
 	payloadText := buildOrderFulfillmentEmailPayload(order)
-	siteBrand := settingsapp.SiteBrand{}
-	if c.SettingService != nil {
-		resolvedSiteBrand, siteErr := c.SettingService.GetSiteBrand()
-		if siteErr != nil {
-			logger.Warnw("worker_order_status_email_load_site_brand_failed", "order_id", order.ID, "error", siteErr)
-		} else {
-			siteBrand = resolvedSiteBrand
-		}
+	emailBrand, brandErr := c.resolveOrderEmailBrand(ctx, order)
+	if brandErr != nil {
+		logger.Warnw("worker_order_status_email_load_site_brand_failed", "order_id", order.ID, "error", brandErr)
+		return brandErr
 	}
 	refundDetails, refundDetailsErr := c.OrderRefundService.ResolveOrderStatusEmailRefundDetails(order, payload.RefundRecordID)
 	if refundDetailsErr != nil {
@@ -153,9 +149,10 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 		RefundAmount: refundDetails.Amount,
 		RefundReason: refundDetails.Reason,
 		Currency:     order.Currency,
-		SiteName:     siteBrand.SiteName,
-		SiteURL:      siteBrand.SiteURL,
+		SiteName:     emailBrand.SiteName,
+		SiteURL:      emailBrand.SiteURL,
 		IsGuest:      order.UserID == 0,
+		MailBrand:    emailBrand,
 	}
 	if fulfillmentdomain.ShouldAttachFulfillmentPayload(payloadText) {
 		// 交付内容过大，正文不放交付内容，以附件形式发送
@@ -206,6 +203,36 @@ func (c *Consumer) handleOrderStatusEmail(_ context.Context, task *asynq.Task) e
 		}
 	}
 	return nil
+}
+
+func (c *Consumer) resolveOrderEmailBrand(ctx context.Context, order *orderdomain.Order) (mailbrand.Brand, error) {
+	if order == nil {
+		return mailbrand.Brand{}, nil
+	}
+	scope := mailbrand.Scope{}
+	if order.ResellerID != nil {
+		scope.ResellerID = order.ResellerID
+		scope.Host = order.ResellerDomain
+	}
+	if c != nil && c.Container != nil && c.EmailBrandResolver != nil {
+		return c.EmailBrandResolver.ResolveEmailBrand(ctx, scope)
+	}
+	if order.ResellerID != nil {
+		// Fail closed for white-label identity: a missing resolver may degrade to
+		// the order's own domain, but must never expose the global main brand.
+		return mailbrand.ResellerFallback(order.ResellerDomain), nil
+	}
+	if c != nil && c.Container != nil && c.SettingService != nil {
+		brand, err := c.SettingService.GetSiteBrand()
+		if err != nil {
+			return mailbrand.Brand{}, err
+		}
+		return mailbrand.Brand{
+			SiteName: strings.TrimSpace(brand.SiteName),
+			SiteURL:  strings.TrimRight(strings.TrimSpace(brand.SiteURL), "/"),
+		}, nil
+	}
+	return mailbrand.Brand{}, nil
 }
 
 // handleOrderAutoFulfill 处理自动交付任务。

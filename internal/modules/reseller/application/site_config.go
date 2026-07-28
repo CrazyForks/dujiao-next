@@ -18,6 +18,7 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/constants"
 	"github.com/dujiao-next/internal/shared/jsonmap"
+	"github.com/dujiao-next/internal/shared/mailbrand"
 )
 
 type LocalizedTextInput map[string]string
@@ -366,6 +367,16 @@ func (s *SiteConfigService) ApplyPublicConfigOverlay(ctx context.Context, tenant
 		"host":           tenant.Host,
 		"primary_domain": tenant.PrimaryDomain,
 	}
+	brand, _ := out["brand"].(map[string]interface{})
+	if brand == nil {
+		brand = map[string]interface{}{}
+	}
+	brandHost := tenant.Host
+	if strings.TrimSpace(brandHost) == "" {
+		brandHost = tenant.PrimaryDomain
+	}
+	brand["site_url"] = mailbrand.ResellerFallback(brandHost).SiteURL
+	out["brand"] = brand
 	if s == nil || s.repo == nil {
 		return out, nil
 	}

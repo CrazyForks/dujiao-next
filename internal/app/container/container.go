@@ -78,6 +78,7 @@ import (
 	walletapp "github.com/dujiao-next/internal/modules/wallet/application"
 	walletgormstore "github.com/dujiao-next/internal/modules/wallet/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/queue"
+	"github.com/dujiao-next/internal/shared/mailbrand"
 )
 
 // Container 声明应用运行期共享的依赖表面；具体构造过程按职责拆分在同包装配文件中。
@@ -135,6 +136,7 @@ type Container struct {
 	UserAuthService               *userauthapp.Service
 	TelegramAuthService           *telegramauthapp.Service
 	EmailSender                   *notificationsmtp.Service
+	EmailBrandResolver            mailbrand.Resolver
 	CaptchaService                *captchaapp.Service
 	UploadService                 *uploadapp.Service
 	ProductReadService            *productapplication.Service
