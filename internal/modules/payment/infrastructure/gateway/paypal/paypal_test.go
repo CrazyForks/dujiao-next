@@ -55,14 +55,16 @@ func TestVerifyWebhookSignatureRequiresWebhookID(t *testing.T) {
 }
 
 func TestVerifyWebhookSignaturePreservesRawEvent(t *testing.T) {
-	raw := []byte(`{"id":"WH-1","event_type":"PAYMENT.CAPTURE.COMPLETED","summary":"A&B <x>"}`)
+	raw := []byte("{\n  \"id\": \"WH-1\",\n  \"event_type\": \"PAYMENT.CAPTURE.COMPLETED\",\n  \"summary\": \"A&B <x>\"\n}\n")
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/v1/oauth2/token":
 			_, _ = w.Write([]byte(`{"access_token":"test-token"}`))
 		case "/v1/notifications/verify-webhook-signature":
 			body, _ := io.ReadAll(r.Body)
-			if !bytes.Contains(body, raw) {
+			wantSuffix := append([]byte(`"webhook_event":`), raw...)
+			wantSuffix = append(wantSuffix, '}')
+			if !bytes.HasSuffix(body, wantSuffix) {
 				t.Errorf("webhook_event changed:\nrequest: %s\n  event: %s", body, raw)
 			}
 			_, _ = w.Write([]byte(`{"verification_status":"SUCCESS"}`))
