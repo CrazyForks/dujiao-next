@@ -6,6 +6,7 @@
   "packageManager": "pnpm@10.34.3",
   "scripts": {
     "dev": "vite",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview"
   },

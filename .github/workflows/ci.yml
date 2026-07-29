@@ -108,6 +108,9 @@ jobs:
       - name: Run admin frontend tests
         run: (cd frontend/admin && pnpm run test)
 
+      - name: Run user frontend tests
+        run: (cd frontend/user && pnpm run test)
+
       # 两个 build 脚本都以 `vue-tsc -b` 开头，因此这一步同时覆盖了类型检查
       - name: Build frontends
         run: |

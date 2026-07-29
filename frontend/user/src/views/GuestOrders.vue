@@ -60,12 +60,13 @@
             <Badge :variant="statusVariant(order.status)" size="sm">
               {{ statusLabel(order.status) }}
             </Badge>
-            <Button as-child variant="outline" size="sm">
-              <router-link :to="`/guest/orders/${order.order_no}`">
-                <Eye class="h-4 w-4 opacity-60" />
-                {{ t('guestOrders.viewDetails') }}
-              </router-link>
-            </Button>
+            <RouterLink
+              :to="{ name: 'guest-order-detail', params: { order_no: order.order_no } }"
+              :class="buttonVariants({ variant: 'outline', size: 'sm' })"
+            >
+              <Eye class="h-4 w-4 opacity-60" />
+              {{ t('guestOrders.viewDetails') }}
+            </RouterLink>
             <Button v-if="order.status === 'pending_payment'" as-child size="sm">
               <router-link :to="`/pay?guest=1&order_no=${order.order_no}`">
                 <CreditCard class="h-4 w-4" />
@@ -91,7 +92,7 @@ import { ClipboardList, Search, Eye, CreditCard } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import EmptyState from '../components/EmptyState.vue'
 import PaginationNav from '../components/PaginationNav.vue'

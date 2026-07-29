@@ -11,7 +11,7 @@
         </Button>
       </div>
 
-      <div v-if="showAuthForm"
+      <div v-if="viewState === 'auth'"
         class="rounded-2xl border bg-card p-6 shadow-sm mb-6">
         <h2 class="text-lg font-bold mb-2">{{ t('guestOrderDetail.authTitle') }}</h2>
         <p class="text-xs text-muted-foreground mb-4">{{ t('guestOrderDetail.authHint') }}</p>
@@ -32,16 +32,16 @@
         </div>
       </div>
 
-      <div v-if="loading"
+      <div v-else-if="viewState === 'loading'"
         class="h-40 bg-muted border rounded-2xl animate-pulse">
       </div>
 
-      <div v-else-if="!order && !showAuthForm"
+      <div v-else-if="viewState === 'empty'"
         class="rounded-2xl border bg-card shadow-sm p-12 text-center">
         <p class="text-muted-foreground">{{ t('guestOrderDetail.notFound') }}</p>
       </div>
 
-      <div v-else class="space-y-6">
+      <div v-else-if="viewState === 'detail' && order" class="space-y-6">
         <div class="rounded-2xl border bg-card shadow-sm p-6">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -429,7 +429,7 @@ import { useGuestOrderDetail } from '../composables/useGuestOrderDetail'
 const { t } = useI18n()
 
 const {
-  loading, order, authError, auth, showAuthForm, handleAuthSubmit, clearAuth,
+  order, authError, auth, viewState, handleAuthSubmit, clearAuth,
   fulfillmentDownloading, handleDownloadFulfillment,
   statusLabel, statusVariant, fulfillmentTypeLabelText, fulfillmentStatusLabelText,
   formatDate, getLocalizedText, formatMoney, formatDiscountMoney, hasDiscountAmount,

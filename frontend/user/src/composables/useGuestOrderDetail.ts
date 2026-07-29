@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { guestOrderAPI } from '../api'
 import { debounceAsync } from '../utils/debounce'
 import { clearGuestOrderAuth, loadGuestOrderAuth, saveGuestOrderAuth } from '../utils/guestOrderAuth'
+import { resolveGuestOrderDetailViewState } from '../utils/guestOrderDetailState'
 import { useOrderDisplayHelpers } from './useOrderDisplayHelpers'
 
 /**
@@ -51,6 +52,11 @@ export function useGuestOrderDetail() {
 
   const hasAuth = computed(() => Boolean(auth.value.email && auth.value.order_password))
   const showAuthForm = computed(() => !hasAuth.value || authError.value !== '')
+  const viewState = computed(() => resolveGuestOrderDetailViewState({
+    loading: loading.value,
+    order: order.value,
+    showAuthForm: showAuthForm.value,
+  }))
 
   const loadOrder = async () => {
     loading.value = true
@@ -90,6 +96,7 @@ export function useGuestOrderDetail() {
       return
     }
     persistAuth()
+    loading.value = true
     await debouncedLoadOrder()
   }
 
@@ -119,6 +126,7 @@ export function useGuestOrderDetail() {
     authError,
     auth,
     showAuthForm,
+    viewState,
     handleAuthSubmit,
     clearAuth,
     fulfillmentDownloading,

@@ -9,7 +9,7 @@
     </div>
 
     <!-- 游客验证 -->
-    <div v-if="showAuthForm" class="mb-[18px] rounded-xl border bg-card p-[22px]">
+    <div v-if="viewState === 'auth'" class="mb-[18px] rounded-xl border bg-card p-[22px]">
       <h2 class="mb-1.5 text-lg font-bold">{{ t('guestOrderDetail.authTitle') }}</h2>
       <p class="mb-3.5 text-[13px] text-muted-foreground">{{ t('guestOrderDetail.authHint') }}</p>
       <div class="grid gap-3 sm:grid-cols-2">
@@ -24,18 +24,18 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="loading" class="rounded-xl border bg-card p-[22px]">
+    <div v-if="viewState === 'loading'" class="rounded-xl border bg-card p-[22px]">
       <div class="mb-4 h-5 w-[35%] rounded bg-secondary"></div>
       <div class="h-[200px] rounded-md bg-secondary"></div>
     </div>
 
     <!-- 不存在 -->
-    <div v-else-if="!order && !showAuthForm" class="my-6 flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center text-muted-foreground">
+    <div v-else-if="viewState === 'empty'" class="my-6 flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center text-muted-foreground">
       <AlertCircle class="h-10 w-10 opacity-60" />
       <p>{{ t('guestOrderDetail.notFound') }}</p>
     </div>
 
-    <template v-else-if="order">
+    <template v-else-if="viewState === 'detail' && order">
       <div class="mb-[18px] flex flex-wrap items-start justify-between gap-[18px] rounded-xl border bg-card p-[22px]">
         <div>
           <div class="text-[11px] uppercase tracking-[0.06em] text-muted-foreground">{{ t('orders.orderNo') }}</div>
@@ -76,7 +76,7 @@ import { useGuestOrderDetail } from '../../composables/useGuestOrderDetail'
 const { t } = useI18n()
 
 const {
-  loading, order, authError, auth, showAuthForm, handleAuthSubmit, clearAuth,
+  order, authError, auth, viewState, handleAuthSubmit, clearAuth,
   fulfillmentDownloading, handleDownloadFulfillment,
   statusLabel, statusVariant, formatDate, formatMoney,
 } = useGuestOrderDetail()

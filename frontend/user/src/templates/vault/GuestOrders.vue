@@ -44,9 +44,13 @@
         </div>
         <div class="flex flex-wrap items-center gap-2.5">
           <Badge :variant="statusVariant(order.status)" class="rounded-full">{{ statusLabel(order.status) }}</Badge>
-          <Button as-child variant="outline" size="sm" class="rounded-full">
-            <RouterLink :to="`/guest/orders/${order.order_no}`"><Eye /> {{ t('guestOrders.viewDetails') }}</RouterLink>
-          </Button>
+          <RouterLink
+            :to="{ name: 'guest-order-detail', params: { order_no: order.order_no } }"
+            :class="buttonVariants({ variant: 'outline', size: 'sm' })"
+            class="rounded-full"
+          >
+            <Eye /> {{ t('guestOrders.viewDetails') }}
+          </RouterLink>
           <Button v-if="order.status === 'pending_payment'" as-child size="sm" class="rounded-full">
             <RouterLink :to="`/pay?guest=1&order_no=${order.order_no}`"><CreditCard /> {{ t('guestOrders.payNow') }}</RouterLink>
           </Button>
@@ -66,7 +70,7 @@
 import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, ClipboardList, Search, Eye, CreditCard } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useGuestOrders } from '../../composables/useGuestOrders'
 
