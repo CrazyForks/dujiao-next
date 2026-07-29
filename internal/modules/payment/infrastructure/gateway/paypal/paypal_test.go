@@ -1,9 +1,12 @@
 package paypal
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/dujiao-next/internal/constants"
@@ -48,6 +51,37 @@ func TestVerifyWebhookSignatureRequiresWebhookID(t *testing.T) {
 	err := VerifyWebhookSignature(context.Background(), cfg, http.Header{}, []byte(`{}`))
 	if !errors.Is(err, ErrConfigInvalid) {
 		t.Fatalf("VerifyWebhookSignature should require webhook_id, got: %v", err)
+	}
+}
+
+func TestVerifyWebhookSignaturePreservesRawEvent(t *testing.T) {
+	raw := []byte(`{"id":"WH-1","event_type":"PAYMENT.CAPTURE.COMPLETED","summary":"A&B <x>"}`)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/oauth2/token":
+			_, _ = w.Write([]byte(`{"access_token":"test-token"}`))
+		case "/v1/notifications/verify-webhook-signature":
+			body, _ := io.ReadAll(r.Body)
+			if !bytes.Contains(body, raw) {
+				t.Errorf("webhook_event changed:\nrequest: %s\n  event: %s", body, raw)
+			}
+			_, _ = w.Write([]byte(`{"verification_status":"SUCCESS"}`))
+		default:
+			t.Errorf("unexpected request path: %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	cfg := &Config{ClientID: "client-id", ClientSecret: "client-secret", BaseURL: server.URL, WebhookID: "WH-ID"}
+	headers := http.Header{}
+	headers.Set("Paypal-Transmission-Id", "transmission-id")
+	headers.Set("Paypal-Transmission-Time", "2026-07-29T12:00:00Z")
+	headers.Set("Paypal-Cert-Url", "https://api.paypal.com/cert?foo=1&bar=2")
+	headers.Set("Paypal-Auth-Algo", "SHA256withRSA")
+	headers.Set("Paypal-Transmission-Sig", "signature")
+
+	if err := VerifyWebhookSignature(context.Background(), cfg, headers, raw); err != nil {
+		t.Fatalf("VerifyWebhookSignature failed: %v", err)
 	}
 }
 
