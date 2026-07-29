@@ -217,7 +217,7 @@ func printStartupBanner() {
 
 func writeStartupBanner(w io.Writer) {
 	fmt.Fprintln(w, ansiBrightMag+"╔══════════════════════════════════════════════════════════════════════╗"+ansiReset)
-	fmt.Fprintln(w, ansiBrightMag+"║                      🚀 Dujiao-Next API 启动中                      ║"+ansiReset)
+	fmt.Fprintln(w, ansiBrightMag+"║                      🚀 Dujiao-Next 启动中                  	      ║"+ansiReset)
 	fmt.Fprintln(w, ansiBrightMag+"╚══════════════════════════════════════════════════════════════════════╝"+ansiReset)
 	fmt.Fprintln(w, ansiCyan+"██████╗ ██╗   ██╗     ██╗ █████╗  ██████╗      ███╗   ██╗███████╗██╗  ██╗████████╗"+ansiReset)
 	fmt.Fprintln(w, ansiCyan+"██╔══██╗██║   ██║     ██║██╔══██╗██╔═══██╗     ████╗  ██║██╔════╝╚██╗██╔╝╚══██╔══╝"+ansiReset)
@@ -226,9 +226,10 @@ func writeStartupBanner(w io.Writer) {
 	fmt.Fprintln(w, ansiCyan+"██████╔╝╚██████╔╝╚█████╔╝██║  ██║╚██████╔╝     ██║ ╚████║███████╗██╔╝ ██╗   ██║   "+ansiReset)
 	fmt.Fprintln(w, ansiCyan+"╚═════╝  ╚═════╝  ╚════╝ ╚═╝  ╚═╝ ╚═════╝      ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝   ╚═╝   "+ansiReset)
 	fmt.Fprintln(w, ansiGreen+ansiBold+"Open Source Repositories"+ansiReset)
-	fmt.Fprintln(w, ansiBlue+"• Root:    https://github.com/dujiao-next"+ansiReset)
-	fmt.Fprintln(w, ansiBlue+"• API:     https://github.com/dujiao-next/dujiao-next"+ansiReset)
-	fmt.Fprintln(w, ansiBlue+"• Official:https://dujiao-next.com"+ansiReset)
+	fmt.Fprintln(w, ansiBlue+"• Organization:  https://github.com/dujiao-next"+ansiReset)
+	fmt.Fprintln(w, ansiBlue+"• Main:    		 https://github.com/dujiao-next/dujiao-next"+ansiReset)
+	fmt.Fprintln(w, ansiBlue+"• Official:		 https://dujiao-next.com"+ansiReset)
+	fmt.Fprintln(w, ansiBlue+"• Discussion Group: https://t.me/dujiaonext_official"+ansiReset)
 	fmt.Fprintln(w, ansiGreen+"Version: "+version.Version+ansiReset)
 	fmt.Fprintln(w, ansiDim+"--------------------------------------------------------------"+ansiReset)
 }
