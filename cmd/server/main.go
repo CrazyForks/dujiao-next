@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -211,23 +212,25 @@ func printUpdateStateRecoveryHint() {
 }
 
 func printStartupBanner() {
-	fmt.Println(ansiBrightMag + "╔══════════════════════════════════════════════════════════════════════╗" + ansiReset)
-	fmt.Println(ansiBrightMag + "║                      🚀 Dujiao-Next API 启动中                      ║" + ansiReset)
-	fmt.Println(ansiBrightMag + "╚══════════════════════════════════════════════════════════════════════╝" + ansiReset)
-	fmt.Println(ansiCyan + "██████╗ ██╗   ██╗     ██╗ █████╗  ██████╗      ███╗   ██╗███████╗██╗  ██╗████████╗" + ansiReset)
-	fmt.Println(ansiCyan + "██╔══██╗██║   ██║     ██║██╔══██╗██╔═══██╗     ████╗  ██║██╔════╝╚██╗██╔╝╚══██╔══╝" + ansiReset)
-	fmt.Println(ansiCyan + "██║  ██║██║   ██║     ██║███████║██║   ██║     ██╔██╗ ██║█████╗   ╚███╔╝    ██║   " + ansiReset)
-	fmt.Println(ansiCyan + "██║  ██║██║   ██║██   ██║██╔══██║██║   ██║     ██║╚██╗██║██╔══╝   ██╔██╗    ██║   " + ansiReset)
-	fmt.Println(ansiCyan + "██████╔╝╚██████╔╝╚█████╔╝██║  ██║╚██████╔╝     ██║ ╚████║███████╗██╔╝ ██╗   ██║   " + ansiReset)
-	fmt.Println(ansiCyan + "╚═════╝  ╚═════╝  ╚════╝ ╚═╝  ╚═╝ ╚═════╝      ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝   ╚═╝   " + ansiReset)
-	fmt.Println(ansiGreen + ansiBold + "Open Source Repositories" + ansiReset)
-	fmt.Println(ansiBlue + "• Root:    https://github.com/dujiao-next" + ansiReset)
-	fmt.Println(ansiBlue + "• API:     https://github.com/dujiao-next/dujiao-next" + ansiReset)
-	fmt.Println(ansiBlue + "• User:    https://github.com/dujiao-next/user" + ansiReset)
-	fmt.Println(ansiBlue + "• Admin:   https://github.com/dujiao-next/admin" + ansiReset)
-	fmt.Println(ansiBlue + "• Official:https://github.com/dujiao-next/document" + ansiReset)
-	fmt.Println(ansiGreen + "Version: " + version.Version + ansiReset)
-	fmt.Println(ansiDim + "--------------------------------------------------------------" + ansiReset)
+	writeStartupBanner(os.Stdout)
+}
+
+func writeStartupBanner(w io.Writer) {
+	fmt.Fprintln(w, ansiBrightMag+"╔══════════════════════════════════════════════════════════════════════╗"+ansiReset)
+	fmt.Fprintln(w, ansiBrightMag+"║                      🚀 Dujiao-Next API 启动中                      ║"+ansiReset)
+	fmt.Fprintln(w, ansiBrightMag+"╚══════════════════════════════════════════════════════════════════════╝"+ansiReset)
+	fmt.Fprintln(w, ansiCyan+"██████╗ ██╗   ██╗     ██╗ █████╗  ██████╗      ███╗   ██╗███████╗██╗  ██╗████████╗"+ansiReset)
+	fmt.Fprintln(w, ansiCyan+"██╔══██╗██║   ██║     ██║██╔══██╗██╔═══██╗     ████╗  ██║██╔════╝╚██╗██╔╝╚══██╔══╝"+ansiReset)
+	fmt.Fprintln(w, ansiCyan+"██║  ██║██║   ██║     ██║███████║██║   ██║     ██╔██╗ ██║█████╗   ╚███╔╝    ██║   "+ansiReset)
+	fmt.Fprintln(w, ansiCyan+"██║  ██║██║   ██║██   ██║██╔══██║██║   ██║     ██║╚██╗██║██╔══╝   ██╔██╗    ██║   "+ansiReset)
+	fmt.Fprintln(w, ansiCyan+"██████╔╝╚██████╔╝╚█████╔╝██║  ██║╚██████╔╝     ██║ ╚████║███████╗██╔╝ ██╗   ██║   "+ansiReset)
+	fmt.Fprintln(w, ansiCyan+"╚═════╝  ╚═════╝  ╚════╝ ╚═╝  ╚═╝ ╚═════╝      ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝   ╚═╝   "+ansiReset)
+	fmt.Fprintln(w, ansiGreen+ansiBold+"Open Source Repositories"+ansiReset)
+	fmt.Fprintln(w, ansiBlue+"• Root:    https://github.com/dujiao-next"+ansiReset)
+	fmt.Fprintln(w, ansiBlue+"• API:     https://github.com/dujiao-next/dujiao-next"+ansiReset)
+	fmt.Fprintln(w, ansiBlue+"• Official:https://dujiao-next.com"+ansiReset)
+	fmt.Fprintln(w, ansiGreen+"Version: "+version.Version+ansiReset)
+	fmt.Fprintln(w, ansiDim+"--------------------------------------------------------------"+ansiReset)
 }
 
 func isWeakSecret(secret string) bool {

@@ -2,10 +2,35 @@ package main
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/dujiao-next/internal/config"
 )
+
+func TestWriteStartupBannerOmitsRetiredFrontendRepositories(t *testing.T) {
+	var output strings.Builder
+	writeStartupBanner(&output)
+
+	banner := output.String()
+	for _, removed := range []string{
+		"• User:    https://github.com/dujiao-next/user",
+		"• Admin:   https://github.com/dujiao-next/admin",
+	} {
+		if strings.Contains(banner, removed) {
+			t.Errorf("startup banner still contains retired repository: %s", removed)
+		}
+	}
+	for _, retained := range []string{
+		"• Root:    https://github.com/dujiao-next",
+		"• API:     https://github.com/dujiao-next/dujiao-next",
+		"• Official:https://dujiao-next.com",
+	} {
+		if !strings.Contains(banner, retained) {
+			t.Errorf("startup banner is missing retained repository: %s", retained)
+		}
+	}
+}
 
 func TestWeakRuntimeSecretNamesCoversEveryRootSecret(t *testing.T) {
 	cfg := &config.Config{
