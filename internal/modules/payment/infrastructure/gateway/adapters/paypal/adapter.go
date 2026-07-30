@@ -174,7 +174,7 @@ func (a *paypalAdapter) ParseWebhook(ctx context.Context, raw jsonmap.JSON, head
 		httpHeaders.Set(k, v)
 	}
 
-	if err := paypal.VerifyWebhookSignature(ctx, cfg, httpHeaders, event); err != nil {
+	if err := paypal.VerifyWebhookSignature(ctx, cfg, httpHeaders, body); err != nil {
 		return nil, mapPaypalError(err)
 	}
 
