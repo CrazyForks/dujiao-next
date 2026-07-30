@@ -16,8 +16,7 @@ application: the Go backend, the customer storefront, and the admin panel.
 
 <tr>
 <td width="180"><a href="https://www.99cdn.com/"><img src="assets/partners/99cdn.jpg" alt="openmodel" width="150"></a></td>
-<td>99CDN 自建 CDN 平台，自主管理节点 · 智能流量调度 · 多级缓存加速。 <a href="https://www.99cdn.com/">99CDN</a> 是 EasyLink 旗下的商业化自建 CDN 与 DNS 智能调度平台，支持边缘缓存、分片缓存、多级回源、GTM 调度与边缘计算能力。
-关键词："自建 CDN"，"CDN 平台","DNS 智能调度","GTM 调度","边缘计算","边缘缓存","Slice Cache 分片缓存","多级缓存回源","智能流量调度"</td>
+<td>99CDN 自建 CDN 平台，自主管理节点 · 智能流量调度 · 多级缓存加速。 <a href="https://www.99cdn.com/">99CDN</a> 是 EasyLink 旗下的商业化自建 CDN 与 DNS 智能调度平台，支持边缘缓存、分片缓存、多级回源、GTM 调度与边缘计算能力。</td>
 </tr>
 
 
@@ -244,13 +243,3 @@ gateways and the like) outside it.
 ## Online Documentation
 
 - https://dujiao-next.com
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=dujiao-next%2Fdujiao-next&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=dujiao-next/dujiao-next&type=date&theme=dark&legend=top-left&sealed_token=pLO1UK6ooAVrG-Ax2T2YaXxp2jAmvLNEOCMtlLr3tVrDSS1GHTeQIEjhMpafFToiXGjdEOkjTK4QERxqQjl8-xjwmo4ngQqOwxBZpzcVfqpF6braIFEhJRM1iAVRA7wbrUAQltZSRwebK_w0CUDg-cChnGbROE1WTSted0VXWtKg28dhOY9-GCn7KXsH" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=dujiao-next/dujiao-next&type=date&legend=top-left&sealed_token=pLO1UK6ooAVrG-Ax2T2YaXxp2jAmvLNEOCMtlLr3tVrDSS1GHTeQIEjhMpafFToiXGjdEOkjTK4QERxqQjl8-xjwmo4ngQqOwxBZpzcVfqpF6braIFEhJRM1iAVRA7wbrUAQltZSRwebK_w0CUDg-cChnGbROE1WTSted0VXWtKg28dhOY9-GCn7KXsH" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=dujiao-next/dujiao-next&type=date&legend=top-left&sealed_token=pLO1UK6ooAVrG-Ax2T2YaXxp2jAmvLNEOCMtlLr3tVrDSS1GHTeQIEjhMpafFToiXGjdEOkjTK4QERxqQjl8-xjwmo4ngQqOwxBZpzcVfqpF6braIFEhJRM1iAVRA7wbrUAQltZSRwebK_w0CUDg-cChnGbROE1WTSted0VXWtKg28dhOY9-GCn7KXsH" />
- </picture>
-</a>
