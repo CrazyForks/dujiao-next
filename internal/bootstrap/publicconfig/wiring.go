@@ -14,16 +14,25 @@ func NewHandler(c *container.Container) *publicconfigtransport.Handler {
 	if c.TelegramAuthService != nil {
 		telegram = publicConfigTelegramAdapter{svc: c.TelegramAuthService}
 	}
+	var google publicconfigtransport.GoogleAuthPublic
+	if c.GoogleAuthService != nil {
+		google = publicConfigGoogleAdapter{svc: c.GoogleAuthService}
+	}
 	var overlay publicconfigtransport.ResellerOverlay
 	if c.ResellerSiteConfigService != nil {
 		overlay = publicConfigResellerOverlayAdapter{svc: c.ResellerSiteConfigService}
 	}
 	fallback := publicconfigtransport.TelegramAuthFallback{}
+	googleFallback := publicconfigtransport.GoogleAuthFallback{}
 	if c.Config != nil {
 		fallback = publicconfigtransport.TelegramAuthFallback{
 			Enabled:     c.Config.TelegramAuth.Enabled,
 			BotUsername: c.Config.TelegramAuth.BotUsername,
 			MiniAppURL:  c.Config.TelegramAuth.MiniAppURL,
+		}
+		googleFallback = publicconfigtransport.GoogleAuthFallback{
+			Enabled:  c.Config.GoogleAuth.Enabled,
+			ClientID: c.Config.GoogleAuth.ClientID,
 		}
 	}
 	return publicconfigtransport.NewHandler(
@@ -33,6 +42,8 @@ func NewHandler(c *container.Container) *publicconfigtransport.Handler {
 		captcha,
 		telegram,
 		fallback,
+		google,
+		googleFallback,
 		overlay,
 	)
 }

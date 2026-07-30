@@ -14,6 +14,8 @@ export type {
     TelegramAuthPayload,
     TelegramMiniAppAuthPayload,
     TelegramBindingData,
+    GoogleCredentialPayload,
+    GoogleBindingData,
     WalletAccountData,
     WalletTransactionData,
     WalletRechargePayload,

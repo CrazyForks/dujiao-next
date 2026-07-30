@@ -13,8 +13,11 @@ import (
 	complianceapp "github.com/dujiao-next/internal/modules/compliance/application"
 	adminauthapp "github.com/dujiao-next/internal/modules/identity/adminauth/application"
 	admintotpapp "github.com/dujiao-next/internal/modules/identity/adminauth/totp/application"
+	googleauthapp "github.com/dujiao-next/internal/modules/identity/googleauth/application"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	userauthcachestore "github.com/dujiao-next/internal/modules/identity/userauth/infrastructure/cachestore"
+	userauthgormstore "github.com/dujiao-next/internal/modules/identity/userauth/infrastructure/gormstore"
 	usertotpapp "github.com/dujiao-next/internal/modules/identity/userauth/totp/application"
 	notificationsmtp "github.com/dujiao-next/internal/modules/notification/infrastructure/smtp"
 	orderapp "github.com/dujiao-next/internal/modules/order/application"
@@ -80,6 +83,21 @@ func (c *Container) loadRuntimeSettings() {
 	} else {
 		c.Config.TelegramAuth = settingssecurity.TelegramAuthSettingToConfig(telegramAuthSetting)
 	}
+
+	googleAuthSetting, err := c.SettingService.GetGoogleAuthSetting(c.Config.GoogleAuth)
+	if err != nil {
+		// Database-backed settings are the administrative source of truth. A
+		// read failure must not resurrect an enabled YAML fallback after an
+		// operator disabled Google login in the database.
+		c.Config.GoogleAuth.Enabled = false
+		logger.Warnw(
+			"provider_load_google_auth_setting_failed",
+			"error", err,
+			"fail_closed", true,
+		)
+	} else {
+		c.Config.GoogleAuth = settingssecurity.GoogleAuthSettingToConfig(googleAuthSetting)
+	}
 }
 
 // initIdentityAndCatalogServices 装配身份认证、上传、推广与商品读取能力。
@@ -90,7 +108,11 @@ func (c *Container) initIdentityAndCatalogServices() {
 	c.TOTPService = admintotpapp.NewService(c.Config, c.AdminStore, cache.Client())
 	c.UserTOTPService = usertotpapp.NewService(c.Config, c.UserStore, cache.Client())
 	c.TelegramAuthService = telegramauthapp.NewService(c.Config.TelegramAuth, telegramauthcache.Options()...)
+	c.GoogleAuthService = googleauthapp.NewService(c.Config.GoogleAuth)
 	c.UserAuthService = userauthapp.NewService(c.Config, c.UserStore, c.ExternalIdentityStore, c.EmailVerificationStore, c.SettingService, c.EmailSender, c.TelegramAuthService)
+	c.UserAuthService.SetGoogleAuthService(c.GoogleAuthService)
+	c.UserAuthService.SetGoogleRedirectStore(userauthcachestore.NewGoogleRedirectStore())
+	c.UserAuthService.SetAuthUnitOfWork(userauthgormstore.New(gormdb.DB))
 	c.UserAuthService.SetEmailBrandResolver(c.EmailBrandResolver)
 	c.UploadService = uploadapp.NewService(uploadapp.Policy{
 		MaxSize:           c.Config.Upload.MaxSize,

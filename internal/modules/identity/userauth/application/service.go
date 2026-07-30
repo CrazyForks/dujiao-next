@@ -24,6 +24,7 @@ import (
 	emailverificationcontract "github.com/dujiao-next/internal/modules/identity/emailverification/contract"
 	emailverificationdomain "github.com/dujiao-next/internal/modules/identity/emailverification/domain"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
+	googleauthapp "github.com/dujiao-next/internal/modules/identity/googleauth/application"
 	"github.com/dujiao-next/internal/modules/identity/jwttoken"
 	"github.com/dujiao-next/internal/modules/identity/userauth/challenge"
 	"github.com/dujiao-next/internal/shared/mailbrand"
@@ -43,7 +44,10 @@ type Service struct {
 	emailService          VerificationEmailSender
 	emailBrandResolver    mailbrand.Resolver
 	telegramAuthService   *telegramauthapp.Service
+	googleAuthService     *googleauthapp.Service
+	googleRedirectStore   GoogleRedirectStore
 	memberLevelSvc        MemberLevelAssigner
+	authUnitOfWork        AuthUnitOfWork
 }
 
 type MemberLevelAssigner interface {
@@ -53,6 +57,23 @@ type MemberLevelAssigner interface {
 // SetMemberLevelService 设置会员等级服务
 func (s *Service) SetMemberLevelService(svc MemberLevelAssigner) {
 	s.memberLevelSvc = svc
+}
+
+// SetGoogleAuthService injects the runtime-configurable Google credential verifier.
+func (s *Service) SetGoogleAuthService(service *googleauthapp.Service) {
+	s.googleAuthService = service
+}
+
+// SetGoogleRedirectStore injects the Redis-backed single-use state store used
+// only by the redirect UX. Popup Google login remains independent of Redis.
+func (s *Service) SetGoogleRedirectStore(store GoogleRedirectStore) {
+	s.googleRedirectStore = store
+}
+
+// SetAuthUnitOfWork injects the transaction boundary shared by user accounts
+// and external identities.
+func (s *Service) SetAuthUnitOfWork(unitOfWork AuthUnitOfWork) {
+	s.authUnitOfWork = unitOfWork
 }
 
 // SetEmailBrandResolver enables request-scoped storefront branding for
@@ -96,11 +117,12 @@ type UserJWTClaims struct {
 // 注：Typ 字段同时占用与 UserJWTClaims 兼容的 typ 键，写入 "2fa_challenge"，
 // 防止挑战 token 在被错误地解析为 UserJWTClaims 时通过中间件的 typ 校验。
 type UserChallengeClaims struct {
-	UserID     uint   `json:"user_id"`
-	JTI        string `json:"jti"`
-	Purpose    string `json:"purpose"`
-	RememberMe bool   `json:"remember_me"`
-	Typ        string `json:"typ"`
+	UserID      uint   `json:"user_id"`
+	JTI         string `json:"jti"`
+	Purpose     string `json:"purpose"`
+	RememberMe  bool   `json:"remember_me"`
+	LoginSource string `json:"login_source,omitempty"`
+	Typ         string `json:"typ"`
 	jwt.RegisteredClaims
 }
 
@@ -369,14 +391,21 @@ func (s *Service) LoginStep1(email, password string, rememberMe bool) (*UserLogi
 
 // IssueUserChallengeToken 签发用户 2FA 挑战 token
 func (s *Service) IssueUserChallengeToken(userID uint, rememberMe bool) (token, jti string, expiresAt time.Time, err error) {
+	return s.IssueUserChallengeTokenForSource(userID, rememberMe, constants.LoginLogSourceWeb)
+}
+
+// IssueUserChallengeTokenForSource signs a 2FA challenge while retaining the
+// original login provider for the completion audit log.
+func (s *Service) IssueUserChallengeTokenForSource(userID uint, rememberMe bool, loginSource string) (token, jti string, expiresAt time.Time, err error) {
 	jti = uuid.NewString()
 	expiresAt = time.Now().Add(challenge.TTL)
 	claims := UserChallengeClaims{
-		UserID:     userID,
-		JTI:        jti,
-		Purpose:    challenge.PurposeTwoFactor,
-		RememberMe: rememberMe,
-		Typ:        jwttoken.TypeTwoFactorChallenge,
+		UserID:      userID,
+		JTI:         jti,
+		Purpose:     challenge.PurposeTwoFactor,
+		RememberMe:  rememberMe,
+		LoginSource: normalizeLoginSource(loginSource),
+		Typ:         jwttoken.TypeTwoFactorChallenge,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -390,6 +419,17 @@ func (s *Service) IssueUserChallengeToken(userID uint, rememberMe bool) (token, 
 		return "", "", time.Time{}, err
 	}
 	return signed, jti, expiresAt, nil
+}
+
+func normalizeLoginSource(source string) string {
+	switch strings.ToLower(strings.TrimSpace(source)) {
+	case constants.LoginLogSourceGoogle:
+		return constants.LoginLogSourceGoogle
+	case constants.LoginLogSourceTelegram:
+		return constants.LoginLogSourceTelegram
+	default:
+		return constants.LoginLogSourceWeb
+	}
 }
 
 // ParseUserChallengeToken 解析并校验用户挑战 token

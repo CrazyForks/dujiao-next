@@ -92,6 +92,9 @@ func AutoMigrate() error {
 		return err
 	}
 
+	if err := ensureUserOAuthIdentityUserProviderUniqueIndex(); err != nil {
+		return err
+	}
 	if err := resellerstore.Migrate(db); err != nil {
 		return err
 	}

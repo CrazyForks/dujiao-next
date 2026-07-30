@@ -10,6 +10,7 @@ func RegisterAdminRoutes(authorized gin.IRoutes, handler *AdminHandler) {
 	authorized.GET("/users", handler.GetAdminUsers)
 	authorized.PUT("/users/batch-status", handler.BatchUpdateUserStatus)
 	authorized.DELETE("/users/:id/oauth/telegram", handler.UnbindAdminUserTelegram)
+	authorized.DELETE("/users/:id/oauth/google", handler.UnbindAdminUserGoogle)
 	authorized.GET("/users/:id", handler.GetAdminUser)
 	authorized.PUT("/users/:id", handler.UpdateAdminUser)
 	authorized.GET("/users/:id/coupon-usages", handler.GetAdminUserCouponUsages)

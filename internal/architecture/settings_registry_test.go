@@ -142,6 +142,7 @@ func TestSettingRegistryUsesModuleOwnedTypedJSONNormalizers(t *testing.T) {
 	want := map[string]bool{
 		"NormalizeDashboardSettingJSON":       false,
 		"NormalizeAffiliateSettingJSON":       false,
+		"NormalizeGoogleAuthSettingJSON":      false,
 		"NormalizeUpstreamSyncConfigJSON":     false,
 		"NormalizeTelegramAuthSettingJSON":    false,
 		"NormalizeTelegramBotConfigJSON":      false,

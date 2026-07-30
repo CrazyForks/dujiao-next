@@ -55,6 +55,18 @@ telegram_auth:
   login_expire_seconds: 300
   replay_ttl_seconds: 300
 
+google_auth:
+  enabled: false
+  # Google Identity Services Web Client ID。登录只校验 credential ID Token，
+  # 不需要 Client Secret，也不需要申请 Gmail API 权限。
+  # 请在 Google Cloud Console 为主站及每个白标域名分别登记：
+  # 1. Authorized JavaScript origin，例如 https://shop.example.com
+  # 2. Authorized redirect URI，例如
+  #    https://shop.example.com/api/v1/auth/google/redirect/callback
+  # 桌面与 Android 使用 popup/FedCM；iOS/iPadOS 使用 redirect form_post，
+  # 后者依赖已启用且可用的 Redis 7（一次性状态通过 GETDEL 消费）。
+  client_id: ""
+
 redis:
   enabled: true
   host: 127.0.0.1

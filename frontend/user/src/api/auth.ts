@@ -1,5 +1,6 @@
 import { api, userApi } from './client'
-import type { TelegramAuthPayload, TelegramMiniAppAuthPayload } from './types'
+import type { GoogleCredentialPayload, TelegramAuthPayload, TelegramMiniAppAuthPayload } from './types'
+import { GOOGLE_REDIRECT_API_PATHS } from '../utils/googleRedirect'
 
 export const userAuthAPI = {
     sendVerifyCode: (data: any) => userApi.post('/auth/send-verify-code', data),
@@ -13,6 +14,11 @@ export const userAuthAPI = {
     telegramOidcStart: () => userApi.get('/auth/telegram/oidc/start'),
     telegramOidcCallback: (data: { code: string; state: string }) =>
         userApi.post('/auth/telegram/oidc/callback', data),
+    googleLogin: (data: GoogleCredentialPayload) => userApi.post('/auth/google/login', data),
+    googleRedirectIntent: () =>
+        userApi.post(GOOGLE_REDIRECT_API_PATHS.loginIntent, {}, { credentials: 'include' }),
+    googleRedirectExchange: () =>
+        userApi.post(GOOGLE_REDIRECT_API_PATHS.loginExchange, {}, { credentials: 'include' }),
     forgotPassword: (data: any) => userApi.post('/auth/forgot-password', data),
 }
 

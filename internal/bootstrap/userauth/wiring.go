@@ -16,6 +16,7 @@ type Handlers struct {
 	TwoFA        *userauthtransport.User2FAHandler
 	TelegramOIDC *userauthtransport.UserTelegramOIDCHandler
 	Telegram     *userauthtransport.UserTelegramHandler
+	Google       *userauthtransport.UserGoogleHandler
 }
 
 // New assembles user authentication transports at the application boundary.
@@ -58,6 +59,10 @@ func New(c *container.Container) Handlers {
 		),
 		Telegram: userauthtransport.NewUserTelegramHandler(
 			userTelegramTransportAdapter{auth: c.UserAuthService},
+			recorder,
+		),
+		Google: userauthtransport.NewUserGoogleHandler(
+			userGoogleTransportAdapter{auth: c.UserAuthService},
 			recorder,
 		),
 	}

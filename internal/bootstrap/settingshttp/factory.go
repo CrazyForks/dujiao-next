@@ -23,3 +23,9 @@ func NewTelegramAuthHandler(c *container.Container, cfg *config.Config) *setting
 		settings: c.SettingService, cfg: cfg, telegramAuth: c.TelegramAuthService,
 	})
 }
+
+func NewGoogleAuthHandler(c *container.Container, cfg *config.Config) *settingstransport.GoogleAuthHandler {
+	return settingstransport.NewGoogleAuthHandler(settingsGoogleAuthAdapter{
+		settings: c.SettingService, cfg: cfg, googleAuth: c.GoogleAuthService,
+	})
+}

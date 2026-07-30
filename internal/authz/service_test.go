@@ -159,6 +159,40 @@ func TestBootstrapBuiltinRoles(t *testing.T) {
 	if allow {
 		t.Fatalf("expected readonly inherited role deny write")
 	}
+
+	if err := svc.SetAdminRoles(4, []string{"system_admin"}); err != nil {
+		t.Fatalf("set system admin role failed: %v", err)
+	}
+	for _, action := range []string{"GET", "PUT"} {
+		allow, err = svc.EnforceAdmin(4, "/admin/settings/google-auth", action)
+		if err != nil {
+			t.Fatalf("enforce google auth settings %s failed: %v", action, err)
+		}
+		if !allow {
+			t.Fatalf("expected system admin to access google auth settings with %s", action)
+		}
+	}
+
+	for _, roleCase := range []struct {
+		adminID uint
+		role    string
+		want    bool
+	}{
+		{adminID: 5, role: "support", want: true},
+		{adminID: 6, role: "system_admin", want: true},
+		{adminID: 7, role: "readonly_auditor", want: false},
+	} {
+		if err := svc.SetAdminRoles(roleCase.adminID, []string{roleCase.role}); err != nil {
+			t.Fatalf("assign %s role failed: %v", roleCase.role, err)
+		}
+		allow, err = svc.EnforceAdmin(roleCase.adminID, "/admin/users/42/oauth/google", "DELETE")
+		if err != nil {
+			t.Fatalf("enforce google unbind for %s failed: %v", roleCase.role, err)
+		}
+		if allow != roleCase.want {
+			t.Fatalf("google unbind for %s allow=%v, want %v", roleCase.role, allow, roleCase.want)
+		}
+	}
 }
 
 func TestBootstrapBuiltinRolesRemovesStaleImmutableWildcard(t *testing.T) {

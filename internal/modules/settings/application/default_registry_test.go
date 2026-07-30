@@ -13,6 +13,7 @@ func TestDefaultSettingRegistryCoversLegacyNormalizedKeys(t *testing.T) {
 		constants.SettingKeyAffiliateConfig,
 		constants.SettingKeyCallbackRoutesConfig,
 		constants.SettingKeyDashboardConfig,
+		constants.SettingKeyGoogleAuthConfig,
 		constants.SettingKeyHomeAnnouncement,
 		constants.SettingKeyNavConfig,
 		constants.SettingKeyNotificationCenterConfig,
@@ -38,6 +39,12 @@ func TestSettingServiceUpdateWithEffectsDescribesCacheImpact(t *testing.T) {
 		value      map[string]interface{}
 		wantEffect Effect
 	}{
+		{
+			name:       "google auth config invalidates public cache",
+			key:        constants.SettingKeyGoogleAuthConfig,
+			value:      map[string]interface{}{"enabled": true, "client_id": "client.apps.googleusercontent.com"},
+			wantEffect: EffectInvalidatePublicConfigCache,
+		},
 		{
 			name:       "site config invalidates public cache",
 			key:        constants.SettingKeySiteConfig,

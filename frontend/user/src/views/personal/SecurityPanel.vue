@@ -38,6 +38,29 @@
         @oidc-bind="startTelegramOidcBind"
       />
 
+      <GoogleBindingSection
+        :google-enabled="googleAuthorizationEnabled"
+        :google-bound="googleBound"
+        :loading-google-binding="userProfileStore.loadingGoogleBinding"
+        :client-id="googleClientID"
+        :locale="googleButtonLocale"
+        :avatar-url="userProfileStore.googleBinding?.avatar_url || ''"
+        :google-display-name="googleDisplayName"
+        :email="userProfileStore.googleBinding?.email || userProfileStore.googleBinding?.username || ''"
+        :provider-user-id="userProfileStore.googleBinding?.provider_user_id || '-'"
+        :formatted-auth-at="formatDate(userProfileStore.googleBinding?.auth_at) || '-'"
+        :binding-google="userProfileStore.bindingGoogle"
+        :unbinding-google="userProfileStore.unbindingGoogle"
+        :can-unbind-google="canUnbindGoogle"
+        :is-telegram-mini-app="isTelegramMiniApp"
+        :google-ux-mode="googleIdentityUXMode"
+        :google-login-uri="googleRedirectLoginURI"
+        :prepare-redirect="prepareGoogleRedirectBind"
+        @credential="handleGoogleBind"
+        @script-error="handleGoogleScriptError"
+        @unbind="handleUnbindGoogle"
+      />
+
       <EmailChangeForm
         :current-email-display="currentEmailDisplay"
         :requires-old-email-code="requiresOldEmailCode"
@@ -88,8 +111,18 @@ import { useAppStore } from '../../stores/app'
 import { useTelegramMiniAppStore } from '../../stores/telegramMiniApp'
 import { useUserProfileStore } from '../../stores/userProfile'
 import { useUserAuthStore } from '../../stores/userAuth'
-import { buildTelegramMiniAppEntryLink, openTelegramCompatibleLink } from '../../utils/telegramMiniApp'
+import { buildTelegramMiniAppEntryLink, isTelegramUrlEnvironment, openTelegramCompatibleLink } from '../../utils/telegramMiniApp'
+import { canUnbindExternalIdentity } from '../../utils/externalIdentity'
+import { detectGoogleIdentityUXMode } from '../../utils/googleIdentity'
+import {
+  createGoogleRedirectIntent,
+  createGoogleRedirectPreparedIntent,
+  getGoogleRedirectSessionStorage,
+  storeGoogleRedirectIntent,
+  tryBuildGoogleRedirectCredentialCallbackURL,
+} from '../../utils/googleRedirect'
 import TelegramBindingSection from '../../components/security/TelegramBindingSection.vue'
+import GoogleBindingSection from '../../components/security/GoogleBindingSection.vue'
 import EmailChangeForm from '../../components/security/EmailChangeForm.vue'
 import LoginHistorySection from '../../components/security/LoginHistorySection.vue'
 import PasswordChangeForm from '../../components/security/PasswordChangeForm.vue'
@@ -128,7 +161,19 @@ const telegramMiniAppURL = computed(() => String(telegramConfig.value?.mini_app_
 const telegramLoginMode = computed(() => String(telegramConfig.value?.mode || '').trim())
 const telegramEnabled = computed(() => !!telegramConfig.value?.enabled && telegramBotUsername.value !== '')
 const telegramBound = computed(() => !!userProfileStore.telegramBinding?.bound)
-const isTelegramMiniApp = computed(() => telegramMiniAppStore.isMiniApp && telegramMiniAppStore.isReady)
+const googleConfig = computed(() => appStore.config?.google_auth || null)
+const googleClientID = computed(() => String(googleConfig.value?.client_id || '').trim())
+const googleEnabled = computed(() => !!googleConfig.value?.enabled && googleClientID.value !== '')
+const googleButtonLocale = computed(() => String(appStore.locale || '').trim())
+const googleBound = computed(() => !!userProfileStore.googleBinding?.bound)
+const googleIdentityUXMode = detectGoogleIdentityUXMode()
+const googleRedirectLoginURI = googleIdentityUXMode === 'redirect'
+  ? tryBuildGoogleRedirectCredentialCallbackURL()
+  : ''
+const googleRedirectAvailable = googleIdentityUXMode === 'popup' || googleRedirectLoginURI !== ''
+const googleAuthorizationEnabled = computed(() => googleEnabled.value && googleRedirectAvailable)
+const isTelegramUrlEnv = isTelegramUrlEnvironment()
+const isTelegramMiniApp = computed(() => (telegramMiniAppStore.isMiniApp && telegramMiniAppStore.isReady) || isTelegramUrlEnv)
 const miniAppInitData = computed(() => String(telegramMiniAppStore.initData || '').trim())
 const showMiniAppBindAction = computed(() => telegramEnabled.value && !telegramBound.value && isTelegramMiniApp.value)
 const showTelegramWidget = computed(() => telegramLoginMode.value !== 'oidc' && telegramEnabled.value && !telegramBound.value && !isTelegramMiniApp.value)
@@ -140,7 +185,10 @@ const requiresOldEmailCode = computed(() => emailChangeMode.value !== 'bind_only
 const canManagePassword = computed(() => requiresOldEmailCode.value)
 const passwordChangeMode = computed(() => userProfileStore.profile?.password_change_mode || 'change_with_old')
 const requiresOldPassword = computed(() => passwordChangeMode.value !== 'set_without_old')
-const canUnbindTelegram = computed(() => requiresOldEmailCode.value)
+// External identities can create passwordless accounts. Only an explicit
+// backend authorization enables unbinding; missing capability data fails closed.
+const canUnbindTelegram = computed(() => canUnbindExternalIdentity(userProfileStore.telegramBinding))
+const canUnbindGoogle = computed(() => canUnbindExternalIdentity(userProfileStore.googleBinding))
 const currentEmailDisplay = computed(() => {
   if (!requiresOldEmailCode.value) {
     return t('personalCenter.security.bindOnlyEmailDisplay')
@@ -152,6 +200,15 @@ const telegramDisplayName = computed(() => {
     return `@${userProfileStore.telegramBinding.username}`
   }
   return t('personalCenter.security.telegramDisplayFallback')
+})
+const googleDisplayName = computed(() => {
+  const displayName = String(userProfileStore.googleBinding?.display_name || '').trim()
+  if (displayName !== '') return displayName
+  const email = String(userProfileStore.googleBinding?.email || '').trim()
+  if (email !== '') return email
+  const username = String(userProfileStore.googleBinding?.username || '').trim()
+  if (username !== '') return username
+  return t('personalCenter.security.googleDisplayFallback')
 })
 
 const openTelegramMiniAppEntry = () => {
@@ -375,6 +432,27 @@ const renderTelegramWidget = () => {
   widgetEl.appendChild(script)
 }
 
+const refreshExternalIdentityBindings = async (): Promise<boolean> => {
+  const [telegramLoaded, googleLoaded] = await Promise.all([
+    userProfileStore.loadTelegramBinding(),
+    userProfileStore.loadGoogleBinding(),
+  ])
+  return telegramLoaded && googleLoaded
+}
+
+const finishExternalIdentityMutation = async (successMessage: string) => {
+  const refreshed = await refreshExternalIdentityBindings()
+  securityAlert.value = refreshed
+    ? {
+        level: 'success',
+        message: successMessage,
+      }
+    : {
+        level: 'warning',
+        message: t('personalCenter.security.externalIdentityRefreshFailed'),
+      }
+}
+
 const handleTelegramBind = async (raw: any) => {
   securityAlert.value = null
   const payload = buildTelegramPayload(raw)
@@ -393,10 +471,7 @@ const handleTelegramBind = async (raw: any) => {
     }
     return
   }
-  securityAlert.value = {
-    level: 'success',
-    message: t('personalCenter.security.telegramBindSuccess'),
-  }
+  await finishExternalIdentityMutation(t('personalCenter.security.telegramBindSuccess'))
   renderTelegramWidget()
 }
 
@@ -419,10 +494,7 @@ const handleTelegramMiniAppBind = async () => {
     return
   }
 
-  securityAlert.value = {
-    level: 'success',
-    message: t('personalCenter.security.telegramBindSuccess'),
-  }
+  await finishExternalIdentityMutation(t('personalCenter.security.telegramBindSuccess'))
 }
 
 const startTelegramOidcBind = async () => {
@@ -449,6 +521,14 @@ const startTelegramOidcBind = async () => {
 
 const handleUnbindTelegram = async () => {
   securityAlert.value = null
+  if (!canUnbindTelegram.value) {
+    securityAlert.value = {
+      level: 'warning',
+      message: t('personalCenter.security.telegramUnbindDisabledTip'),
+    }
+    return
+  }
+
   const ok = await userProfileStore.unbindTelegram()
   if (!ok) {
     securityAlert.value = {
@@ -457,11 +537,74 @@ const handleUnbindTelegram = async () => {
     }
     return
   }
-  securityAlert.value = {
-    level: 'success',
-    message: t('personalCenter.security.telegramUnbindSuccess'),
-  }
+  await finishExternalIdentityMutation(t('personalCenter.security.telegramUnbindSuccess'))
   renderTelegramWidget()
+}
+
+const handleGoogleBind = async (credential: string) => {
+  if (userProfileStore.bindingGoogle) return
+  securityAlert.value = null
+  const normalizedCredential = String(credential || '').trim()
+  if (normalizedCredential === '') {
+    securityAlert.value = {
+      level: 'warning',
+      message: t('personalCenter.security.googleInvalidCredential'),
+    }
+    return
+  }
+
+  const ok = await userProfileStore.bindGoogle(normalizedCredential)
+  if (!ok) {
+    securityAlert.value = {
+      level: 'error',
+      message: userProfileStore.securityError || t('personalCenter.security.googleBindFailed'),
+    }
+    return
+  }
+  await finishExternalIdentityMutation(t('personalCenter.security.googleBindSuccess'))
+}
+
+const handleGoogleScriptError = () => {
+  securityAlert.value = {
+    level: 'error',
+    message: t('personalCenter.security.googleWidgetLoadFailed'),
+  }
+}
+
+const prepareGoogleRedirectBind = async () => {
+  const response = await userProfileAPI.googleRedirectBindIntent()
+  const preparedIntent = createGoogleRedirectPreparedIntent(response.data.data)
+  if (!preparedIntent) {
+    throw new Error('Google redirect state is invalid')
+  }
+  const intent = createGoogleRedirectIntent(
+    'bind',
+    '/me/security',
+    preparedIntent.issuedAt,
+  )
+  storeGoogleRedirectIntent(getGoogleRedirectSessionStorage(), intent)
+  return preparedIntent
+}
+
+const handleUnbindGoogle = async () => {
+  securityAlert.value = null
+  if (!canUnbindGoogle.value) {
+    securityAlert.value = {
+      level: 'warning',
+      message: t('personalCenter.security.googleUnbindDisabledTip'),
+    }
+    return
+  }
+
+  const ok = await userProfileStore.unbindGoogle()
+  if (!ok) {
+    securityAlert.value = {
+      level: 'error',
+      message: userProfileStore.securityError || t('personalCenter.security.googleUnbindFailed'),
+    }
+    return
+  }
+  await finishExternalIdentityMutation(t('personalCenter.security.googleUnbindSuccess'))
 }
 
 const formatDate = (raw?: string | null) => {
@@ -476,19 +619,21 @@ onMounted(async () => {
     appStore.loadConfig(),
     userProfileStore.loadRecentLoginLogs(10),
     userProfileStore.loadTelegramBinding(),
+    userProfileStore.loadGoogleBinding(),
   ])
   const win = window as Window & Record<string, any>
   win[telegramCallbackName] = handleTelegramBind
   renderTelegramWidget()
 
   if (route.query.tgBound === '1') {
-    await userProfileStore.loadTelegramBinding()
-    securityAlert.value = {
-      level: 'success',
-      message: t('personalCenter.security.telegramBoundOk'),
-    }
+    await finishExternalIdentityMutation(t('personalCenter.security.telegramBoundOk'))
     const nextQuery = { ...route.query }
     delete nextQuery.tgBound
+    router.replace({ path: route.path, query: nextQuery })
+  } else if (route.query.googleBound === '1') {
+    await finishExternalIdentityMutation(t('personalCenter.security.googleBindSuccess'))
+    const nextQuery = { ...route.query }
+    delete nextQuery.googleBound
     router.replace({ path: route.path, query: nextQuery })
   }
 })

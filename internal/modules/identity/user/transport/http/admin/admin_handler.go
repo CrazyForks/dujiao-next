@@ -33,6 +33,7 @@ var (
 	ErrUserDisabled                = errors.New("user disabled")
 	ErrUserOAuthNotBound           = errors.New("user oauth not bound")
 	ErrTelegramUnbindRequiresEmail = errors.New("telegram unbind requires real email")
+	ErrGoogleUnbindLocked          = errors.New("google unbind would lock account")
 	ErrInvalidEmail                = errors.New("invalid email")
 )
 
@@ -76,9 +77,10 @@ type OAuthIdentityDirectory interface {
 	ListByUserID(userID uint) ([]externalidentitydomain.Identity, error)
 }
 
-// TelegramBinder 解绑 Telegram 端口。
-type TelegramBinder interface {
+// OAuthIdentityUnbinder 第三方身份解绑端口。
+type OAuthIdentityUnbinder interface {
 	UnbindTelegram(userID uint) error
+	UnbindGoogle(userID uint) error
 }
 
 // CouponUsageDirectory 优惠券使用记录端口。
@@ -104,15 +106,15 @@ type AuthStateCache interface {
 
 // AdminHandler 处理后台用户管理 HTTP 请求。
 type AdminHandler struct {
-	users        UserDirectory
-	emails       EmailNormalizer
-	wallets      WalletBalances
-	oauth        OAuthIdentityDirectory
-	telegram     TelegramBinder
-	couponUsages CouponUsageDirectory
-	coupons      CouponDirectory
-	products     ProductDirectory
-	authState    AuthStateCache
+	users         UserDirectory
+	emails        EmailNormalizer
+	wallets       WalletBalances
+	oauth         OAuthIdentityDirectory
+	oauthUnbinder OAuthIdentityUnbinder
+	couponUsages  CouponUsageDirectory
+	coupons       CouponDirectory
+	products      ProductDirectory
+	authState     AuthStateCache
 }
 
 func NewAdminHandler(
@@ -120,7 +122,7 @@ func NewAdminHandler(
 	emails EmailNormalizer,
 	wallets WalletBalances,
 	oauth OAuthIdentityDirectory,
-	telegram TelegramBinder,
+	oauthUnbinder OAuthIdentityUnbinder,
 	couponUsages CouponUsageDirectory,
 	coupons CouponDirectory,
 	products ProductDirectory,
@@ -138,8 +140,8 @@ func NewAdminHandler(
 	if oauth == nil {
 		panic("admin user handler: oauth is nil")
 	}
-	if telegram == nil {
-		panic("admin user handler: telegram is nil")
+	if oauthUnbinder == nil {
+		panic("admin user handler: oauthUnbinder is nil")
 	}
 	if couponUsages == nil {
 		panic("admin user handler: couponUsages is nil")
@@ -151,15 +153,15 @@ func NewAdminHandler(
 		panic("admin user handler: products is nil")
 	}
 	return &AdminHandler{
-		users:        users,
-		emails:       emails,
-		wallets:      wallets,
-		oauth:        oauth,
-		telegram:     telegram,
-		couponUsages: couponUsages,
-		coupons:      coupons,
-		products:     products,
-		authState:    authState,
+		users:         users,
+		emails:        emails,
+		wallets:       wallets,
+		oauth:         oauth,
+		oauthUnbinder: oauthUnbinder,
+		couponUsages:  couponUsages,
+		coupons:       coupons,
+		products:      products,
+		authState:     authState,
 	}
 }
 
@@ -470,7 +472,7 @@ func (h *AdminHandler) UnbindAdminUserTelegram(c *gin.Context) {
 		return
 	}
 
-	if err := h.telegram.UnbindTelegram(userID); err != nil {
+	if err := h.oauthUnbinder.UnbindTelegram(userID); err != nil {
 		switch {
 		case errors.Is(err, ErrNotFound):
 			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
@@ -480,6 +482,34 @@ func (h *AdminHandler) UnbindAdminUserTelegram(c *gin.Context) {
 			ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_not_bound", nil)
 		case errors.Is(err, ErrTelegramUnbindRequiresEmail):
 			ginutil.RespondError(c, response.CodeBadRequest, "error.telegram_unbind_requires_email", nil)
+		default:
+			ginutil.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
+		}
+		return
+	}
+
+	response.Success(c, gin.H{"unbound": true})
+}
+
+// UnbindAdminUserGoogle 管理员解除目标用户的 Google 绑定。
+// DELETE /admin/users/:id/oauth/google
+func (h *AdminHandler) UnbindAdminUserGoogle(c *gin.Context) {
+	userID, err := ginutil.ParseParamUint(c, "id")
+	if err != nil {
+		ginutil.RespondError(c, response.CodeBadRequest, "error.user_id_invalid", nil)
+		return
+	}
+
+	if err := h.oauthUnbinder.UnbindGoogle(userID); err != nil {
+		switch {
+		case errors.Is(err, ErrNotFound):
+			ginutil.RespondError(c, response.CodeNotFound, "error.user_not_found", nil)
+		case errors.Is(err, ErrUserDisabled):
+			ginutil.RespondError(c, response.CodeBadRequest, "error.user_disabled", nil)
+		case errors.Is(err, ErrUserOAuthNotBound):
+			ginutil.RespondError(c, response.CodeBadRequest, "error.google_not_bound", nil)
+		case errors.Is(err, ErrGoogleUnbindLocked):
+			ginutil.RespondError(c, response.CodeBadRequest, "error.google_unbind_locked", nil)
 		default:
 			ginutil.RespondError(c, response.CodeInternal, "error.user_update_failed", err)
 		}

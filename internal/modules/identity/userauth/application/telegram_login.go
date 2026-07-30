@@ -6,7 +6,7 @@ import (
 
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 
-	"github.com/dujiao-next/internal/cache"
+	"github.com/dujiao-next/internal/constants"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 )
@@ -111,37 +111,5 @@ func (s *Service) LoginVerifiedTelegram(verified *telegramauthapp.IdentityVerifi
 		}
 	}
 
-	// 已启用 2FA → 仅签发挑战 token
-	if user.TOTPEnabledAt != nil {
-		challenge, jti, expiresAt, err := s.IssueUserChallengeToken(user.ID, false)
-		if err != nil {
-			return nil, err
-		}
-		return &UserLoginResult{
-			RequiresTOTP:       true,
-			User:               user,
-			ChallengeToken:     challenge,
-			ChallengeJTI:       jti,
-			ChallengeExpiresAt: expiresAt,
-		}, nil
-	}
-
-	token, expiresAt, err := s.GenerateUserJWT(user, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	now := time.Now()
-	user.LastLoginAt = &now
-	user.UpdatedAt = now
-	if err := s.userRepo.Update(user); err != nil {
-		return nil, err
-	}
-	_ = cache.SetUserAuthState(context.Background(), cache.BuildUserAuthState(user))
-	return &UserLoginResult{
-		RequiresTOTP: false,
-		User:         user,
-		Token:        token,
-		ExpiresAt:    expiresAt,
-	}, nil
+	return s.completeExternalLogin(user, constants.LoginLogSourceTelegram)
 }

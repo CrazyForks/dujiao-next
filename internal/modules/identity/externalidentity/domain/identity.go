@@ -8,7 +8,7 @@ type Identity struct {
 	ID             uint       `gorm:"primarykey" json:"id"`                                                              // 主键
 	UserID         uint       `gorm:"index;not null" json:"user_id"`                                                     // 绑定用户ID
 	Provider       string     `gorm:"type:varchar(32);index:idx_provider_user,unique;not null" json:"provider"`          // 提供方
-	ProviderUserID string     `gorm:"type:varchar(128);index:idx_provider_user,unique;not null" json:"provider_user_id"` // 提供方用户ID
+	ProviderUserID string     `gorm:"type:varchar(255);index:idx_provider_user,unique;not null" json:"provider_user_id"` // 提供方用户ID
 	Username       string     `gorm:"type:varchar(128)" json:"username"`                                                 // 提供方用户名
 	AvatarURL      string     `gorm:"type:text" json:"avatar_url"`                                                       // 头像地址
 	AuthAt         *time.Time `json:"auth_at"`                                                                           // 最近认证时间

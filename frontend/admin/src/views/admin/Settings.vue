@@ -79,6 +79,7 @@ const tabs = computed(() => [
   { label: t('admin.settings.tabs.orderEmailTemplate'), value: 'order_email_template' },
   { label: t('admin.settings.tabs.captcha'), value: 'captcha' },
   { label: t('admin.settings.tabs.telegram'), value: 'telegram' },
+  { label: t('admin.settings.tabs.google'), value: 'google' },
   { label: t('admin.settings.tabs.dashboard'), value: 'dashboard' },
   { label: t('admin.settings.tabs.upstreamSync'), value: 'upstream_sync' },
 ])
@@ -278,6 +279,11 @@ const telegramForm = reactive({
   mode: '' as string,
 })
 
+const googleForm = reactive({
+  enabled: false,
+  client_id: '',
+})
+
 const createOrderEmailLocalizedTemplate = () => ({ subject: '', body: '' })
 const createOrderEmailSceneTemplate = () => ({
   'zh-CN': createOrderEmailLocalizedTemplate(),
@@ -359,12 +365,13 @@ const notifyErrorIfNeeded = (err: unknown, fallback: string) => {
 const fetchSettings = async () => {
   loading.value = true
   try {
-    const [siteRes, orderRes, smtpRes, captchaRes, telegramRes, dashboardRes, registrationRes, orderEmailTmplRes] = await Promise.all([
+    const [siteRes, orderRes, smtpRes, captchaRes, telegramRes, googleRes, dashboardRes, registrationRes, orderEmailTmplRes] = await Promise.all([
       adminAPI.getSettings({ key: 'site_config' }),
       adminAPI.getSettings({ key: 'order_config' }),
       adminAPI.getSMTPSettings(),
       adminAPI.getCaptchaSettings(),
       adminAPI.getTelegramAuthSettings(),
+      adminAPI.getGoogleAuthSettings(),
       adminAPI.getSettings({ key: 'dashboard_config' }),
       adminAPI.getSettings({ key: 'registration_config' }),
       adminAPI.getOrderEmailTemplateSettings(),
@@ -516,6 +523,12 @@ const fetchSettings = async () => {
       telegramForm.has_client_secret = !!telegram.has_client_secret
       telegramForm.oidc_redirect_uri = String(telegram.oidc_redirect_uri || '')
       telegramForm.mode = String(telegram.mode || '')
+    }
+
+    if (googleRes.data && googleRes.data.data) {
+      const google = googleRes.data.data as Record<string, unknown>
+      googleForm.enabled = !!google.enabled
+      googleForm.client_id = String(google.client_id || '')
     }
 
     if (dashboardRes.data && dashboardRes.data.data) {
@@ -688,6 +701,15 @@ const saveTelegramAuthSettings = async () => {
   telegramForm.oidc_redirect_uri = String(data?.oidc_redirect_uri ?? telegramForm.oidc_redirect_uri)
 }
 
+const saveGoogleAuthSettings = async () => {
+  const res = await adminAPI.updateGoogleAuthSettings({
+    enabled: googleForm.enabled,
+    client_id: googleForm.client_id.trim(),
+  })
+  const data = res.data?.data as Record<string, unknown> | undefined
+  googleForm.enabled = !!data?.enabled
+  googleForm.client_id = String(data?.client_id || '')
+}
 
 const saveDashboardSettings = async () => {
   const normalized = {
@@ -746,6 +768,8 @@ const saveSettings = async () => {
   try {
     if (currentTab.value === 'telegram') {
       await saveTelegramAuthSettings()
+    } else if (currentTab.value === 'google') {
+      await saveGoogleAuthSettings()
     } else if (currentTab.value === 'dashboard') {
       await saveDashboardSettings()
     } else {
@@ -1389,6 +1413,34 @@ onMounted(() => {
           </div>
         </div>
       </div>
+      </TabsContent>
+
+      <TabsContent value="google" :forceMount="true" v-show="currentTab === 'google'" class="space-y-6 mt-0">
+        <div class="rounded-xl border border-border bg-card">
+          <div class="border-b border-border bg-muted/40 px-6 py-4">
+            <h2 class="text-lg font-semibold">{{ t('admin.settings.google.title') }}</h2>
+            <p class="mt-1 text-xs text-muted-foreground">{{ t('admin.settings.google.subtitle') }}</p>
+          </div>
+
+          <div class="space-y-6 p-6">
+            <div class="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center">
+              <Switch id="google-auth-enabled" v-model="googleForm.enabled" />
+              <Label for="google-auth-enabled" class="text-sm font-medium">{{ t('admin.settings.google.enabled') }}</Label>
+            </div>
+
+            <div class="space-y-2">
+              <label class="text-xs font-medium text-muted-foreground">{{ t('admin.settings.google.clientID') }}</label>
+              <Input v-model="googleForm.client_id" :placeholder="t('admin.settings.google.clientIDPlaceholder')" />
+              <p class="text-xs text-muted-foreground">{{ t('admin.settings.google.clientIDHint') }}</p>
+            </div>
+
+            <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-200">
+              <p>{{ t('admin.settings.google.credentialHint') }}</p>
+              <p class="mt-1">{{ t('admin.settings.google.originHint') }}</p>
+              <p class="mt-1">{{ t('admin.settings.google.redirectHint') }}</p>
+            </div>
+          </div>
+        </div>
       </TabsContent>
 
       <TabsContent value="upstream_sync" :forceMount="true" v-show="currentTab === 'upstream_sync'" class="mt-0">

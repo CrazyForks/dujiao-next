@@ -42,6 +42,7 @@ import (
 	admintotpapp "github.com/dujiao-next/internal/modules/identity/adminauth/totp/application"
 	emailverificationcontract "github.com/dujiao-next/internal/modules/identity/emailverification/contract"
 	externalidentitycontract "github.com/dujiao-next/internal/modules/identity/externalidentity/contract"
+	googleauthapp "github.com/dujiao-next/internal/modules/identity/googleauth/application"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	usercontract "github.com/dujiao-next/internal/modules/identity/user/contract"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
@@ -135,6 +136,7 @@ type Container struct {
 	UserTOTPService               *usertotpapp.Service
 	UserAuthService               *userauthapp.Service
 	TelegramAuthService           *telegramauthapp.Service
+	GoogleAuthService             *googleauthapp.Service
 	EmailSender                   *notificationsmtp.Service
 	EmailBrandResolver            mailbrand.Resolver
 	CaptchaService                *captchaapp.Service

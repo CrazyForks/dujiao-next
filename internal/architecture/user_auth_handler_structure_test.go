@@ -36,6 +36,21 @@ func TestTelegramAuthLivesInIdentityModule(t *testing.T) {
 	}
 }
 
+func TestGoogleAuthLivesInIdentityModule(t *testing.T) {
+	repositoryRoot := findRepositoryRoot(t)
+	applicationRoot := filepath.Join(
+		repositoryRoot,
+		"internal", "modules", "identity", "googleauth", "application",
+	)
+	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "service.go"), []string{
+		"Service", "VerifiedIdentity", "Option",
+	})
+	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "service.go"), []string{
+		"NewService", "WithJWKSURL", "WithHTTPClient", "WithClock",
+	})
+	assertDirectoryGoFileBudget(t, applicationRoot, 3)
+}
+
 func TestEmailVerificationLivesInIdentityModule(t *testing.T) {
 	repositoryRoot := findRepositoryRoot(t)
 	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "identity", "emailverification")
@@ -147,6 +162,8 @@ func TestUserProfileHTTPLivesInTransport(t *testing.T) {
 		"RegisterUserTelegramOIDCRoutes",
 		"RegisterUserTelegramAuthRoutes",
 		"RegisterUserTelegramRoutes",
+		"RegisterUserGoogleAuthRoutes",
+		"RegisterUserGoogleRoutes",
 	})
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "user_profile_handler.go"), []string{
 		"UserProfileService", "UserProfileHandler", "UserProfileUpdateRequest",
@@ -187,6 +204,12 @@ func TestUserProfileHTTPLivesInTransport(t *testing.T) {
 		"NewUserTelegramHandler", "UserTelegramLogin", "UserTelegramMiniAppLogin",
 		"GetMyTelegramBinding", "BindMyTelegram", "BindMyTelegramMiniApp", "UnbindMyTelegram",
 	})
+	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "user_google_handler.go"), []string{
+		"UserGoogleService", "UserGoogleHandler", "UserGoogleCredentialRequest", "GoogleBindingResult",
+	})
+	assertFileDeclaresFunctions(t, filepath.Join(transportRoot, "user_google_handler.go"), []string{
+		"NewUserGoogleHandler", "UserGoogleLogin", "GetMyGoogleBinding", "BindMyGoogle", "UnbindMyGoogle",
+	})
 	assertFileDeclaresTypes(t, filepath.Join(transportRoot, "user_login_handler.go"), []string{
 		"UserLoginSettings", "UserLoginAuth", "UserLoginHandler", "UserRegisterRequest", "UserLoginRequest",
 	})
@@ -202,12 +225,12 @@ func TestUserProfileHTTPLivesInTransport(t *testing.T) {
 		"DisableUser2FA", "RegenerateUser2FARecoveryCodes", "VerifyUser2FA",
 	})
 	assertFileDeclaresTypes(t, filepath.Join(presenterRoot, "user.go"), []string{
-		"UserProfileResp", "TelegramBindingResp", "UserAuthBriefResp",
+		"UserProfileResp", "TelegramBindingResp", "GoogleBindingResp", "UserAuthBriefResp",
 	})
 	assertFileDeclaresFunctions(t, filepath.Join(presenterRoot, "user.go"), []string{
-		"NewUserProfileResp", "NewTelegramBindingResp", "NewUserAuthBriefResp",
+		"NewUserProfileResp", "NewTelegramBindingResp", "NewGoogleBindingResp", "NewUserAuthBriefResp",
 	})
-	assertDirectoryGoFileBudget(t, transportRoot, 10)
+	assertDirectoryGoFileBudget(t, transportRoot, 13)
 	assertDirectoryGoFileBudget(t, presenterRoot, 2)
 
 	for _, legacy := range []string{

@@ -31,11 +31,17 @@ type TelegramAuthPayload struct {
 	Hash      string
 }
 
+// TelegramBindingResult is the transport view returned by the application adapter.
+type TelegramBindingResult struct {
+	Identity  *externalidentitydomain.Identity
+	CanUnbind bool
+}
+
 // UserTelegramService 是 Telegram widget/MiniApp 端点所需的最小端口。
 type UserTelegramService interface {
 	LoginWithTelegram(ctx context.Context, payload TelegramAuthPayload) (*AuthLoginResult, error)
 	LoginWithTelegramMiniApp(ctx context.Context, initData string) (*AuthLoginResult, error)
-	GetTelegramBinding(userID uint) (*externalidentitydomain.Identity, error)
+	GetTelegramBinding(userID uint) (*TelegramBindingResult, error)
 	BindTelegram(ctx context.Context, userID uint, payload TelegramAuthPayload) (*externalidentitydomain.Identity, error)
 	BindTelegramMiniApp(ctx context.Context, userID uint, initData string) (*externalidentitydomain.Identity, error)
 	UnbindTelegram(userID uint) error
@@ -225,7 +231,7 @@ func (h *UserTelegramHandler) GetMyTelegramBinding(c *gin.Context) {
 	if !ok {
 		return
 	}
-	identity, err := h.service.GetTelegramBinding(uid)
+	binding, err := h.service.GetTelegramBinding(uid)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrUserNotFound):
@@ -235,11 +241,11 @@ func (h *UserTelegramHandler) GetMyTelegramBinding(c *gin.Context) {
 		}
 		return
 	}
-	if identity == nil {
-		response.Success(c, userpresenter.NewTelegramBindingResp(nil))
+	if binding == nil || binding.Identity == nil {
+		response.Success(c, userpresenter.NewTelegramBindingResp(nil, false))
 		return
 	}
-	response.Success(c, userpresenter.NewTelegramBindingResp(identity))
+	response.Success(c, userpresenter.NewTelegramBindingResp(binding.Identity, binding.CanUnbind))
 }
 
 // BindMyTelegram 绑定当前用户 Telegram。
@@ -258,7 +264,12 @@ func (h *UserTelegramHandler) BindMyTelegram(c *gin.Context) {
 		respondTelegramBindError(c, err)
 		return
 	}
-	response.Success(c, userpresenter.NewTelegramBindingResp(identity))
+	binding, getErr := h.service.GetTelegramBinding(uid)
+	if getErr != nil || binding == nil {
+		response.Success(c, userpresenter.NewTelegramBindingResp(identity, false))
+		return
+	}
+	response.Success(c, userpresenter.NewTelegramBindingResp(binding.Identity, binding.CanUnbind))
 }
 
 // BindMyTelegramMiniApp 绑定当前用户的 Telegram Mini App 身份。
@@ -277,7 +288,12 @@ func (h *UserTelegramHandler) BindMyTelegramMiniApp(c *gin.Context) {
 		respondTelegramBindError(c, err)
 		return
 	}
-	response.Success(c, userpresenter.NewTelegramBindingResp(identity))
+	binding, getErr := h.service.GetTelegramBinding(uid)
+	if getErr != nil || binding == nil {
+		response.Success(c, userpresenter.NewTelegramBindingResp(identity, false))
+		return
+	}
+	response.Success(c, userpresenter.NewTelegramBindingResp(binding.Identity, binding.CanUnbind))
 }
 
 // UnbindMyTelegram 解绑当前用户 Telegram。

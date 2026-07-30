@@ -4,9 +4,11 @@ import type {
     SendChangeEmailCodePayload,
     ChangeEmailPayload,
     ChangeUserPasswordPayload,
+    GoogleCredentialPayload,
     TelegramAuthPayload,
     TelegramMiniAppAuthPayload,
 } from './types'
+import { GOOGLE_REDIRECT_API_PATHS } from '../utils/googleRedirect'
 
 export const userProfileAPI = {
     current: () => userApi.get('/me'),
@@ -23,4 +25,11 @@ export const userProfileAPI = {
     telegramOidcBindCallback: (data: { code: string; state: string }) =>
         userApi.post('/me/telegram/oidc/callback', data),
     unbindTelegram: () => userApi.delete('/me/telegram/unbind'),
+    getGoogleBinding: () => userApi.get('/me/google'),
+    bindGoogle: (data: GoogleCredentialPayload) => userApi.post('/me/google/bind', data),
+    googleRedirectBindIntent: () =>
+        userApi.post(GOOGLE_REDIRECT_API_PATHS.bindIntent, {}, { credentials: 'include' }),
+    googleRedirectBindExchange: () =>
+        userApi.post(GOOGLE_REDIRECT_API_PATHS.bindExchange, {}, { credentials: 'include' }),
+    unbindGoogle: () => userApi.delete('/me/google/unbind'),
 }

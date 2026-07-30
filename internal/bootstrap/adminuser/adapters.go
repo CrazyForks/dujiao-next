@@ -91,12 +91,16 @@ func (a adminUserOAuthAdapter) ListByUserID(userID uint) ([]externalidentitydoma
 	return a.identities.ListByUserID(userID)
 }
 
-type adminUserTelegramAdapter struct {
+type adminUserOAuthUnbindAdapter struct {
 	auth *userauthapp.Service
 }
 
-func (a adminUserTelegramAdapter) UnbindTelegram(userID uint) error {
+func (a adminUserOAuthUnbindAdapter) UnbindTelegram(userID uint) error {
 	return mapAdminUserTransportError(a.auth.UnbindTelegram(userID))
+}
+
+func (a adminUserOAuthUnbindAdapter) UnbindGoogle(userID uint) error {
+	return mapAdminUserTransportError(a.auth.UnbindGoogle(userID))
 }
 
 type adminUserCouponUsageAdapter struct {
@@ -145,6 +149,7 @@ func mapAdminUserTransportError(err error) error {
 		{userauthapp.ErrUserDisabled, adminusertransport.ErrUserDisabled},
 		{userauthapp.ErrUserOAuthNotBound, adminusertransport.ErrUserOAuthNotBound},
 		{userauthapp.ErrTelegramUnbindRequiresEmail, adminusertransport.ErrTelegramUnbindRequiresEmail},
+		{userauthapp.ErrGoogleUnbindLocked, adminusertransport.ErrGoogleUnbindLocked},
 		{userauthapp.ErrInvalidEmail, adminusertransport.ErrInvalidEmail},
 	} {
 		if errors.Is(err, mapping.source) {

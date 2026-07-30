@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,8 +23,10 @@ import (
 	emailverificationstore "github.com/dujiao-next/internal/modules/identity/emailverification/infrastructure/gormstore"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 	externalidentitystore "github.com/dujiao-next/internal/modules/identity/externalidentity/infrastructure/gormstore"
+	googleauthapp "github.com/dujiao-next/internal/modules/identity/googleauth/application"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
+	userauthgormstore "github.com/dujiao-next/internal/modules/identity/userauth/infrastructure/gormstore"
 	memberlevelapp "github.com/dujiao-next/internal/modules/memberlevel/application"
 	memberlevelgormstore "github.com/dujiao-next/internal/modules/memberlevel/infrastructure/gormstore"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -32,6 +35,87 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
+
+func TestBindTelegramMiniAppConcurrentDifferentIdentitiesReturnsStableConflict(t *testing.T) {
+	botToken := "concurrent-bind-bot-token"
+	telegramService := telegramauthapp.NewService(
+		config.TelegramAuthConfig{
+			Enabled:            true,
+			BotToken:           botToken,
+			LoginExpireSeconds: 300,
+			ReplayTTLSeconds:   300,
+		},
+		telegramauthapp.WithReplaySetNX(func(context.Context, string, interface{}, time.Duration) (bool, error) {
+			return true, nil
+		}),
+	)
+	svc, _, db := setupTelegramOAuthTestService(t, telegramService)
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatalf("get sql db: %v", err)
+	}
+	sqlDB.SetMaxOpenConns(1)
+
+	now := time.Now()
+	user := &userdomain.User{
+		Email: "telegram-concurrent@example.com", PasswordHash: "not-used", DisplayName: "Concurrent",
+		Status: constants.UserStatusActive, EmailVerifiedAt: &now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(user).Error; err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+
+	initData := []string{
+		buildUserAuthTestTelegramMiniAppInitData(
+			t,
+			botToken,
+			now.Unix(),
+			`{"id":1001001,"first_name":"First","username":"first"}`,
+		),
+		buildUserAuthTestTelegramMiniAppInitData(
+			t,
+			botToken,
+			now.Unix(),
+			`{"id":1001002,"first_name":"Second","username":"second"}`,
+		),
+	}
+	start := make(chan struct{})
+	results := make(chan error, len(initData))
+	var waitGroup sync.WaitGroup
+	for _, credential := range initData {
+		credential := credential
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			<-start
+			_, bindErr := svc.BindTelegramMiniApp(userauthapp.BindTelegramMiniAppInput{
+				UserID:   user.ID,
+				InitData: credential,
+				Context:  context.Background(),
+			})
+			results <- bindErr
+		}()
+	}
+	close(start)
+	waitGroup.Wait()
+	close(results)
+
+	successes := 0
+	conflicts := 0
+	for resultErr := range results {
+		switch {
+		case resultErr == nil:
+			successes++
+		case errors.Is(resultErr, userauthapp.ErrUserOAuthAlreadyBound):
+			conflicts++
+		default:
+			t.Fatalf("unexpected bind error: %v", resultErr)
+		}
+	}
+	if successes != 1 || conflicts != 1 {
+		t.Fatalf("results successes=%d conflicts=%d, want 1/1", successes, conflicts)
+	}
+}
 
 func setupTelegramOAuthTestService(t *testing.T, telegramService ...*telegramauthapp.Service) (*userauthapp.Service, *settingsapp.Service, *gorm.DB) {
 	t.Helper()
@@ -43,6 +127,11 @@ func setupTelegramOAuthTestService(t *testing.T, telegramService ...*telegramaut
 	}
 	if err := db.AutoMigrate(&userdomain.User{}, &externalidentitydomain.Identity{}, &emailverificationdomain.Code{}, &settingsstore.SettingRecord{}); err != nil {
 		t.Fatalf("auto migrate failed: %v", err)
+	}
+	if err := db.Exec(
+		"CREATE UNIQUE INDEX idx_user_oauth_identity_user_provider ON user_oauth_identities(user_id, provider)",
+	).Error; err != nil {
+		t.Fatalf("create user/provider identity unique index: %v", err)
 	}
 
 	cfg := &config.Config{
@@ -65,6 +154,11 @@ func setupTelegramOAuthTestService(t *testing.T, telegramService ...*telegramaut
 		nil,
 		verifier,
 	)
+	svc.SetAuthUnitOfWork(userauthgormstore.New(db))
+	svc.SetGoogleAuthService(googleauthapp.NewService(config.GoogleAuthConfig{
+		Enabled:  true,
+		ClientID: "google-client-id",
+	}))
 	return svc, settingSvc, db
 }
 

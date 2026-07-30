@@ -61,6 +61,17 @@ type TelegramAuthFallback struct {
 	MiniAppURL  string
 }
 
+// GoogleAuthPublic Google Identity Services 登录公开配置端口。
+type GoogleAuthPublic interface {
+	PublicConfig() map[string]interface{}
+}
+
+// GoogleAuthFallback 无 GoogleAuthService 时的配置回退。
+type GoogleAuthFallback struct {
+	Enabled  bool
+	ClientID string
+}
+
 // ResellerOverlay 分销站配置叠加端口。
 type ResellerOverlay interface {
 	ApplyPublicConfigOverlay(ctx context.Context, tenant reseller.TenantContext, base map[string]interface{}) (map[string]interface{}, error)
@@ -68,13 +79,15 @@ type ResellerOverlay interface {
 
 // Handler 处理公开站点配置 HTTP 请求。
 type Handler struct {
-	cache    ConfigCache
-	settings Settings
-	payments PaymentChannels
-	captcha  CaptchaPublic
-	telegram TelegramAuthPublic
-	fallback TelegramAuthFallback
-	overlay  ResellerOverlay
+	cache          ConfigCache
+	settings       Settings
+	payments       PaymentChannels
+	captcha        CaptchaPublic
+	telegram       TelegramAuthPublic
+	fallback       TelegramAuthFallback
+	google         GoogleAuthPublic
+	googleFallback GoogleAuthFallback
+	overlay        ResellerOverlay
 }
 
 func NewHandler(
@@ -84,6 +97,8 @@ func NewHandler(
 	captcha CaptchaPublic,
 	telegram TelegramAuthPublic,
 	fallback TelegramAuthFallback,
+	google GoogleAuthPublic,
+	googleFallback GoogleAuthFallback,
 	overlay ResellerOverlay,
 ) *Handler {
 	if cache == nil {
@@ -96,13 +111,15 @@ func NewHandler(
 		panic("public config handler: payments is nil")
 	}
 	return &Handler{
-		cache:    cache,
-		settings: settings,
-		payments: payments,
-		captcha:  captcha,
-		telegram: telegram,
-		fallback: fallback,
-		overlay:  overlay,
+		cache:          cache,
+		settings:       settings,
+		payments:       payments,
+		captcha:        captcha,
+		telegram:       telegram,
+		fallback:       fallback,
+		google:         google,
+		googleFallback: googleFallback,
+		overlay:        overlay,
 	}
 }
 
@@ -173,6 +190,8 @@ func (h *Handler) GetConfig(c *gin.Context) {
 	}
 	data["telegram_auth"] = telegramAuthConfig
 
+	data["google_auth"] = resolveGoogleAuthPublicConfig(h.google, h.googleFallback)
+
 	affiliateSetting, err := h.settings.GetAffiliateSettingMap()
 	if err != nil {
 		ginutil.RespondError(c, response.CodeInternal, "error.config_fetch_failed", err)
@@ -222,4 +241,23 @@ func (h *Handler) GetConfig(c *gin.Context) {
 	data["server_time"] = time.Now().UnixMilli()
 	data["app_version"] = version.Version
 	response.Success(c, data)
+}
+
+func stringValue(value interface{}) string {
+	text, _ := value.(string)
+	return text
+}
+
+func resolveGoogleAuthPublicConfig(source GoogleAuthPublic, fallback GoogleAuthFallback) map[string]interface{} {
+	enabled := fallback.Enabled
+	clientID := strings.TrimSpace(fallback.ClientID)
+	if source != nil {
+		publicGoogle := source.PublicConfig()
+		clientID = strings.TrimSpace(stringValue(publicGoogle["client_id"]))
+		enabled, _ = publicGoogle["enabled"].(bool)
+	}
+	return map[string]interface{}{
+		"enabled":   enabled && clientID != "",
+		"client_id": clientID,
+	}
 }

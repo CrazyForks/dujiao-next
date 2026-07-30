@@ -4,6 +4,7 @@ import { memberLevelAPI, userOrderAPI, userProfileAPI } from '../api'
 import type {
     ChangeEmailPayload,
     ChangeUserPasswordPayload,
+    GoogleBindingData,
     PublicMemberLevel,
     SendChangeEmailCodePayload,
     TelegramAuthPayload,
@@ -38,6 +39,7 @@ export const useUserProfileStore = defineStore('user-profile', () => {
     const ordersTotal = ref(0)
     const recentLoginLogs = ref<UserLoginLogItem[]>([])
     const telegramBinding = ref<TelegramBindingData | null>(null)
+    const googleBinding = ref<GoogleBindingData | null>(null)
     const memberLevels = ref<PublicMemberLevel[]>([])
 
     const loadingProfile = ref(false)
@@ -47,6 +49,9 @@ export const useUserProfileStore = defineStore('user-profile', () => {
     const loadingTelegramBinding = ref(false)
     const bindingTelegram = ref(false)
     const unbindingTelegram = ref(false)
+    const loadingGoogleBinding = ref(false)
+    const bindingGoogle = ref(false)
+    const unbindingGoogle = ref(false)
     const sendingCode = ref(false)
     const changingEmail = ref(false)
     const changingPassword = ref(false)
@@ -285,12 +290,74 @@ export const useUserProfileStore = defineStore('user-profile', () => {
         }
     }
 
+    const loadGoogleBinding = async () => {
+        loadingGoogleBinding.value = true
+        clearSecurityError()
+        try {
+            const response = await userProfileAPI.getGoogleBinding()
+            googleBinding.value = response.data.data || { bound: false }
+            return true
+        } catch (error) {
+            googleBinding.value = null
+            securityError.value = normalizeErrorMessage(error, '加载 Google 绑定信息失败')
+            return false
+        } finally {
+            loadingGoogleBinding.value = false
+        }
+    }
+
+    const bindGoogle = async (credential: string) => {
+        bindingGoogle.value = true
+        clearSecurityError()
+        try {
+            const response = await userProfileAPI.bindGoogle({ credential })
+            googleBinding.value = response.data.data || { bound: true }
+            return true
+        } catch (error) {
+            securityError.value = normalizeErrorMessage(error, '绑定 Google 失败')
+            return false
+        } finally {
+            bindingGoogle.value = false
+        }
+    }
+
+    const exchangeGoogleRedirectBind = async () => {
+        bindingGoogle.value = true
+        clearSecurityError()
+        try {
+            const response = await userProfileAPI.googleRedirectBindExchange()
+            googleBinding.value = response.data.data || { bound: true }
+            return true
+        } catch (error) {
+            securityError.value = normalizeErrorMessage(error, '绑定 Google 失败')
+            return false
+        } finally {
+            bindingGoogle.value = false
+        }
+    }
+
+    const unbindGoogle = async () => {
+        unbindingGoogle.value = true
+        clearSecurityError()
+        try {
+            await userProfileAPI.unbindGoogle()
+            googleBinding.value = { bound: false }
+            return true
+        } catch (error) {
+            securityError.value = normalizeErrorMessage(error, '解绑 Google 失败')
+            return false
+        } finally {
+            unbindingGoogle.value = false
+        }
+    }
+
     return {
         profile,
         recentOrders,
         ordersTotal,
         recentLoginLogs,
         telegramBinding,
+        googleBinding,
         memberLevels,
         currentLevel,
         nextLevel,
@@ -302,6 +369,9 @@ export const useUserProfileStore = defineStore('user-profile', () => {
         loadingTelegramBinding,
         bindingTelegram,
         unbindingTelegram,
+        loadingGoogleBinding,
+        bindingGoogle,
+        unbindingGoogle,
         sendingCode,
         changingEmail,
         changingPassword,
@@ -322,5 +392,9 @@ export const useUserProfileStore = defineStore('user-profile', () => {
         bindTelegram,
         bindTelegramMiniApp,
         unbindTelegram,
+        loadGoogleBinding,
+        bindGoogle,
+        exchangeGoogleRedirectBind,
+        unbindGoogle,
     }
 })

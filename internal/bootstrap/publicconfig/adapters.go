@@ -13,6 +13,7 @@ import (
 	"github.com/dujiao-next/internal/config"
 	"github.com/dujiao-next/internal/constants"
 	captchaapp "github.com/dujiao-next/internal/modules/captcha/application"
+	googleauthapp "github.com/dujiao-next/internal/modules/identity/googleauth/application"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	resellerapplication "github.com/dujiao-next/internal/modules/reseller/application"
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
@@ -124,6 +125,14 @@ type publicConfigTelegramAdapter struct {
 }
 
 func (a publicConfigTelegramAdapter) PublicConfig() map[string]interface{} {
+	return a.svc.PublicConfig()
+}
+
+type publicConfigGoogleAdapter struct {
+	svc *googleauthapp.Service
+}
+
+func (a publicConfigGoogleAdapter) PublicConfig() map[string]interface{} {
 	return a.svc.PublicConfig()
 }
 

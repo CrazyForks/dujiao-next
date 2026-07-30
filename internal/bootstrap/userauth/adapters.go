@@ -19,6 +19,7 @@ import (
 	"github.com/dujiao-next/internal/cache"
 	auditlogapp "github.com/dujiao-next/internal/modules/auditlog/application"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
+	googleauthapp "github.com/dujiao-next/internal/modules/identity/googleauth/application"
 	telegramauthapp "github.com/dujiao-next/internal/modules/identity/telegramauth/application"
 	userauthapp "github.com/dujiao-next/internal/modules/identity/userauth/application"
 	"github.com/dujiao-next/internal/modules/identity/userauth/challenge"
@@ -117,6 +118,156 @@ type userTelegramTransportAdapter struct {
 	auth *userauthapp.Service
 }
 
+// userGoogleTransportAdapter adapts Google authentication application services
+// to the user HTTP transport port.
+type userGoogleTransportAdapter struct {
+	auth *userauthapp.Service
+}
+
+func (a userGoogleTransportAdapter) LoginWithGoogle(ctx context.Context, credential string) (*userauthtransport.AuthLoginResult, error) {
+	result, err := a.auth.LoginWithGoogle(userauthapp.LoginWithGoogleInput{
+		Credential: credential,
+		Context:    ctx,
+	})
+	if err != nil {
+		return nil, mapUserAuthTransportError(err)
+	}
+	return toUserAuthTransportLoginResult(result), nil
+}
+
+func (a userGoogleTransportAdapter) GetGoogleBinding(userID uint) (*userauthtransport.GoogleBindingResult, error) {
+	result, err := a.auth.GetGoogleBinding(userID)
+	if err != nil {
+		return nil, mapUserAuthTransportError(err)
+	}
+	return toGoogleTransportBindingResult(result), nil
+}
+
+func (a userGoogleTransportAdapter) BindGoogle(ctx context.Context, userID uint, credential string) (*userauthtransport.GoogleBindingResult, error) {
+	result, err := a.auth.BindGoogle(userauthapp.BindGoogleInput{
+		UserID:     userID,
+		Credential: credential,
+		Context:    ctx,
+	})
+	if err != nil {
+		return nil, mapUserAuthTransportError(err)
+	}
+	return toGoogleTransportBindingResult(result), nil
+}
+
+func (a userGoogleTransportAdapter) UnbindGoogle(userID uint) error {
+	return mapUserAuthTransportError(a.auth.UnbindGoogle(userID))
+}
+
+func (a userGoogleTransportAdapter) CreateGoogleRedirectIntent(
+	ctx context.Context,
+	flow string,
+	userID uint,
+	tenant userauthtransport.GoogleRedirectTenant,
+) (string, error) {
+	state, err := a.auth.CreateGoogleRedirectIntent(
+		ctx,
+		flow,
+		userID,
+		toGoogleRedirectApplicationTenant(tenant),
+	)
+	return state, mapUserAuthTransportError(err)
+}
+
+func (a userGoogleTransportAdapter) CompleteGoogleRedirect(
+	ctx context.Context,
+	state string,
+	credential string,
+	tenant userauthtransport.GoogleRedirectTenant,
+) (*userauthtransport.GoogleRedirectCompletionResult, error) {
+	result, err := a.auth.CompleteGoogleRedirect(
+		ctx,
+		state,
+		credential,
+		toGoogleRedirectApplicationTenant(tenant),
+	)
+	var transportResult *userauthtransport.GoogleRedirectCompletionResult
+	if result == nil {
+		return nil, mapUserAuthTransportError(err)
+	}
+	transportResult = &userauthtransport.GoogleRedirectCompletionResult{
+		Flow:          result.Flow,
+		HandoffHandle: result.HandoffHandle,
+	}
+	return transportResult, mapUserAuthTransportError(err)
+}
+
+func (a userGoogleTransportAdapter) ExchangeGoogleRedirectLogin(
+	ctx context.Context,
+	handle string,
+	tenant userauthtransport.GoogleRedirectTenant,
+) (*userauthtransport.AuthLoginResult, error) {
+	result, err := a.auth.ExchangeGoogleRedirectLogin(
+		ctx,
+		handle,
+		toGoogleRedirectApplicationTenant(tenant),
+	)
+	if err != nil {
+		return nil, mapUserAuthTransportError(err)
+	}
+	return toUserAuthTransportLoginResult(result), nil
+}
+
+func (a userGoogleTransportAdapter) ExchangeGoogleRedirectBind(
+	ctx context.Context,
+	handle string,
+	userID uint,
+	tenant userauthtransport.GoogleRedirectTenant,
+) (*userauthtransport.GoogleBindingResult, error) {
+	result, err := a.auth.ExchangeGoogleRedirectBind(
+		ctx,
+		handle,
+		userID,
+		toGoogleRedirectApplicationTenant(tenant),
+	)
+	if err != nil {
+		return nil, mapUserAuthTransportError(err)
+	}
+	return toGoogleTransportBindingResult(result), nil
+}
+
+func toGoogleRedirectApplicationTenant(
+	tenant userauthtransport.GoogleRedirectTenant,
+) userauthapp.GoogleRedirectTenant {
+	return userauthapp.GoogleRedirectTenant{
+		Host:          tenant.Host,
+		IsMain:        tenant.IsMain,
+		HasResellerID: tenant.HasResellerID,
+		ResellerID:    tenant.ResellerID,
+	}
+}
+
+func toGoogleTransportBindingResult(result *userauthapp.GoogleBinding) *userauthtransport.GoogleBindingResult {
+	if result == nil {
+		return nil
+	}
+	return &userauthtransport.GoogleBindingResult{
+		Identity:    result.Identity,
+		Email:       result.Email,
+		DisplayName: result.DisplayName,
+		CanUnbind:   result.CanUnbind,
+	}
+}
+
+func toUserAuthTransportLoginResult(result *userauthapp.UserLoginResult) *userauthtransport.AuthLoginResult {
+	if result == nil {
+		return nil
+	}
+	return &userauthtransport.AuthLoginResult{
+		RequiresTOTP:       result.RequiresTOTP,
+		User:               result.User,
+		Token:              result.Token,
+		ExpiresAt:          result.ExpiresAt,
+		ChallengeToken:     result.ChallengeToken,
+		ChallengeExpiresAt: result.ChallengeExpiresAt,
+	}
+}
+
 func (a userTelegramTransportAdapter) toServicePayload(payload userauthtransport.TelegramAuthPayload) telegramauthapp.LoginPayload {
 	return telegramauthapp.LoginPayload{
 		ID:        payload.ID,
@@ -165,9 +316,18 @@ func (a userTelegramTransportAdapter) LoginWithTelegramMiniApp(ctx context.Conte
 	return a.toAuthLoginResult(res), nil
 }
 
-func (a userTelegramTransportAdapter) GetTelegramBinding(userID uint) (*externalidentitydomain.Identity, error) {
-	identity, err := a.auth.GetTelegramBinding(userID)
-	return identity, mapUserAuthTransportError(err)
+func (a userTelegramTransportAdapter) GetTelegramBinding(userID uint) (*userauthtransport.TelegramBindingResult, error) {
+	binding, err := a.auth.GetTelegramBinding(userID)
+	if err != nil {
+		return nil, mapUserAuthTransportError(err)
+	}
+	if binding == nil {
+		return nil, nil
+	}
+	return &userauthtransport.TelegramBindingResult{
+		Identity:  binding.Identity,
+		CanUnbind: binding.CanUnbind,
+	}, nil
 }
 
 func (a userTelegramTransportAdapter) BindTelegram(ctx context.Context, userID uint, payload userauthtransport.TelegramAuthPayload) (*externalidentitydomain.Identity, error) {
@@ -380,9 +540,10 @@ func (a user2FAAuthTransportAdapter) ParseUserChallengeToken(tokenString string)
 		return nil, nil
 	}
 	return &userauthtransport.UserChallengeClaims{
-		UserID:     claims.UserID,
-		JTI:        claims.JTI,
-		RememberMe: claims.RememberMe,
+		UserID:      claims.UserID,
+		JTI:         claims.JTI,
+		RememberMe:  claims.RememberMe,
+		LoginSource: claims.LoginSource,
 	}, nil
 }
 
@@ -496,10 +657,23 @@ func mapUserAuthTransportError(err error) error {
 		{telegramauthapp.ErrTelegramAuthSignatureInvalid, userauthtransport.ErrTelegramAuthSignatureInvalid},
 		{telegramauthapp.ErrTelegramAuthExpired, userauthtransport.ErrTelegramAuthExpired},
 		{telegramauthapp.ErrTelegramAuthReplay, userauthtransport.ErrTelegramAuthReplay},
+		{googleauthapp.ErrGoogleAuthDisabled, userauthtransport.ErrGoogleAuthDisabled},
+		{googleauthapp.ErrGoogleAuthConfigInvalid, userauthtransport.ErrGoogleAuthConfigInvalid},
+		{googleauthapp.ErrGoogleCredentialInvalid, userauthtransport.ErrGoogleCredentialInvalid},
+		{googleauthapp.ErrGoogleCredentialExpired, userauthtransport.ErrGoogleCredentialExpired},
+		{googleauthapp.ErrGoogleEmailUnverified, userauthtransport.ErrGoogleEmailUnverified},
+		{googleauthapp.ErrGoogleJWKSUnavailable, userauthtransport.ErrGoogleJWKSUnavailable},
 		{userauthapp.ErrUserOAuthIdentityExists, userauthtransport.ErrUserOAuthIdentityExists},
 		{userauthapp.ErrUserOAuthAlreadyBound, userauthtransport.ErrUserOAuthAlreadyBound},
 		{userauthapp.ErrUserOAuthNotBound, userauthtransport.ErrUserOAuthNotBound},
 		{userauthapp.ErrTelegramUnbindRequiresEmail, userauthtransport.ErrTelegramUnbindRequiresEmail},
+		{userauthapp.ErrGoogleAutoLinkForbidden, userauthtransport.ErrGoogleAutoLinkForbidden},
+		{userauthapp.ErrGoogleUnbindLocked, userauthtransport.ErrGoogleUnbindLocked},
+		{userauthapp.ErrGoogleRedirectUnavailable, userauthtransport.ErrGoogleRedirectUnavailable},
+		{userauthapp.ErrGoogleRedirectSessionExpired, userauthtransport.ErrGoogleRedirectSessionExpired},
+		{userauthapp.ErrGoogleRedirectTenantMismatch, userauthtransport.ErrGoogleRedirectTenantMismatch},
+		{userauthapp.ErrGoogleRedirectUserMismatch, userauthtransport.ErrGoogleRedirectUserMismatch},
+		{userauthapp.ErrGoogleRedirectFlowInvalid, userauthtransport.ErrGoogleRedirectFlowInvalid},
 		{userauthapp.ErrUserDisabled, userauthtransport.ErrUserDisabled},
 		{userauthapp.ErrRegistrationDisabled, userauthtransport.ErrRegistrationDisabled},
 		{userauthapp.ErrAgreementRequired, userauthtransport.ErrAgreementRequired},

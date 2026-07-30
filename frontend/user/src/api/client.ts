@@ -1,4 +1,5 @@
 import i18n from '../i18n'
+import { isPublicAuthEndpoint } from '../utils/authEndpoints'
 
 export const t = (key: string, params?: Record<string, any>) =>
     (params ? i18n.global.t(key, params) : i18n.global.t(key)) as string
@@ -23,6 +24,7 @@ interface RequestOptions {
     headers?: Record<string, string>
     blob?: boolean
     silentBusinessError?: boolean
+    credentials?: RequestCredentials
     [key: string]: any
 }
 
@@ -54,9 +56,6 @@ function getHttpErrorMessage(status: number): string {
         default: return t('common.api.requestFailedStatus', { status })
     }
 }
-
-const isAuthEndpoint = (url: string) =>
-    /\/auth\/(login|register|telegram\/login|telegram\/miniapp\/login|telegram\/oidc\/start|telegram\/oidc\/callback|forgot-password)/.test(url)
 
 function createClient(injectAuth: boolean) {
     const baseURL = `${API_BASE_URL}${API_PREFIX}`
@@ -101,6 +100,7 @@ function createClient(injectAuth: boolean) {
                 method,
                 headers,
                 body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
+                credentials: opts.credentials,
                 signal: controller.signal,
             })
         } catch (err: any) {
@@ -136,7 +136,7 @@ function createClient(injectAuth: boolean) {
                 const status = response.status
                 const message = getHttpErrorMessage(status)
                 if (status === 401) {
-                    if (injectAuth && !isAuthEndpoint(path)) {
+                    if (injectAuth && !isPublicAuthEndpoint(path)) {
                         localStorage.removeItem('user_token')
                         localStorage.removeItem('user_profile')
                         window.location.href = '/auth/login'
@@ -153,7 +153,7 @@ function createClient(injectAuth: boolean) {
         if (!response.ok) {
             const status = response.status
             const message = data?.msg || getHttpErrorMessage(status)
-            if (status === 401 && injectAuth && !isAuthEndpoint(path)) {
+            if (status === 401 && injectAuth && !isPublicAuthEndpoint(path)) {
                 localStorage.removeItem('user_token')
                 localStorage.removeItem('user_profile')
                 window.location.href = '/auth/login'
@@ -164,7 +164,7 @@ function createClient(injectAuth: boolean) {
 
         // Business error check
         if (typeof data.status_code !== 'undefined' && data.status_code !== 0) {
-            if (data.status_code === 401 && injectAuth && !isAuthEndpoint(path)) {
+            if (data.status_code === 401 && injectAuth && !isPublicAuthEndpoint(path)) {
                 localStorage.removeItem('user_token')
                 localStorage.removeItem('user_profile')
                 window.location.href = '/auth/login'

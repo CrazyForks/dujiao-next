@@ -8,6 +8,7 @@ import (
 
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 
 	categorydomain "github.com/dujiao-next/internal/modules/catalog/category/domain"
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
@@ -32,7 +33,22 @@ const (
 	cartSKUForeignKeyConstraint                     = "fk_cart_items_sku"
 	procurementOrderForeignKeyConstraint            = "fk_procurement_orders_local_order"
 	supersededProcurementOrderForeignKeyConstraint  = "fk_procurement_orders_local_order_reference"
+	userOAuthIdentityUserProviderUniqueIndex        = "idx_user_oauth_identity_user_provider"
 )
+
+type userOAuthIdentityUserProviderIndexSchema struct {
+	UserID   uint   `gorm:"uniqueIndex:idx_user_oauth_identity_user_provider"`
+	Provider string `gorm:"uniqueIndex:idx_user_oauth_identity_user_provider"`
+}
+
+type namedIndexMigrator interface {
+	HasIndex(value interface{}, name string) bool
+	CreateIndex(value interface{}, name string) error
+}
+
+func (userOAuthIdentityUserProviderIndexSchema) TableName() string {
+	return "user_oauth_identities"
+}
 
 type cartItemConstraintSchema struct {
 	cartdomain.Item
@@ -255,6 +271,79 @@ func migrateCartSKUUniqueIndex() error {
 		}
 	}
 	return nil
+}
+
+// ensureUserOAuthIdentityUserProviderUniqueIndex makes one provider binding per
+// user a database invariant. Historical duplicates are real login credentials,
+// including rows that legacy GetByUserProvider(...).First(...) hid from the UI,
+// so startup fails with an explicit preflight diagnostic rather than revoking
+// any credential automatically.
+func ensureUserOAuthIdentityUserProviderUniqueIndex() error {
+	if gormdb.DB == nil {
+		return errors.New("database is not initialized")
+	}
+	migrator := gormdb.DB.Migrator()
+	if migrator.HasIndex(&userOAuthIdentityUserProviderIndexSchema{}, userOAuthIdentityUserProviderUniqueIndex) {
+		return nil
+	}
+
+	type duplicateGroup struct {
+		UserID   uint
+		Provider string
+		Count    int64
+	}
+	var groups []duplicateGroup
+	if err := gormdb.DB.Model(&externalidentitydomain.Identity{}).
+		Select("user_id, provider, COUNT(*) AS count").
+		Group("user_id, provider").
+		Having("COUNT(*) > 1").
+		Order("user_id ASC, provider ASC").
+		Scan(&groups).Error; err != nil {
+		return err
+	}
+	if len(groups) > 0 {
+		sample := groups[0]
+		return fmt.Errorf(
+			"cannot create %s: found %d duplicate user/provider group(s); "+
+				"first group user_id=%d provider=%q count=%d; "+
+				"inspect with SELECT id,user_id,provider,provider_user_id,username,created_at "+
+				"FROM user_oauth_identities WHERE (user_id,provider) IN "+
+				"(SELECT user_id,provider FROM user_oauth_identities GROUP BY user_id,provider HAVING COUNT(*)>1) "+
+				"ORDER BY user_id,provider,id",
+			userOAuthIdentityUserProviderUniqueIndex,
+			len(groups),
+			sample.UserID,
+			sample.Provider,
+			sample.Count,
+		)
+	}
+	return createIndexConvergingOnExisting(
+		migrator,
+		&userOAuthIdentityUserProviderIndexSchema{},
+		userOAuthIdentityUserProviderUniqueIndex,
+	)
+}
+
+// createIndexConvergingOnExisting tolerates only the rolling-deploy race where
+// another instance creates the exact target index after our HasIndex check.
+// The original CreateIndex error remains authoritative if the index still does
+// not exist, so duplicate-data and other DDL failures are never swallowed.
+func createIndexConvergingOnExisting(
+	migrator namedIndexMigrator,
+	value interface{},
+	name string,
+) error {
+	if migrator.HasIndex(value, name) {
+		return nil
+	}
+	err := migrator.CreateIndex(value, name)
+	if err == nil {
+		return nil
+	}
+	if migrator.HasIndex(value, name) {
+		return nil
+	}
+	return err
 }
 
 // ensureProductSKUMigration 执行 SKU 迁移：补默认 SKU、回填 sku_id、完整性校验。

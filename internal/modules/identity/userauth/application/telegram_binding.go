@@ -23,6 +23,12 @@ type BindTelegramMiniAppInput struct {
 	Context  context.Context
 }
 
+// TelegramBinding is the account-safe Telegram binding view.
+type TelegramBinding struct {
+	Identity  *externalidentitydomain.Identity
+	CanUnbind bool
+}
+
 // BindTelegram 绑定 Telegram
 func (s *Service) BindTelegram(input BindTelegramInput) (*externalidentitydomain.Identity, error) {
 	if input.UserID == 0 {
@@ -93,6 +99,17 @@ func (s *Service) bindVerifiedTelegram(userID uint, verified *telegramauthapp.Id
 			UpdatedAt:      time.Now(),
 		}
 		if err := s.userOAuthIdentityRepo.Create(current); err != nil {
+			occupied, occupiedErr := s.getTelegramIdentityByVerifiedID(verified)
+			if occupiedErr == nil && occupied != nil && occupied.UserID != userID {
+				return nil, ErrUserOAuthIdentityExists
+			}
+			latest, latestErr := s.userOAuthIdentityRepo.GetByUserProvider(userID, verified.Provider)
+			if latestErr == nil && latest != nil {
+				if !telegramProviderUserIDMatchesVerified(latest.ProviderUserID, verified) {
+					return nil, ErrUserOAuthAlreadyBound
+				}
+				return latest, nil
+			}
 			return nil, err
 		}
 		return current, nil
@@ -113,40 +130,38 @@ func (s *Service) bindVerifiedTelegram(userID uint, verified *telegramauthapp.Id
 
 // UnbindTelegram 解绑 Telegram
 func (s *Service) UnbindTelegram(userID uint) error {
-	if userID == 0 {
-		return ErrNotFound
-	}
-	if s.userOAuthIdentityRepo == nil {
-		return telegramauthapp.ErrTelegramAuthConfigInvalid
-	}
-	user, err := s.getActiveUserByID(userID)
-	if err != nil {
+	if err := s.unbindExternalIdentity(userID, constants.UserOAuthProviderTelegram); err != nil {
+		if err == errExternalIdentityUnbindLocked {
+			return ErrTelegramUnbindRequiresEmail
+		}
 		return err
 	}
-	mode, err := s.ResolveEmailChangeMode(user)
-	if err != nil {
-		return err
-	}
-	if mode == EmailChangeModeBindOnly {
-		return ErrTelegramUnbindRequiresEmail
-	}
-	identity, err := s.userOAuthIdentityRepo.GetByUserProvider(userID, constants.UserOAuthProviderTelegram)
-	if err != nil {
-		return err
-	}
-	if identity == nil {
-		return ErrUserOAuthNotBound
-	}
-	return s.userOAuthIdentityRepo.DeleteByID(identity.ID)
+	return nil
 }
 
 // GetTelegramBinding 获取 Telegram 绑定
-func (s *Service) GetTelegramBinding(userID uint) (*externalidentitydomain.Identity, error) {
+func (s *Service) GetTelegramBinding(userID uint) (*TelegramBinding, error) {
 	if userID == 0 {
 		return nil, ErrNotFound
 	}
 	if s.userOAuthIdentityRepo == nil {
 		return nil, telegramauthapp.ErrTelegramAuthConfigInvalid
 	}
-	return s.userOAuthIdentityRepo.GetByUserProvider(userID, constants.UserOAuthProviderTelegram)
+	user, err := s.getActiveUserByID(userID)
+	if err != nil {
+		return nil, err
+	}
+	identity, err := s.userOAuthIdentityRepo.GetByUserProvider(userID, constants.UserOAuthProviderTelegram)
+	if err != nil {
+		return nil, err
+	}
+	result := &TelegramBinding{Identity: identity}
+	if identity == nil {
+		return result, nil
+	}
+	result.CanUnbind, err = s.canUnbindExternalIdentity(user, identity)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }

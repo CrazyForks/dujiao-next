@@ -22,6 +22,7 @@ type Config struct {
 	UserJWT      JWTConfig          `mapstructure:"user_jwt"`
 	Bootstrap    BootstrapConfig    `mapstructure:"bootstrap"`
 	TelegramAuth TelegramAuthConfig `mapstructure:"telegram_auth"`
+	GoogleAuth   GoogleAuthConfig   `mapstructure:"google_auth"`
 	Redis        RedisConfig        `mapstructure:"redis"`
 	Queue        QueueConfig        `mapstructure:"queue"`
 	Upload       UploadConfig       `mapstructure:"upload"`
@@ -107,6 +108,12 @@ type TelegramAuthConfig struct {
 	MiniAppURL         string `mapstructure:"mini_app_url"`
 	LoginExpireSeconds int    `mapstructure:"login_expire_seconds"`
 	ReplayTTLSeconds   int    `mapstructure:"replay_ttl_seconds"`
+}
+
+// GoogleAuthConfig Google Identity Services 登录配置。
+type GoogleAuthConfig struct {
+	Enabled  bool   `mapstructure:"enabled"`
+	ClientID string `mapstructure:"client_id"`
 }
 
 // RedisConfig Redis 配置
@@ -333,6 +340,8 @@ func Load() *Config {
 	viper.SetDefault("telegram_auth.bot_token", "")
 	viper.SetDefault("telegram_auth.login_expire_seconds", 300)
 	viper.SetDefault("telegram_auth.replay_ttl_seconds", 300)
+	viper.SetDefault("google_auth.enabled", false)
+	viper.SetDefault("google_auth.client_id", "")
 	viper.SetDefault("redis.enabled", true)
 	viper.SetDefault("redis.host", "127.0.0.1")
 	viper.SetDefault("redis.port", 6379)

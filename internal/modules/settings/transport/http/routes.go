@@ -23,6 +23,11 @@ func RegisterAdminTelegramAuthRoutes(admin gin.IRoutes, handler *TelegramAuthHan
 	admin.PUT("/settings/telegram-auth", handler.UpdateTelegramAuth)
 }
 
+func RegisterAdminGoogleAuthRoutes(admin gin.IRoutes, handler *GoogleAuthHandler) {
+	admin.GET("/settings/google-auth", handler.GetGoogleAuth)
+	admin.PUT("/settings/google-auth", handler.UpdateGoogleAuth)
+}
+
 func RegisterAdminAffiliateRoutes(admin gin.IRoutes, handler *AffiliateHandler) {
 	admin.GET("/settings/affiliate", handler.GetAffiliate)
 	admin.PUT("/settings/affiliate", handler.UpdateAffiliate)

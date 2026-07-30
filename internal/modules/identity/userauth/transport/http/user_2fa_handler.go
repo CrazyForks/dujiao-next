@@ -51,9 +51,10 @@ type UserTOTPEnableResult struct {
 
 // UserChallengeClaims 是 transport 层挑战 token 视图。
 type UserChallengeClaims struct {
-	UserID     uint
-	JTI        string
-	RememberMe bool
+	UserID      uint
+	JTI         string
+	RememberMe  bool
+	LoginSource string
 }
 
 // User2FAChallengeStore 管理挑战失败计数与撤销。
@@ -286,7 +287,7 @@ func (h *User2FAHandler) VerifyUser2FA(c *gin.Context) {
 	}
 	ctx := context.Background()
 	if h.challenges != nil && h.challenges.IsRevoked(ctx, claims.JTI) {
-		h.recordLogin(c, "", claims.UserID, constants.LoginLogStatusFailed, constants.LoginLogFailReasonChallengeInvalid, constants.LoginLogSourceWeb)
+		h.recordLogin(c, "", claims.UserID, constants.LoginLogStatusFailed, constants.LoginLogFailReasonChallengeInvalid, resolvedChallengeLoginSource(claims))
 		ginutil.RespondError(c, response.CodeUnauthorized, "error.totp_challenge_invalid", nil)
 		return
 	}
@@ -307,7 +308,7 @@ func (h *User2FAHandler) VerifyUser2FA(c *gin.Context) {
 		default:
 			failReason = constants.LoginLogFailReasonInternalError
 		}
-		h.recordLogin(c, email, claims.UserID, constants.LoginLogStatusFailed, failReason, constants.LoginLogSourceWeb)
+		h.recordLogin(c, email, claims.UserID, constants.LoginLogStatusFailed, failReason, resolvedChallengeLoginSource(claims))
 		if failCnt >= userChallengeMaxFailures {
 			if h.challenges != nil {
 				h.challenges.Revoke(ctx, claims.JTI)
@@ -333,13 +334,27 @@ func (h *User2FAHandler) VerifyUser2FA(c *gin.Context) {
 		ginutil.RespondError(c, response.CodeInternal, "error.login_failed", err)
 		return
 	}
-	h.recordLogin(c, loginRes.User.Email, loginRes.User.ID, constants.LoginLogStatusSuccess, "", constants.LoginLogSourceWeb)
+	h.recordLogin(c, loginRes.User.Email, loginRes.User.ID, constants.LoginLogStatusSuccess, "", resolvedChallengeLoginSource(claims))
 	response.Success(c, gin.H{
 		"requires_totp": false,
 		"user":          userpresenter.NewUserAuthBriefResp(loginRes.User),
 		"token":         loginRes.Token,
 		"expires_at":    loginRes.ExpiresAt.Format("2006-01-02T15:04:05Z07:00"),
 	})
+}
+
+func resolvedChallengeLoginSource(claims *UserChallengeClaims) string {
+	if claims == nil {
+		return constants.LoginLogSourceWeb
+	}
+	switch claims.LoginSource {
+	case constants.LoginLogSourceGoogle:
+		return constants.LoginLogSourceGoogle
+	case constants.LoginLogSourceTelegram:
+		return constants.LoginLogSourceTelegram
+	default:
+		return constants.LoginLogSourceWeb
+	}
 }
 
 func (h *User2FAHandler) verifyUserChallengeAttempt(userID uint, code, recoveryCode string) error {

@@ -117,3 +117,26 @@ func RegisterUserTelegramRoutes(user gin.IRoutes, handler *UserTelegramHandler) 
 	user.POST("/me/telegram/miniapp/bind", handler.BindMyTelegramMiniApp)
 	user.DELETE("/me/telegram/unbind", handler.UnbindMyTelegram)
 }
+
+// RegisterUserGoogleAuthRoutes registers public Google Identity Services login.
+func RegisterUserGoogleAuthRoutes(auth gin.IRoutes, handler *UserGoogleHandler, rateLimit gin.HandlerFunc) {
+	if auth == nil || handler == nil || rateLimit == nil {
+		panic("user google auth routes: required dependency is nil")
+	}
+	auth.POST("/google/login", rateLimit, handler.UserGoogleLogin)
+	auth.POST("/google/redirect/intent", rateLimit, handler.CreateGoogleRedirectLoginIntent)
+	auth.POST("/google/redirect/callback", handler.CompleteGoogleRedirect)
+	auth.POST("/google/redirect/exchange", handler.ExchangeGoogleRedirectLogin)
+}
+
+// RegisterUserGoogleRoutes registers authenticated Google binding endpoints.
+func RegisterUserGoogleRoutes(user gin.IRoutes, handler *UserGoogleHandler, bindRateLimit gin.HandlerFunc) {
+	if user == nil || handler == nil || bindRateLimit == nil {
+		panic("user google routes: required dependency is nil")
+	}
+	user.GET("/me/google", handler.GetMyGoogleBinding)
+	user.POST("/me/google/bind", bindRateLimit, handler.BindMyGoogle)
+	user.POST("/me/google/redirect/intent", bindRateLimit, handler.CreateGoogleRedirectBindIntent)
+	user.POST("/me/google/redirect/exchange", handler.ExchangeGoogleRedirectBind)
+	user.DELETE("/me/google/unbind", handler.UnbindMyGoogle)
+}

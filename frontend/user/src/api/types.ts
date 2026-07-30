@@ -70,6 +70,10 @@ export interface TelegramMiniAppAuthPayload {
     init_data: string
 }
 
+export interface GoogleCredentialPayload {
+    credential: string
+}
+
 export interface TelegramBindingData {
     bound: boolean
     provider?: string
@@ -78,6 +82,12 @@ export interface TelegramBindingData {
     avatar_url?: string
     auth_at?: string | null
     updated_at?: string | null
+    can_unbind?: boolean
+}
+
+export interface GoogleBindingData extends TelegramBindingData {
+    email?: string
+    display_name?: string
 }
 
 export interface WalletAccountData {

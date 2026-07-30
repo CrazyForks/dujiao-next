@@ -4,6 +4,7 @@ import { useAppStore } from '../stores/app'
 import { useTelegramMiniAppStore } from '../stores/telegramMiniApp'
 import { captureAffiliateFromRoute } from '../utils/affiliate'
 import { templateView } from '../templates/registry'
+import { GOOGLE_REDIRECT_FRONTEND_CALLBACK_PATH } from '../utils/googleRedirect'
 
 type RouteComponentLoader = () => Promise<unknown>
 
@@ -311,6 +312,11 @@ const router = createRouter({
             path: '/auth/telegram/callback',
             name: 'user-telegram-callback',
             component: templateView('auth/TelegramCallback', () => import('../views/auth/TelegramCallback.vue')),
+        },
+        {
+            path: GOOGLE_REDIRECT_FRONTEND_CALLBACK_PATH,
+            name: 'user-google-callback',
+            component: templateView('auth/GoogleCallback', () => import('../views/auth/GoogleCallback.vue')),
         },
         {
             path: '/:pathMatch(.*)*',

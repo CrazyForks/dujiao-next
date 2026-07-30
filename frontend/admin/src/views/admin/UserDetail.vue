@@ -16,6 +16,12 @@ import type { AcceptableValue } from 'reka-ui'
 import { copyText } from '@/utils/clipboard'
 import { confirmAction } from '@/utils/confirm'
 import {
+  formatOAuthIdentityAccount,
+  formatOAuthIdentityUsername,
+  formatOAuthProviderLabel,
+  managedOAuthProvider,
+} from '@/utils/oauthIdentity'
+import {
   orderStatusClass as orderStatusClassMap,
   orderStatusLabel as orderStatusLabelMap,
   paymentStatusClass as paymentStatusClassMap,
@@ -418,23 +424,17 @@ const handleResetUser2FA = async () => {
   }
 }
 
-const formatProviderLabel = (provider?: string) => {
-  if (!provider) return '-'
-  const normalized = provider.trim().toLowerCase()
-  if (normalized === 'telegram') return 'Telegram'
-  return normalized
-}
-
-const isTelegramIdentity = (identity: AdminUserOAuthIdentity) => {
-  return identity.provider?.trim().toLowerCase() === 'telegram'
-}
-
-const handleUnbindTelegram = async (identity: AdminUserOAuthIdentity) => {
-  if (!Number.isFinite(userId.value) || userId.value <= 0 || !isTelegramIdentity(identity)) return
-  const account = identity.username ? `@${identity.username}` : identity.provider_user_id || 'Telegram'
+const handleUnbindOAuthIdentity = async (identity: AdminUserOAuthIdentity) => {
+  const provider = managedOAuthProvider(identity)
+  if (!Number.isFinite(userId.value) || userId.value <= 0 || !provider) return
+  const isGoogle = provider === 'google'
+  const account = formatOAuthIdentityAccount(identity)
   const confirmed = await confirmAction({
-    description: t('admin.userDetail.oauth.confirmUnbindTelegram', { account }),
-    confirmText: t('admin.userDetail.oauth.unbindTelegram'),
+    description: t(
+      isGoogle ? 'admin.userDetail.oauth.confirmUnbindGoogle' : 'admin.userDetail.oauth.confirmUnbindTelegram',
+      { account },
+    ),
+    confirmText: t(isGoogle ? 'admin.userDetail.oauth.unbindGoogle' : 'admin.userDetail.oauth.unbindTelegram'),
     variant: 'destructive',
   })
   if (!confirmed) return
@@ -442,11 +442,19 @@ const handleUnbindTelegram = async (identity: AdminUserOAuthIdentity) => {
   oauthSuccess.value = ''
   oauthUnbindingId.value = identity.id
   try {
-    await adminAPI.unbindUserTelegram(userId.value)
+    if (isGoogle) {
+      await adminAPI.unbindUserGoogle(userId.value)
+    } else {
+      await adminAPI.unbindUserTelegram(userId.value)
+    }
     await fetchUser()
-    oauthSuccess.value = t('admin.userDetail.oauth.unbindSuccess')
+    oauthSuccess.value = t(
+      isGoogle ? 'admin.userDetail.oauth.unbindGoogleSuccess' : 'admin.userDetail.oauth.unbindTelegramSuccess',
+    )
   } catch (err: any) {
-    oauthError.value = err?.message || t('admin.userDetail.oauth.unbindFailed')
+    oauthError.value =
+      err?.message ||
+      t(isGoogle ? 'admin.userDetail.oauth.unbindGoogleFailed' : 'admin.userDetail.oauth.unbindTelegramFailed')
   } finally {
     oauthUnbindingId.value = null
   }
@@ -647,26 +655,47 @@ watch(
                   class="h-10 w-10 rounded-full border border-border object-cover"
                 />
                 <div class="min-w-0">
-                  <div class="text-sm font-medium text-foreground">{{ formatProviderLabel(identity.provider) }}</div>
+                  <div class="text-sm font-medium text-foreground">{{ formatOAuthProviderLabel(identity.provider) }}</div>
                   <div class="truncate text-xs text-muted-foreground">
-                    {{ identity.username ? `@${identity.username}` : identity.provider_user_id }}
+                    {{ formatOAuthIdentityAccount(identity) }}
                   </div>
                 </div>
               </div>
               <Button
-                v-if="isTelegramIdentity(identity)"
+                v-if="managedOAuthProvider(identity)"
                 size="sm"
                 variant="destructive"
                 class="shrink-0 cursor-pointer"
                 :disabled="oauthUnbindingId === identity.id"
-                @click="handleUnbindTelegram(identity)"
+                @click="handleUnbindOAuthIdentity(identity)"
               >
-                {{ oauthUnbindingId === identity.id ? t('admin.userDetail.oauth.unbindingTelegram') : t('admin.userDetail.oauth.unbindTelegram') }}
+                {{
+                  oauthUnbindingId === identity.id
+                    ? t(
+                        managedOAuthProvider(identity) === 'google'
+                          ? 'admin.userDetail.oauth.unbindingGoogle'
+                          : 'admin.userDetail.oauth.unbindingTelegram',
+                      )
+                    : t(
+                        managedOAuthProvider(identity) === 'google'
+                          ? 'admin.userDetail.oauth.unbindGoogle'
+                          : 'admin.userDetail.oauth.unbindTelegram',
+                      )
+                }}
               </Button>
             </div>
             <div class="mt-3 space-y-1 text-xs text-muted-foreground">
               <div>{{ t('admin.userDetail.oauth.providerUserId') }}: <span class="font-mono text-foreground">{{ identity.provider_user_id || '-' }}</span></div>
-              <div>{{ t('admin.userDetail.oauth.username') }}: <span class="text-foreground">{{ identity.username ? `@${identity.username}` : '-' }}</span></div>
+              <div>
+                {{
+                  t(
+                    managedOAuthProvider(identity) === 'google'
+                      ? 'admin.userDetail.oauth.email'
+                      : 'admin.userDetail.oauth.username',
+                  )
+                }}:
+                <span class="text-foreground">{{ formatOAuthIdentityUsername(identity) }}</span>
+              </div>
               <div>{{ t('admin.userDetail.oauth.boundAt') }}: <span class="text-foreground">{{ formatDate(identity.created_at) }}</span></div>
             </div>
           </div>

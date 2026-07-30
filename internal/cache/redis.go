@@ -18,6 +18,11 @@ var redisClient *redis.Client
 var redisPrefix string
 var redisEnabled bool
 
+// ErrUnavailable indicates that a cache-backed security primitive cannot be
+// used because Redis is disabled or was not initialized. Callers that require
+// atomic, single-use state must fail closed on this error.
+var ErrUnavailable = errors.New("redis cache unavailable")
+
 // InitRedis 初始化 Redis 客户端
 func InitRedis(cfg *config.RedisConfig) error {
 	if cfg == nil || !cfg.Enabled {
@@ -87,6 +92,40 @@ func SetJSON(ctx context.Context, key string, value interface{}, ttl time.Durati
 		return err
 	}
 	return redisClient.Set(ctx, buildKey(key), payload, ttl).Err()
+}
+
+// SetJSONRequired writes security-sensitive JSON state and fails closed when
+// Redis is unavailable. It is intentionally separate from the best-effort
+// cache helpers used by non-critical paths.
+func SetJSONRequired(ctx context.Context, key string, value interface{}, ttl time.Duration) error {
+	if !Enabled() {
+		return ErrUnavailable
+	}
+	payload, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	return redisClient.Set(ctx, buildKey(key), payload, ttl).Err()
+}
+
+// GetDelJSONRequired atomically reads and deletes a JSON value. Atomic GETDEL
+// is required for one-time OAuth redirect intents and handoffs; a GET followed
+// by DEL would permit concurrent replay.
+func GetDelJSONRequired(ctx context.Context, key string, dest interface{}) (bool, error) {
+	if !Enabled() {
+		return false, ErrUnavailable
+	}
+	val, err := redisClient.GetDel(ctx, buildKey(key)).Result()
+	if errors.Is(err, redis.Nil) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if err := json.Unmarshal([]byte(val), dest); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // GetString 获取字符串缓存

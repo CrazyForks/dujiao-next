@@ -1,6 +1,8 @@
 package settingshttp
 
 import (
+	"strings"
+
 	"github.com/dujiao-next/internal/cache"
 	"github.com/dujiao-next/internal/constants"
 	settingsapp "github.com/dujiao-next/internal/modules/settings/application"
@@ -57,6 +59,15 @@ func (h *AdminHandler) Update(c *gin.Context) {
 	var req updateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		ginutil.RespondBindError(c, err)
+		return
+	}
+	if strings.TrimSpace(req.Key) == constants.SettingKeyGoogleAuthConfig {
+		ginutil.RespondErrorWithMsg(
+			c,
+			response.CodeBadRequest,
+			"google_auth_config must be updated through /admin/settings/google-auth",
+			nil,
+		)
 		return
 	}
 

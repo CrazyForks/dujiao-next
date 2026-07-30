@@ -149,6 +149,26 @@ export const useUserAuthStore = defineStore('user-auth', () => {
         }
     }
 
+    const googleLogin = async (credential: string) => {
+        loading.value = true
+        try {
+            const response = await userAuthAPI.googleLogin({ credential })
+            return handleLoginResponse(response.data.data)
+        } finally {
+            loading.value = false
+        }
+    }
+
+    const googleRedirectLogin = async () => {
+        loading.value = true
+        try {
+            const response = await userAuthAPI.googleRedirectExchange()
+            return handleLoginResponse(response.data.data)
+        } finally {
+            loading.value = false
+        }
+    }
+
     const forgotPassword = async (payload: any) => {
         loading.value = true
         try {
@@ -192,6 +212,8 @@ export const useUserAuthStore = defineStore('user-auth', () => {
         telegramLogin,
         telegramOidcLogin,
         telegramMiniAppLogin,
+        googleLogin,
+        googleRedirectLogin,
         forgotPassword,
         syncUserProfile,
         logout,

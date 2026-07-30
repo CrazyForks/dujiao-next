@@ -219,6 +219,38 @@ func (s *Service) PatchTelegramAuthSetting(defaultCfg config.TelegramAuthConfig,
 	return next, nil
 }
 
+// GetGoogleAuthSetting 获取 Google Identity Services 登录配置。
+func (s *Service) GetGoogleAuthSetting(defaultCfg config.GoogleAuthConfig) (settingssecurity.GoogleAuthSetting, error) {
+	fallback := settingssecurity.DefaultGoogleAuthSetting(defaultCfg)
+	if s == nil {
+		return fallback, nil
+	}
+	value, err := s.GetByKey(constants.SettingKeyGoogleAuthConfig)
+	if err != nil {
+		return fallback, err
+	}
+	if value == nil {
+		return fallback, nil
+	}
+	return settingssecurity.DecodeGoogleAuthSetting(value, fallback), nil
+}
+
+// PatchGoogleAuthSetting 基于补丁更新 Google Identity Services 登录配置。
+func (s *Service) PatchGoogleAuthSetting(defaultCfg config.GoogleAuthConfig, patch settingssecurity.GoogleAuthSettingPatch) (settingssecurity.GoogleAuthSetting, error) {
+	current, err := s.GetGoogleAuthSetting(defaultCfg)
+	if err != nil {
+		return settingssecurity.GoogleAuthSetting{}, err
+	}
+	next := settingssecurity.NormalizeGoogleAuthSetting(settingssecurity.ApplyGoogleAuthSettingPatch(current, patch))
+	if err := settingssecurity.ValidateGoogleAuthSetting(next); err != nil {
+		return settingssecurity.GoogleAuthSetting{}, err
+	}
+	if _, err := s.Update(constants.SettingKeyGoogleAuthConfig, map[string]interface{}(settingssecurity.EncodeGoogleAuthSetting(next))); err != nil {
+		return settingssecurity.GoogleAuthSetting{}, err
+	}
+	return next, nil
+}
+
 // GetOrderEmailTemplateSetting 获取订单邮件模板配置（优先 settings，空时回退默认）。
 func (s *Service) GetOrderEmailTemplateSetting() (settingsmessaging.OrderEmailTemplateSetting, error) {
 	fallback := settingsmessaging.DefaultOrderEmailTemplateSetting()

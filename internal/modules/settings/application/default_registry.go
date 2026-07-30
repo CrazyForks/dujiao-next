@@ -33,6 +33,11 @@ var defaultSettingRegistry = MustNewRegistry(
 		Normalize: settingssecurity.NormalizeTelegramAuthSettingJSON,
 	},
 	Definition{
+		Key:       constants.SettingKeyGoogleAuthConfig,
+		Normalize: settingssecurity.NormalizeGoogleAuthSettingJSON,
+		Effects:   []Effect{EffectInvalidatePublicConfigCache},
+	},
+	Definition{
 		Key: constants.SettingKeyNotificationCenterConfig,
 		Normalize: func(value jsonmap.JSON) jsonmap.JSON {
 			setting := settingsmessaging.DecodeNotificationCenterSetting(value, settingsmessaging.NotificationCenterDefaultSetting())

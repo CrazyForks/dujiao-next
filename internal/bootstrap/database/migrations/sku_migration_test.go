@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -8,6 +9,7 @@ import (
 
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
+	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
 
 	productdomain "github.com/dujiao-next/internal/modules/catalog/product/domain"
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
@@ -259,6 +261,141 @@ func TestMigrateCartSKUUniqueIndex(t *testing.T) {
 	}
 	if !db.Migrator().HasIndex(&cartdomain.Item{}, "idx_cart_user_product_sku") {
 		t.Fatalf("new unique index idx_cart_user_product_sku should exist")
+	}
+}
+
+func TestEnsureUserOAuthIdentityUserProviderUniqueIndexFailsClosedOnLegacyDuplicates(t *testing.T) {
+	db := setupSKUMigrationTestDB(t)
+	if err := db.AutoMigrate(&externalidentitydomain.Identity{}); err != nil {
+		t.Fatalf("auto migrate identity: %v", err)
+	}
+	now := time.Now()
+	first := &externalidentitydomain.Identity{
+		UserID: 42, Provider: "telegram", ProviderUserID: "legacy-effective",
+		CreatedAt: now.Add(-time.Hour), UpdatedAt: now.Add(-time.Hour),
+	}
+	second := &externalidentitydomain.Identity{
+		UserID: 42, Provider: "telegram", ProviderUserID: "legacy-hidden",
+		CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(first).Error; err != nil {
+		t.Fatalf("create first legacy identity: %v", err)
+	}
+	if err := db.Create(second).Error; err != nil {
+		t.Fatalf("create duplicate legacy identity: %v", err)
+	}
+
+	err := ensureUserOAuthIdentityUserProviderUniqueIndex()
+	if err == nil {
+		t.Fatalf("expected explicit duplicate preflight failure")
+	}
+	for _, expected := range []string{
+		userOAuthIdentityUserProviderUniqueIndex,
+		"1 duplicate user/provider group",
+		"user_id=42",
+		`provider="telegram"`,
+		"count=2",
+		"SELECT id,user_id,provider,provider_user_id",
+	} {
+		if !strings.Contains(err.Error(), expected) {
+			t.Fatalf("migration error %q does not include %q", err, expected)
+		}
+	}
+	if db.Migrator().HasIndex(
+		&userOAuthIdentityUserProviderIndexSchema{},
+		userOAuthIdentityUserProviderUniqueIndex,
+	) {
+		t.Fatalf("index %s must not exist after dirty preflight failure", userOAuthIdentityUserProviderUniqueIndex)
+	}
+
+	var identities []externalidentitydomain.Identity
+	if err := db.Where("user_id = ? AND provider = ?", 42, "telegram").
+		Order("id ASC").
+		Find(&identities).Error; err != nil {
+		t.Fatalf("load deduplicated identities: %v", err)
+	}
+	if len(identities) != 2 || identities[0].ID != first.ID || identities[1].ID != second.ID {
+		t.Fatalf("dirty migration changed credentials: %+v", identities)
+	}
+
+	// After an operator resolves the duplicate deliberately, the same migration
+	// creates the invariant and remains idempotent.
+	if err := db.Delete(second).Error; err != nil {
+		t.Fatalf("resolve duplicate explicitly: %v", err)
+	}
+	if err := ensureUserOAuthIdentityUserProviderUniqueIndex(); err != nil {
+		t.Fatalf("ensure unique index after resolution: %v", err)
+	}
+	if err := ensureUserOAuthIdentityUserProviderUniqueIndex(); err != nil {
+		t.Fatalf("idempotent ensure unique index: %v", err)
+	}
+	if !db.Migrator().HasIndex(
+		&userOAuthIdentityUserProviderIndexSchema{},
+		userOAuthIdentityUserProviderUniqueIndex,
+	) {
+		t.Fatalf("missing index %s", userOAuthIdentityUserProviderUniqueIndex)
+	}
+
+	duplicate := &externalidentitydomain.Identity{
+		UserID: 42, Provider: "telegram", ProviderUserID: "must-fail",
+		CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(duplicate).Error; err == nil {
+		t.Fatalf("expected database unique constraint for same user/provider")
+	}
+	otherUser := &externalidentitydomain.Identity{
+		UserID: 43, Provider: "telegram", ProviderUserID: "other-user",
+		CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(otherUser).Error; err != nil {
+		t.Fatalf("same provider on another user should remain valid: %v", err)
+	}
+}
+
+type racingNamedIndexMigrator struct {
+	hasIndexResults []bool
+	hasIndexCalls   int
+	createCalls     int
+	createErr       error
+}
+
+func (m *racingNamedIndexMigrator) HasIndex(interface{}, string) bool {
+	index := m.hasIndexCalls
+	m.hasIndexCalls++
+	if index >= len(m.hasIndexResults) {
+		return false
+	}
+	return m.hasIndexResults[index]
+}
+
+func (m *racingNamedIndexMigrator) CreateIndex(interface{}, string) error {
+	m.createCalls++
+	return m.createErr
+}
+
+func TestCreateIndexConvergingOnExistingHandlesOnlyConcurrentWinner(t *testing.T) {
+	ddlErr := errors.New("index already exists")
+	migrator := &racingNamedIndexMigrator{
+		hasIndexResults: []bool{false, true},
+		createErr:       ddlErr,
+	}
+	if err := createIndexConvergingOnExisting(migrator, &struct{}{}, "idx_target"); err != nil {
+		t.Fatalf("concurrent winner should converge: %v", err)
+	}
+	if migrator.createCalls != 1 || migrator.hasIndexCalls != 2 {
+		t.Fatalf("calls = create:%d has:%d, want 1/2", migrator.createCalls, migrator.hasIndexCalls)
+	}
+}
+
+func TestCreateIndexConvergingOnExistingPreservesDDLFailure(t *testing.T) {
+	ddlErr := errors.New("duplicate rows prevent unique index")
+	migrator := &racingNamedIndexMigrator{
+		hasIndexResults: []bool{false, false},
+		createErr:       ddlErr,
+	}
+	err := createIndexConvergingOnExisting(migrator, &struct{}{}, "idx_target")
+	if !errors.Is(err, ddlErr) {
+		t.Fatalf("error = %v, want original DDL error", err)
 	}
 }
 

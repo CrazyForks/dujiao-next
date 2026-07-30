@@ -234,6 +234,19 @@ func KeyByIP(c *gin.Context) string {
 	return c.ClientIP()
 }
 
+// KeyByUserIDAndIP isolates authenticated mutation limits by both account and
+// source IP. It falls back to IP when authentication context is unavailable.
+func KeyByUserIDAndIP(c *gin.Context) string {
+	if c == nil {
+		return ""
+	}
+	userID, exists := c.Get("user_id")
+	if !exists {
+		return c.ClientIP()
+	}
+	return fmt.Sprintf("%v|%s", userID, c.ClientIP())
+}
+
 // KeyByUpstreamApiKey 使用上游 API Key 作为限流 key
 func KeyByUpstreamApiKey(c *gin.Context) string {
 	apiKey := c.GetHeader("Dujiao-Next-Api-Key")

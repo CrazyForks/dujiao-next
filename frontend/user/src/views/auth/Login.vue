@@ -205,39 +205,49 @@
             {{ userAuthStore.loading ? t('auth.login.submitting') : t('auth.login.submit') }}
           </Button>
 
-          <div v-if="showTelegramWidget" class="space-y-3 pt-1">
+          <div v-if="showThirdPartyLogin" class="space-y-4 pt-1">
             <div class="flex items-center gap-3 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
               <span class="h-px flex-1 border-t border-gray-200/80 dark:border-white/10"></span>
-              <span>{{ t('auth.login.telegramOr') }}</span>
+              <span>{{ t('auth.login.socialOr') }}</span>
               <span class="h-px flex-1 border-t border-gray-200/80 dark:border-white/10"></span>
             </div>
-            <div ref="telegramWidgetRef" class="flex justify-center"></div>
-            <p class="text-center text-xs text-muted-foreground">
-              {{ t('auth.login.telegramHint') }}
-            </p>
-          </div>
-          <div v-else-if="showTelegramOidc" class="space-y-3 pt-1">
-            <div class="flex items-center gap-3 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-              <span class="h-px flex-1 border-t border-gray-200/80 dark:border-white/10"></span>
-              <span>{{ t('auth.login.telegramOr') }}</span>
-              <span class="h-px flex-1 border-t border-gray-200/80 dark:border-white/10"></span>
+            <div class="space-y-3">
+              <div v-if="showTelegramWidget" class="space-y-2">
+                <div ref="telegramWidgetRef" class="flex justify-center"></div>
+                <p class="text-center text-xs text-muted-foreground">
+                  {{ t('auth.login.telegramHint') }}
+                </p>
+              </div>
+              <div v-else-if="showTelegramOidc" class="space-y-2">
+                <Button type="button" variant="secondary" class="h-11 w-full font-semibold" @click="startTelegramOidc">
+                  {{ t('auth.login.telegramOidcButton') }}
+                </Button>
+                <p class="text-center text-xs text-muted-foreground">
+                  {{ t('auth.login.telegramOidcHint') }}
+                </p>
+              </div>
+              <div v-else-if="showMiniAppLoginHint" class="space-y-2">
+                <p class="text-center text-xs text-muted-foreground">
+                  {{ attemptingMiniAppLogin ? t('auth.login.telegramMiniAppLoggingIn') : t('auth.login.telegramMiniAppHint') }}
+                </p>
+              </div>
+              <div v-if="showGoogleLogin" class="space-y-2">
+                <GoogleIdentityButton
+                  :client-id="googleClientID"
+                  :locale="googleButtonLocale"
+                  :ux-mode="googleIdentityUXMode"
+                  :login-uri="googleRedirectLoginURI"
+                  :prepare-redirect="prepareGoogleRedirectLogin"
+                  :disabled="userAuthStore.loading"
+                  :loading-label="t('auth.login.googleLoading')"
+                  @credential="handleGoogleCredential"
+                  @error="handleGoogleScriptError"
+                />
+                <p class="text-center text-xs text-muted-foreground">
+                  {{ t('auth.login.googleHint') }}
+                </p>
+              </div>
             </div>
-            <Button type="button" variant="secondary" class="h-11 w-full font-semibold" @click="startTelegramOidc">
-              {{ t('auth.login.telegramOidcButton') }}
-            </Button>
-            <p class="text-center text-xs text-muted-foreground">
-              {{ t('auth.login.telegramOidcHint') }}
-            </p>
-          </div>
-          <div v-else-if="showMiniAppLoginHint" class="space-y-3 pt-1">
-            <div class="flex items-center gap-3 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-              <span class="h-px flex-1 border-t border-gray-200/80 dark:border-white/10"></span>
-              <span>{{ t('auth.login.telegramOr') }}</span>
-              <span class="h-px flex-1 border-t border-gray-200/80 dark:border-white/10"></span>
-            </div>
-            <p class="text-center text-xs text-muted-foreground">
-              {{ attemptingMiniAppLogin ? t('auth.login.telegramMiniAppLoggingIn') : t('auth.login.telegramMiniAppHint') }}
-            </p>
           </div>
           <div v-if="showTelegramMiniAppEntry" class="space-y-2 pt-1">
             <p class="text-center text-xs text-muted-foreground">
@@ -266,6 +276,7 @@
 import ImageCaptcha from '../../components/captcha/ImageCaptcha.vue'
 import TurnstileCaptcha from '../../components/captcha/TurnstileCaptcha.vue'
 import FormField from '../../components/FormField.vue'
+import GoogleIdentityButton from '../../components/auth/GoogleIdentityButton.vue'
 import { useI18n } from 'vue-i18n'
 import { ArrowLeft, Mail, Lock, ShieldCheck, Eye, EyeOff, LogIn } from 'lucide-vue-next'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -287,6 +298,9 @@ const {
   registrationEnabled, emailVerificationEnabled,
   showTelegramWidget, telegramWidgetRef, showTelegramOidc, startTelegramOidc,
   showMiniAppLoginHint, attemptingMiniAppLogin, showTelegramMiniAppEntry, openTelegramMiniAppEntry,
+  googleClientID, googleButtonLocale, googleIdentityUXMode, googleRedirectLoginURI,
+  prepareGoogleRedirectLogin, showGoogleLogin, showThirdPartyLogin,
+  handleGoogleCredential, handleGoogleScriptError,
   handleLogin,
 } = useLogin()
 
