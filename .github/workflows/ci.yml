@@ -15,6 +15,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  installer:
+    name: Verify installer
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install shell test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml shellcheck
+
+      - name: Check Bash syntax and ShellCheck
+        run: |
+          bash -n scripts/dujiao-next-manager.sh
+          bash -n scripts/tests/dujiao-next-manager_test.sh
+          shellcheck -x -S warning scripts/dujiao-next-manager.sh scripts/tests/dujiao-next-manager_test.sh
+
+      - name: Run installer tests
+        run: sudo bash scripts/tests/dujiao-next-manager_test.sh
+
+      - name: Check release archive includes installer
+        run: |
+          python3 - <<'PY'
+          import yaml
+
+          with open('.goreleaser.yaml', encoding='utf-8') as handle:
+              config = yaml.safe_load(handle)
+          files = config['archives'][0]['files']
+          assert './scripts/dujiao-next-manager.sh' in files, files
+          PY
+
   api:
     name: Verify API
     runs-on: ubuntu-latest

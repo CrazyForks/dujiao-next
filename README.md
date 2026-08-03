@@ -161,6 +161,50 @@ Chinese, and English. Do not hard-code user-facing strings on either side.
 
 ## Quick Start (Deploy)
 
+### Official one-click installer (Ubuntu / Debian)
+
+On a fresh Ubuntu 22.04+ or Debian 12+ server, download and run the official
+interactive installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dujiao-next/dujiao-next/main/scripts/dujiao-next-manager.sh \
+  -o /tmp/dujiao-next-manager.sh
+sudo bash /tmp/dujiao-next-manager.sh install
+```
+
+The installer deploys the release binary with systemd, an isolated local Redis,
+Nginx, SQLite, and a Let's Encrypt certificate. After installation, reopen the
+management menu with:
+
+```bash
+sudo dujiao-next-manager
+```
+
+Common automation-friendly commands are also available:
+
+```bash
+sudo dujiao-next-manager status
+sudo dujiao-next-manager logs app
+sudo dujiao-next-manager restart
+sudo dujiao-next-manager configure-domain
+sudo dujiao-next-manager configure-admin-path
+sudo dujiao-next-manager renew-cert
+sudo dujiao-next-manager admin-reset-password
+sudo dujiao-next-manager admin-reset-2fa
+sudo dujiao-next-manager uninstall
+```
+
+The first release supports a single non-wildcard domain on Ubuntu/Debian only.
+It does not adopt an existing manual installation. If SMTP is skipped, configure
+it in the admin panel before enabling email-verification registration. Application
+data lives in `/opt/dujiao-next`; installer state is stored in
+`/etc/dujiao-next/install-state.json`. TLS failures leave only the ACME challenge
+endpoint enabled, and `install` can be rerun after DNS or firewall repair. Safe
+uninstall creates and verifies a `0600` recovery archive under
+`/var/backups/dujiao-next` before deleting managed data.
+
+### Manual binary installation
+
 Download the latest `dujiao-next_*.tar.gz` from [Releases](https://github.com/dujiao-next/dujiao-next/releases):
 
 ```bash

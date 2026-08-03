@@ -52,6 +52,7 @@ archives:
     files:
       - ./config.yml.example
       - ./README.md
+      - ./scripts/dujiao-next-manager.sh
     name_template: >-
       {{ .ProjectName }}_
       {{- .Tag }}_
