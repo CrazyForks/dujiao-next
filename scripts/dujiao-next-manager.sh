@@ -301,7 +301,7 @@ validate_admin_path() {
 }
 
 platform_asset_arch() {
-  local machine=${1:-$(uname -m)}
+  local machine=$1
   case "$machine" in
     x86_64|amd64) printf 'x86_64' ;;
     aarch64|arm64) printf 'arm64' ;;
@@ -744,7 +744,7 @@ check_os_support() {
   # shellcheck disable=SC1090
   source "$os_release"
   validate_os_version "$ID" "$VERSION_ID" || die "当前系统 ${ID:-unknown} ${VERSION_ID:-unknown} 不受支持；首版仅支持 Ubuntu 22.04+ 与 Debian 12+"
-  platform_asset_arch >/dev/null || die "仅支持 amd64/x86_64 与 arm64/aarch64"
+  platform_asset_arch "$(uname -m)" >/dev/null || die "仅支持 amd64/x86_64 与 arm64/aarch64"
   [[ "$(ps -p 1 -o comm= | tr -d '[:space:]')" == "systemd" ]] || die "当前系统不是由 systemd 启动，无法使用官方安装器"
 }
 
@@ -961,7 +961,7 @@ write_systemd_units() {
 
 fetch_release() {
   local arch
-  arch=$(platform_asset_arch)
+  arch=$(platform_asset_arch "$(uname -m)")
   local metadata="${RUN_TMP}/release.json"
   curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
     --connect-timeout 10 --max-time 60 \
