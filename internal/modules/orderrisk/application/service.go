@@ -40,17 +40,24 @@ func NewService(options Options) *Service {
 	return &Service{settings: options.Settings, rateLimiter: options.RateLimiter}
 }
 
-// CheckOrderAllowed 执行不依赖订单事务的风控，并返回后续事务应复用的规范化 IP。
+// CheckOrderAllowed 在订单事务外读取配置并执行前置风控，返回后续事务应复用的配置与规范化 IP。
 func (s *Service) CheckOrderAllowed(input orderriskcontract.CheckInput) (orderriskcontract.CheckResult, error) {
-	result := orderriskcontract.CheckResult{RiskIP: orderriskcontract.NormalizeRiskIP(input.ClientIP)}
+	result := orderriskcontract.CheckResult{
+		RiskIP:         orderriskcontract.NormalizeRiskIP(input.ClientIP),
+		ConfigSnapshot: settingssecurity.DefaultOrderRiskControlConfig(),
+	}
 	if s == nil || s.settings == nil {
 		return result, nil
 	}
 	cfg, err := s.settings.GetOrderRiskControlConfig()
 	if err != nil {
 		logger.Warnw("risk_control_get_config_error", "error", err)
+		if input.ConsumeRateLimit {
+			return result, err
+		}
 		return result, nil
 	}
+	result.ConfigSnapshot = cfg
 	if !cfg.Enabled {
 		return result, nil
 	}
@@ -135,19 +142,20 @@ func aggregateProductQuantities(items []orderriskcontract.OrderItem) map[uint]in
 }
 
 // CheckPendingOrderAllowed 必须在订单事务内、创建父订单和锁库存之前调用。
-func (s *Service) CheckPendingOrderAllowed(input orderriskcontract.CheckInput, gate orderriskcontract.PendingOrderGate) error {
-	if s == nil || s.settings == nil || gate == nil {
+// prepared 来自事务外的 CheckOrderAllowed；事务内禁止再次读取独立设置仓储。
+func (s *Service) CheckPendingOrderAllowed(input orderriskcontract.CheckInput, prepared orderriskcontract.CheckResult, gate orderriskcontract.PendingOrderGate) error {
+	if s == nil || gate == nil {
 		return nil
 	}
-	cfg, err := s.settings.GetOrderRiskControlConfig()
-	if err != nil {
-		return err
-	}
+	cfg := prepared.ConfigSnapshot
 	if !cfg.Enabled {
 		return nil
 	}
 	if input.RiskIP == "" {
-		input.RiskIP = orderriskcontract.NormalizeRiskIP(input.ClientIP)
+		input.RiskIP = prepared.RiskIP
+		if input.RiskIP == "" {
+			input.RiskIP = orderriskcontract.NormalizeRiskIP(input.ClientIP)
+		}
 	}
 	if input.IsGuest {
 		return checkGuestPendingOrder(input, cfg.Guest, gate)

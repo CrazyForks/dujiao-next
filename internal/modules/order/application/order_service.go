@@ -282,6 +282,7 @@ type orderCreateParams struct {
 	ClientIP                 string
 	RiskIP                   string
 	RiskPaymentExpireMinutes int
+	RiskCheckResult          orderriskcontract.CheckResult
 	IsGuest                  bool
 	ManualFormData           map[string]jsonmap.JSON
 	SkipManualFormCheck      bool
@@ -542,7 +543,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 		orderStore := tx.Orders()
 		productSKURepo := tx.ProductSKUs()
 		if s.riskControlSvc != nil && !input.SkipRiskControl {
-			if err := s.riskControlSvc.CheckPendingOrderAllowed(buildRiskCheckInput(input, false), orderStore); err != nil {
+			if err := s.riskControlSvc.CheckPendingOrderAllowed(buildRiskCheckInput(input, false), input.RiskCheckResult, orderStore); err != nil {
 				return err
 			}
 		}
@@ -728,6 +729,7 @@ func (s *OrderService) checkOrderRisk(input *orderCreateParams, consumeRateLimit
 	input.ClientIP = strings.TrimSpace(input.ClientIP)
 	input.RiskIP = orderriskcontract.NormalizeRiskIP(input.ClientIP)
 	input.RiskPaymentExpireMinutes = 0
+	input.RiskCheckResult = orderriskcontract.CheckResult{}
 	if s.riskControlSvc == nil || input.SkipRiskControl {
 		return nil
 	}
@@ -737,6 +739,7 @@ func (s *OrderService) checkOrderRisk(input *orderCreateParams, consumeRateLimit
 	}
 	input.RiskIP = result.RiskIP
 	input.RiskPaymentExpireMinutes = result.PaymentExpireMinutes
+	input.RiskCheckResult = result
 	return nil
 }
 

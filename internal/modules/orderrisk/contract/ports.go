@@ -23,5 +23,5 @@ type RateLimiter interface {
 // Controller 是订单上下文调用风控所需的用例端口。
 type Controller interface {
 	CheckOrderAllowed(input CheckInput) (CheckResult, error)
-	CheckPendingOrderAllowed(input CheckInput, gate PendingOrderGate) error
+	CheckPendingOrderAllowed(input CheckInput, prepared CheckResult, gate PendingOrderGate) error
 }
