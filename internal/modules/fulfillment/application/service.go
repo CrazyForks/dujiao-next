@@ -172,13 +172,15 @@ func (s *Service) CreateManual(input CreateManualInput) (*fulfillmentdomain.Fulf
 				if status == "" {
 					status = constants.OrderStatusDelivered
 				}
-				if _, err := orderapp.EnqueueStatusEmailTaskIfEligible(s.orderStore, s.orderQueue, s.settingService, s.defaultEmailConfig, *order.ParentID, status); err != nil {
-					logger.Warnw("fulfillment_enqueue_status_email_failed",
-						"order_id", order.ID,
-						"target_order_id", *order.ParentID,
-						"status", status,
-						"error", err,
-					)
+				if status != constants.OrderStatusCanceled {
+					if _, err := orderapp.EnqueueStatusEmailTaskIfEligible(s.orderStore, s.orderQueue, s.settingService, s.defaultEmailConfig, *order.ParentID, status); err != nil {
+						logger.Warnw("fulfillment_enqueue_status_email_failed",
+							"order_id", order.ID,
+							"target_order_id", *order.ParentID,
+							"status", status,
+							"error", err,
+						)
+					}
 				}
 			}
 		} else {
@@ -348,13 +350,15 @@ func (s *Service) CreateAuto(orderID uint) (*fulfillmentdomain.Fulfillment, erro
 				if status == "" {
 					status = constants.OrderStatusCompleted
 				}
-				if _, err := orderapp.EnqueueStatusEmailTaskIfEligible(s.orderStore, s.orderQueue, s.settingService, s.defaultEmailConfig, *order.ParentID, status); err != nil {
-					logger.Warnw("fulfillment_enqueue_status_email_failed",
-						"order_id", order.ID,
-						"target_order_id", *order.ParentID,
-						"status", status,
-						"error", err,
-					)
+				if status != constants.OrderStatusCanceled {
+					if _, err := orderapp.EnqueueStatusEmailTaskIfEligible(s.orderStore, s.orderQueue, s.settingService, s.defaultEmailConfig, *order.ParentID, status); err != nil {
+						logger.Warnw("fulfillment_enqueue_status_email_failed",
+							"order_id", order.ID,
+							"target_order_id", *order.ParentID,
+							"status", status,
+							"error", err,
+						)
+					}
 				}
 			}
 		} else {

@@ -249,6 +249,7 @@ func TestUpdateOrderStatusAdminCancelExpiresPendingPaymentsSingleOrder(t *testin
 
 	now := time.Now()
 	order := newPendingOrderForCancel("ADMIN-CANCEL-SINGLE-001", 0, nil, now)
+	order.GuestEmail = "buyer@example.com"
 	if err := db.Create(order).Error; err != nil {
 		t.Fatalf("create order failed: %v", err)
 	}
@@ -258,12 +259,14 @@ func TestUpdateOrderStatusAdminCancelExpiresPendingPaymentsSingleOrder(t *testin
 		t.Fatalf("create payment failed: %v", err)
 	}
 
+	emailQueue := &fakeOrderTimeoutQueue{}
 	svc := NewOrderService(OrderServiceOptions{
 		OrderStore:       ordergormstore.New(db, "test-guest-credential-secret-with-32-bytes"),
 		ProductStore:     productgormstore.NewProductStore(db),
 		ProductSKUStore:  productgormstore.NewSKUStore(db),
 		CouponStore:      coupongormstore.New(db),
 		CouponUsageStore: coupongormstore.NewUsageStore(db),
+		Queue:            emailQueue,
 	})
 	updated, err := svc.UpdateOrderStatus(order.ID, constants.OrderStatusCanceled)
 	if err != nil {
@@ -279,6 +282,9 @@ func TestUpdateOrderStatusAdminCancelExpiresPendingPaymentsSingleOrder(t *testin
 	}
 	if reloaded.Status != constants.PaymentStatusExpired || reloaded.ExpiredAt == nil {
 		t.Fatalf("payment should expire, got status=%s expired_at=%v", reloaded.Status, reloaded.ExpiredAt)
+	}
+	if len(emailQueue.statusEmails) != 0 {
+		t.Fatalf("canceling an order must not enqueue status email, got %v", emailQueue.statusEmails)
 	}
 }
 

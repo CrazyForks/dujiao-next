@@ -10,6 +10,7 @@ import (
 
 	"github.com/dujiao-next/internal/app/container"
 	"github.com/dujiao-next/internal/config"
+	"github.com/dujiao-next/internal/constants"
 	notificationcontract "github.com/dujiao-next/internal/modules/notification/contract"
 	notificationsmtp "github.com/dujiao-next/internal/modules/notification/infrastructure/smtp"
 	"github.com/dujiao-next/internal/queue"
@@ -307,6 +308,41 @@ func TestHandleOrderStatusEmailSkipsNonRetryableEmailErrors(t *testing.T) {
 				t.Fatalf("expected generic retryable error, got %v", err)
 			}
 		})
+	}
+}
+
+func TestHandleOrderStatusEmailSkipsCanceledWithoutDependencies(t *testing.T) {
+	task, err := queue.NewOrderStatusEmailTask(queue.OrderStatusEmailPayload{
+		OrderID: 106,
+		Status:  constants.OrderStatusCanceled,
+	})
+	if err != nil {
+		t.Fatalf("new order status email task failed: %v", err)
+	}
+
+	consumer := &Consumer{}
+	if err := consumer.handleOrderStatusEmail(context.Background(), task); err != nil {
+		t.Fatalf("expected canceled email task to be dropped, got %v", err)
+	}
+}
+
+func TestHandleOrderStatusEmailSkipsCanceledRegisteredOrderWhenPayloadStatusEmpty(t *testing.T) {
+	task, err := queue.NewOrderStatusEmailTask(queue.OrderStatusEmailPayload{OrderID: 107})
+	if err != nil {
+		t.Fatalf("new order status email task failed: %v", err)
+	}
+
+	consumer := &Consumer{
+		Container: &container.Container{},
+		orderReader: orderStatusEmailWorkerOrderRepoStub{order: &orderdomain.Order{
+			ID:      107,
+			OrderNo: "DJ-ORDER-107",
+			UserID:  42,
+			Status:  constants.OrderStatusCanceled,
+		}},
+	}
+	if err := consumer.handleOrderStatusEmail(context.Background(), task); err != nil {
+		t.Fatalf("expected canceled registered-order task to be dropped, got %v", err)
 	}
 }
 

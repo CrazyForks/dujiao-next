@@ -136,16 +136,6 @@ func (s *OrderService) CancelOrder(orderID uint, userID uint) (*orderdomain.Orde
 			)
 		}
 	}
-	if s.queueClient != nil {
-		if _, err := EnqueueStatusEmailTaskIfEligible(s.orderStore, s.queueClient, s.settingService, s.defaultEmailConfig, order.ID, constants.OrderStatusCanceled); err != nil {
-			logger.Warnw("order_enqueue_status_email_failed",
-				"order_id", order.ID,
-				"target_order_id", order.ID,
-				"status", constants.OrderStatusCanceled,
-				"error", err,
-			)
-		}
-	}
 	FillOrderItemsFromChildren(order)
 	return order, nil
 }
@@ -183,16 +173,6 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*or
 				if err := s.affiliateSvc.HandleOrderCanceled(order.ID, "order_canceled_by_admin"); err != nil {
 					logger.Warnw("affiliate_handle_order_canceled_failed",
 						"order_id", order.ID,
-						"error", err,
-					)
-				}
-			}
-			if s.queueClient != nil {
-				if _, err := EnqueueStatusEmailTaskIfEligible(s.orderStore, s.queueClient, s.settingService, s.defaultEmailConfig, order.ID, constants.OrderStatusCanceled); err != nil {
-					logger.Warnw("order_enqueue_status_email_failed",
-						"order_id", order.ID,
-						"target_order_id", order.ID,
-						"status", constants.OrderStatusCanceled,
 						"error", err,
 					)
 				}
@@ -330,16 +310,18 @@ func (s *OrderService) UpdateOrderStatus(orderID uint, targetStatus string) (*or
 			if status == "" {
 				status = target
 			}
-			if _, err := EnqueueStatusEmailTaskIfEligible(s.orderStore, s.queueClient, s.settingService, s.defaultEmailConfig, *order.ParentID, status); err != nil {
-				logger.Warnw("order_enqueue_status_email_failed",
-					"order_id", order.ID,
-					"target_order_id", *order.ParentID,
-					"status", status,
-					"error", err,
-				)
+			if status != constants.OrderStatusCanceled {
+				if _, err := EnqueueStatusEmailTaskIfEligible(s.orderStore, s.queueClient, s.settingService, s.defaultEmailConfig, *order.ParentID, status); err != nil {
+					logger.Warnw("order_enqueue_status_email_failed",
+						"order_id", order.ID,
+						"target_order_id", *order.ParentID,
+						"status", status,
+						"error", err,
+					)
+				}
 			}
 		}
-	} else if s.queueClient != nil {
+	} else if s.queueClient != nil && target != constants.OrderStatusCanceled {
 		if _, err := EnqueueStatusEmailTaskIfEligible(s.orderStore, s.queueClient, s.settingService, s.defaultEmailConfig, order.ID, target); err != nil {
 			logger.Warnw("order_enqueue_status_email_failed",
 				"order_id", order.ID,
@@ -441,16 +423,6 @@ func (s *OrderService) CancelExpiredOrder(orderID uint) (*orderdomain.Order, err
 		if err := s.affiliateSvc.HandleOrderCanceled(order.ID, "order_expired_canceled"); err != nil {
 			logger.Warnw("affiliate_handle_order_canceled_failed",
 				"order_id", order.ID,
-				"error", err,
-			)
-		}
-	}
-	if s.queueClient != nil {
-		if _, err := EnqueueStatusEmailTaskIfEligible(s.orderStore, s.queueClient, s.settingService, s.defaultEmailConfig, order.ID, constants.OrderStatusCanceled); err != nil {
-			logger.Warnw("order_enqueue_status_email_failed",
-				"order_id", order.ID,
-				"target_order_id", order.ID,
-				"status", constants.OrderStatusCanceled,
 				"error", err,
 			)
 		}

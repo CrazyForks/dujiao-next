@@ -66,7 +66,9 @@ func (s *Service) HandleUpstreamCallback(procurementOrderID uint, upstreamStatus
 				if status == "" {
 					status = constants.OrderStatusDelivered
 				}
-				_, _ = s.orderLifecycle.EnqueueStatusEmail(*localOrder.ParentID, status)
+				if status != constants.OrderStatusCanceled {
+					_, _ = s.orderLifecycle.EnqueueStatusEmail(*localOrder.ParentID, status)
+				}
 			}
 		} else if localOrder != nil && s.orderLifecycle != nil {
 			_, _ = s.orderLifecycle.EnqueueStatusEmail(localOrder.ID, constants.OrderStatusDelivered)

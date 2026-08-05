@@ -43,6 +43,13 @@ func (c *Consumer) handleOrderStatusEmail(ctx context.Context, task *asynq.Task)
 		logger.Debugw("worker_order_status_email_skip_invalid_payload", "order_id", payload.OrderID)
 		return nil
 	}
+	payloadStatus := strings.TrimSpace(payload.Status)
+	// 兼容部署前已进入 Redis 的旧取消邮件任务。新代码已不再创建此类任务；
+	// 这里保留墓碑分支，避免旧任务在取消模板删除后误用默认模板发送。
+	if payloadStatus == constants.OrderStatusCanceled {
+		logger.Debugw("worker_order_status_email_skip_canceled", "order_id", payload.OrderID)
+		return nil
+	}
 	// 消费侧二次校验开关：避免 SMTP/订单通知关闭后，旧任务（含 retry/scheduled 中的任务）继续触发发送。
 	if c.SettingService != nil && c.Config != nil {
 		smtpSetting, smtpErr := c.SettingService.GetSMTPSetting(c.Config.Email)
@@ -72,20 +79,16 @@ func (c *Consumer) handleOrderStatusEmail(ctx context.Context, task *asynq.Task)
 		logger.Debugw("worker_order_status_email_skip_order_not_found", "order_id", payload.OrderID)
 		return nil
 	}
-	// 游客订单的"取消"通知价值极低（用户大概率已离开），但极易被滥用为退信轰炸载体：
-	// 攻击者可用伪造邮箱批量下单等过期取消触发发送。统一不发，保留登录用户与其它状态。
-	if order.UserID == 0 {
-		emailStatus := strings.TrimSpace(payload.Status)
-		if emailStatus == "" {
-			emailStatus = order.Status
-		}
-		if emailStatus == constants.OrderStatusCanceled {
-			logger.Debugw("worker_order_status_email_skip_guest_canceled",
-				"order_id", order.ID,
-				"order_no", order.OrderNo,
-			)
-			return nil
-		}
+	status := payloadStatus
+	if status == "" {
+		status = strings.TrimSpace(order.Status)
+	}
+	if status == constants.OrderStatusCanceled {
+		logger.Debugw("worker_order_status_email_skip_canceled",
+			"order_id", order.ID,
+			"order_no", order.OrderNo,
+		)
+		return nil
 	}
 	var receiverEmail string
 	var locale string
@@ -123,10 +126,6 @@ func (c *Consumer) handleOrderStatusEmail(ctx context.Context, task *asynq.Task)
 		} else {
 			tmplSetting = &setting
 		}
-	}
-	status := strings.TrimSpace(payload.Status)
-	if status == "" {
-		status = order.Status
 	}
 	payloadText := buildOrderFulfillmentEmailPayload(order)
 	emailBrand, brandErr := c.resolveOrderEmailBrand(ctx, order)

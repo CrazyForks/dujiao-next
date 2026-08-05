@@ -47,7 +47,8 @@ import (
 )
 
 type fakeOrderTimeoutQueue struct {
-	enqueued int
+	enqueued     int
+	statusEmails []string
 }
 
 func (q *fakeOrderTimeoutQueue) Enabled() bool {
@@ -59,7 +60,8 @@ func (q *fakeOrderTimeoutQueue) EnqueueTimeoutCancel(_ uint, _ time.Duration) er
 	return nil
 }
 
-func (q *fakeOrderTimeoutQueue) EnqueueStatusEmail(_ uint, _ string) error {
+func (q *fakeOrderTimeoutQueue) EnqueueStatusEmail(_ uint, status string) error {
+	q.statusEmails = append(q.statusEmails, status)
 	return nil
 }
 

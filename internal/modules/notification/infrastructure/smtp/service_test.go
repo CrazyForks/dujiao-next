@@ -44,19 +44,6 @@ func TestBuildOrderStatusContent(t *testing.T) {
 			},
 		},
 		{
-			name:   "canceled_en",
-			locale: i18n.LocaleEN,
-			status: "canceled",
-			wantSubjectContains: []string{
-				"Order status updated",
-				"Canceled",
-			},
-			wantBodyContains: []string{
-				"The order has been canceled",
-				"Order No: DJ-CANCEL",
-			},
-		},
-		{
 			name:    "delivered_with_payload_tw",
 			locale:  i18n.LocaleTW,
 			status:  "delivered",
@@ -166,8 +153,6 @@ func pickOrderNo(status string) string {
 	switch status {
 	case "paid":
 		return "DJ-PAID"
-	case "canceled":
-		return "DJ-CANCEL"
 	case "refunded":
 		return "DJ-REFUND"
 	case "partially_refunded":

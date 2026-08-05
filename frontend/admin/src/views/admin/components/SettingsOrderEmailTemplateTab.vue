@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { notifyError, notifySuccess } from '@/utils/notify'
+import { orderEmailSceneKeys } from '@/utils/orderEmailTemplates'
 
 const { t } = useI18n()
 
@@ -22,14 +23,13 @@ interface OrderEmailTemplateData {
     paid: OrderEmailSceneTemplate
     delivered: OrderEmailSceneTemplate
     delivered_with_content: OrderEmailSceneTemplate
-    canceled: OrderEmailSceneTemplate
     refunded: OrderEmailSceneTemplate
     partially_refunded: OrderEmailSceneTemplate
   }
   guest_tip: Record<SupportedLanguage, string>
 }
 
-const sceneKeys = ['default', 'paid', 'delivered', 'delivered_with_content', 'canceled', 'refunded', 'partially_refunded'] as const
+const sceneKeys = orderEmailSceneKeys
 type SceneKey = (typeof sceneKeys)[number]
 
 const props = defineProps<{
@@ -67,7 +67,6 @@ const form = reactive({
     paid: createSceneTemplate(),
     delivered: createSceneTemplate(),
     delivered_with_content: createSceneTemplate(),
-    canceled: createSceneTemplate(),
     refunded: createSceneTemplate(),
     partially_refunded: createSceneTemplate(),
   },

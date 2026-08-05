@@ -44,7 +44,6 @@ type OrderEmailTemplatesSetting struct {
 	Paid                 OrderEmailSceneTemplate `json:"paid"`
 	Delivered            OrderEmailSceneTemplate `json:"delivered"`
 	DeliveredWithContent OrderEmailSceneTemplate `json:"delivered_with_content"`
-	Canceled             OrderEmailSceneTemplate `json:"canceled"`
 	Refunded             OrderEmailSceneTemplate `json:"refunded"`
 	PartiallyRefunded    OrderEmailSceneTemplate `json:"partially_refunded"`
 }
@@ -91,7 +90,6 @@ type OrderEmailTemplatesPatch struct {
 	Paid                 *OrderEmailSceneTemplatePatch `json:"paid"`
 	Delivered            *OrderEmailSceneTemplatePatch `json:"delivered"`
 	DeliveredWithContent *OrderEmailSceneTemplatePatch `json:"delivered_with_content"`
-	Canceled             *OrderEmailSceneTemplatePatch `json:"canceled"`
 	Refunded             *OrderEmailSceneTemplatePatch `json:"refunded"`
 	PartiallyRefunded    *OrderEmailSceneTemplatePatch `json:"partially_refunded"`
 }
@@ -165,20 +163,6 @@ func DefaultOrderEmailTemplateSetting() OrderEmailTemplateSetting {
 					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nDelivery content:\n{{fulfillment_info}}\n\nUsage instructions:\n{{instructions}}\n\nThank you for your purchase.\n\n{{site_name}}'s Site URL: {{site_url}}",
 				},
 			},
-			Canceled: OrderEmailSceneTemplate{
-				ZHCN: OrderEmailLocalizedTemplate{
-					Subject: "订单状态更新：{{status}}",
-					Body:    "订单号：{{order_no}}\n状态：{{status}}\n金额：{{amount}} {{currency}}\n\n订单已取消，如有疑问请联系管理员。\n\n{{site_name}} 的网址：{{site_url}}",
-				},
-				ZHTW: OrderEmailLocalizedTemplate{
-					Subject: "訂單狀態更新：{{status}}",
-					Body:    "訂單號：{{order_no}}\n狀態：{{status}}\n金額：{{amount}} {{currency}}\n\n訂單已取消，如有疑問請聯絡管理員。\n\n{{site_name}} 的網址：{{site_url}}",
-				},
-				ENUS: OrderEmailLocalizedTemplate{
-					Subject: "Order status updated: {{status}}",
-					Body:    "Order No: {{order_no}}\nStatus: {{status}}\nAmount: {{amount}} {{currency}}\n\nThe order has been canceled. Please contact admin if needed.\n\n{{site_name}}'s Site URL: {{site_url}}",
-				},
-			},
 			Refunded: OrderEmailSceneTemplate{
 				ZHCN: OrderEmailLocalizedTemplate{
 					Subject: "订单状态更新：{{status}}",
@@ -229,7 +213,6 @@ func NormalizeOrderEmailTemplateSetting(setting OrderEmailTemplateSetting) Order
 	setting.Templates.Paid = normalizeOrderEmailSceneTemplate(setting.Templates.Paid)
 	setting.Templates.Delivered = normalizeOrderEmailSceneTemplate(setting.Templates.Delivered)
 	setting.Templates.DeliveredWithContent = normalizeOrderEmailSceneTemplate(setting.Templates.DeliveredWithContent)
-	setting.Templates.Canceled = normalizeOrderEmailSceneTemplate(setting.Templates.Canceled)
 	setting.Templates.Refunded = normalizeOrderEmailSceneTemplate(setting.Templates.Refunded)
 	setting.Templates.PartiallyRefunded = normalizeOrderEmailSceneTemplate(setting.Templates.PartiallyRefunded)
 	setting.GuestTip.ZHCN = strings.TrimSpace(setting.GuestTip.ZHCN)
@@ -258,7 +241,6 @@ func ValidateOrderEmailTemplateSetting(setting OrderEmailTemplateSetting) error 
 		setting.Templates.Paid,
 		setting.Templates.Delivered,
 		setting.Templates.DeliveredWithContent,
-		setting.Templates.Canceled,
 		setting.Templates.Refunded,
 		setting.Templates.PartiallyRefunded,
 	}
@@ -284,7 +266,6 @@ func EncodeOrderEmailTemplateSetting(setting OrderEmailTemplateSetting) jsonmap.
 			"paid":                   orderEmailSceneTemplateToMap(normalized.Templates.Paid),
 			"delivered":              orderEmailSceneTemplateToMap(normalized.Templates.Delivered),
 			"delivered_with_content": orderEmailSceneTemplateToMap(normalized.Templates.DeliveredWithContent),
-			"canceled":               orderEmailSceneTemplateToMap(normalized.Templates.Canceled),
 			"refunded":               orderEmailSceneTemplateToMap(normalized.Templates.Refunded),
 			"partially_refunded":     orderEmailSceneTemplateToMap(normalized.Templates.PartiallyRefunded),
 		},
@@ -338,9 +319,6 @@ func ApplyOrderEmailTemplateSettingPatch(current OrderEmailTemplateSetting, patc
 		}
 		if patch.Templates.DeliveredWithContent != nil {
 			applyOrderEmailSceneTemplatePatch(&next.Templates.DeliveredWithContent, patch.Templates.DeliveredWithContent)
-		}
-		if patch.Templates.Canceled != nil {
-			applyOrderEmailSceneTemplatePatch(&next.Templates.Canceled, patch.Templates.Canceled)
 		}
 		if patch.Templates.Refunded != nil {
 			applyOrderEmailSceneTemplatePatch(&next.Templates.Refunded, patch.Templates.Refunded)
@@ -436,9 +414,6 @@ func DecodeOrderEmailTemplateSetting(raw jsonmap.JSON, fallback OrderEmailTempla
 		}
 		if sceneMap := settingsvalue.ToStringAnyMap(templatesMap["delivered_with_content"]); sceneMap != nil {
 			next.Templates.DeliveredWithContent = orderEmailSceneTemplateFromMap(sceneMap, next.Templates.DeliveredWithContent)
-		}
-		if sceneMap := settingsvalue.ToStringAnyMap(templatesMap["canceled"]); sceneMap != nil {
-			next.Templates.Canceled = orderEmailSceneTemplateFromMap(sceneMap, next.Templates.Canceled)
 		}
 		if sceneMap := settingsvalue.ToStringAnyMap(templatesMap["refunded"]); sceneMap != nil {
 			next.Templates.Refunded = orderEmailSceneTemplateFromMap(sceneMap, next.Templates.Refunded)

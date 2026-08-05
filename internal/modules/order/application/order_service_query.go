@@ -8,7 +8,6 @@ import (
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
 
 	"github.com/dujiao-next/internal/constants"
-	"github.com/dujiao-next/internal/logger"
 	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
 	resellercontract "github.com/dujiao-next/internal/modules/reseller/contract"
 	"github.com/dujiao-next/internal/shared/jsonmap"
@@ -90,16 +89,6 @@ func (s *OrderService) ensureOrderCanceledIfExpired(order *orderdomain.Order) er
 	}
 	if err := s.cancelOrderWithChildren(order, true); err != nil {
 		return err
-	}
-	if s.queueClient != nil {
-		if _, err := EnqueueStatusEmailTaskIfEligible(s.orderStore, s.queueClient, s.settingService, s.defaultEmailConfig, order.ID, constants.OrderStatusCanceled); err != nil {
-			logger.Warnw("order_enqueue_status_email_failed",
-				"order_id", order.ID,
-				"target_order_id", order.ID,
-				"status", constants.OrderStatusCanceled,
-				"error", err,
-			)
-		}
 	}
 	return nil
 }

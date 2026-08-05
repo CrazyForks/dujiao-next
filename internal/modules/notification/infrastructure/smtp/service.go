@@ -109,8 +109,6 @@ func buildOrderStatusContentFromTemplate(input notificationcontract.OrderStatusE
 		} else {
 			sceneTmpl = tmplSetting.Templates.Delivered
 		}
-	case constants.OrderStatusCanceled:
-		sceneTmpl = tmplSetting.Templates.Canceled
 	case constants.OrderStatusRefunded:
 		sceneTmpl = tmplSetting.Templates.Refunded
 	case constants.OrderStatusPartiallyRefunded:
@@ -408,9 +406,6 @@ func buildOrderStatusContent(input notificationcontract.OrderStatusEmailInput, l
 		return subject, appendGuestTip(normalized, input, appendFulfillmentAttachmentTip(normalized, input, body))
 	case constants.OrderStatusPaid:
 		body := i18n.Sprintf(normalized, "email.order_status.body_paid", input.OrderNo, statusLabel, amount, currency, siteName, siteURL)
-		return subject, appendGuestTip(normalized, input, appendFulfillmentAttachmentTip(normalized, input, body))
-	case constants.OrderStatusCanceled:
-		body := i18n.Sprintf(normalized, "email.order_status.body_canceled", input.OrderNo, statusLabel, amount, currency, siteName, siteURL)
 		return subject, appendGuestTip(normalized, input, appendFulfillmentAttachmentTip(normalized, input, body))
 	case constants.OrderStatusRefunded:
 		body := i18n.Sprintf(normalized, "email.order_status.body_refunded", input.OrderNo, statusLabel, refundAmount, currency, refundReason, siteName, siteURL)
