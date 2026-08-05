@@ -270,21 +270,23 @@ func (s *OrderService) CreateGuestOrder(input CreateGuestOrderInput) (*orderdoma
 }
 
 type orderCreateParams struct {
-	UserID              uint
-	GuestEmail          string
-	GuestPassword       string
-	GuestLocale         string
-	Tenant              resellercontract.TenantContext
-	Items               []CreateOrderItem
-	CouponCode          string
-	AffiliateCode       string
-	AffiliateVisitorKey string
-	ClientIP            string
-	IsGuest             bool
-	ManualFormData      map[string]jsonmap.JSON
-	SkipManualFormCheck bool
-	SkipRiskControl     bool
-	SkipIPRiskControl   bool
+	UserID                   uint
+	GuestEmail               string
+	GuestPassword            string
+	GuestLocale              string
+	Tenant                   resellercontract.TenantContext
+	Items                    []CreateOrderItem
+	CouponCode               string
+	AffiliateCode            string
+	AffiliateVisitorKey      string
+	ClientIP                 string
+	RiskIP                   string
+	RiskPaymentExpireMinutes int
+	IsGuest                  bool
+	ManualFormData           map[string]jsonmap.JSON
+	SkipManualFormCheck      bool
+	SkipRiskControl          bool
+	SkipIPRiskControl        bool
 }
 
 // OrderPreview 订单金额预览
@@ -338,7 +340,7 @@ func (s *OrderService) PreviewOrder(input CreateOrderInput) (*OrderPreview, erro
 	if input.UserID == 0 {
 		return nil, ErrInvalidOrderItem
 	}
-	return s.previewOrder(orderCreateParams{
+	params := orderCreateParams{
 		UserID:              input.UserID,
 		Tenant:              input.Tenant,
 		Items:               input.Items,
@@ -348,12 +350,16 @@ func (s *OrderService) PreviewOrder(input CreateOrderInput) (*OrderPreview, erro
 		ClientIP:            input.ClientIP,
 		ManualFormData:      input.ManualFormData,
 		SkipManualFormCheck: true,
-	})
+	}
+	if err := s.checkOrderRisk(&params, false); err != nil {
+		return nil, err
+	}
+	return s.previewOrder(params)
 }
 
 // PreviewGuestOrder 游客订单金额预览
 func (s *OrderService) PreviewGuestOrder(input CreateGuestOrderInput) (*OrderPreview, error) {
-	return s.previewOrder(orderCreateParams{
+	params := orderCreateParams{
 		GuestEmail:          input.Email,
 		GuestPassword:       input.OrderPassword,
 		GuestLocale:         input.Locale,
@@ -366,7 +372,11 @@ func (s *OrderService) PreviewGuestOrder(input CreateGuestOrderInput) (*OrderPre
 		IsGuest:             true,
 		ManualFormData:      input.ManualFormData,
 		SkipManualFormCheck: true,
-	})
+	}
+	if err := s.checkOrderRisk(&params, false); err != nil {
+		return nil, err
+	}
+	return s.previewOrder(params)
 }
 
 func (s *OrderService) previewOrder(input orderCreateParams) (*OrderPreview, error) {
@@ -419,17 +429,8 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 		return nil, ErrQueueUnavailable
 	}
 
-	// 风控检查（在锁库存之前）
-	if s.riskControlSvc != nil && !input.SkipRiskControl {
-		if err := s.riskControlSvc.CheckOrderAllowed(orderriskcontract.CheckInput{
-			UserID:      input.UserID,
-			GuestEmail:  input.GuestEmail,
-			ClientIP:    input.ClientIP,
-			IsGuest:     input.IsGuest,
-			SkipIPCheck: input.SkipIPRiskControl,
-		}); err != nil {
-			return nil, err
-		}
+	if err := s.checkOrderRisk(&input, true); err != nil {
+		return nil, err
 	}
 
 	result, err := s.buildOrderResult(input)
@@ -493,6 +494,9 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 	}
 
 	expireMinutes := s.resolveExpireMinutes()
+	if input.RiskPaymentExpireMinutes > 0 {
+		expireMinutes = input.RiskPaymentExpireMinutes
+	}
 	now := time.Now()
 	expiresAt := now.Add(time.Duration(expireMinutes) * time.Minute)
 	order := &orderdomain.Order{
@@ -519,6 +523,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 		AffiliateCode:           affiliateCode,
 		ExpiresAt:               &expiresAt,
 		ClientIP:                strings.TrimSpace(input.ClientIP),
+		RiskIP:                  input.RiskIP,
 		CreatedAt:               now,
 		UpdatedAt:               now,
 	}
@@ -536,6 +541,11 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 	err = s.orderStore.WithinTransaction(func(tx ordercontract.Transaction) error {
 		orderStore := tx.Orders()
 		productSKURepo := tx.ProductSKUs()
+		if s.riskControlSvc != nil && !input.SkipRiskControl {
+			if err := s.riskControlSvc.CheckPendingOrderAllowed(buildRiskCheckInput(input, false), orderStore); err != nil {
+				return err
+			}
+		}
 		if err := orderStore.Create(order, nil); err != nil {
 			return err
 		}
@@ -570,6 +580,7 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 				AffiliateCode:           affiliateCode,
 				ExpiresAt:               &expiresAt,
 				ClientIP:                order.ClientIP,
+				RiskIP:                  order.RiskIP,
 				CreatedAt:               now,
 				UpdatedAt:               now,
 			}
@@ -654,6 +665,17 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 		return nil
 	})
 	if err != nil {
+		for _, riskErr := range []error{
+			orderriskcontract.ErrClientIPUnavailable,
+			orderriskcontract.ErrTooManyPendingOrders,
+			orderriskcontract.ErrProductQuantityLimit,
+			orderriskcontract.ErrPendingProductQuantityLimit,
+			orderriskcontract.ErrOrderRateLimited,
+		} {
+			if errors.Is(err, riskErr) {
+				return nil, err
+			}
+		}
 		if errors.Is(err, ErrCardSecretInsufficient) {
 			return nil, ErrCardSecretInsufficient
 		}
@@ -697,6 +719,41 @@ func (s *OrderService) createOrder(input orderCreateParams) (*orderdomain.Order,
 	}
 	FillOrderItemsFromChildren(order)
 	return order, nil
+}
+
+func (s *OrderService) checkOrderRisk(input *orderCreateParams, consumeRateLimit bool) error {
+	if input == nil {
+		return nil
+	}
+	input.ClientIP = strings.TrimSpace(input.ClientIP)
+	input.RiskIP = orderriskcontract.NormalizeRiskIP(input.ClientIP)
+	input.RiskPaymentExpireMinutes = 0
+	if s.riskControlSvc == nil || input.SkipRiskControl {
+		return nil
+	}
+	result, err := s.riskControlSvc.CheckOrderAllowed(buildRiskCheckInput(*input, consumeRateLimit))
+	if err != nil {
+		return err
+	}
+	input.RiskIP = result.RiskIP
+	input.RiskPaymentExpireMinutes = result.PaymentExpireMinutes
+	return nil
+}
+
+func buildRiskCheckInput(input orderCreateParams, consumeRateLimit bool) orderriskcontract.CheckInput {
+	items := make([]orderriskcontract.OrderItem, 0, len(input.Items))
+	for _, item := range input.Items {
+		items = append(items, orderriskcontract.OrderItem{ProductID: item.ProductID, Quantity: item.Quantity})
+	}
+	return orderriskcontract.CheckInput{
+		UserID:           input.UserID,
+		ClientIP:         input.ClientIP,
+		RiskIP:           input.RiskIP,
+		IsGuest:          input.IsGuest,
+		SkipIPCheck:      input.SkipIPRiskControl,
+		ConsumeRateLimit: consumeRateLimit,
+		Items:            items,
+	}
 }
 
 func generateOrderNo() string {

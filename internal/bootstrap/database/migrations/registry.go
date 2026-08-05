@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"github.com/dujiao-next/internal/constants"
 	affiliatedomain "github.com/dujiao-next/internal/modules/affiliate/domain"
 	apicredentialdomain "github.com/dujiao-next/internal/modules/apicredential/domain"
 	auditlogdomain "github.com/dujiao-next/internal/modules/auditlog/domain"
@@ -22,6 +23,8 @@ import (
 	memberleveldomain "github.com/dujiao-next/internal/modules/memberlevel/domain"
 	notificationdomain "github.com/dujiao-next/internal/modules/notification/domain"
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderriskcontract "github.com/dujiao-next/internal/modules/orderrisk/contract"
+	orderriskdomain "github.com/dujiao-next/internal/modules/orderrisk/domain"
 	paymentdomain "github.com/dujiao-next/internal/modules/payment/domain"
 	procurementdomain "github.com/dujiao-next/internal/modules/procurement/domain"
 	promotiondomain "github.com/dujiao-next/internal/modules/promotion/domain"
@@ -32,6 +35,8 @@ import (
 	broadcastdomain "github.com/dujiao-next/internal/modules/telegram/broadcast/domain"
 	walletdomain "github.com/dujiao-next/internal/modules/wallet/domain"
 	"github.com/dujiao-next/internal/platform/database/gormdb"
+
+	"gorm.io/gorm"
 )
 
 // AutoMigrate owns the application-wide schema registry and ordered data migrations.
@@ -56,6 +61,7 @@ func AutoMigrate() error {
 		&orderdomain.Order{},
 		&orderdomain.OrderItem{},
 		&orderdomain.OrderRefundRecord{},
+		&orderriskdomain.LockKey{},
 		&cartdomain.Item{},
 		&paymentdomain.PaymentChannel{},
 		&paymentdomain.Payment{},
@@ -95,6 +101,9 @@ func AutoMigrate() error {
 	if err := ensureUserOAuthIdentityUserProviderUniqueIndex(); err != nil {
 		return err
 	}
+	if err := backfillPendingOrderRiskIPs(db); err != nil {
+		return err
+	}
 	if err := resellerstore.Migrate(db); err != nil {
 		return err
 	}
@@ -131,4 +140,33 @@ func AutoMigrate() error {
 		}
 	}
 	return nil
+}
+
+// backfillPendingOrderRiskIPs 只迁移仍可能占用库存的在途订单，避免启动时扫描全部历史订单。
+func backfillPendingOrderRiskIPs(db *gorm.DB) error {
+	type orderIPRow struct {
+		ID       uint
+		ClientIP string
+	}
+	var rows []orderIPRow
+	if err := db.Model(&orderdomain.Order{}).
+		Select("id", "client_ip").
+		Where("deleted_at IS NULL AND status = ? AND (risk_ip IS NULL OR risk_ip = '') AND client_ip <> ''", constants.OrderStatusPendingPayment).
+		Find(&rows).Error; err != nil {
+		return err
+	}
+	return db.Transaction(func(tx *gorm.DB) error {
+		for _, row := range rows {
+			riskIP := orderriskcontract.NormalizeRiskIP(row.ClientIP)
+			if riskIP == "" {
+				continue
+			}
+			if err := tx.Model(&orderdomain.Order{}).
+				Where("id = ? AND (risk_ip IS NULL OR risk_ip = '')", row.ID).
+				UpdateColumn("risk_ip", riskIP).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }

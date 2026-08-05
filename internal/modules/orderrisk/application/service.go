@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"sync"
 
@@ -21,14 +22,12 @@ type parsedIPBlacklist struct {
 // Options 声明订单风控应用服务的全部端口。
 type Options struct {
 	Settings    orderriskcontract.SettingReader
-	Orders      orderriskcontract.PendingOrderCounter
 	RateLimiter orderriskcontract.RateLimiter
 }
 
-// Service 编排订单黑名单、待支付数量和下单频率检查。
+// Service 编排身份分流、黑名单、商品数量、待支付库存配额和下单频率检查。
 type Service struct {
 	settings    orderriskcontract.SettingReader
-	orders      orderriskcontract.PendingOrderCounter
 	rateLimiter orderriskcontract.RateLimiter
 
 	mu              sync.RWMutex
@@ -38,71 +37,198 @@ type Service struct {
 var _ orderriskcontract.Controller = (*Service)(nil)
 
 func NewService(options Options) *Service {
-	return &Service{
-		settings:    options.Settings,
-		orders:      options.Orders,
-		rateLimiter: options.RateLimiter,
-	}
+	return &Service{settings: options.Settings, rateLimiter: options.RateLimiter}
 }
 
-func (s *Service) CheckOrderAllowed(input orderriskcontract.CheckInput) error {
+// CheckOrderAllowed 执行不依赖订单事务的风控，并返回后续事务应复用的规范化 IP。
+func (s *Service) CheckOrderAllowed(input orderriskcontract.CheckInput) (orderriskcontract.CheckResult, error) {
+	result := orderriskcontract.CheckResult{RiskIP: orderriskcontract.NormalizeRiskIP(input.ClientIP)}
 	if s == nil || s.settings == nil {
-		return nil
+		return result, nil
 	}
 	cfg, err := s.settings.GetOrderRiskControlConfig()
 	if err != nil {
 		logger.Warnw("risk_control_get_config_error", "error", err)
-		return nil
+		return result, nil
 	}
 	if !cfg.Enabled {
-		return nil
+		return result, nil
 	}
 
-	if !input.SkipIPCheck && input.ClientIP != "" && len(cfg.IPBlacklist) > 0 && s.isIPInBlacklist(input.ClientIP, cfg.IPBlacklist) {
-		return orderriskcontract.ErrIPBlacklisted
+	if !input.SkipIPCheck && input.ClientIP != "" && len(cfg.Common.IPBlacklist) > 0 && s.isIPInBlacklist(input.ClientIP, cfg.Common.IPBlacklist) {
+		return result, orderriskcontract.ErrIPBlacklisted
 	}
-	if input.IsGuest && input.GuestEmail != "" && len(cfg.EmailBlacklist) > 0 {
-		normalizedEmail := strings.ToLower(strings.TrimSpace(input.GuestEmail))
-		for _, blocked := range cfg.EmailBlacklist {
-			if normalizedEmail == blocked {
-				return orderriskcontract.ErrEmailBlacklisted
-			}
+	if input.IsGuest {
+		return s.checkGuestOrder(input, result, cfg)
+	}
+	return s.checkMemberOrder(input, result, cfg)
+}
+
+func (s *Service) checkGuestOrder(input orderriskcontract.CheckInput, result orderriskcontract.CheckResult, cfg settingssecurity.OrderRiskControlConfig) (orderriskcontract.CheckResult, error) {
+	policy := cfg.Guest
+	if !policy.Enabled {
+		return result, nil
+	}
+	result.PaymentExpireMinutes = policy.PaymentExpireMinutes
+	if !input.SkipIPCheck && guestPolicyRequiresIP(policy) && result.RiskIP == "" {
+		return result, orderriskcontract.ErrClientIPUnavailable
+	}
+	if err := checkProductQuantityLimit(input.Items, policy.MaxQuantityPerProductPerOrder); err != nil {
+		return result, err
+	}
+	if input.ConsumeRateLimit && policy.RateLimit.Enabled && s.rateLimiter != nil {
+		input.RiskIP = result.RiskIP
+		if err := s.rateLimiter.Check(input, policy.RateLimit); err != nil {
+			return result, err
 		}
 	}
-	if err := s.checkPendingOrderLimits(input, cfg); err != nil {
-		return err
+	return result, nil
+}
+
+func (s *Service) checkMemberOrder(input orderriskcontract.CheckInput, result orderriskcontract.CheckResult, cfg settingssecurity.OrderRiskControlConfig) (orderriskcontract.CheckResult, error) {
+	policy := cfg.Member
+	if !policy.Enabled {
+		return result, nil
 	}
-	if cfg.OrderRateLimit.Enabled && s.rateLimiter != nil {
-		return s.rateLimiter.Check(input, cfg.OrderRateLimit)
+	if !input.SkipIPCheck && policy.MaxPendingOrdersPerIP > 0 && result.RiskIP == "" {
+		return result, orderriskcontract.ErrClientIPUnavailable
+	}
+	if err := checkProductQuantityLimit(input.Items, policy.MaxQuantityPerProductPerOrder); err != nil {
+		return result, err
+	}
+	if input.ConsumeRateLimit && policy.RateLimit.Enabled && s.rateLimiter != nil {
+		input.RiskIP = result.RiskIP
+		if err := s.rateLimiter.Check(input, policy.RateLimit); err != nil {
+			return result, err
+		}
+	}
+	return result, nil
+}
+
+func guestPolicyRequiresIP(policy settingssecurity.OrderRiskGuestPolicy) bool {
+	return policy.MaxPendingOrdersPerIP > 0 ||
+		policy.MaxPendingQuantityPerIPProduct > 0 ||
+		policy.RateLimit.Enabled
+}
+
+func checkProductQuantityLimit(items []orderriskcontract.OrderItem, maximum int) error {
+	if maximum <= 0 {
+		return nil
+	}
+	for _, quantity := range aggregateProductQuantities(items) {
+		if quantity > int64(maximum) {
+			return orderriskcontract.ErrProductQuantityLimit
+		}
 	}
 	return nil
 }
 
-func (s *Service) checkPendingOrderLimits(input orderriskcontract.CheckInput, cfg settingssecurity.OrderRiskControlConfig) error {
-	if s.orders == nil {
+func aggregateProductQuantities(items []orderriskcontract.OrderItem) map[uint]int64 {
+	result := make(map[uint]int64, len(items))
+	for _, item := range items {
+		if item.ProductID == 0 || item.Quantity <= 0 {
+			continue
+		}
+		result[item.ProductID] += int64(item.Quantity)
+	}
+	return result
+}
+
+// CheckPendingOrderAllowed 必须在订单事务内、创建父订单和锁库存之前调用。
+func (s *Service) CheckPendingOrderAllowed(input orderriskcontract.CheckInput, gate orderriskcontract.PendingOrderGate) error {
+	if s == nil || s.settings == nil || gate == nil {
 		return nil
 	}
-	if input.UserID > 0 && cfg.MaxPendingOrdersPerUser > 0 {
-		count, err := s.orders.CountPendingByUserID(input.UserID)
+	cfg, err := s.settings.GetOrderRiskControlConfig()
+	if err != nil {
+		return err
+	}
+	if !cfg.Enabled {
+		return nil
+	}
+	if input.RiskIP == "" {
+		input.RiskIP = orderriskcontract.NormalizeRiskIP(input.ClientIP)
+	}
+	if input.IsGuest {
+		return checkGuestPendingOrder(input, cfg.Guest, gate)
+	}
+	return checkMemberPendingOrder(input, cfg.Member, gate)
+}
+
+func checkGuestPendingOrder(input orderriskcontract.CheckInput, policy settingssecurity.OrderRiskGuestPolicy, gate orderriskcontract.PendingOrderGate) error {
+	if !policy.Enabled || input.SkipIPCheck {
+		return nil
+	}
+	if !guestPolicyRequiresIP(policy) {
+		return nil
+	}
+	if input.RiskIP == "" {
+		return orderriskcontract.ErrClientIPUnavailable
+	}
+	if err := gate.LockRiskKeys([]string{"guest:ip:" + input.RiskIP}); err != nil {
+		return err
+	}
+	if policy.MaxPendingOrdersPerIP > 0 {
+		count, err := gate.CountPendingGuestByRiskIP(input.RiskIP)
 		if err != nil {
-			logger.Warnw("risk_control_count_pending_by_user_error", "user_id", input.UserID, "error", err)
-		} else if count >= int64(cfg.MaxPendingOrdersPerUser) {
+			return err
+		}
+		if count >= int64(policy.MaxPendingOrdersPerIP) {
 			return orderriskcontract.ErrTooManyPendingOrders
 		}
 	}
-	if !input.SkipIPCheck && input.ClientIP != "" && cfg.MaxPendingOrdersPerIP > 0 {
-		count, err := s.orders.CountPendingByClientIP(input.ClientIP)
+	if policy.MaxPendingQuantityPerIPProduct <= 0 {
+		return nil
+	}
+	requested := aggregateProductQuantities(input.Items)
+	productIDs := make([]uint, 0, len(requested))
+	for productID := range requested {
+		productIDs = append(productIDs, productID)
+	}
+	sort.Slice(productIDs, func(i, j int) bool { return productIDs[i] < productIDs[j] })
+	pending, err := gate.SumPendingGuestQuantityByRiskIP(input.RiskIP, productIDs)
+	if err != nil {
+		return err
+	}
+	for productID, quantity := range requested {
+		if pending[productID]+quantity > int64(policy.MaxPendingQuantityPerIPProduct) {
+			return orderriskcontract.ErrPendingProductQuantityLimit
+		}
+	}
+	return nil
+}
+
+func checkMemberPendingOrder(input orderriskcontract.CheckInput, policy settingssecurity.OrderRiskMemberPolicy, gate orderriskcontract.PendingOrderGate) error {
+	if !policy.Enabled {
+		return nil
+	}
+	keys := make([]string, 0, 2)
+	if input.UserID > 0 && policy.MaxPendingOrdersPerUser > 0 {
+		keys = append(keys, fmt.Sprintf("member:user:%d", input.UserID))
+	}
+	if !input.SkipIPCheck && input.RiskIP != "" && policy.MaxPendingOrdersPerIP > 0 {
+		keys = append(keys, "member:ip:"+input.RiskIP)
+	}
+	if len(keys) > 0 {
+		if err := gate.LockRiskKeys(keys); err != nil {
+			return err
+		}
+	}
+	if input.UserID > 0 && policy.MaxPendingOrdersPerUser > 0 {
+		count, err := gate.CountPendingByUserID(input.UserID)
 		if err != nil {
-			logger.Warnw("risk_control_count_pending_by_ip_error", "ip", input.ClientIP, "error", err)
-		} else if count >= int64(cfg.MaxPendingOrdersPerIP) {
+			return err
+		}
+		if count >= int64(policy.MaxPendingOrdersPerUser) {
 			return orderriskcontract.ErrTooManyPendingOrders
 		}
 	}
-	if input.IsGuest && input.GuestEmail != "" && cfg.MaxPendingOrdersPerGuestEmail > 0 {
-		count, err := s.orders.CountPendingByGuestEmail(input.GuestEmail)
+	if !input.SkipIPCheck && input.RiskIP != "" && policy.MaxPendingOrdersPerIP > 0 {
+		count, err := gate.CountPendingMemberByRiskIP(input.RiskIP)
 		if err != nil {
-			logger.Warnw("risk_control_count_pending_by_email_error", "email", input.GuestEmail, "error", err)
-		} else if count >= int64(cfg.MaxPendingOrdersPerGuestEmail) {
+			return err
+		}
+		if count >= int64(policy.MaxPendingOrdersPerIP) {
 			return orderriskcontract.ErrTooManyPendingOrders
 		}
 	}
@@ -126,8 +252,10 @@ func (s *Service) getOrBuildBlacklist(blacklist []string) *parsedIPBlacklist {
 			if err == nil {
 				parsed.cidrs = append(parsed.cidrs, cidr)
 			}
-		} else {
-			parsed.exactIPs[entry] = struct{}{}
+			continue
+		}
+		if ip := net.ParseIP(entry); ip != nil {
+			parsed.exactIPs[ip.String()] = struct{}{}
 		}
 	}
 
@@ -142,19 +270,19 @@ func (s *Service) getOrBuildBlacklist(blacklist []string) *parsedIPBlacklist {
 func hashBlacklist(list []string) string {
 	hash := sha256.New()
 	for _, value := range list {
-		hash.Write([]byte(value))
-		hash.Write([]byte{0})
+		_, _ = hash.Write([]byte(value))
+		_, _ = hash.Write([]byte{0})
 	}
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 func (s *Service) isIPInBlacklist(clientIP string, blacklist []string) bool {
-	ip := net.ParseIP(clientIP)
+	ip := net.ParseIP(strings.TrimSpace(clientIP))
 	if ip == nil {
 		return false
 	}
 	parsed := s.getOrBuildBlacklist(blacklist)
-	if _, exists := parsed.exactIPs[clientIP]; exists {
+	if _, exists := parsed.exactIPs[ip.String()]; exists {
 		return true
 	}
 	for _, cidr := range parsed.cidrs {

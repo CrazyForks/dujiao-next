@@ -95,17 +95,6 @@ changelog:
       - 'Merge branch'
 
 release:
-  # 过渡版本必须把警告直接放在 GitHub Release body 首部：旧版后台的一键升级
-  # 只会展示 Release notes，不会主动打开新版在线文档。等 v1.3.1 及更早版本
-  # 已完成迁移后，可以在后续版本删除这个一次性 header。
-  header: |
-    > [!WARNING]
-    > **二进制部署从 v1.3.1 或更早版本升级：**如果 systemd unit 仍是 `Restart=on-failure`，请先改成 `Restart=always` 并执行 `sudo systemctl daemon-reload`，再使用后台一键升级；否则本次升级后需要手动执行 `sudo systemctl start <你的 unit 名>`。
-    >
-    > **二進制部署從 v1.3.1 或更早版本升級：**如果 systemd unit 仍是 `Restart=on-failure`，請先改成 `Restart=always` 並執行 `sudo systemctl daemon-reload`，再使用後臺一鍵升級；否則本次升級後需要手動執行 `sudo systemctl start <你的 unit 名>`。
-    >
-    > **Binary deployments upgrading from v1.3.1 or earlier:** if the systemd unit still uses `Restart=on-failure`, change it to `Restart=always` and run `sudo systemctl daemon-reload` before using one-click upgrade. Otherwise, you must run `sudo systemctl start <your-unit>` manually after this upgrade.
-
   footer: >-
     ---
 

@@ -32,7 +32,8 @@ func TestOrderAdminHTTPLivesInTransport(t *testing.T) {
 	assertDirectoryGoFileBudget(t, domainRoot, 5)
 	assertDirectoryGoFileBudget(t, contractRoot, 4)
 	assertDirectoryGoFileBudget(t, applicationRoot, 20)
-	assertDirectoryGoFileBudget(t, storeRoot, 7)
+	// 风控并发闸门保留独立测试文件，避免与租户、搜索等存储语义混杂。
+	assertDirectoryGoFileBudget(t, storeRoot, 8)
 	assertDirectoryGoFileBudget(t, presenterRoot, 3)
 	assertProductionImportsAbsent(t, applicationRoot, moduleImportPath+"/internal/service")
 	assertProductionImportsAbsent(t, applicationRoot, moduleImportPath+"/internal/repository")

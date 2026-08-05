@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	userdomain "github.com/dujiao-next/internal/modules/identity/user/domain"
 	ordercontract "github.com/dujiao-next/internal/modules/order/contract"
 	orderdomain "github.com/dujiao-next/internal/modules/order/domain"
+	orderriskdomain "github.com/dujiao-next/internal/modules/orderrisk/domain"
 	"github.com/dujiao-next/internal/persistence/gormutil"
 
 	"gorm.io/gorm"
@@ -687,32 +689,96 @@ func (r *Store) CountPendingByUserID(userID uint) (int64, error) {
 	return count, nil
 }
 
-// CountPendingByClientIP 统计某 IP 待支付的父订单数量
-func (r *Store) CountPendingByClientIP(clientIP string) (int64, error) {
-	if clientIP == "" {
+// LockRiskKeys 在当前事务中按固定顺序锁定风控维度；数据库只保存 SHA-256 摘要。
+func (r *Store) LockRiskKeys(keys []string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+	hashes := make([]string, 0, len(keys))
+	seen := make(map[string]struct{}, len(keys))
+	for _, key := range keys {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		digest := sha256.Sum256([]byte(key))
+		hash := hex.EncodeToString(digest[:])
+		if _, exists := seen[hash]; exists {
+			continue
+		}
+		seen[hash] = struct{}{}
+		hashes = append(hashes, hash)
+	}
+	sort.Strings(hashes)
+	for _, hash := range hashes {
+		row := orderriskdomain.LockKey{KeyHash: hash}
+		if err := r.db.Clauses(clause.OnConflict{DoNothing: true}).Create(&row).Error; err != nil {
+			return err
+		}
+		if err := r.db.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("key_hash = ?", hash).
+			First(&row).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// CountPendingGuestByRiskIP 统计某风控 IP 的游客待支付父订单数量。
+func (r *Store) CountPendingGuestByRiskIP(riskIP string) (int64, error) {
+	if riskIP == "" {
 		return 0, nil
 	}
 	var count int64
 	if err := r.db.Model(&orderdomain.Order{}).
-		Where("orders.deleted_at IS NULL AND client_ip = ? AND status = ? AND parent_id IS NULL", clientIP, constants.OrderStatusPendingPayment).
+		Where("orders.deleted_at IS NULL AND risk_ip = ? AND user_id = 0 AND status = ? AND parent_id IS NULL", riskIP, constants.OrderStatusPendingPayment).
 		Count(&count).Error; err != nil {
 		return 0, err
 	}
 	return count, nil
 }
 
-// CountPendingByGuestEmail 统计游客邮箱待支付的父订单数量
-func (r *Store) CountPendingByGuestEmail(email string) (int64, error) {
-	if email == "" {
+// CountPendingMemberByRiskIP 统计某风控 IP 的会员待支付父订单数量。
+func (r *Store) CountPendingMemberByRiskIP(riskIP string) (int64, error) {
+	if riskIP == "" {
 		return 0, nil
 	}
 	var count int64
 	if err := r.db.Model(&orderdomain.Order{}).
-		Where("orders.deleted_at IS NULL AND guest_email = ? AND status = ? AND parent_id IS NULL", email, constants.OrderStatusPendingPayment).
+		Where("orders.deleted_at IS NULL AND risk_ip = ? AND user_id > 0 AND status = ? AND parent_id IS NULL", riskIP, constants.OrderStatusPendingPayment).
 		Count(&count).Error; err != nil {
 		return 0, err
 	}
 	return count, nil
+}
+
+// SumPendingGuestQuantityByRiskIP 按商品汇总某风控 IP 已锁定的游客待支付数量。
+func (r *Store) SumPendingGuestQuantityByRiskIP(riskIP string, productIDs []uint) (map[uint]int64, error) {
+	result := make(map[uint]int64, len(productIDs))
+	if riskIP == "" || len(productIDs) == 0 {
+		return result, nil
+	}
+	type quantityRow struct {
+		ProductID uint
+		Quantity  int64
+	}
+	var rows []quantityRow
+	err := r.db.Table("order_items AS oi").
+		Select("oi.product_id, COALESCE(SUM(oi.quantity), 0) AS quantity").
+		Joins("JOIN orders AS child ON child.id = oi.order_id AND child.deleted_at IS NULL").
+		Joins("JOIN orders AS parent ON parent.id = child.parent_id AND parent.deleted_at IS NULL").
+		Where("oi.deleted_at IS NULL AND parent.risk_ip = ? AND parent.user_id = 0", riskIP).
+		Where("parent.status = ? AND child.status = ?", constants.OrderStatusPendingPayment, constants.OrderStatusPendingPayment).
+		Where("oi.product_id IN ?", productIDs).
+		Group("oi.product_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		result[row.ProductID] = row.Quantity
+	}
+	return result, nil
 }
 
 // CountOrderItemsByProduct 统计商品关联的订单项数量

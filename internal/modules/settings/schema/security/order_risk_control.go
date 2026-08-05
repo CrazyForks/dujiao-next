@@ -8,7 +8,9 @@ import (
 	"github.com/dujiao-next/internal/shared/jsonmap"
 )
 
-// OrderRateLimitConfig 下单频率限制配置
+const orderRiskControlVersion = 2
+
+// OrderRateLimitConfig 下单频率限制配置。
 type OrderRateLimitConfig struct {
 	Enabled       bool `json:"enabled"`
 	WindowSeconds int  `json:"window_seconds"`
@@ -16,107 +18,211 @@ type OrderRateLimitConfig struct {
 	BlockSeconds  int  `json:"block_seconds"`
 }
 
-// OrderRiskControlConfig 订单风控配置
-type OrderRiskControlConfig struct {
+// OrderRiskCommonPolicy 保存与购买身份无关的订单风控策略。
+type OrderRiskCommonPolicy struct {
+	IPBlacklist []string `json:"ip_blacklist"`
+}
+
+// OrderRiskGuestPolicy 保存以可信客户端 IP 为主体的游客库存保护策略。
+type OrderRiskGuestPolicy struct {
+	Enabled                        bool                 `json:"enabled"`
+	MaxPendingOrdersPerIP          int                  `json:"max_pending_orders_per_ip"`
+	MaxQuantityPerProductPerOrder  int                  `json:"max_quantity_per_product_per_order"`
+	MaxPendingQuantityPerIPProduct int                  `json:"max_pending_quantity_per_ip_product"`
+	PaymentExpireMinutes           int                  `json:"payment_expire_minutes"`
+	RateLimit                      OrderRateLimitConfig `json:"rate_limit"`
+}
+
+// OrderRiskMemberPolicy 保存以用户 ID 为主体、默认更宽松的会员策略。
+type OrderRiskMemberPolicy struct {
 	Enabled                       bool                 `json:"enabled"`
 	MaxPendingOrdersPerUser       int                  `json:"max_pending_orders_per_user"`
 	MaxPendingOrdersPerIP         int                  `json:"max_pending_orders_per_ip"`
-	MaxPendingOrdersPerGuestEmail int                  `json:"max_pending_orders_per_guest_email"`
-	OrderRateLimit                OrderRateLimitConfig `json:"order_rate_limit"`
-	IPBlacklist                   []string             `json:"ip_blacklist"`
-	EmailBlacklist                []string             `json:"email_blacklist"`
+	MaxQuantityPerProductPerOrder int                  `json:"max_quantity_per_product_per_order"`
+	RateLimit                     OrderRateLimitConfig `json:"rate_limit"`
 }
 
-// DefaultOrderRiskControlConfig 默认风控配置
+// OrderRiskControlConfig 订单风控配置。游客邮箱仅用于订单业务，不作为风控身份。
+type OrderRiskControlConfig struct {
+	Version int                   `json:"version"`
+	Enabled bool                  `json:"enabled"`
+	Common  OrderRiskCommonPolicy `json:"common"`
+	Guest   OrderRiskGuestPolicy  `json:"guest"`
+	Member  OrderRiskMemberPolicy `json:"member"`
+}
+
+// DefaultOrderRiskControlConfig 返回新安装推荐值；总开关默认关闭，避免静默改变订单行为。
 func DefaultOrderRiskControlConfig() OrderRiskControlConfig {
 	return OrderRiskControlConfig{
-		Enabled:                       false,
-		MaxPendingOrdersPerUser:       3,
-		MaxPendingOrdersPerIP:         5,
-		MaxPendingOrdersPerGuestEmail: 2,
-		OrderRateLimit: OrderRateLimitConfig{
-			Enabled:       false,
-			WindowSeconds: 60,
-			MaxRequests:   5,
-			BlockSeconds:  120,
+		Version: orderRiskControlVersion,
+		Enabled: false,
+		Common:  OrderRiskCommonPolicy{IPBlacklist: []string{}},
+		Guest: OrderRiskGuestPolicy{
+			Enabled:                        true,
+			MaxPendingOrdersPerIP:          2,
+			MaxQuantityPerProductPerOrder:  1,
+			MaxPendingQuantityPerIPProduct: 2,
+			PaymentExpireMinutes:           10,
+			RateLimit: OrderRateLimitConfig{
+				Enabled:       true,
+				WindowSeconds: 60,
+				MaxRequests:   3,
+				BlockSeconds:  120,
+			},
 		},
-		IPBlacklist:    []string{},
-		EmailBlacklist: []string{},
+		Member: OrderRiskMemberPolicy{
+			Enabled:                       true,
+			MaxPendingOrdersPerUser:       5,
+			MaxPendingOrdersPerIP:         0,
+			MaxQuantityPerProductPerOrder: 0,
+			RateLimit: OrderRateLimitConfig{
+				Enabled:       false,
+				WindowSeconds: 60,
+				MaxRequests:   10,
+				BlockSeconds:  120,
+			},
+		},
 	}
 }
 
-// NormalizeOrderRiskControlConfig 归一化风控配置
+// NormalizeOrderRiskControlConfig 归一化风控配置；0 始终表示对应限制关闭。
 func NormalizeOrderRiskControlConfig(cfg OrderRiskControlConfig) OrderRiskControlConfig {
-	if cfg.MaxPendingOrdersPerUser < 0 || cfg.MaxPendingOrdersPerUser > 100 {
-		cfg.MaxPendingOrdersPerUser = 3
-	}
-	if cfg.MaxPendingOrdersPerIP < 0 || cfg.MaxPendingOrdersPerIP > 100 {
-		cfg.MaxPendingOrdersPerIP = 5
-	}
-	if cfg.MaxPendingOrdersPerGuestEmail < 0 || cfg.MaxPendingOrdersPerGuestEmail > 100 {
-		cfg.MaxPendingOrdersPerGuestEmail = 2
-	}
+	defaults := DefaultOrderRiskControlConfig()
+	cfg.Version = orderRiskControlVersion
+	cfg.Guest.MaxPendingOrdersPerIP = normalizeRiskLimit(cfg.Guest.MaxPendingOrdersPerIP, 100, defaults.Guest.MaxPendingOrdersPerIP)
+	cfg.Guest.MaxQuantityPerProductPerOrder = normalizeRiskLimit(cfg.Guest.MaxQuantityPerProductPerOrder, 100000, defaults.Guest.MaxQuantityPerProductPerOrder)
+	cfg.Guest.MaxPendingQuantityPerIPProduct = normalizeRiskLimit(cfg.Guest.MaxPendingQuantityPerIPProduct, 100000, defaults.Guest.MaxPendingQuantityPerIPProduct)
+	cfg.Guest.PaymentExpireMinutes = normalizeRiskLimit(cfg.Guest.PaymentExpireMinutes, 10080, defaults.Guest.PaymentExpireMinutes)
+	cfg.Guest.RateLimit = normalizeRateLimit(cfg.Guest.RateLimit, defaults.Guest.RateLimit)
 
-	if cfg.OrderRateLimit.WindowSeconds < 10 || cfg.OrderRateLimit.WindowSeconds > 3600 {
-		cfg.OrderRateLimit.WindowSeconds = 60
-	}
-	if cfg.OrderRateLimit.MaxRequests < 1 || cfg.OrderRateLimit.MaxRequests > 100 {
-		cfg.OrderRateLimit.MaxRequests = 5
-	}
-	if cfg.OrderRateLimit.BlockSeconds < 0 || cfg.OrderRateLimit.BlockSeconds > 86400 {
-		cfg.OrderRateLimit.BlockSeconds = 120
-	}
+	cfg.Member.MaxPendingOrdersPerUser = normalizeRiskLimit(cfg.Member.MaxPendingOrdersPerUser, 100, defaults.Member.MaxPendingOrdersPerUser)
+	cfg.Member.MaxPendingOrdersPerIP = normalizeRiskLimit(cfg.Member.MaxPendingOrdersPerIP, 100, defaults.Member.MaxPendingOrdersPerIP)
+	cfg.Member.MaxQuantityPerProductPerOrder = normalizeRiskLimit(cfg.Member.MaxQuantityPerProductPerOrder, 100000, defaults.Member.MaxQuantityPerProductPerOrder)
+	cfg.Member.RateLimit = normalizeRateLimit(cfg.Member.RateLimit, defaults.Member.RateLimit)
 
-	// 归一化 IP 黑名单：去空行、去首尾空格、校验格式
-	cleanIPs := make([]string, 0, len(cfg.IPBlacklist))
-	for _, entry := range cfg.IPBlacklist {
-		entry = strings.TrimSpace(entry)
-		if entry == "" {
+	cleanIPs := make([]string, 0, len(cfg.Common.IPBlacklist))
+	seen := make(map[string]struct{}, len(cfg.Common.IPBlacklist))
+	for _, raw := range cfg.Common.IPBlacklist {
+		entry := strings.TrimSpace(raw)
+		if entry == "" || !isValidIPOrCIDR(entry) {
 			continue
 		}
-		if isValidIPOrCIDR(entry) {
-			cleanIPs = append(cleanIPs, entry)
+		if _, exists := seen[entry]; exists {
+			continue
 		}
+		seen[entry] = struct{}{}
+		cleanIPs = append(cleanIPs, entry)
 	}
-	cfg.IPBlacklist = cleanIPs
-
-	// 归一化邮箱黑名单：去空行、小写化
-	cleanEmails := make([]string, 0, len(cfg.EmailBlacklist))
-	for _, email := range cfg.EmailBlacklist {
-		email = strings.ToLower(strings.TrimSpace(email))
-		if email != "" {
-			cleanEmails = append(cleanEmails, email)
-		}
-	}
-	cfg.EmailBlacklist = cleanEmails
-
+	cfg.Common.IPBlacklist = cleanIPs
 	return cfg
 }
 
-// isValidIPOrCIDR 校验字符串是否为有效的 IP 地址或 CIDR 表示
-func isValidIPOrCIDR(s string) bool {
-	if net.ParseIP(s) != nil {
+func normalizeRiskLimit(value, maximum, fallback int) int {
+	if value < 0 || value > maximum {
+		return fallback
+	}
+	return value
+}
+
+func normalizeRateLimit(cfg, fallback OrderRateLimitConfig) OrderRateLimitConfig {
+	if cfg.WindowSeconds < 10 || cfg.WindowSeconds > 3600 {
+		cfg.WindowSeconds = fallback.WindowSeconds
+	}
+	if cfg.MaxRequests < 1 || cfg.MaxRequests > 100 {
+		cfg.MaxRequests = fallback.MaxRequests
+	}
+	if cfg.BlockSeconds < 0 || cfg.BlockSeconds > 86400 {
+		cfg.BlockSeconds = fallback.BlockSeconds
+	}
+	return cfg
+}
+
+func isValidIPOrCIDR(value string) bool {
+	if net.ParseIP(value) != nil {
 		return true
 	}
-	_, _, err := net.ParseCIDR(s)
+	_, _, err := net.ParseCIDR(value)
 	return err == nil
 }
 
-// DecodeOrderRiskControlConfig 从 JSON map 解析风控配置
+// DecodeOrderRiskControlConfig 解析新版嵌套配置，并把旧版扁平配置一次性映射到游客/会员策略。
 func DecodeOrderRiskControlConfig(raw jsonmap.JSON, fallback OrderRiskControlConfig) OrderRiskControlConfig {
-	result := fallback
 	if raw == nil {
-		return result
+		return NormalizeOrderRiskControlConfig(fallback)
 	}
 	data, err := json.Marshal(raw)
 	if err != nil {
-		return result
+		return NormalizeOrderRiskControlConfig(fallback)
 	}
-	_ = json.Unmarshal(data, &result)
+	if _, hasGuest := raw["guest"]; hasGuest {
+		result := fallback
+		if err := json.Unmarshal(data, &result); err != nil {
+			return NormalizeOrderRiskControlConfig(fallback)
+		}
+		return NormalizeOrderRiskControlConfig(result)
+	}
+
+	type flatRateLimitConfig struct {
+		Enabled       *bool `json:"enabled"`
+		WindowSeconds *int  `json:"window_seconds"`
+		MaxRequests   *int  `json:"max_requests"`
+		BlockSeconds  *int  `json:"block_seconds"`
+	}
+	type flatOrderRiskConfig struct {
+		Enabled                 *bool                `json:"enabled"`
+		MaxPendingOrdersPerUser *int                 `json:"max_pending_orders_per_user"`
+		MaxPendingOrdersPerIP   *int                 `json:"max_pending_orders_per_ip"`
+		OrderRateLimit          *flatRateLimitConfig `json:"order_rate_limit"`
+		IPBlacklist             []string             `json:"ip_blacklist"`
+	}
+	var old flatOrderRiskConfig
+	if err := json.Unmarshal(data, &old); err != nil {
+		return NormalizeOrderRiskControlConfig(fallback)
+	}
+	result := fallback
+	// 先恢复旧版缺省值，再叠加持久化字段。这样旧的稀疏 JSON 也不会误用 v2 推荐值。
+	result.Guest.MaxPendingOrdersPerIP = 5
+	result.Member.MaxPendingOrdersPerUser = 3
+	result.Member.MaxPendingOrdersPerIP = 5
+	result.Guest.MaxQuantityPerProductPerOrder = 0
+	result.Guest.MaxPendingQuantityPerIPProduct = 0
+	result.Guest.PaymentExpireMinutes = 0
+	result.Member.MaxQuantityPerProductPerOrder = 0
+	legacyRateLimit := OrderRateLimitConfig{Enabled: false, WindowSeconds: 60, MaxRequests: 5, BlockSeconds: 120}
+	result.Guest.RateLimit = legacyRateLimit
+	result.Member.RateLimit = legacyRateLimit
+	if old.Enabled != nil {
+		result.Enabled = *old.Enabled
+	}
+	if old.MaxPendingOrdersPerUser != nil {
+		result.Member.MaxPendingOrdersPerUser = *old.MaxPendingOrdersPerUser
+	}
+	if old.MaxPendingOrdersPerIP != nil {
+		result.Guest.MaxPendingOrdersPerIP = *old.MaxPendingOrdersPerIP
+		result.Member.MaxPendingOrdersPerIP = *old.MaxPendingOrdersPerIP
+	}
+	if old.OrderRateLimit != nil {
+		if old.OrderRateLimit.Enabled != nil {
+			legacyRateLimit.Enabled = *old.OrderRateLimit.Enabled
+		}
+		if old.OrderRateLimit.WindowSeconds != nil {
+			legacyRateLimit.WindowSeconds = *old.OrderRateLimit.WindowSeconds
+		}
+		if old.OrderRateLimit.MaxRequests != nil {
+			legacyRateLimit.MaxRequests = *old.OrderRateLimit.MaxRequests
+		}
+		if old.OrderRateLimit.BlockSeconds != nil {
+			legacyRateLimit.BlockSeconds = *old.OrderRateLimit.BlockSeconds
+		}
+		result.Guest.RateLimit = legacyRateLimit
+		result.Member.RateLimit = legacyRateLimit
+	}
+	if old.IPBlacklist != nil {
+		result.Common.IPBlacklist = old.IPBlacklist
+	}
 	return NormalizeOrderRiskControlConfig(result)
 }
 
-// EncodeOrderRiskControlConfig 将风控配置转为 map 用于存储
 func EncodeOrderRiskControlConfig(cfg OrderRiskControlConfig) jsonmap.JSON {
 	normalized := NormalizeOrderRiskControlConfig(cfg)
 	data, err := json.Marshal(normalized)

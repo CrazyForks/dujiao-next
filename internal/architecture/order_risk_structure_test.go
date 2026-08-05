@@ -11,6 +11,7 @@ func TestOrderRiskUsesCompleteVerticalLayout(t *testing.T) {
 	moduleRoot := filepath.Join(repositoryRoot, "internal", "modules", "orderrisk")
 	applicationRoot := filepath.Join(moduleRoot, "application")
 	contractRoot := filepath.Join(moduleRoot, "contract")
+	domainRoot := filepath.Join(moduleRoot, "domain")
 	limiterRoot := filepath.Join(moduleRoot, "infrastructure", "redislimiter")
 
 	production, total := countDirectGoFiles(t, moduleRoot)
@@ -19,16 +20,18 @@ func TestOrderRiskUsesCompleteVerticalLayout(t *testing.T) {
 	}
 	assertDirectoryGoFileBudget(t, applicationRoot, 2)
 	assertDirectoryGoFileBudget(t, contractRoot, 4)
+	assertDirectoryGoFileBudget(t, domainRoot, 1)
 	assertDirectoryGoFileBudget(t, limiterRoot, 1)
 
 	assertFileDeclaresTypes(t, filepath.Join(applicationRoot, "service.go"), []string{"Options", "Service"})
 	assertFileDeclaresFunctions(t, filepath.Join(applicationRoot, "service.go"), []string{"NewService"})
 	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "types.go"), []string{"CheckInput"})
 	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "ports.go"), []string{
-		"SettingReader", "PendingOrderCounter", "RateLimiter", "Controller",
+		"SettingReader", "PendingOrderGate", "RateLimiter", "Controller",
 	})
 	assertFileDeclaresTypes(t, filepath.Join(contractRoot, "errors.go"), []string{"RateLimitedError"})
 	assertFileDeclaresFunctions(t, filepath.Join(contractRoot, "errors.go"), []string{"GetRetryAfter"})
+	assertFileDeclaresTypes(t, filepath.Join(domainRoot, "lock_key.go"), []string{"LockKey"})
 	assertFileDeclaresTypes(t, filepath.Join(limiterRoot, "limiter.go"), []string{"Limiter"})
 	assertFileDeclaresFunctions(t, filepath.Join(limiterRoot, "limiter.go"), []string{"New"})
 

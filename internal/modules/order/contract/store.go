@@ -44,8 +44,10 @@ type Store interface {
 	UpdateStatus(id uint, status string, updates map[string]interface{}) error
 	CountOrderItemsByProduct(productID uint) (int64, error)
 	CountPendingByUserID(userID uint) (int64, error)
-	CountPendingByClientIP(clientIP string) (int64, error)
-	CountPendingByGuestEmail(email string) (int64, error)
+	LockRiskKeys(keys []string) error
+	CountPendingGuestByRiskIP(riskIP string) (int64, error)
+	CountPendingMemberByRiskIP(riskIP string) (int64, error)
+	SumPendingGuestQuantityByRiskIP(riskIP string, productIDs []uint) (map[uint]int64, error)
 	UpdateFields(id uint, updates map[string]interface{}) error
 	UpdateChildrenStatus(parentID uint, targetStatus string, now time.Time) (int64, error)
 	UpdateFieldsWhereWalletPaid(id uint, updates map[string]interface{}) (int64, error)

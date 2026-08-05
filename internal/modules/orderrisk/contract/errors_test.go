@@ -17,3 +17,19 @@ func TestRateLimitedErrorContract(t *testing.T) {
 		t.Fatalf("expected zero retry-after for unrelated error, got %d", retryAfter)
 	}
 }
+
+func TestNormalizeRiskIP(t *testing.T) {
+	tests := map[string]string{
+		"1.2.3.4":                  "1.2.3.4",
+		"::ffff:1.2.3.4":           "1.2.3.4",
+		"2001:db8:1234:5678::1":    "2001:db8:1234:5678::/64",
+		"2001:db8:1234:5678::abcd": "2001:db8:1234:5678::/64",
+		"not-an-ip":                "",
+		"":                         "",
+	}
+	for input, expected := range tests {
+		if actual := NormalizeRiskIP(input); actual != expected {
+			t.Fatalf("NormalizeRiskIP(%q)=%q, want %q", input, actual, expected)
+		}
+	}
+}

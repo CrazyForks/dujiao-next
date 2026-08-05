@@ -87,7 +87,6 @@ func (c *Container) initApplicationServices() {
 	c.MemberLevelService = memberlevelapp.NewService(c.MemberLevelRepo, c.MemberLevelPriceRepo, c.MemberLevelUserRepo)
 	c.OrderRiskControlService = orderriskapp.NewService(orderriskapp.Options{
 		Settings:    c.SettingService,
-		Orders:      c.OrderStore,
 		RateLimiter: orderrisklimiter.New(),
 	})
 	orderQueue := orderqueue.New(c.QueueClient)

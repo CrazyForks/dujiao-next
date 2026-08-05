@@ -26,8 +26,10 @@ import (
 
 var (
 	ErrRiskIPBlacklisted             = errors.New("risk ip blacklisted")
-	ErrRiskEmailBlacklisted          = errors.New("risk email blacklisted")
+	ErrRiskClientIPUnavailable       = errors.New("risk client ip unavailable")
 	ErrRiskTooManyPendingOrders      = errors.New("too many pending orders")
+	ErrRiskProductQuantityLimit      = errors.New("risk product quantity limit")
+	ErrRiskPendingProductLimit       = errors.New("risk pending product quantity limit")
 	ErrRiskOrderRateLimited          = errors.New("order rate limited")
 	ErrProductSKURequired            = errors.New("product sku required")
 	ErrProductSKUInvalid             = errors.New("product sku invalid")

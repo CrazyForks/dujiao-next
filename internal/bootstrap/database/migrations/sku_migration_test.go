@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dujiao-next/internal/constants"
 	cardsecretdomain "github.com/dujiao-next/internal/modules/cardsecret/domain"
 	cartdomain "github.com/dujiao-next/internal/modules/cart/domain"
 	externalidentitydomain "github.com/dujiao-next/internal/modules/identity/externalidentity/domain"
@@ -449,6 +450,45 @@ func TestAutoMigrateOwnsResellerSchemaAndCrossModuleConstraints(t *testing.T) {
 	}
 	if db.Migrator().HasConstraint(&procurementdomain.Order{}, supersededProcurementOrderForeignKeyConstraint) {
 		t.Errorf("central AutoMigrate retained superseded procurement constraint %s", supersededProcurementOrderForeignKeyConstraint)
+	}
+}
+
+func TestBackfillPendingOrderRiskIPsHandlesLegacyNullsAndIPv6(t *testing.T) {
+	db := setupSKUMigrationTestDB(t)
+	if err := db.AutoMigrate(&orderdomain.Order{}); err != nil {
+		t.Fatalf("auto migrate orders: %v", err)
+	}
+
+	pendingIPv4 := &orderdomain.Order{OrderNo: "risk-ipv4", Status: constants.OrderStatusPendingPayment, Currency: "USD", ClientIP: "1.2.3.4"}
+	pendingIPv6 := &orderdomain.Order{OrderNo: "risk-ipv6", Status: constants.OrderStatusPendingPayment, Currency: "USD", ClientIP: "2001:db8:abcd:12::9"}
+	paid := &orderdomain.Order{OrderNo: "risk-paid", Status: constants.OrderStatusPaid, Currency: "USD", ClientIP: "5.6.7.8"}
+	for _, order := range []*orderdomain.Order{pendingIPv4, pendingIPv6, paid} {
+		if err := db.Create(order).Error; err != nil {
+			t.Fatalf("create order %s: %v", order.OrderNo, err)
+		}
+		if err := db.Exec("UPDATE orders SET risk_ip = NULL WHERE id = ?", order.ID).Error; err != nil {
+			t.Fatalf("set legacy NULL risk_ip for %s: %v", order.OrderNo, err)
+		}
+	}
+
+	if err := backfillPendingOrderRiskIPs(db); err != nil {
+		t.Fatalf("backfill risk IPs: %v", err)
+	}
+	var gotIPv4, gotIPv6, gotPaid orderdomain.Order
+	if err := db.First(&gotIPv4, pendingIPv4.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.First(&gotIPv6, pendingIPv6.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.First(&gotPaid, paid.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if gotIPv4.RiskIP != "1.2.3.4" || gotIPv6.RiskIP != "2001:db8:abcd:12::/64" {
+		t.Fatalf("unexpected risk IP backfill: ipv4=%q ipv6=%q", gotIPv4.RiskIP, gotIPv6.RiskIP)
+	}
+	if gotPaid.RiskIP != "" {
+		t.Fatalf("paid history must not be backfilled, got %q", gotPaid.RiskIP)
 	}
 }
 
