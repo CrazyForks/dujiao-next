@@ -2,6 +2,7 @@
   <Teleport to="body">
     <!-- Overlay -->
     <Transition
+      appear
       enter-active-class="transition duration-300 ease-out"
       enter-from-class="opacity-0"
       enter-to-class="opacity-100"
@@ -22,6 +23,7 @@
       - Desktop (md+): centered modal, fades + scales in
     -->
     <Transition
+      appear
       enter-active-class="quick-buy-enter-active"
       enter-from-class="quick-buy-enter-from"
       enter-to-class="quick-buy-enter-to"
