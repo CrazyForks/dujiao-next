@@ -111,7 +111,6 @@
                 {{ checkingPayment ? t('personalCenter.wallet.checkingPayStatus') : t('personalCenter.wallet.checkPayStatus') }}
               </Button>
             </div>
-            <div v-if="payLink" class="mt-3 break-all text-[13px] text-muted-foreground">{{ t('payment.payLinkLabel') }}：{{ payLink }}</div>
             <div v-if="showTelegramPayHint" class="mt-3 text-[13px] text-muted-foreground">{{ t('payment.telegramExternalHint') }}</div>
           </div>
         </div>

@@ -6,6 +6,7 @@ import { walletAPI } from '../api/wallet'
 import { useTelegramMiniAppStore } from '../stores/telegramMiniApp'
 import { copyText } from '../utils/clipboard'
 import { basisPointsToPercent, rateToBasisPoints } from '../utils/money'
+import { resolvePaymentLinkNavigationTarget, resolvePaymentPresentationMode } from '../utils/paymentResumePolicy'
 import type { BadgeTone } from '../utils/status'
 
 /**
@@ -34,19 +35,20 @@ export function useRechargeOrderDetail() {
   })
 
   const payLink = computed(() => String(payment.value?.pay_url || '').trim())
-  const interactionMode = computed(() => String(payment.value?.interaction_mode || '').toLowerCase())
+  const interactionMode = computed(() => String(payment.value?.interaction_mode || '').trim().toLowerCase())
+  const paymentPresentationMode = computed(() => resolvePaymentPresentationMode(interactionMode.value))
   const isTelegramMiniApp = computed(() => telegramMiniAppStore.isMiniApp && telegramMiniAppStore.isReady)
   const showTelegramPayHint = computed(() => isTelegramMiniApp.value && Boolean(payLink.value))
 
   const qrCodeContent = computed(() => String(payment.value?.qr_code || '').trim())
   const qrFallbackContent = computed(() => {
-    if (interactionMode.value === 'redirect') return ''
+    if (paymentPresentationMode.value === 'redirect') return ''
     if (qrCodeContent.value) return ''
     return payLink.value
   })
   const qrDisplayContent = computed(() => qrCodeContent.value || qrFallbackContent.value)
   const qrUsingPayLinkFallback = computed(() => Boolean(!qrCodeContent.value && qrFallbackContent.value))
-  const showQRCode = computed(() => interactionMode.value !== 'redirect' && Boolean(qrImageUrl.value))
+  const showQRCode = computed(() => paymentPresentationMode.value === 'qr' && Boolean(qrImageUrl.value))
   const cryptoWalletAddress = computed(() => String(payment.value?.wallet_address || '').trim())
   const cryptoChainAmount = computed(() => String(payment.value?.chain_amount || '').trim())
   const cryptoChain = computed(() => String(payment.value?.chain || '').trim())
@@ -215,7 +217,7 @@ export function useRechargeOrderDetail() {
     }
   }
 
-  const handleOpenPayLink = () => {
+  const openPayLinkInCompatibleWindow = (automatic: boolean) => {
     if (!payLink.value) return
     if (isTelegramMiniApp.value) {
       try {
@@ -223,9 +225,15 @@ export function useRechargeOrderDetail() {
       } catch {
         window.open(payLink.value, '_blank')
       }
+    } else if (resolvePaymentLinkNavigationTarget(automatic) === 'current-tab') {
+      window.location.assign(payLink.value)
     } else {
       window.open(payLink.value, '_blank')
     }
+  }
+
+  const handleOpenPayLink = () => {
+    openPayLinkInCompatibleWindow(false)
   }
 
   const handleCopyWalletAddress = async () => {
@@ -282,9 +290,9 @@ export function useRechargeOrderDetail() {
     await loadDetail()
     if (isPending.value) {
       startPolling()
-      // Auto-redirect for redirect mode
-      if (payLink.value && interactionMode.value === 'redirect') {
-        handleOpenPayLink()
+      // 自动跳转类支付使用当前标签页，避免异步加载后被浏览器拦截为弹窗。
+      if (payLink.value && paymentPresentationMode.value === 'redirect') {
+        openPayLinkInCompatibleWindow(true)
       }
     }
   })

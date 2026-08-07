@@ -1211,6 +1211,8 @@
     },
     "modeQr": "二维码支付",
     "modeRedirect": "跳转支付",
+    "modeWap": "手机网站支付",
+    "modePage": "电脑网站支付",
     "payLinkLabel": "跳转链接",
     "openPayLink": "打开支付链接",
     "copyPayLink": "复制支付链接",

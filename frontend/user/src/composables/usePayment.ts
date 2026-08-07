@@ -13,6 +13,10 @@ import { buildSkuDisplayTextFromSnapshot } from '../utils/sku'
 import {
   getCachedPaymentRestorePolicy,
   getPaymentResetPolicy,
+  resolvePaymentInteractionLabelKey,
+  resolvePaymentLinkNavigationTarget,
+  resolvePaymentPresentationMode,
+  resolvePaymentResultTitleKey,
   shouldAutoOpenPaymentLink,
   type PaymentResetReason,
 } from '../utils/paymentResumePolicy'
@@ -181,21 +185,23 @@ export function usePayment() {
 
   const paymentChannelType = computed(() => String(paymentResult.value?.channel_type || resultChannel.value?.channel_type || '').toLowerCase())
 
+  const interactionMode = computed(() => String(paymentResult.value?.interaction_mode || '').trim().toLowerCase())
+  const paymentPresentationMode = computed(() => resolvePaymentPresentationMode(interactionMode.value))
+
   const interactionLabel = computed(() => {
-    if (!paymentResult.value?.interaction_mode) return '-'
-    const mode = String(paymentResult.value.interaction_mode).toLowerCase()
-    if (mode === 'qr') return t('payment.modeQr')
-    if (mode === 'redirect') return t('payment.modeRedirect')
+    const mode = interactionMode.value
+    if (!mode) return '-'
+    const labelKey = resolvePaymentInteractionLabelKey(mode)
+    if (labelKey) return t(labelKey)
     return mode
   })
 
-  const interactionMode = computed(() => String(paymentResult.value?.interaction_mode || '').toLowerCase())
-  const paymentResultTitle = computed(() => interactionMode.value === 'redirect' ? t('payment.resultRedirectTitle') : t('payment.resultTitle'))
-  const paymentGuideTitle = computed(() => interactionMode.value === 'redirect' ? t('payment.redirectTitle') : t('payment.qrTitle'))
-  const paymentGuideTip = computed(() => interactionMode.value === 'redirect' ? t('payment.redirectTip') : t('payment.qrTip'))
+  const paymentResultTitle = computed(() => t(resolvePaymentResultTitleKey(interactionMode.value)))
+  const paymentGuideTitle = computed(() => paymentPresentationMode.value === 'redirect' ? t('payment.redirectTitle') : t('payment.qrTitle'))
+  const paymentGuideTip = computed(() => paymentPresentationMode.value === 'redirect' ? t('payment.redirectTip') : t('payment.qrTip'))
 
   const showPayLink = computed(() => {
-    return interactionMode.value === 'redirect' || Boolean(payLink.value)
+    return paymentPresentationMode.value === 'redirect' || Boolean(payLink.value)
   })
   const isTelegramMiniApp = computed(() => telegramMiniAppStore.isMiniApp && telegramMiniAppStore.isReady)
   const showTelegramPayHint = computed(() => isTelegramMiniApp.value && Boolean(payLink.value))
@@ -267,13 +273,13 @@ export function usePayment() {
   })
   const hasCryptoPaymentDetails = computed(() => cryptoPaymentDetails.value.length > 0)
   const qrFallbackContent = computed(() => {
-    if (interactionMode.value !== 'qr') return ''
+    if (paymentPresentationMode.value !== 'qr') return ''
     if (qrCodeContent.value) return ''
     return payLink.value
   })
   const qrDisplayContent = computed(() => qrCodeContent.value || qrFallbackContent.value)
   const qrUsingPayLinkFallback = computed(() => Boolean(!qrCodeContent.value && qrFallbackContent.value))
-  const showQRCode = computed(() => interactionMode.value === 'qr' && Boolean(qrDisplayContent.value))
+  const showQRCode = computed(() => paymentPresentationMode.value === 'qr' && Boolean(qrDisplayContent.value))
 
   const qrImageUrl = ref('')
   const qrRenderVersion = ref(0)
@@ -777,10 +783,15 @@ export function usePayment() {
     }
   }
 
-  const openPayLinkInCompatibleWindow = () => {
+  const openPayLinkInCompatibleWindow = (automatic = false) => {
     if (!payLink.value) return
     if (isTelegramMiniApp.value) {
       telegramMiniAppStore.openLink(payLink.value)
+    } else if (resolvePaymentLinkNavigationTarget(automatic) === 'current-tab') {
+      // 支付请求返回后已脱离原始点击事件，浏览器通常会拦截此时创建的新窗口。
+      // 自动收银台跳转使用当前标签页，既可靠也能保留当前 sessionStorage。
+      window.location.assign(payLink.value)
+      return
     } else {
       // 先创建同源空白页，让浏览器按规范复制当前标签页的 sessionStorage；
       // 随后立即切断 opener 再跳转到支付站。这样第三方回跳仍能恢复游客订单，
@@ -822,9 +833,9 @@ export function usePayment() {
         startPolling()
         void captureCurrentPayment({ silent: true })
         startCountdown()
-        // 对 redirect 模式自动打开支付链接
+        // 对 redirect / WAP / page 跳转类模式自动进入收银台。
         if (shouldAutoOpenPaymentLink(data)) {
-          openPayLinkInCompatibleWindow()
+          openPayLinkInCompatibleWindow(true)
         }
       }
     } catch (err) {
@@ -1053,7 +1064,7 @@ export function usePayment() {
       }
       window.scrollTo({ top: 0, behavior: 'smooth' })
       if (shouldAutoOpenPaymentLink(paymentResult.value)) {
-        openPayLinkInCompatibleWindow()
+        openPayLinkInCompatibleWindow(true)
       }
     } catch (err: any) {
       error.value = err.message || t('payment.createFailed')
@@ -1158,7 +1169,7 @@ export function usePayment() {
       startCountdown()
     }
     if (restorePolicy.autoOpenPayLink && shouldAutoOpenPaymentLink(paymentResult.value)) {
-      openPayLinkInCompatibleWindow()
+      openPayLinkInCompatibleWindow(true)
     }
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }

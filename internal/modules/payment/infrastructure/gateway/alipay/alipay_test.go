@@ -82,6 +82,13 @@ func TestCreatePaymentPrecreate(t *testing.T) {
 		if r.Form.Get("method") != "alipay.trade.precreate" {
 			t.Fatalf("expected precreate method, got %s", r.Form.Get("method"))
 		}
+		var bizContent map[string]interface{}
+		if err := json.Unmarshal([]byte(r.Form.Get("biz_content")), &bizContent); err != nil {
+			t.Fatalf("decode biz_content: %v", err)
+		}
+		if got := bizContent["product_code"]; got != alipayProductCodeFaceToFace {
+			t.Fatalf("product_code = %v, want %s", got, alipayProductCodeFaceToFace)
+		}
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
 			"alipay_trade_precreate_response": map[string]interface{}{
 				"code":         "10000",
@@ -135,6 +142,45 @@ func TestCreatePaymentWAPReturnsPayURL(t *testing.T) {
 	}
 	if parsedURL.Query().Get("method") != "alipay.trade.wap.pay" {
 		t.Fatalf("unexpected method: %s", parsedURL.Query().Get("method"))
+	}
+	var bizContent map[string]interface{}
+	if err := json.Unmarshal([]byte(parsedURL.Query().Get("biz_content")), &bizContent); err != nil {
+		t.Fatalf("decode biz_content: %v", err)
+	}
+	if got := bizContent["product_code"]; got != alipayProductCodeQuickWAP {
+		t.Fatalf("product_code = %v, want %s", got, alipayProductCodeQuickWAP)
+	}
+	if parsedURL.Query().Get("sign") == "" {
+		t.Fatalf("expected sign in pay url")
+	}
+}
+
+func TestCreatePaymentPageReturnsPayURL(t *testing.T) {
+	cfg := buildTestConfig("https://openapi.alipay.com/gateway.do")
+	cfg.ReturnURL = "https://example.com/pay/return"
+	result, err := CreatePayment(context.Background(), cfg, CreateInput{
+		OrderNo:   "ORDER-PAGE-1",
+		Amount:    "88.00",
+		Subject:   "电脑网站支付测试",
+		NotifyURL: cfg.NotifyURL,
+		ReturnURL: cfg.ReturnURL,
+	}, constants.PaymentInteractionPage)
+	if err != nil {
+		t.Fatalf("create payment failed: %v", err)
+	}
+	parsedURL, err := url.Parse(result.PayURL)
+	if err != nil {
+		t.Fatalf("parse pay url failed: %v", err)
+	}
+	if got := parsedURL.Query().Get("method"); got != alipayMethodPagePay {
+		t.Fatalf("method = %s, want %s", got, alipayMethodPagePay)
+	}
+	var bizContent map[string]interface{}
+	if err := json.Unmarshal([]byte(parsedURL.Query().Get("biz_content")), &bizContent); err != nil {
+		t.Fatalf("decode biz_content: %v", err)
+	}
+	if got := bizContent["product_code"]; got != alipayProductCodeFastPay {
+		t.Fatalf("product_code = %v, want %s", got, alipayProductCodeFastPay)
 	}
 	if parsedURL.Query().Get("sign") == "" {
 		t.Fatalf("expected sign in pay url")

@@ -119,7 +119,8 @@
 
               <div v-else class="bg-secondary border rounded-2xl p-6">
                 <div class="text-sm text-muted-foreground mb-3">{{ t('payment.openPayLink') }}</div>
-                <Button type="button" variant="secondary" class="font-semibold" @click="handleOpenPayLink">
+                <Button type="button" variant="default" class="font-bold" @click="handleOpenPayLink">
+                  <ExternalLink class="h-4 w-4" aria-hidden="true" />
                   {{ t('payment.openPayLink') }}
                 </Button>
                 <div v-if="openedPayWindow" class="mt-3 text-xs text-success">
@@ -129,13 +130,11 @@
                   {{ t('payment.telegramExternalHint') }}
                 </div>
                 <div class="mt-3 flex flex-wrap items-center gap-2">
-                  <Button variant="secondary" size="sm" @click="handleCopyPayLink">
+                  <Button type="button" variant="outline" size="sm" class="font-semibold" @click="handleCopyPayLink">
+                    <Copy class="h-4 w-4" aria-hidden="true" />
                     {{ t('payment.copyPayLink') }}
                   </Button>
                   <span v-if="copied" class="text-xs text-success">{{ t('payment.copied') }}</span>
-                </div>
-                <div class="mt-3 text-xs text-muted-foreground break-all">
-                  {{ t('payment.payLinkLabel') }}：{{ paymentResult.pay_url }}
                 </div>
               </div>
             </div>
@@ -429,7 +428,8 @@
                   </div>
                 </div>
                 <div v-if="paymentResult.pay_url" class="pt-2 flex flex-wrap items-center gap-2">
-                  <Button variant="secondary" size="sm" class="font-bold" @click="handleCopyPayLink">
+                  <Button type="button" variant="outline" size="sm" class="font-semibold" @click="handleCopyPayLink">
+                    <Copy class="h-4 w-4" aria-hidden="true" />
                     {{ t('payment.copyPayLink') }}
                   </Button>
                   <span v-if="copied" class="text-xs text-success">{{ t('payment.copied') }}</span>
@@ -438,17 +438,16 @@
             </div>
 
             <div v-if="showPayLink" class="mt-6 flex flex-col md:flex-row md:items-center gap-3">
-              <Button type="button" variant="secondary" class="font-semibold" @click="handleOpenPayLink">
+              <Button type="button" variant="default" class="font-bold" @click="handleOpenPayLink">
+                <ExternalLink class="h-4 w-4" aria-hidden="true" />
                 {{ t('payment.openPayLink') }}
               </Button>
-              <Button variant="secondary" @click="handleCopyPayLink">
+              <Button type="button" variant="outline" class="font-semibold" @click="handleCopyPayLink">
+                <Copy class="h-4 w-4" aria-hidden="true" />
                 {{ t('payment.copyPayLink') }}
               </Button>
               <div v-if="showTelegramPayHint" class="text-xs text-muted-foreground">
                 {{ t('payment.telegramExternalHint') }}
-              </div>
-              <div class="text-xs text-muted-foreground break-all">
-                {{ t('payment.payLinkLabel') }}：{{ paymentResult.pay_url }}
               </div>
             </div>
           </div>
@@ -506,6 +505,7 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { Copy, ExternalLink } from 'lucide-vue-next'
 import { pageAlertVariant, pageAlertToneClass } from '../utils/alerts'
 import PaymentAmountBreakdown from '../components/payment/PaymentAmountBreakdown.vue'
 import PaymentChannelSelector from '../components/payment/PaymentChannelSelector.vue'

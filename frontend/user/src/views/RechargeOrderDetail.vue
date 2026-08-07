@@ -125,15 +125,13 @@
                 </div>
               </div>
               <div class="mt-4 flex flex-wrap items-center gap-3">
-                <Button v-if="payLink" type="button" variant="outline" size="sm" @click="handleOpenPayLink">
+                <Button v-if="payLink" type="button" variant="default" size="sm" class="font-bold" @click="handleOpenPayLink">
+                  <ExternalLink class="h-4 w-4" aria-hidden="true" />
                   {{ t('payment.openPayLink') }}
                 </Button>
                 <Button type="button" variant="outline" size="sm" :disabled="checkingPayment" @click="checkPayment">
                   {{ checkingPayment ? t('personalCenter.wallet.checkingPayStatus') : t('personalCenter.wallet.checkPayStatus') }}
                 </Button>
-              </div>
-              <div v-if="payLink" class="mt-3 text-xs text-muted-foreground break-all">
-                {{ t('payment.payLinkLabel') }}：{{ payLink }}
               </div>
               <div v-if="showTelegramPayHint" class="mt-3 text-xs text-muted-foreground">
                 {{ t('payment.telegramExternalHint') }}
@@ -153,6 +151,7 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { ExternalLink } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import EmptyState from '../components/EmptyState.vue'

@@ -78,7 +78,6 @@
               <Button variant="outline" size="sm" class="rounded-full" @click="handleCopyPayLink">{{ t('payment.copyPayLink') }}</Button>
               <span v-if="copied" class="text-xs text-[color:var(--teal-strong)]">{{ t('payment.copied') }}</span>
             </div>
-            <div class="mt-2.5 break-all text-xs text-muted-foreground">{{ t('payment.payLinkLabel') }}：{{ paymentResult.pay_url }}</div>
           </div>
         </div>
 
