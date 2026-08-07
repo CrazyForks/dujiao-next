@@ -26,7 +26,7 @@ func TestPaymentServiceImplementationIsSplitByResponsibility(t *testing.T) {
 			"detachOutboundRequestContext",
 			"shouldUseGatewayOrderNo", "buildGatewayOrderNo", "resolveGatewayOrderNo",
 			"resolveProviderOrderNo", "matchesBusinessOrderNo", "buildPaymentReturnQuery",
-			"applyProviderPayment", "ValidateChannel", "resolveTenantReturnURL",
+			"applyProviderPayment", "TestChannelSecurity", "ValidateChannel", "resolveTenantReturnURL",
 			"tenantReturnPath", "resolveTokenPayOrderUserKey",
 		},
 		"payment_service_rules.go": {

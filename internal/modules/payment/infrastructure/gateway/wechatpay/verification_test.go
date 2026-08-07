@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -214,6 +215,93 @@ func TestCreatePaymentRejectsInvalidResponseSignature(t *testing.T) {
 	}, constants.PaymentInteractionQR)
 	if !errors.Is(err, ErrSignatureInvalid) {
 		t.Fatalf("invalid response signature error = %v, want ErrSignatureInvalid", err)
+	}
+}
+
+func TestWechatPayPublicKeySecurityEchoSuccess(t *testing.T) {
+	wechatPayKey := newTestWechatPayKey(t)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != securityEchoPath {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		if got := r.Header.Get("Accept"); got != "application/json" {
+			t.Errorf("Accept = %q, want application/json", got)
+		}
+		if got := r.Header.Get("Content-Type"); got != "application/json" {
+			t.Errorf("Content-Type = %q, want application/json", got)
+		}
+		if got := r.Header.Get("Wechatpay-Serial"); got != wechatPayKey.id {
+			t.Errorf("Wechatpay-Serial = %q, want %q", got, wechatPayKey.id)
+		}
+		if got := r.Header.Get("Authorization"); !strings.HasPrefix(got, "WECHATPAY2-SHA256-RSA2048 ") {
+			t.Errorf("Authorization header is missing or invalid: %q", got)
+		}
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Errorf("decode request: %v", err)
+			return
+		}
+		if _, exists := payload["notify_url"]; exists {
+			t.Error("security echo request must not include notify_url")
+		}
+		if _, exists := payload["encrypted_echo_message"]; exists {
+			t.Error("public-key signature test must not include encrypted_echo_message")
+		}
+		echoMessage, _ := payload["echo_message"].(string)
+		if !strings.HasPrefix(echoMessage, "dujiao-next-") {
+			t.Errorf("unexpected echo_message: %q", echoMessage)
+		}
+		responseBody, err := json.Marshal(map[string]string{"echo_message": echoMessage})
+		if err != nil {
+			t.Errorf("marshal response: %v", err)
+			return
+		}
+		writeSignedWechatPayResponse(t, w, wechatPayKey, string(responseBody))
+	}))
+	defer server.Close()
+
+	raw := baseWechatPayConfig(t)
+	addPublicKeyMode(raw, wechatPayKey)
+	raw["verification_mode"] = verificationModeCombined
+	raw["base_url"] = server.URL
+	cfg, err := ParseConfig(raw)
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+
+	result, err := TestWechatPayPublicKey(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("security echo failed: %v", err)
+	}
+	if result.ResponseSerial != wechatPayKey.id || !result.RequestSignatureAccepted ||
+		!result.ResponseSignatureValid || !result.EchoMessageMatched {
+		t.Fatalf("unexpected security echo result: %+v", result)
+	}
+}
+
+func TestWechatPayPublicKeySecurityEchoRejectsInvalidSignature(t *testing.T) {
+	configuredKey := newTestWechatPayKey(t)
+	wrongSigningKey := newTestWechatPayKey(t)
+	wrongSigningKey.id = configuredKey.id
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]interface{}
+		_ = json.NewDecoder(r.Body).Decode(&payload)
+		echoMessage, _ := payload["echo_message"].(string)
+		responseBody, _ := json.Marshal(map[string]string{"echo_message": echoMessage})
+		writeSignedWechatPayResponse(t, w, wrongSigningKey, string(responseBody))
+	}))
+	defer server.Close()
+
+	raw := baseWechatPayConfig(t)
+	addPublicKeyMode(raw, configuredKey)
+	raw["base_url"] = server.URL
+	cfg, err := ParseConfig(raw)
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+
+	if _, err := TestWechatPayPublicKey(context.Background(), cfg); !errors.Is(err, ErrSignatureInvalid) {
+		t.Fatalf("invalid security echo signature error = %v, want ErrSignatureInvalid", err)
 	}
 }
 

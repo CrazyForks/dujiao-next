@@ -414,6 +414,7 @@ export const adminAPI = {
   createPaymentChannel: (data: Partial<AdminPaymentChannel>) => api.post('/admin/payment-channels', data),
   getPaymentChannels: (params?: Record<string, unknown>) => api.get('/admin/payment-channels', { params }),
   getPaymentChannel: (id: number) => api.get(`/admin/payment-channels/${id}`),
+  testWechatPayPublicKey: (id: number) => api.post(`/admin/payment-channels/${id}/wechatpay-public-key-test`, {}),
   updatePaymentChannel: (id: number, data: Partial<AdminPaymentChannel>) => api.put(`/admin/payment-channels/${id}`, data),
   deletePaymentChannel: (id: number) => api.delete(`/admin/payment-channels/${id}`),
   getUsers: (params?: Record<string, unknown>) => api.get('/admin/users', { params }),
