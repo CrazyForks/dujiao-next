@@ -22,10 +22,7 @@ import (
 
 	"github.com/shopspring/decimal"
 	"github.com/wechatpay-apiv3/wechatpay-go/core"
-	"github.com/wechatpay-apiv3/wechatpay-go/core/auth/verifiers"
-	"github.com/wechatpay-apiv3/wechatpay-go/core/downloader"
 	"github.com/wechatpay-apiv3/wechatpay-go/core/notify"
-	"github.com/wechatpay-apiv3/wechatpay-go/core/option"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
 )
 
@@ -56,17 +53,20 @@ const (
 // Config 微信官方支付配置。
 type Config struct {
 	common.ExchangeRateConfig
-	AppID              string `json:"appid"`
-	MerchantID         string `json:"mchid"`
-	MerchantSerialNo   string `json:"merchant_serial_no"`
-	MerchantPrivateKey string `json:"merchant_private_key"`
-	APIV3Key           string `json:"api_v3_key"`
-	NotifyURL          string `json:"notify_url"`
-	H5RedirectURL      string `json:"h5_redirect_url"`
-	H5Type             string `json:"h5_type"`
-	H5WapURL           string `json:"h5_wap_url"`
-	H5WapName          string `json:"h5_wap_name"`
-	BaseURL            string `json:"base_url"`
+	AppID                string `json:"appid"`
+	MerchantID           string `json:"mchid"`
+	MerchantSerialNo     string `json:"merchant_serial_no"`
+	MerchantPrivateKey   string `json:"merchant_private_key"`
+	APIV3Key             string `json:"api_v3_key"`
+	VerificationMode     string `json:"verification_mode"`
+	WechatPayPublicKeyID string `json:"wechatpay_public_key_id"`
+	WechatPayPublicKey   string `json:"wechatpay_public_key"`
+	NotifyURL            string `json:"notify_url"`
+	H5RedirectURL        string `json:"h5_redirect_url"`
+	H5Type               string `json:"h5_type"`
+	H5WapURL             string `json:"h5_wap_url"`
+	H5WapName            string `json:"h5_wap_name"`
+	BaseURL              string `json:"base_url"`
 }
 
 // CreateInput 创建微信支付单输入。
@@ -283,14 +283,10 @@ func VerifyAndDecodeWebhook(ctx context.Context, cfg *Config, headers map[string
 		return nil, err
 	}
 
-	mgr := downloader.MgrInstance()
-	if !mgr.HasDownloader(ctx, cfg.MerchantID) {
-		if err := mgr.RegisterDownloaderWithPrivateKey(ctx, privateKey, cfg.MerchantSerialNo, cfg.MerchantID, cfg.APIV3Key); err != nil {
-			return nil, fmt.Errorf("%w: register certificate downloader failed", ErrRequestFailed)
-		}
+	verifier, err := createWechatPayVerifier(ctx, cfg, privateKey)
+	if err != nil {
+		return nil, err
 	}
-
-	verifier := verifiers.NewSHA256WithRSAVerifier(mgr.GetCertificateVisitor(cfg.MerchantID))
 	handler, err := notify.NewRSANotifyHandler(cfg.APIV3Key, verifier)
 	if err != nil {
 		return nil, fmt.Errorf("%w: init notify handler failed", ErrConfigInvalid)
@@ -403,22 +399,10 @@ func validateBaseConfig(cfg *Config) error {
 	if err := validatePrivateKey(cfg.MerchantPrivateKey); err != nil {
 		return err
 	}
+	if err := validateVerificationConfig(cfg); err != nil {
+		return err
+	}
 	return nil
-}
-
-func createAPIClient(ctx context.Context, cfg *Config) (*core.Client, error) {
-	privateKey, err := parsePrivateKey(cfg.MerchantPrivateKey)
-	if err != nil {
-		return nil, err
-	}
-	client, err := core.NewClient(ctx,
-		option.WithMerchantCredential(cfg.MerchantID, cfg.MerchantSerialNo, privateKey),
-		option.WithoutValidator(),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("%w: init client failed", ErrConfigInvalid)
-	}
-	return client, nil
 }
 
 func doPostJSON(ctx context.Context, client *core.Client, requestURL string, payload map[string]interface{}) (map[string]interface{}, error) {
@@ -438,6 +422,9 @@ func doGetJSON(ctx context.Context, client *core.Client, requestURL string) (map
 }
 
 func wrapRequestError(err error) error {
+	if errors.Is(err, ErrSignatureInvalid) {
+		return err
+	}
 	var apiErr *core.APIError
 	if errors.As(err, &apiErr) {
 		return fmt.Errorf("%w: %s", ErrResponseInvalid, strings.TrimSpace(apiErr.Message))
@@ -727,6 +714,7 @@ func (c *Config) Normalize() {
 	c.MerchantSerialNo = strings.TrimSpace(c.MerchantSerialNo)
 	c.MerchantPrivateKey = strings.TrimSpace(c.MerchantPrivateKey)
 	c.APIV3Key = strings.TrimSpace(c.APIV3Key)
+	c.normalizeVerificationConfig()
 	c.NotifyURL = strings.TrimSpace(c.NotifyURL)
 	c.H5RedirectURL = strings.TrimSpace(c.H5RedirectURL)
 	c.H5Type = strings.ToUpper(strings.TrimSpace(c.H5Type))
