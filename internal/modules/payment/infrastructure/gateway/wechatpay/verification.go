@@ -73,15 +73,50 @@ func createAPIClientWithVerifier(
 	cfg *Config,
 	privateKey *rsa.PrivateKey,
 	verifier auth.Verifier,
+	extraOptions ...core.ClientOption,
 ) (*core.Client, error) {
-	client, err := core.NewClient(ctx,
+	options := []core.ClientOption{
 		option.WithMerchantCredential(cfg.MerchantID, cfg.MerchantSerialNo, privateKey),
 		withResponseSignatureVerifier(verifier),
-	)
+	}
+	options = append(options, extraOptions...)
+	client, err := core.NewClient(ctx, options...)
 	if err != nil {
 		return nil, fmt.Errorf("%w: init client failed", ErrConfigInvalid)
 	}
 	return client, nil
+}
+
+type acceptJSONRoundTripper struct {
+	base http.RoundTripper
+}
+
+func (t acceptJSONRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	base := t.base
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	cloned := req.Clone(req.Context())
+	cloned.Header = req.Header.Clone()
+	cloned.Header.Set("Accept", "application/json")
+	return base.RoundTrip(cloned)
+}
+
+func withAcceptJSONHTTPClient() core.ClientOption {
+	return option.WithHTTPClient(&http.Client{
+		Timeout: defaultTimeout,
+		Transport: acceptJSONRoundTripper{
+			base: http.DefaultTransport,
+		},
+	})
+}
+
+func createWechatPayPublicKeyVerifier(cfg *Config) (auth.Verifier, error) {
+	publicKey, err := parsePublicKey(cfg.WechatPayPublicKey)
+	if err != nil {
+		return nil, err
+	}
+	return verifiers.NewSHA256WithRSAPubkeyVerifier(cfg.WechatPayPublicKeyID, *publicKey), nil
 }
 
 func createWechatPayVerifier(
@@ -113,11 +148,7 @@ func createWechatPayVerifierWithVisitor(
 		}
 		return verifiers.NewSHA256WithRSAVerifier(certificateVisitor), nil
 	case verificationModeWechatPayPublicKey:
-		publicKey, err := parsePublicKey(cfg.WechatPayPublicKey)
-		if err != nil {
-			return nil, err
-		}
-		return verifiers.NewSHA256WithRSAPubkeyVerifier(cfg.WechatPayPublicKeyID, *publicKey), nil
+		return createWechatPayPublicKeyVerifier(cfg)
 	case verificationModeCombined:
 		if certificateVisitor == nil {
 			return nil, fmt.Errorf("%w: platform certificate visitor is required", ErrConfigInvalid)

@@ -3,8 +3,10 @@ package wechatpay
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -34,8 +36,9 @@ var (
 )
 
 const (
-	defaultBaseURL = "https://api.mch.weixin.qq.com"
-	defaultTimeout = 15 * time.Second
+	defaultBaseURL   = "https://api.mch.weixin.qq.com"
+	defaultTimeout   = 15 * time.Second
+	securityEchoPath = "/v3/security/echo"
 
 	wechatH5TypeWAP     = "WAP"
 	wechatH5TypeIOS     = "IOS"
@@ -110,6 +113,14 @@ type WebhookResult struct {
 	Attach        string
 	PaidAt        *time.Time
 	Raw           map[string]interface{}
+}
+
+// SecurityEchoResult 微信支付公钥非交易诊断结果。
+type SecurityEchoResult struct {
+	ResponseSerial           string
+	RequestSignatureAccepted bool
+	ResponseSignatureValid   bool
+	EchoMessageMatched       bool
 }
 
 // ParseConfig 解析配置。
@@ -265,6 +276,76 @@ func QueryOrderByOutTradeNo(ctx context.Context, cfg *Config, orderNo string) (*
 		return nil, err
 	}
 	return parseQueryResult(raw, orderNo)
+}
+
+// TestWechatPayPublicKey 调用微信支付官方 /v3/security/echo 接口，强制使用
+// Wechatpay-Serial: PUB_KEY_ID_... 获取应答，并仅使用配置的微信支付公钥验签。
+// 请求不携带 notify_url，不会触发回调或创建真实交易。
+func TestWechatPayPublicKey(ctx context.Context, cfg *Config) (*SecurityEchoResult, error) {
+	if err := validateBaseConfig(cfg); err != nil {
+		return nil, err
+	}
+	if cfg.VerificationMode != verificationModeWechatPayPublicKey && cfg.VerificationMode != verificationModeCombined {
+		return nil, fmt.Errorf("%w: public key or combined verification mode is required", ErrConfigInvalid)
+	}
+	if !strings.HasPrefix(cfg.WechatPayPublicKeyID, "PUB_KEY_ID_") {
+		return nil, fmt.Errorf("%w: wechatpay_public_key_id must start with PUB_KEY_ID_", ErrConfigInvalid)
+	}
+
+	ctx, cancel := withDefaultTimeout(ctx)
+	defer cancel()
+
+	privateKey, err := parsePrivateKey(cfg.MerchantPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	verifier, err := createWechatPayPublicKeyVerifier(cfg)
+	if err != nil {
+		return nil, err
+	}
+	client, err := createAPIClientWithVerifier(
+		ctx,
+		cfg,
+		privateKey,
+		verifier,
+		withAcceptJSONHTTPClient(),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	echoMessage, err := newSecurityEchoMessage()
+	if err != nil {
+		return nil, fmt.Errorf("%w: generate echo message failed", ErrRequestFailed)
+	}
+	requestURL := strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/") + securityEchoPath
+	result, err := client.Post(ctx, requestURL, map[string]interface{}{
+		"echo_message": echoMessage,
+	})
+	if err != nil {
+		return nil, wrapRequestError(err)
+	}
+	responseSerial := ""
+	if result != nil && result.Response != nil {
+		responseSerial = strings.TrimSpace(result.Response.Header.Get("Wechatpay-Serial"))
+	}
+	raw, err := parseAPIResult(result)
+	if err != nil {
+		return nil, err
+	}
+	if responseSerial != cfg.WechatPayPublicKeyID {
+		return nil, fmt.Errorf("%w: unexpected response serial", ErrSignatureInvalid)
+	}
+	if readString(raw, "echo_message") != echoMessage {
+		return nil, fmt.Errorf("%w: echo_message mismatch", ErrResponseInvalid)
+	}
+
+	return &SecurityEchoResult{
+		ResponseSerial:           responseSerial,
+		RequestSignatureAccepted: true,
+		ResponseSignatureValid:   true,
+		EchoMessageMatched:       true,
+	}, nil
 }
 
 // VerifyAndDecodeWebhook 验签并解密微信回调。
@@ -664,6 +745,14 @@ func buildDescription(description string, orderNo string) string {
 		return "微信支付订单"
 	}
 	return "订单 " + orderNo
+}
+
+func newSecurityEchoMessage() (string, error) {
+	randomBytes := make([]byte, 16)
+	if _, err := rand.Read(randomBytes); err != nil {
+		return "", err
+	}
+	return "dujiao-next-" + hex.EncodeToString(randomBytes), nil
 }
 
 func validatePrivateKey(raw string) error {

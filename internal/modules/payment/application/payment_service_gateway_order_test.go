@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -87,6 +88,72 @@ func (p emptyProviderRefProvider) CreatePayment(_ context.Context, _ jsonmap.JSO
 		QRCodeURL:          "weixin://wxpay/bizpayurl?pr=test",
 		DisplayChannelType: p.displayChannelType,
 	}, nil
+}
+
+type fakeGatewaySecurityTester struct {
+	emptyProviderRefProvider
+	result *paymentcontract.GatewaySecurityTestResult
+	err    error
+}
+
+func (p fakeGatewaySecurityTester) TestSecurity(context.Context, jsonmap.JSON) (*paymentcontract.GatewaySecurityTestResult, error) {
+	return p.result, p.err
+}
+
+func TestChannelSecurityUsesSavedWechatPayChannel(t *testing.T) {
+	service, db := setupPaymentServiceWalletTest(t)
+	channel := &paymentdomain.PaymentChannel{
+		Name:            "WeChat Pay",
+		ProviderType:    constants.PaymentProviderOfficial,
+		ChannelType:     constants.PaymentChannelTypeWechat,
+		InteractionMode: constants.PaymentInteractionQR,
+		ConfigJSON: jsonmap.JSON{
+			"verification_mode": "combined",
+		},
+	}
+	if err := db.Create(channel).Error; err != nil {
+		t.Fatalf("create channel: %v", err)
+	}
+	expected := &paymentcontract.GatewaySecurityTestResult{
+		VerificationMode:         "wechatpay_public_key",
+		ResponseSerial:           "PUB_KEY_ID_3000000001",
+		RequestSignatureAccepted: true,
+		ResponseSignatureValid:   true,
+		EchoMessageMatched:       true,
+	}
+	registerTestGateway(t, service, constants.PaymentProviderOfficial, constants.PaymentChannelTypeWechat, fakeGatewaySecurityTester{
+		result: expected,
+	})
+
+	result, err := service.TestChannelSecurity(context.Background(), channel.ID)
+	if err != nil {
+		t.Fatalf("test channel security: %v", err)
+	}
+	if result != expected {
+		t.Fatalf("security result = %+v, want %+v", result, expected)
+	}
+}
+
+func TestChannelSecurityMapsSignatureFailure(t *testing.T) {
+	service, db := setupPaymentServiceWalletTest(t)
+	channel := &paymentdomain.PaymentChannel{
+		Name:            "WeChat Pay",
+		ProviderType:    constants.PaymentProviderOfficial,
+		ChannelType:     constants.PaymentChannelTypeWechat,
+		InteractionMode: constants.PaymentInteractionQR,
+		ConfigJSON:      jsonmap.JSON{},
+	}
+	if err := db.Create(channel).Error; err != nil {
+		t.Fatalf("create channel: %v", err)
+	}
+	registerTestGateway(t, service, constants.PaymentProviderOfficial, constants.PaymentChannelTypeWechat, fakeGatewaySecurityTester{
+		err: paymentcontract.ErrGatewaySignatureInvalid,
+	})
+
+	_, err := service.TestChannelSecurity(context.Background(), channel.ID)
+	if !errors.Is(err, ErrPaymentGatewayResponseInvalid) {
+		t.Fatalf("signature failure = %v, want ErrPaymentGatewayResponseInvalid", err)
+	}
 }
 
 func TestShouldUseGatewayOrderNo(t *testing.T) {

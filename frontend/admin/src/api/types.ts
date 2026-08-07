@@ -437,6 +437,14 @@ export interface AdminPaymentChannel {
   updated_at: string
 }
 
+export interface AdminGatewaySecurityTestResult {
+  verification_mode: string
+  response_serial: string
+  request_signature_accepted: boolean
+  response_signature_valid: boolean
+  echo_message_matched: boolean
+}
+
 // --- Payment ---
 export interface AdminPayment {
   id: number
