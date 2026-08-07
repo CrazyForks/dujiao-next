@@ -121,6 +121,9 @@ const wechatConfig = reactive({
   merchant_serial_no: '',
   merchant_private_key: '',
   api_v3_key: '',
+  verification_mode: 'platform_certificate',
+  wechatpay_public_key_id: '',
+  wechatpay_public_key: '',
   notify_url: '',
   h5_redirect_url: '',
   h5_type: 'WAP',
@@ -390,6 +393,9 @@ const resetWechatConfig = () => {
   wechatConfig.merchant_serial_no = ''
   wechatConfig.merchant_private_key = ''
   wechatConfig.api_v3_key = ''
+  wechatConfig.verification_mode = 'platform_certificate'
+  wechatConfig.wechatpay_public_key_id = ''
+  wechatConfig.wechatpay_public_key = ''
   wechatConfig.notify_url = ''
   wechatConfig.h5_redirect_url = ''
   wechatConfig.h5_type = 'WAP'
@@ -530,6 +536,12 @@ const applyWechatConfig = (raw: Record<string, unknown>) => {
   wechatConfig.merchant_serial_no = String(raw.merchant_serial_no || '')
   wechatConfig.merchant_private_key = String(raw.merchant_private_key || '')
   wechatConfig.api_v3_key = String(raw.api_v3_key || '')
+  const verificationMode = String(raw.verification_mode || 'platform_certificate').trim().toLowerCase()
+  wechatConfig.verification_mode = ['platform_certificate', 'wechatpay_public_key', 'combined'].includes(verificationMode)
+    ? verificationMode
+    : 'platform_certificate'
+  wechatConfig.wechatpay_public_key_id = String(raw.wechatpay_public_key_id || '')
+  wechatConfig.wechatpay_public_key = String(raw.wechatpay_public_key || '')
   wechatConfig.notify_url = String(raw.notify_url || '')
   wechatConfig.h5_redirect_url = String(raw.h5_redirect_url || '')
   wechatConfig.h5_type = String(raw.h5_type || 'WAP').toUpperCase()
@@ -702,6 +714,11 @@ const buildWechatConfig = () => {
   setIfNotEmpty('merchant_serial_no', wechatConfig.merchant_serial_no)
   setIfNotEmpty('merchant_private_key', wechatConfig.merchant_private_key)
   setIfNotEmpty('api_v3_key', wechatConfig.api_v3_key)
+  setIfNotEmpty('verification_mode', wechatConfig.verification_mode)
+  if (wechatConfig.verification_mode !== 'platform_certificate') {
+    setIfNotEmpty('wechatpay_public_key_id', wechatConfig.wechatpay_public_key_id)
+    setIfNotEmpty('wechatpay_public_key', wechatConfig.wechatpay_public_key)
+  }
   setIfNotEmpty('notify_url', wechatConfig.notify_url)
   setIfNotEmpty('h5_redirect_url', wechatConfig.h5_redirect_url)
   setIfNotEmpty('h5_type', wechatConfig.h5_type)
@@ -1489,6 +1506,28 @@ const closeModal = () => {
             <div class="min-w-0">
               <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.wechatApiV3Key') }}</label>
               <Input v-model="wechatConfig.api_v3_key" :placeholder="t('admin.paymentChannels.modal.wechatApiV3KeyPlaceholder')" />
+            </div>
+            <div class="min-w-0 md:col-span-2">
+              <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.wechatVerificationMode') }}</label>
+              <Select v-model="wechatConfig.verification_mode">
+                <SelectTrigger class="h-9 w-full">
+                  <SelectValue :placeholder="t('admin.paymentChannels.modal.wechatVerificationModePlatformCertificate')" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="platform_certificate">{{ t('admin.paymentChannels.modal.wechatVerificationModePlatformCertificate') }}</SelectItem>
+                  <SelectItem value="wechatpay_public_key">{{ t('admin.paymentChannels.modal.wechatVerificationModePublicKey') }}</SelectItem>
+                  <SelectItem value="combined">{{ t('admin.paymentChannels.modal.wechatVerificationModeCombined') }}</SelectItem>
+                </SelectContent>
+              </Select>
+              <p class="text-xs text-muted-foreground mt-1">{{ t('admin.paymentChannels.modal.wechatVerificationModeHint') }}</p>
+            </div>
+            <div v-if="wechatConfig.verification_mode !== 'platform_certificate'" class="min-w-0">
+              <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.wechatPublicKeyId') }}</label>
+              <Input v-model="wechatConfig.wechatpay_public_key_id" :placeholder="t('admin.paymentChannels.modal.wechatPublicKeyIdPlaceholder')" />
+            </div>
+            <div v-if="wechatConfig.verification_mode !== 'platform_certificate'" class="min-w-0 md:col-span-2">
+              <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.wechatPublicKey') }}</label>
+              <Textarea v-model="wechatConfig.wechatpay_public_key" rows="4" :placeholder="t('admin.paymentChannels.modal.wechatPublicKeyPlaceholder')" />
             </div>
             <div class="min-w-0 md:col-span-2">
               <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.wechatMerchantPrivateKey') }}</label>
